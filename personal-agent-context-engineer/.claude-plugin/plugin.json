@@ -1,0 +1,31 @@
+{
+    "name": "personal-agent-context-engineer",
+    "description": "Transform Claude Code into a comprehensive personal agent for diverse non-coding tasks through structured research, planning, and implementation phases with intelligent context management.",
+    "version": "1.0.0",
+    "author": {
+        "name": "Pablo Oliva",
+        "email": "p.o@pablooliva.de"
+    },
+    "keywords": [
+        "personal-agent",
+        "context-engineering",
+        "research",
+        "planning",
+        "task-management",
+        "knowledge-management",
+        "documentation"
+    ],
+    "homepage": "https://github.com/pablooliva/claude-plugins",
+    "hooks": {
+        "SubagentStop": [
+            {
+                "hooks": [
+                {
+                    "type": "command",
+                    "command": "${CLAUDE_PLUGIN_ROOT}/hooks/log_subagent_call.py"
+                }
+                ]
+            }
+        ]
+    }
+}

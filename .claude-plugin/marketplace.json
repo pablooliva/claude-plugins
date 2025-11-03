@@ -1,0 +1,27 @@
+{
+  "name": "pablooliva",
+  "owner": {
+    "name": "Pablo Oliva",
+    "email": "p.o@pablooliva.de"
+  },
+  "plugins": [
+    {
+      "name": "spec-driven-development",
+      "source": "./spec-driven-development",
+      "description": "Provides a standardized Specification-Driven Development (SDD) methodology that ensures consistent, high-quality software development practices when working with Claude Code.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Pablo Oliva"
+      }
+    },
+    {
+      "name": "personal-agent-context-engineer",
+      "source": "./personal-agent-context-engineer",
+      "description": "Transform Claude Code into a comprehensive personal agent for diverse non-coding tasks through structured research, planning, and implementation phases with intelligent context management.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Pablo Oliva"
+      }
+    }
+  ]
+}
