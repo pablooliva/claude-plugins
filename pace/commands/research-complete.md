@@ -61,7 +61,7 @@ Ensure all investigation questions are answered and the research document provid
 
 Write brief transition note to `PACE/prompts/context-management/progress.md`:
 
-"Research phase complete. RESEARCH-[###]-[feature-name].md finalized. Ready for /sdd-planning-start."
+"Research phase complete. RESEARCH-[###]-[feature-name].md finalized. Ready for /planning-start."
 
 ## Phase Complete
 

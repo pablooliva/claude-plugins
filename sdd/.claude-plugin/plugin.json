@@ -1,5 +1,5 @@
 {
-    "name": "spec-driven-development",
+    "name": "sdd",
     "description": "Provides a standardized Specification-Driven Development (SDD) methodology that ensures consistent, high-quality software development practices when working with Claude Code.",
     "version": "1.0.0",
     "author": {

@@ -17,14 +17,14 @@ Before loading documents for completion verification:
 Current context utilization: [X]%
 
 If > 35%: ⚠️ Warning - Context usage is high ([X]%).
-  - Consider running /sdd-implementation-compact first
+  - Consider running /implementation-compact first
   - This will preserve your progress and free up context
-  - Then use /sdd-continue to resume with fresh context
+  - Then use /continue to resume with fresh context
 
 If > 40%: ⚠️ CRITICAL - Context too high for completion process ([X]%).
-  - MUST run /sdd-implementation-compact before continuing
+  - MUST run /implementation-compact before continuing
   - Completion process requires loading multiple documents for validation
-  - Clear session and use /sdd-continue after compaction
+  - Clear session and use /continue after compaction
 ```
 
 Note: The completion process requires loading specification, PROMPT document, and creating summary documents, which needs available context.
@@ -32,16 +32,16 @@ Note: The completion process requires loading specification, PROMPT document, an
 ## Workflow Position
 
 ```text
-[/sdd-implementation-start] ──────► [/sdd-implementation-compact] ──────► [/sdd-continue]
-         │                                      │                                │
-         ▼                                      ▼                                ▼
+[/implementation-start] ──────────► [/implementation-compact] ──────────► [/continue]
+         │                                      │                              │
+         ▼                                      ▼                              ▼
    Create PROMPT-###                    Save progress &                   Resume work
                                        clear session
                                                                                │
                                           ┌────────────────────────────────────┘
                                           │
                                           ▼
-                                 [/sdd-implementation-complete] ◄── YOU ARE HERE
+                                [/implementation-complete] ◄── YOU ARE HERE
                                           │
                                           ▼
                                    Validate all requirements
@@ -49,7 +49,7 @@ Note: The completion process requires loading specification, PROMPT document, an
                                    Update specifications
                                           │
                                           ▼
-                                   [/sdd-commit] ──────► DEPLOYMENT READY
+                                   [/commit] ──────► DEPLOYMENT READY
 ```
 
 ## Initial Document Loading and Verification
@@ -59,24 +59,24 @@ Note: The completion process requires loading specification, PROMPT document, an
 **IMPORTANT: Load these documents BEFORE proceeding with any completion tasks.**
 
 1. **Progress File:**
-   - Load `SDD/prompts/context-management/progress.md`
+   - Load `PACE/prompts/context-management/progress.md`
    - Verify implementation phase is active
    - Check for any incomplete items or blockers
    - Note any recent compaction files referenced
 
 2. **PROMPT Document:**
-   - Load `SDD/prompts/PROMPT-[###]-[feature-name]-[date].md`
+   - Load `PACE/prompts/PROMPT-[###]-[feature-name]-[date].md`
    - This is your PRIMARY verification source
    - Check "Status" field (should be "In Progress" or "Testing")
    - Review all requirement implementation statuses
 
 3. **Specification Document:**
-   - Load `SDD/requirements/SPEC-[###]-[feature-name].md`
+   - Load `PACE/requirements/SPEC-[###]-[feature-name].md`
    - Compare requirements against PROMPT document status
    - Verify all REQ-XXX, PERF-XXX, SEC-XXX, UX-XXX items
 
 4. **Recent Compaction (if exists):**
-   - Check for `SDD/prompts/context-management/implementation-compacted-*.md`
+   - Check for `PACE/prompts/context-management/implementation-compacted-*.md`
    - Load most recent file to understand any pending items
    - Review "Specification Validation Remaining" section
 
@@ -114,7 +114,7 @@ Required Actions:
 3. Verify all tests are passing
 4. Then retry this completion command
 
-Consider using /sdd-continue to resume implementation work.
+Consider using /continue to resume implementation work.
 ```
 
 **STOP processing if verification fails.**
@@ -123,7 +123,7 @@ Consider using /sdd-continue to resume implementation work.
 
 ### 1. Finalize PROMPT Document
 
-Update `SDD/prompts/PROMPT-[###]-[feature-name]-[date].md`:
+Update `PACE/prompts/PROMPT-[###]-[feature-name]-[date].md`:
 
 #### Update Header Section
 
@@ -173,7 +173,7 @@ Total subagent delegations: [X]
 
 ### 2. Update Specification Document
 
-Add implementation results to `SDD/requirements/SPEC-[###]-[feature-name].md`:
+Add implementation results to `PACE/requirements/SPEC-[###]-[feature-name].md`:
 
 ```markdown
 ## Implementation Summary
@@ -181,8 +181,8 @@ Add implementation results to `SDD/requirements/SPEC-[###]-[feature-name].md`:
 ### Completion Details
 - **Completed:** [YYYY-MM-DD]
 - **Implementation Duration:** [X days]
-- **Final PROMPT Document:** SDD/prompts/PROMPT-[###]-[feature-name]-[date].md
-- **Implementation Summary:** SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md
+- **Final PROMPT Document:** PACE/prompts/PROMPT-[###]-[feature-name]-[date].md
+- **Implementation Summary:** PACE/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md
 
 ### Requirements Validation Results
 Based on PROMPT document verification:
@@ -210,7 +210,7 @@ Based on PROMPT document verification:
 
 ### 3. Create Implementation Summary Document
 
-Save to `SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`:
+Save to `PACE/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`:
 
 Format: `IMPLEMENTATION-SUMMARY-[###]-YYYY-MM-DD_HH-MM-SS.md` (24-hour format with underscores)
 Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
@@ -219,9 +219,9 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 # Implementation Summary: [Feature Name]
 
 ## Feature Overview
-- **Specification:** SDD/requirements/SPEC-[###]-[feature-name].md
-- **Research Foundation:** SDD/research/RESEARCH-[###]-[feature-name].md
-- **Implementation Tracking:** SDD/prompts/PROMPT-[###]-[feature-name]-[date].md
+- **Specification:** PACE/requirements/SPEC-[###]-[feature-name].md
+- **Research Foundation:** PACE/research/RESEARCH-[###]-[feature-name].md
+- **Implementation Tracking:** PACE/prompts/PROMPT-[###]-[feature-name]-[date].md
 - **Completion Date:** [YYYY-MM-DD HH:MM:SS]
 - **Context Management:** Maintained <40% throughout implementation
 
@@ -392,15 +392,15 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 
 ### 4. Update Progress File
 
-Update `SDD/prompts/context-management/progress.md`:
+Update `PACE/prompts/context-management/progress.md`:
 
 ```markdown
 ## Implementation Phase - COMPLETE ✓
 
 ### Feature: [Feature Name]
-- **Specification:** SDD/requirements/SPEC-[###]-[feature-name].md
-- **Implementation:** SDD/prompts/PROMPT-[###]-[feature-name]-[date].md
-- **Summary:** SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md
+- **Specification:** PACE/requirements/SPEC-[###]-[feature-name].md
+- **Implementation:** PACE/prompts/PROMPT-[###]-[feature-name]-[date].md
+- **Summary:** PACE/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md
 - **Completion:** [YYYY-MM-DD HH:MM:SS]
 
 ### Final Status
@@ -440,9 +440,9 @@ Update `SDD/prompts/context-management/progress.md`:
 Implementation phase COMPLETE for [Feature Name].
 
 To start next feature:
-- Research new feature: `/sdd-research-start`
-- Plan another feature: `/sdd-planning-start` (if research exists)
-- Implement another feature: `/sdd-implementation-start` (if spec exists)
+- Research new feature: `/research-start`
+- Plan another feature: `/planning-start` (if research exists)
+- Implement another feature: `/implementation-start` (if spec exists)
 ```
 
 ## Error Recovery
@@ -460,9 +460,9 @@ When requirements are not met:
    ```
 
 2. **Save Progress:**
-   - Run `/sdd-implementation-compact` to save current state
+   - Run `/implementation-compact` to save current state
    - Clear session if context is high
-   - Use `/sdd-continue` to resume implementation
+   - Use `/continue` to resume implementation
 
 3. **Address Blockers:**
    - Complete missing implementations

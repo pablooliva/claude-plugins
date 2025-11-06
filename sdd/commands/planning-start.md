@@ -49,9 +49,9 @@ Before creating specification:
 
 3. **Validate Research Quality:**
    - If any research sections are missing or incomplete, warn the user
-   - Check if `/sdd-research-complete` was run (look for completion marker in progress.md)
-   - If not complete, warn: "Research phase may not be complete. Consider running /sdd-research-complete first if needed."
-   - Suggest running `/sdd-research-complete` first if research is unfinished
+   - Check if `/research-complete` was run (look for completion marker in progress.md)
+   - If not complete, warn: "Research phase may not be complete. Consider running /research-complete first if needed."
+   - Suggest running `/research-complete` first if research is unfinished
 
 ## Specification Document Structure
 

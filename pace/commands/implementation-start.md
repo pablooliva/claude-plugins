@@ -19,11 +19,11 @@ Current context utilization: [X]%
 If > 35%: ⚠️ Warning - Context usage is high ([X]%). Consider:
   - Running essential tasks only
   - Using subagents for research tasks
-  - Being prepared to run /pace-implementation-compact soon
+  - Being prepared to run /implementation-compact soon
 
 If > 40%: ⚠️ CRITICAL - Context usage is too high ([X]%).
-  - You should run /pace-implementation-compact before starting
-  - Clear session and use /pace-continue to resume with fresh context
+  - You should run /implementation-compact before starting
+  - Clear session and use /continue to resume with fresh context
 ```
 
 Proceed with caution if context is above 35%.
@@ -86,7 +86,7 @@ Before starting implementation:
 
 3. **Validate Plan Quality:**
    - If any plan sections are missing or incomplete, warn the user
-   - Check if `/pace-planning-complete` was run
+   - Check if `/planning-complete` was run
    - Suggest reviewing the plan for completeness before implementation
 
 ## Implementation Document Structure

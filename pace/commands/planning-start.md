@@ -35,7 +35,7 @@ Before creating the plan:
 
 1. **Check for Research Foundation:**
    - If research exists, locate the corresponding `PACE/research/RESEARCH-[###]-[topic-name].md` file
-   - If no research exists but is needed, suggest running `/pace-research-start` first
+   - If no research exists but is needed, suggest running `/research-start` first
    - For simple tasks, proceed without research
 
 2. **Understand Task Requirements:**

@@ -207,7 +207,7 @@ Update `SDD/prompts/context-management/progress.md` with planning completion and
 - [RISK-002 with mitigation approach]
 
 ### Next Steps
-Planning phase complete. Ready for /sdd-implementation-start.
+Planning phase complete. Ready for /implementation-start.
 Specification provides comprehensive implementation guidance.
 ```
 
@@ -259,10 +259,10 @@ The specification in `SDD/requirements/SPEC-[###]-[feature-name].md` provides co
 Next Claude Code session should:
 
 1. Start fresh with Claude Sonnet
-2. Run `/sdd-implementation-start` to begin coding
+2. Run `/implementation-start` to begin coding
 3. Reference the specification for all implementation decisions
 
 ---
 
 Phase Status: FINISHED ✓
-Next Command: `/sdd-implementation-start`
+Next Command: `/implementation-start`

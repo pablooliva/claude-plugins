@@ -12,7 +12,7 @@ When you install a plugin using the standard installation command, it's installe
 
 ```bash
 # Install a specific plugin
-/plugin install spec-driven-development@pablooliva
+/plugin install sdd@pablooliva
 
 # Or use the interactive menu
 /plugin
@@ -45,12 +45,12 @@ your-project/
     "pablooliva": {
       "source": {
         "source": "github",
-        "repo": "pablooliva/spec-driven-development"
+        "repo": "pablooliva/sdd"
       }
     }
   },
   "enabledPlugins": {
-    "spec-driven-development@pablooliva": true,
+    "sdd@pablooliva": true,
     ...
   }
 }

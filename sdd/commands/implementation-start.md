@@ -19,11 +19,11 @@ Current context utilization: [X]%
 If > 35%: ⚠️ Warning - Context usage is high ([X]%). Consider:
   - Running essential tasks only
   - Using subagents for research tasks
-  - Being prepared to run /sdd-implementation-compact soon
+  - Being prepared to run /implementation-compact soon
 
 If > 40%: ⚠️ CRITICAL - Context usage is too high ([X]%).
-  - You should run /sdd-implementation-compact before starting
-  - Clear session and use /sdd-continue to resume with fresh context
+  - You should run /implementation-compact before starting
+  - Clear session and use /continue to resume with fresh context
 ```
 
 Proceed with caution if context is above 35%.
@@ -88,8 +88,8 @@ Before starting implementation:
 
 3. **Validate Specification Quality:**
    - If any specification sections are missing or incomplete, warn the user
-   - Check if `/sdd-planning-complete` was run (look for completion marker in progress.md)
-   - If not complete, warn: "Specification phase may not be complete. Consider running /sdd-planning-complete first if needed."
+   - Check if `/planning-complete` was run (look for completion marker in progress.md)
+   - If not complete, warn: "Specification phase may not be complete. Consider running /planning-complete first if needed."
    - Suggest reviewing the specification for completeness before implementation
 
 ## Implementation Document Structure
@@ -301,9 +301,9 @@ Measure Performance → Complete Implementation
 
 ### When Context Reaches ~40%
 
-1. Run `/sdd-implementation-compact` to preserve progress
+1. Run `/implementation-compact` to preserve progress
 2. Clear session and start fresh
-3. Run `/sdd-continue` to resume from compaction point
+3. Run `/continue` to resume from compaction point
 
 ---
 

@@ -6,9 +6,9 @@ This command resumes your work after using a compaction command and clearing you
 
 ## When to Use This Command
 
-You should run `/sdd-continue` when:
+You should run `/continue` when:
 
-- ✅ You've run a compact command (/sdd-planning-compact, /sdd-research-compact, /sdd-implementation-compact)
+- ✅ You've run a compact command (/planning-compact, /research-compact, /implementation-compact)
 - ✅ You've cleared your Claude Code session
 - ✅ You're starting fresh and want to resume where you left off
 
@@ -20,7 +20,7 @@ This is the REQUIRED next step after any compaction.
 PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
     │                     │                     │                   │
     ▼                     ▼                     ▼                   ▼
-[/sdd-start] ──────► [/sdd-compact] ──────► [/sdd-commit] ──────► [/clear]
+[/start] ──────► [/compact] ──────► [/commit] ──────► [/clear]
                           │                                          │
                           └── Creates ────────┐                      │
                               progress.md &   │                      │
@@ -30,40 +30,40 @@ PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
                                                                 FRESH START
                                                                      │
                                                                      ▼
-                                                               [/sdd-continue]
+                                                               [/continue]
                                                                      │
                                               ┌──────────────────────┘
                                               │ Reads both files
                                               │ (progress.md &
                                               │  compaction file)
                                               ▼
-                                         [/sdd-complete]
+                                         [/complete]
                                               │
                                               ▼
-                                         [/sdd-commit]
+                                         [/commit]
 ```
 
 This workflow represents the complete development cycle:
 
-- **Start**: Begin with `/sdd-start` for any phase (research/planning/implementation)
-- **Compact**: When context approaches 40%, use `/sdd-compact` to compress session
-- **Commit**: Save your work with `/sdd-commit` before clearing the session
-- **Continue**: Resume work with `/sdd-continue` in a fresh session
-- **Complete**: Finalize the current phase with `/sdd-complete`
-- **Commit**: Create final commits with `/sdd-commit`
+- **Start**: Begin with `/start` for any phase (research/planning/implementation)
+- **Compact**: When context approaches 40%, use `/compact` to compress session
+- **Commit**: Save your work with `/commit` before clearing the session
+- **Continue**: Resume work with `/continue` in a fresh session
+- **Complete**: Finalize the current phase with `/complete`
+- **Commit**: Create final commits with `/commit`
 
 ## Process
 
 ### 1. Load Progress and Compaction Files
 
 1. **Read Main Progress File:**
-   - Load `PACE/prompts/context-management/progress.md`
+   - Load `SDD/prompts/context-management/progress.md`
    - Identify current phase (research/planning/implementation)
    - Note completion status and next priorities
    - Check for any subagent delegations that need follow-up
 
 2. **Locate Most Recent Compaction File:**
-   - Check `PACE/prompts/context-management/` for latest compaction file:
+   - Check `SDD/prompts/context-management/` for latest compaction file:
      - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
@@ -104,7 +104,7 @@ If any critical information is missing, ask user for clarification before procee
 #### For Research Phase Continuation
 
 1. **Load Research Context:**
-   - Research document: `PACE/research/RESEARCH-[###]-[feature-name].md`
+   - Research document: `SDD/research/RESEARCH-[###]-[feature-name].md`
    - Files from "Essential Files to Reload" section in compaction
    - Recent investigation areas from "Next Session Priorities"
    - Any pending subagent research tasks from "Subagent Delegations Performed"
@@ -124,8 +124,8 @@ If any critical information is missing, ask user for clarification before procee
 #### For Planning Phase Continuation
 
 1. **Load Planning Context:**
-   - Specification document: `PACE/requirements/SPEC-[###]-[feature-name].md:[lines]`
-   - Research document: `PACE/research/RESEARCH-[###]-[feature-name].md:[sections]`
+   - Specification document: `SDD/requirements/SPEC-[###]-[feature-name].md:[lines]`
+   - Research document: `SDD/research/RESEARCH-[###]-[feature-name].md:[sections]`
    - Files from "Essential Files to Reload" with specific line ranges
    - Review "Subagent Delegations Performed" for any pending follow-ups
 
@@ -144,8 +144,8 @@ If any critical information is missing, ask user for clarification before procee
 #### For Implementation Phase Continuation
 
 1. **Load Implementation Context:**
-   - Implementation prompt: `PACE/prompts/PROMPT-[###]-[feature-name]-[date].md`
-   - Specification: `PACE/requirements/SPEC-[###]-[feature-name].md`
+   - Implementation prompt: `SDD/prompts/PROMPT-[###]-[feature-name]-[date].md`
+   - Specification: `SDD/requirements/SPEC-[###]-[feature-name].md`
    - Files from "Essential Files to Reload"
    - Review any "Technical Decisions" or "Critical Learnings" from compaction
 
@@ -191,9 +191,9 @@ If any verification fails, ask user for clarification before proceeding.
      ```text
      Context utilization is approaching [X]%.
      Please save your work and run the appropriate compact command:
-     - Research: /sdd-research-compact
-     - Planning: /sdd-planning-compact
-     - Implementation: /sdd-implementation-compact
+     - Research: /research-compact
+     - Planning: /planning-compact
+     - Implementation: /implementation-compact
      ```
 
 3. **Update Progress File:**
@@ -262,7 +262,7 @@ To ensure smooth continuation:
 
 If continuation fails or context is unclear:
 
-1. Check for most recent compaction file in `PACE/prompts/context-management/`
+1. Check for most recent compaction file in `SDD/prompts/context-management/`
 2. Verify progress.md exists and contains phase information
 3. Ask user which phase to continue if ambiguous
 4. Request specific guidance on next task if priorities are unclear

@@ -156,7 +156,7 @@ Choose one:
 ### Step 3: START FRESH AND CONTINUE
 
 1. Open a new Claude Code session
-2. Run `/sdd-continue` immediately
+2. Run `/continue` immediately
 3. Your work will resume exactly where you left off
 
 ⚠️ **Why this matters:** Your context is nearly full. Continuing without clearing would lead to:
@@ -173,7 +173,7 @@ This workflow ensures you maintain a clean <40% context throughout your work.
 PHASE START          CONTEXT ~40%         CLEAR SESSION       FRESH START
     │                     │                     │                  │
     ▼                     ▼                     ▼                  ▼
-[/sdd-start] ──────► [/sdd-compact] ──────► [Close] ──────► [/sdd-continue]
+[/start] ──────► [/compact] ──────► [Close] ──────► [/continue]
                           │                                        │
                           └── Creates ──────────────────────────► Reads
                               progress.md &                       both files
@@ -239,10 +239,10 @@ After this compaction is complete:
 
 1. **Clear the current session** - Close Claude Code or start a new conversation
 2. **Start a fresh Claude Code session** with Claude Sonnet
-3. **Run `/sdd-continue`** to resume from where you left off
+3. **Run `/continue`** to resume from where you left off
 4. The continue command will reload your progress from `progress.md` and the compaction file
 
-Planning phase continues - use `/sdd-planning-complete` command when specification is finished and ready for stakeholder review.
+Planning phase continues - use `/planning-complete` command when specification is finished and ready for stakeholder review.
 
 ## Quality Verification
 
@@ -261,6 +261,6 @@ Your work has been saved. You MUST now:
 
 1. Close this Claude Code session
 2. Start fresh
-3. Run `/sdd-continue` to resume
+3. Run `/continue` to resume
 
 DO NOT continue working in this session - context is too high!

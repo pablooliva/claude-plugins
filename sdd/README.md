@@ -22,7 +22,7 @@ An example of this process being used: [video](https://www.youtube.com/watch?v=z
 Install from a marketplace:
 
 ```bash
-/plugin install pablooliva/spec-driven-development
+/plugin install pablooliva/sdd
 ```
 
 This will install the plugin system-wide, making it available in all your projects.
@@ -53,7 +53,7 @@ SDD is a systematic approach that ensures features are thoroughly researched, pr
 PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
     │                     │                     │                   │
     ▼                     ▼                     ▼                   ▼
-[/sdd-start] ──────► [/sdd-compact] ──────► [/sdd-commit] ──────► [/clear]
+[/start] ──────► [/compact] ──────► [/commit] ──────► [/clear]
                           │                                          │
                           └── Creates ────────┐                      │
                               progress.md &   │                      │
@@ -63,27 +63,27 @@ PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
                                                                 FRESH START
                                                                      │
                                                                      ▼
-                                                             [/sdd-continue]
+                                                             [/continue]
                                                                      │
                                               ┌──────────────────────┘
                                               │ Reads both files
                                               │ (progress.md &
                                               │  compaction file)
                                               ▼
-                                         [/sdd-complete]
+                                         [/complete]
                                               │
                                               ▼
-                                         [/sdd-commit]
+                                         [/commit]
 ```
 
 This workflow represents the complete development cycle:
 
-- **Start**: Begin with `/sdd-start` for any phase (research/planning/implementation)
-- **Compact**: When context approaches 40%, use `/sdd-compact` to compress session
-- **Commit**: Save your work with `/sdd-commit` before clearing the session
-- **Continue**: Resume work with `/sdd-continue` in a fresh session
-- **Complete**: Finalize the current phase with `/sdd-complete`
-- **Commit**: Create final commits with `/sdd-commit`
+- **Start**: Begin with `/start` for any phase (research/planning/implementation)
+- **Compact**: When context approaches 40%, use `/compact` to compress session
+- **Commit**: Save your work with `/commit` before clearing the session
+- **Continue**: Resume work with `/continue` in a fresh session
+- **Complete**: Finalize the current phase with `/complete`
+- **Commit**: Create final commits with `/commit`
 
 ### Phase Progression
 
@@ -123,13 +123,13 @@ Each phase in the SDD workflow builds upon the previous:
 
 ```bash
 # Begin research on a new feature
-/sdd-research-start
+/research-start
 
 # Create specifications from research
-/sdd-planning-start
+/planning-start
 
 # Start implementation from specifications
-/sdd-implementation-start
+/implementation-start
 ```
 
 ### Managing Long Sessions
@@ -138,45 +138,45 @@ When context approaches 40%, use compaction commands to continue working:
 
 ```bash
 # Compact and continue research
-/sdd-research-compact
+/research-compact
 
 # Compact and continue planning
-/sdd-planning-compact
+/planning-compact
 
 # Compact and continue implementation
-/sdd-implementation-compact
+/implementation-compact
 ```
 
 ### Completing Phases
 
 ```bash
 # Finalize research documentation
-/sdd-research-complete
+/research-complete
 
 # Finalize specification
-/sdd-planning-complete
+/planning-complete
 
 # Complete implementation
-/sdd-implementation-complete
+/implementation-complete
 ```
 
 ### Utility Commands
 
 ```bash
 # Resume work after clearing session
-/sdd-continue
+/continue
 
 # Check current context utilization
-/sdd-context-check
+/context-check
 
 # Monitor progress across all phases
-/sdd-monitor
+/monitor
 
 # Review code against specifications
-/sdd-code-review
+/code-review
 
 # Create commits following conventions
-/sdd-commit
+/commit
 ```
 
 ## Workflow Example
@@ -186,46 +186,46 @@ When context approaches 40%, use compaction commands to continue working:
 1. **Start Research** (with Claude Opus):
 
    ```bash
-   /sdd-research-start
+   /research-start
    # Describe the feature you want to research
    ```
 
 2. **Manage Context** (when approaching 40%):
 
    ```bash
-   /sdd-research-compact
-   /sdd-commit
+   /research-compact
+   /commit
    /clear
-   /sdd-continue
+   /continue
    ```
 
 3. **Complete Research**:
 
    ```bash
-   /sdd-research-complete
-   /sdd-commit
+   /research-complete
+   /commit
    ```
 
 4. **Create Specification** (switch to Claude Sonnet):
 
    ```bash
-   /sdd-planning-start
+   /planning-start
    # Review and refine the specification
    ```
 
 5. **Implement Feature**:
 
    ```bash
-   /sdd-implementation-start
+   /implementation-start
    # Code is developed following the specification
    ```
 
 6. **Review and Finalize**:
 
    ```bash
-   /sdd-code-review
-   /sdd-implementation-complete
-   /sdd-commit
+   /code-review
+   /implementation-complete
+   /commit
    ```
 
 ## Directory Structure
@@ -291,18 +291,18 @@ Use the complete three-phase workflow for:
 
 For simple, well-understood changes:
 
-- Skip directly to `/sdd-implementation-start`
+- Skip directly to `/implementation-start`
 - Provide clear requirements in the initial prompt
 
 ### Context Management Strategy
 
-- Check context regularly with `/sdd-context-check`
+- Check context regularly with `/context-check`
 - Compact proactively before hitting 40%
-- Use `/sdd-continue` to resume seamlessly
+- Use `/continue` to resume seamlessly
 
 ### Commit Workflow
 
-The `/sdd-commit` command ensures:
+The `/commit` command ensures:
 
 - Conventional Commits specification
 - Proper co-authorship attribution

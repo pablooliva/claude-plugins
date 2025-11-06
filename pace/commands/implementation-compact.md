@@ -116,7 +116,7 @@ This preserves complete implementation journey while enabling fresh context cont
 
 **Before clearing your session:**
 
-1. **Run `/sdd-commit`** to commit any code changes you've made
+1. **Run `/commit`** to commit any code changes you've made
 2. This ensures your implementation work is safely saved in version control
 3. The commit message will be automatically formatted according to project conventions
 
@@ -124,10 +124,10 @@ This preserves complete implementation journey while enabling fresh context cont
 
 After compaction and commit are complete:
 
-1. **Commit your changes** - Run `/sdd-commit` if you haven't already
+1. **Commit your changes** - Run `/commit` if you haven't already
 2. **Clear the current session** - Close Claude Code or start a new conversation
 3. **Start a fresh Claude Code session** with Claude Sonnet
-4. **Run `/sdd-continue`** to resume from where you left off
+4. **Run `/continue`** to resume from where you left off
 5. The continue command will reload your progress from `progress.md` and the compaction file
 
-Implementation phase continues - use `/sdd-implementation-complete` command when feature is finished.
+Implementation phase continues - use `/implementation-complete` command when feature is finished.

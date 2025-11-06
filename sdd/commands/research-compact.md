@@ -110,7 +110,7 @@ After this compaction is complete:
 
 1. **Clear the current session** - Close Claude Code or start a new conversation
 2. **Start a fresh Claude Code session** with Claude Opus
-3. **Run `/sdd-continue`** to resume from where you left off
+3. **Run `/continue`** to resume from where you left off
 4. The continue command will reload your progress from `progress.md` and the compaction file
 
-Research phase continues - use `/sdd-research-complete` command when investigation is finished.
+Research phase continues - use `/research-complete` command when investigation is finished.

@@ -21,7 +21,7 @@ This methodology adapts software engineering best practices for general task man
 Install from a marketplace:
 
 ```bash
-/plugin install pablooliva/personal-agent-context-engineer
+/plugin install pablooliva/pace
 ```
 
 This will install the plugin system-wide, making it available in all your projects.
@@ -52,7 +52,7 @@ PACE is a systematic approach that ensures tasks are thoroughly researched, prop
 PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
     │                     │                     │                   │
     ▼                     ▼                     ▼                   ▼
-[/pace-start] ──────► [/pace-compact] ──────► [/pace-commit] ──────► [/clear]
+[/start] ──────► [/compact] ──────► [/commit] ──────► [/clear]
                           │                                          │
                           └── Creates ────────┐                      │
                               progress.md &   │                      │
@@ -62,17 +62,17 @@ PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
                                                                 FRESH START
                                                                      │
                                                                      ▼
-                                                             [/pace-continue]
+                                                             [/continue]
                                                                      │
                                               ┌──────────────────────┘
                                               │ Reads both files
                                               │ (progress.md &
                                               │  compaction file)
                                               ▼
-                                         [/pace-complete]
+                                         [/complete]
                                               │
                                               ▼
-                                         [/pace-commit]
+                                         [/commit]
 ```
 
 ### Phase Progression
@@ -113,13 +113,13 @@ Each phase in the PACE workflow builds upon the previous:
 
 ```bash
 # Begin research on a new topic or task
-/pace-research-start
+/research-start
 
 # Create action plan from research
-/pace-planning-start
+/planning-start
 
 # Start executing the planned tasks
-/pace-implementation-start
+/implementation-start
 ```
 
 ### Managing Long Sessions
@@ -128,45 +128,45 @@ When context approaches 40%, use compaction commands to continue working:
 
 ```bash
 # Compact and continue research
-/pace-research-compact
+/research-compact
 
 # Compact and continue planning
-/pace-planning-compact
+/planning-compact
 
 # Compact and continue implementation
-/pace-implementation-compact
+/implementation-compact
 ```
 
 ### Completing Phases
 
 ```bash
 # Finalize research documentation
-/pace-research-complete
+/research-complete
 
 # Finalize task plan
-/pace-planning-complete
+/planning-complete
 
 # Complete task implementation
-/pace-implementation-complete
+/implementation-complete
 ```
 
 ### Utility Commands
 
 ```bash
 # Resume work after clearing session
-/pace-continue
+/continue
 
 # Check current context utilization
-/pace-context-check
+/context-check
 
 # Monitor progress across all phases
-/pace-monitor
+/monitor
 
 # Review deliverables against plan
-/pace-review
+/review
 
 # Save work and create documentation
-/pace-commit
+/commit
 ```
 
 ## Workflow Examples
@@ -175,33 +175,33 @@ When context approaches 40%, use compaction commands to continue working:
 
 1. **Start Research** (with Claude Opus):
    ```bash
-   /pace-research-start
+   /research-start
    # "I need to research best practices for personal knowledge management systems"
    ```
 
 2. **Manage Context** (when approaching 40%):
    ```bash
-   /pace-research-compact
-   /pace-commit
+   /research-compact
+   /commit
    /clear
-   /pace-continue
+   /continue
    ```
 
 3. **Complete Research**:
    ```bash
-   /pace-research-complete
-   /pace-commit
+   /research-complete
+   /commit
    ```
 
 4. **Create Action Plan** (switch to Claude Sonnet):
    ```bash
-   /pace-planning-start
+   /planning-start
    # Review research and create implementation plan
    ```
 
 5. **Execute Plan**:
    ```bash
-   /pace-implementation-start
+   /implementation-start
    # Create documents, organize files, write helper scripts
    ```
 
@@ -209,19 +209,19 @@ When context approaches 40%, use compaction commands to continue working:
 
 1. **Analyze Current State**:
    ```bash
-   /pace-research-start
+   /research-start
    # "Analyze my project's markdown files and identify organization patterns"
    ```
 
 2. **Plan Reorganization**:
    ```bash
-   /pace-planning-start
+   /planning-start
    # Create a detailed reorganization strategy
    ```
 
 3. **Implement Changes**:
    ```bash
-   /pace-implementation-start
+   /implementation-start
    # Reorganize files, create index documents, build navigation structure
    ```
 
@@ -288,14 +288,14 @@ Use the complete three-phase workflow for:
 ### Quick Tasks
 
 For simple, well-understood tasks:
-- Skip directly to `/pace-implementation-start`
+- Skip directly to `/implementation-start`
 - Provide clear requirements in the initial prompt
 
 ### Context Management Strategy
 
-- Check context regularly with `/pace-context-check`
+- Check context regularly with `/context-check`
 - Compact proactively before hitting 40%
-- Use `/pace-continue` to resume seamlessly
+- Use `/continue` to resume seamlessly
 
 ### Working with Existing Projects
 
