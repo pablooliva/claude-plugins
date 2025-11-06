@@ -32,24 +32,24 @@ Note: The completion process requires loading specification, PROMPT document, an
 ## Workflow Position
 
 ```text
-[/implementation-start] ──────────► [/implementation-compact] ──────────► [/continue]
-         │                                      │                              │
-         ▼                                      ▼                              ▼
-   Create PROMPT-###                    Save progress &                   Resume work
-                                       clear session
-                                                                               │
-                                          ┌────────────────────────────────────┘
-                                          │
-                                          ▼
-                                [/implementation-complete] ◄── YOU ARE HERE
-                                          │
-                                          ▼
-                                   Validate all requirements
-                                   Create summary documents
-                                   Update specifications
-                                          │
-                                          ▼
-                                   [/commit] ──────► DEPLOYMENT READY
+[/implementation-start] ──────► [/implementation-compact] ──────► [/continue]
+         │                                 │                           │
+         ▼                                 ▼                           ▼
+   Create PROMPT-###              Save progress &                 Resume work
+                                  clear session
+                                                                        │
+                                     ┌──────────────────────────────────┘
+                                     │
+                                     ▼
+                           [/implementation-complete] ◄── YOU ARE HERE
+                                     │
+                                     ▼
+                              Validate all requirements
+                              Create summary documents
+                              Update specifications
+                                     │
+                                     ▼
+                              [/commit] ──────► DEPLOYMENT READY
 ```
 
 ## Initial Document Loading and Verification

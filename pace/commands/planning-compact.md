@@ -173,10 +173,10 @@ This workflow ensures you maintain a clean <40% context throughout your work.
 PHASE START          CONTEXT ~40%         CLEAR SESSION       FRESH START
     │                     │                     │                  │
     ▼                     ▼                     ▼                  ▼
-[/start] ──────────► [/compact] ───────────► [Close] ───────► [/continue]
-                          │                                        │
-                          └── Creates ──────────────────────────► Reads
-                              progress.md &                       both files
+[/start] ──────────► [/compact] ──────────► [Close] ──────────► [/continue]
+                          │                                          │
+                          └── Creates ────────────────────────────► Reads
+                              progress.md &                         both files
                               compaction file
 ```
 

@@ -52,19 +52,19 @@ PACE is a systematic approach that ensures tasks are thoroughly researched, prop
 PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
     │                     │                     │                   │
     ▼                     ▼                     ▼                   ▼
-[/start] ──────► [/compact] ──────► [/commit] ──────► [/clear]
-                          │                                          │
-                          └── Creates ────────┐                      │
-                              progress.md &   │                      │
-                              compaction file │                      │
-                                              │                      │
-                                              ▼                      ▼
-                                                                FRESH START
-                                                                     │
-                                                                     ▼
-                                                             [/continue]
-                                                                     │
-                                              ┌──────────────────────┘
+[/start] ──────────► [/compact] ──────────► [/commit] ──────────► [/clear]
+                          │                                         │
+                          └── Creates ────────┐                     │
+                              progress.md &   │                     │
+                              compaction file │                     │
+                                              │                     │
+                                              ▼                     ▼
+                                                               FRESH START
+                                                                    │
+                                                                    ▼
+                                                              [/continue]
+                                                                    │
+                                              ┌─────────────────────────┘
                                               │ Reads both files
                                               │ (progress.md &
                                               │  compaction file)
@@ -72,7 +72,7 @@ PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
                                          [/complete]
                                               │
                                               ▼
-                                         [/commit]
+                                          [/commit]
 ```
 
 ### Phase Progression
