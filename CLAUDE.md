@@ -19,10 +19,11 @@ Each plugin follows this structure:
 ```
 plugin-name/
 ├── .claude-plugin/plugin.json    # Plugin metadata, hooks, keywords
-├── commands/                     # Markdown command files (14 per plugin)
+├── commands/                     # Markdown command files
 │   ├── research-{start,compact,complete}.md
 │   ├── planning-{start,compact,complete}.md
 │   ├── implementation-{start,compact,complete}.md
+│   ├── compact.md                # Generic lightweight compaction
 │   ├── continue.md, context-check.md, monitor.md
 │   ├── code-review.md, commit.md
 ├── hooks/

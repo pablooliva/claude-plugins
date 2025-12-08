@@ -8,7 +8,7 @@ This command resumes your work after using a compaction command and clearing you
 
 You should run `/continue` when:
 
-- ✅ You've run a compact command (/planning-compact, /research-compact, /implementation-compact)
+- ✅ You've run a compact command (`/compact`, `/research-compact`, `/planning-compact`, `/implementation-compact`)
 - ✅ You've cleared your Claude Code session
 - ✅ You're starting fresh and want to resume where you left off
 
@@ -67,8 +67,10 @@ This workflow represents the complete development cycle:
      - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
+     - Generic (any phase): `compact-[YYYY-MM-DD_HH-MM-SS].md`
    - Load the most recent file based on timestamp (24-hour format with underscores)
    - Note: Files use format `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-10-01_14-30-45`)
+   - Generic compaction files work for smaller tasks, follow-ups, or ad-hoc work
 
 ### 2. Verify Model Requirements
 
@@ -191,9 +193,10 @@ If any verification fails, ask user for clarification before proceeding.
      ```text
      Context utilization is approaching [X]%.
      Please save your work and run the appropriate compact command:
-     - Research: /research-compact
-     - Planning: /planning-compact
-     - Implementation: /implementation-compact
+     - Quick/lightweight: /compact
+     - Research phase: /research-compact
+     - Planning phase: /planning-compact
+     - Implementation phase: /implementation-compact
      ```
 
 3. **Update Progress File:**
@@ -263,6 +266,7 @@ To ensure smooth continuation:
 If continuation fails or context is unclear:
 
 1. Check for most recent compaction file in `SDD/prompts/context-management/`
+   - Look for: `compact-*.md`, `research-compacted-*.md`, `planning-compacted-*.md`, `implementation-compacted-*.md`
 2. Verify progress.md exists and contains phase information
 3. Ask user which phase to continue if ambiguous
 4. Request specific guidance on next task if priorities are unclear

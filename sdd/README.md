@@ -155,15 +155,16 @@ Each phase in the SDD workflow builds upon the previous:
 When context approaches 40%, use compaction commands to continue working:
 
 ```bash
-# Compact and continue research
+# Generic lightweight compaction (for smaller tasks or follow-ups)
+/compact
+
+# Phase-specific compaction (detailed templates):
 /research-compact
-
-# Compact and continue planning
 /planning-compact
-
-# Compact and continue implementation
 /implementation-compact
 ```
+
+Use `/compact` for smaller tasks, ad-hoc work, or when phase-specific compaction is overkill. Use phase-specific commands when deep in a full workflow and need detailed phase artifacts.
 
 ### Completing Phases
 
