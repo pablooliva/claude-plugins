@@ -2,42 +2,43 @@
 
 CONTEXT UTILIZATION ANALYSIS
 
-Analyze current context utilization and provide compaction recommendations:
+Analyze current context utilization and provide compaction recommendations.
 
 ## Context Analysis
 
 1. Estimate current context utilization percentage (target: <40%)
-2. Identify what's consuming the most context space:
+2. Identify what's consuming the most context:
    - File contents loaded
    - Conversation history length
    - Tool outputs and search results
-   - Code generation iterations
+   - Documents and deliverables in progress
 
 ## Compaction Decision
 
 1. Recommend if we should compact now based on:
    - Context utilization level
    - Logical stopping point reached
-   - Phase completion status
+   - Work completion status
 
-2. If compaction recommended, identify current phase:
-   - Research phase (system understanding)
-   - Planning phase (specification creation)
-   - Implementation phase (code development)
+2. If compaction recommended, identify current work type:
+   - Research (investigating, gathering information)
+   - Planning (creating plans, task breakdown)
+   - Execution (producing deliverables)
+   - General (mixed work)
 
 ## Preservation Priority
 
 1. List the most critical information that must be preserved:
-   - Key insights about system behavior
-   - Specification alignment context
-   - Current blocking issues or bugs
-   - Files and line numbers that matter
+   - Key findings and insights
+   - Important decisions made
+   - Current work state
+   - Files and references that matter
 
 ## Recommendation
 
 Provide clear recommendation:
 
-- CONTINUE WORKING (if <40% context utilization)
-- COMPACT NOW (if >40% utilization) + specify which compact command to use
+- **CONTINUE WORKING** (if <40% context utilization)
+- **COMPACT NOW** (if >40% utilization) - run `/compact` to preserve work and prepare for session continuation
 
-Include specific next action based on current phase and context state.
+Include specific next action based on current work and context state.

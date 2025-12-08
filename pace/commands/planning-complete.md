@@ -1,268 +1,90 @@
-# Planning Phase Completion
+# Planning Completion
 
-PLANNING PHASE COMPLETION
+PLANNING COMPLETION
 
-Specification creation is complete and ready for implementation.
+Plan is complete. Finalize and determine next steps.
 
-## 1. Verify Specification Document Completeness
+## 1. Verify Plan Document Completeness
 
-Confirm that `PACE/requirements/SPEC-[###]-[feature-name].md` contains all required sections with complete information:
+Confirm that `PACE/plans/PLAN-[###]-[task-name].md` contains all essential sections:
 
-### Executive Summary
+### Core Content
 
-- [ ] Research foundation reference included `PACE/research/RESEARCH-[###]-[feature-name].md`
-- [ ] Creation date and author documented
-- [ ] Status marked as "In Review" or "Approved"
+- [ ] Executive summary with goal and status
+- [ ] Clear success criteria (specific, measurable outcomes)
+- [ ] Scope defined (what's in and out of scope)
 
-### Research Foundation
+### Task Breakdown
 
-- [ ] Production issues from research listed with issue numbers
-- [ ] Stakeholder validation summarized from all teams
-- [ ] System integration points identified with file:line references
+- [ ] Work broken into logical phases or sections
+- [ ] Tasks are specific and actionable
+- [ ] Dependencies identified between tasks
 
-### Intent
+### Resources & Risks
 
-- [ ] Clear problem statement derived from research
-- [ ] Solution approach defined with rationale
-- [ ] Expected outcomes specified and measurable
+- [ ] Required resources and tools identified
+- [ ] External dependencies noted
+- [ ] Key risks assessed with mitigation strategies
 
-### Success Criteria
+### Execution Guidance
 
-- [ ] Functional requirements (REQ-XXX) specific and testable
-- [ ] Non-functional requirements (PERF-XXX, SEC-XXX, UX-XXX) with metrics
-- [ ] All requirements traceable to research findings
-- [ ] Each requirement has clear acceptance criteria
+- [ ] Implementation strategy or approach defined
+- [ ] Checkpoints for progress validation
+- [ ] Deliverables clearly described
 
-### Edge Cases (Research-Backed)
+## 2. Quality Check
 
-- [ ] All EDGE-XXX cases documented with research references
-- [ ] Current behavior clearly described
-- [ ] Desired behavior specified
-- [ ] Test approach defined for each edge case
-- [ ] Production scenarios from research all covered
+Before marking planning complete:
 
-### Failure Scenarios
-
-- [ ] All FAIL-XXX scenarios documented
-- [ ] Trigger conditions clearly identified
-- [ ] Expected system behavior specified
-- [ ] User communication/error messages defined
-- [ ] Recovery approaches documented
-
-### Implementation Constraints
-
-- [ ] Context requirements specified (<40% target)
-- [ ] Essential files for implementation listed with reasons
-- [ ] Files suitable for subagent delegation identified
-- [ ] Technical constraints from research documented
-
-### Validation Strategy
-
-- [ ] Unit test scenarios specified
-- [ ] Integration test points identified
-- [ ] Edge case test coverage defined
-- [ ] Performance validation metrics specified
-- [ ] Manual verification steps documented
-
-### Dependencies and Risks
-
-- [ ] External dependencies identified
-- [ ] Risk assessment completed (RISK-XXX items)
-- [ ] Mitigation strategies defined for each risk
-
-### Implementation Notes
-
-- [ ] Suggested implementation approach provided
-- [ ] Areas for subagent delegation marked
-- [ ] Critical implementation considerations from research included
-
-## 2. Stakeholder Alignment Verification
-
-Confirm stakeholder reviews and approvals:
-
-### Review Checklist
-
-- [ ] Product Team review completed
-  - Requirements aligned with product vision
-  - User experience considerations addressed
-  - Success criteria approved
-
-- [ ] Engineering Team review completed
-  - Technical feasibility confirmed
-  - Architecture approach validated
-  - Performance requirements achievable
-
-- [ ] Security Team review (if applicable)
-  - Security requirements adequate
-  - Data privacy considerations addressed
-  - Authentication/authorization approach approved
-
-- [ ] Legal/Compliance review (if applicable)
-  - Regulatory requirements met
-  - Data handling compliant
-  - Terms of service considerations addressed
-
-### Feedback Integration
-
-Document any stakeholder feedback received and how it was addressed:
-
-- Product feedback: [What was raised and how addressed]
-- Engineering feedback: [Technical concerns and resolutions]
-- Security feedback: [Security considerations and mitigations]
-
-## 3. Implementation Readiness Assessment
-
-Evaluate specification readiness for implementation phase:
-
-### Ready for Implementation
-
-- [ ] All required specification sections complete
-- [ ] Success criteria clearly defined and measurable
-- [ ] Edge cases have expected behaviors specified
-- [ ] Failure scenarios include recovery approaches
-- [ ] Test scenarios cover all requirements
-
-### Implementation Guidance Clear
-
-- [ ] Context management plan documented (<40% utilization)
-- [ ] Essential files identified with line ranges
-- [ ] Subagent delegation opportunities marked
-- [ ] Implementation approach provides clear direction
-
-### Blocking Items Resolved
-
-- [ ] All "must have" requirements specified
-- [ ] Critical technical decisions made
-- [ ] External dependencies identified and understood
-- [ ] Risk mitigation strategies defined
-
-## 4. Quality Verification
-
-Final quality check before completion:
-
-### Specification Quality
-
-- [ ] All research findings incorporated into specification
-- [ ] Requirements are specific, measurable, achievable, relevant, time-bound (SMART)
-- [ ] Edge cases cover all production scenarios from research
-- [ ] Failure modes include graceful degradation strategies
-- [ ] Testing strategy comprehensive and executable
-
-### Traceability
-
-- [ ] Every requirement traces back to research findings
-- [ ] All stakeholder needs addressed in specification
-- [ ] Production issues from research have corresponding solutions
-- [ ] Edge cases mapped to historical incidents
-
-### Completeness
-
+- [ ] Goals are clear and achievable
+- [ ] Tasks are actionable (not vague)
 - [ ] No placeholder text or TODOs remaining
-- [ ] All sections have substantive content
-- [ ] Cross-references between sections are accurate
-- [ ] File path references include specific line numbers where helpful
+- [ ] Plan provides enough guidance to execute
 
-## 5. Update Progress File for Phase Transition
+## 3. Record Completion
 
-Update `PACE/prompts/context-management/progress.md` with planning completion and implementation handoff:
+Update `PACE/prompts/context-management/progress.md`:
 
 ```markdown
-## Planning Phase - COMPLETE
+## Planning - COMPLETE
 
-### Specification Finalized
-- Document: `PACE/requirements/SPEC-[###]-[feature-name].md`
+### Plan Finalized
+- Document: `PACE/plans/PLAN-[###]-[task-name].md`
 - Completion timestamp: [YYYY-MM-DD HH:MM:SS]
-- Stakeholder approvals: [List teams that approved]
-- Implementation ready: YES
 
 ### Key Decisions Made
-- [Major architectural decision]
-- [Technology choice with rationale]
-- [Trade-off decision made]
+- [Major decision 1]
+- [Major decision 2]
 
-### Research Foundation Applied
-- Production issues addressed: [Count]
-- Edge cases specified: [Count]
-- Test scenarios defined: [Count]
-
-## Implementation Phase - READY TO START
-
-### Implementation Priorities
-1. [First component/feature to implement]
+### Execution Priorities
+1. [First priority]
 2. [Second priority]
 3. [Third priority]
 
-### Critical Implementation Notes
-- [Key technical decision from spec]
-- [Important constraint to remember]
-- [Subagent delegation opportunity]
-
-### Context Management Strategy
-- Target utilization: <40%
-- Essential files: [List with line ranges]
-- Delegatable research: [Tasks for subagents]
-
-### Known Risks for Implementation
-- [RISK-001 with mitigation approach]
-- [RISK-002 with mitigation approach]
-
 ### Next Steps
-Planning phase complete. Ready for /implementation-start.
-Specification provides comprehensive implementation guidance.
+Planning complete. Ready for execution.
 ```
 
-## 6. Final Checklist Before Completion
+## 4. Determine Next Steps
 
-Before marking the planning phase as complete:
+Choose one:
 
-- [ ] Specification document fully populated (no TODOs or placeholders)
-- [ ] All stakeholder reviews completed or explicitly waived
-- [ ] Implementation readiness verified
-- [ ] Progress file updated with transition information
-- [ ] Quality verification passed
-- [ ] Implementation priorities clearly defined
+**Proceed to Execution**
+- Plan is ready to execute
+- Run `/execution-start` to begin producing deliverables
 
-## Context Management Reminders
+**Review with Stakeholders**
+- Share plan for feedback before execution
+- Schedule review and iterate on plan
 
-If context is becoming high during completion:
+**Plan Complete (Standalone)**
+- Planning was the goal
+- Document is ready for reference or future execution
 
-### Delegate to Subagents
+**More Planning Needed**
+- Plan reveals need for additional detail
+- Continue refining specific sections
 
-Use these subagents (via Task tool) as needed:
+## Planning Phase Complete
 
-1. **Explore subagent** (`subagent_type=Explore`)
-   - Use for: Finding additional files or patterns
-   - Example: Verifying integration points or configuration files
-   - When to use: If you need to locate specific files referenced in the specification
-
-2. **General-purpose subagent** (`subagent_type=general-purpose`)
-   - Use for: Researching best practices or architectural patterns
-   - Example tasks:
-     - "Research industry standards for [pattern] implementation"
-     - "Find similar implementations in the codebase"
-     - "Analyze security considerations for [feature type]"
-   - When to use: When you need to validate architectural decisions or research alternatives
-
-### What Must Stay in Main Context
-
-- Core specification decisions
-- Stakeholder feedback and approvals
-- Critical implementation guidance
-- Risk assessments
-
-## Phase Transition
-
-Planning phase is now COMPLETE.
-
-The specification in `PACE/requirements/SPEC-[###]-[feature-name].md` provides comprehensive guidance for implementation.
-
-Next Claude Code session should:
-
-1. Start fresh with Claude Sonnet
-2. Run `/implementation-start` to begin coding
-3. Reference the specification for all implementation decisions
-
----
-
-Phase Status: FINISHED ✓
-Next Command: `/implementation-start`
+Plan documented and ready for use. Proceed based on your goals.

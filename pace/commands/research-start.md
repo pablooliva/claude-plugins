@@ -1,15 +1,16 @@
-# Initialize Research Phase
+# Initialize Research
 
-RESEARCH PHASE INITIALIZATION
+RESEARCH INITIALIZATION
 
-Starting research phase for a new topic or task.
+Starting research on a new topic or question.
 
-IMPORTANT: This command requires Claude Opus. Before proceeding, check your current model ID in the system information. If you are NOT running on a Claude Opus model (e.g., claude-opus-*), immediately:
+IMPORTANT: This command works best with Claude Opus for deep research. If you are NOT running on a Claude Opus model (e.g., claude-opus-*), inform the user: "Note: Research works best with Claude Opus. You're currently using [model name]. Consider switching for complex research tasks."
 
-  1. Warn the user: "WARNING: This command requires Claude Opus but you're currently using [model name]. Please switch to Opus and try again."
-  2. STOP all further processing - do not execute any of the instructions below.
+NOTE: This command can be used standalone or as part of a larger workflow. No prior phase is required.
 
-IMPORTANT: Before starting this phase, check if `PACE/prompts/context-management/progress.md` contains any important information. If it does, ask the user if they want to archive it before resetting. Then reset the file to only contain a heading: `# Research Progress`. We are starting on a new task and want to ensure that the progress file is clean.
+Before starting, check if `PACE/prompts/context-management/progress.md` exists with content:
+- If **unrelated** to this research: Ask user if they want to archive it to `PACE/prompts/context-management/archive/progress-[YYYY-MM-DD_HH-MM-SS].md` before starting fresh
+- If archiving or starting fresh: Create file with `# Current Progress - Research`
 
 Set up systematic investigation:
 
@@ -110,6 +111,14 @@ Complete research document that:
 - Provides comprehensive understanding of the topic
 - Identifies key resources and references
 - Highlights practical applications
-- Sets foundation for planning phase
+- Answers the core research question
+
+## Standalone vs. Workflow Usage
+
+This command works in two modes:
+
+**Standalone**: Research is the end goal. Use `/research-complete` when finished to finalize findings.
+
+**Workflow**: Research feeds into planning or execution. After completing research, proceed to `/planning-start` or `/execution-start` as needed.
 
 Begin research now - create the `PACE/research/RESEARCH-[###]-[topic-name].md` document and start systematic investigation based on the user's research topic.

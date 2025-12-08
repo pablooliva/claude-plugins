@@ -1,26 +1,25 @@
-# Initialize Planning Phase
+# Initialize Planning
 
-PLANNING PHASE INITIALIZATION
+PLANNING INITIALIZATION
 
-Starting planning phase based on completed research or direct task requirements.
+Starting planning for a task or project.
 
-IMPORTANT: This command requires Claude Sonnet. Before proceeding, check your current model ID in the system information. If you are NOT running on a Claude Sonnet model (e.g., claude-sonnet-*), immediately:
+NOTE: This command can be used standalone or after research. No prior phase is required.
 
-  1. Warn the user: "WARNING: This command requires Claude Sonnet but you're currently using [model name]. Please switch to Sonnet and try again."
-  2. STOP all further processing - do not execute any of the instructions below.
+IMPORTANT: This command works best with Claude Sonnet. If you are NOT running on a Claude Sonnet model (e.g., claude-sonnet-*), inform the user: "Note: Planning works well with Claude Sonnet. You're currently using [model name]."
 
 ## Initial Context Load
 
-1. **Read Progress File:**
-   - Load `PACE/prompts/context-management/progress.md` to understand research completion status
-   - Identify any research documents referenced
-   - Note important context from the research phase
+1. **Check for Existing Context:**
+   - If `PACE/prompts/context-management/progress.md` exists, read it
+   - Determine if existing content is **related** to this new planning task:
+     - **Related** (e.g., research for this task): Preserve and build upon it
+     - **Unrelated** (different task entirely): Ask user if they want to archive it to `PACE/prompts/context-management/archive/progress-[YYYY-MM-DD_HH-MM-SS].md` before starting fresh
 
-2. **Update Progress for Planning Phase:**
-   - Add a new planning section to `PACE/prompts/context-management/progress.md`
-   - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
+2. **Update Progress for Planning:**
+   - If archiving, create fresh file with: `# Current Progress - Planning`
+   - If building on prior work, add a planning section
    - Add reference to the PLAN document being created
-   - Document the transition to planning phase
 
 ## Planning Setup
 
@@ -216,7 +215,7 @@ Tasks:
 
 - Maintain <40% context utilization during planning
 - Focus on strategy rather than execution details
-- Prepare clear guidance for implementation phase
+- Prepare clear guidance for execution
 
 ### Available Subagents for Planning
 

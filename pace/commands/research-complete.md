@@ -1,68 +1,67 @@
-# Research Phase Completion
+# Research Completion
 
-RESEARCH PHASE COMPLETION
+RESEARCH COMPLETION
 
-Research phase is complete and ready for specification creation.
+Research is complete. Finalize findings and determine next steps.
 
 ## 1. Verify Research Document Completeness
 
-Confirm that `PACE/research/RESEARCH-[###]-[feature-name].md` contains all required sections with complete information:
+Confirm that `PACE/research/RESEARCH-[###]-[topic-name].md` contains complete information:
 
-### System Data Flow
+### Core Content
 
-- [ ] Key data flows identified with specific file:line references and how data moves
-- [ ] Key entry points documented with specific file:line references
-- [ ] Data transformations explained
-- [ ] External dependencies identified
-- [ ] Integration points documented (where this feature connects to existing systems)
+- [ ] Executive summary captures the key question and main findings
+- [ ] Information sources are documented (online, documents, references)
+- [ ] Key concepts and definitions are explained
+- [ ] Main insights are clearly articulated
 
-### Stakeholder Mental Models
+### Analysis Quality
 
-- [ ] Product team perspective captured
-- [ ] Engineering team perspective captured
-- [ ] Support team perspective captured
-- [ ] User perspective captured
+- [ ] Patterns and connections between findings are identified
+- [ ] Contradictions or conflicting information are addressed
+- [ ] Open questions are documented for future investigation
 
-### Production Edge Cases
+### Practical Value
 
-- [ ] Historical issues analyzed with issue numbers
-- [ ] Support ticket patterns documented
-- [ ] Error log failure patterns identified
-
-### Files That Matter
-
-- [ ] Core logic files identified with significance explained
-- [ ] Existing test coverage gaps documented
-- [ ] Configuration files noted
-
-### Security Considerations
-
-- [ ] Authentication/authorization requirements documented
-- [ ] Data privacy concerns identified
-- [ ] Input validation needs specified
-
-### Testing Strategy
-
-- [ ] Unit test requirements defined
-- [ ] Integration test points identified
-- [ ] Edge case scenarios specified
-
-### Documentation Needs
-
-- [ ] User-facing documentation requirements identified
-- [ ] Developer documentation needs specified
-- [ ] Configuration documentation requirements noted
+- [ ] Immediate applications are identified
+- [ ] Resources and references are organized for future use
+- [ ] Actionable insights are highlighted
 
 ## 2. Finalize Research Document
 
-Ensure all investigation questions are answered and the research document provides sufficient foundation for specification creation without requiring additional system investigation.
+Ensure the research document:
+- Answers the core research question
+- Provides sufficient depth for the intended purpose
+- Is organized for easy reference later
 
-## 3. Record Phase Transition
+## 3. Record Completion
 
-Write brief transition note to `PACE/prompts/context-management/progress.md`:
+Update `PACE/prompts/context-management/progress.md`:
 
-"Research phase complete. RESEARCH-[###]-[feature-name].md finalized. Ready for /planning-start."
+```
+Research complete. RESEARCH-[###]-[topic-name].md finalized.
+```
 
-## Phase Complete
+## 4. Determine Next Steps
 
-Research phase FINISHED. Next Claude Code session should begin SPEC-[###]-[feature-name] creation using this research foundation.
+Choose one:
+
+**Research Complete (Standalone)**
+- Research was the goal - work is done
+- Document is ready for reference
+
+**Continue to Planning**
+- Use findings to create an action plan
+- Run `/planning-start` to begin planning
+
+**Continue to Execution**
+- Skip planning, go directly to producing deliverables
+- Run `/execution-start` to begin execution
+
+**More Research Needed**
+- Current findings reveal need for deeper investigation
+- Continue research or start new research thread
+
+## Research Phase Complete
+
+Findings are documented and ready for use. Proceed based on your goals.

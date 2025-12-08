@@ -21,14 +21,14 @@ A comprehensive plugin that provides a standardized Specification-Driven Develop
 
 ### 2. Personal Agent Context Engineer (PACE)
 
-Transform Claude Code into a comprehensive personal agent for diverse non-coding tasks. PACE provides structured research, planning, and implementation phases with intelligent context management for any type of project or task.
+Context management for Claude Code as a personal agent. PACE keeps Claude operating within optimal context limits (<40%) while providing flexible research, planning, and execution workflows for non-coding tasks.
 
 **Key Features:**
 
-- Adaptable framework for both technical and non-technical tasks
-- Intelligent context management across complex workflows
-- Research and planning tools for knowledge management
-- Task tracking and documentation capabilities
+- Context-first design with intelligent compaction and session continuity
+- Flexible workflows - use commands standalone or in sequence
+- Research, planning, and execution phases for any task type
+- Produces deliverables: documents, reports, analysis, plans
 
 ## Installation
 

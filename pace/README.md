@@ -1,12 +1,16 @@
 # Personal Agent Context Engineering (PACE) Plugin for Claude Code
 
-A [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins) that transforms Claude Code into a powerful personal agent for handling diverse non-coding tasks through structured research, planning, and implementation phases.
+A [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins) that provides intelligent context management for Claude Code as a personal agent, with flexible research, planning, and execution workflows.
 
-## Personal Agent + Context Engineering
+## Context Engineering First
 
-This plugin enables Claude Code to function as a comprehensive personal agent, managing tasks ranging from research and documentation to project organization and decision-making, with intelligent context management and automated workflows.
+The primary purpose of PACE is **context management** - keeping Claude Code operating within optimal context window limits (<40%) for best performance. Secondary to that, it provides structured workflows for:
 
-This methodology adapts software engineering best practices for general task management:
+- Research and information gathering
+- Task planning and breakdown
+- Producing deliverables (documents, reports, analysis)
+
+This methodology draws from:
 
 1. [Advanced Context Engineering for Agents](https://youtu.be/IS_y40zY-hc?si=5u3ajN073rCu7f88)
 2. Systematic approach to complex problem-solving
@@ -14,7 +18,7 @@ This methodology adapts software engineering best practices for general task man
 
 ## Prerequisites
 
-- **Python 3.9 or higher** - Required for the plugin's SubagentStop hook, which uses modern Python type hints (`dict[str, Any]`) introduced in Python 3.9
+- **Python 3.9 or higher** - Required for the plugin's SubagentStop hook, which uses modern Python type hints (`dict[str, Any]`)
 
 ## Installation
 
@@ -26,324 +30,181 @@ Install from a marketplace:
 
 This will install the plugin system-wide, making it available in all your projects.
 
-Or alternatively, install the plugin at the project level by following the instructions in [plugin-installation-scope.md](plugin-installation-scope.md).
+Or alternatively, install the plugin at the project level by following the instructions in [plugin-installation-scope.md](../plugin-installation-scope.md).
 
-## Overview
+## Flexible Workflow
 
-The Personal Agent Context Engineering (PACE) plugin transforms Claude Code into a versatile personal agent by providing:
-
-- **Three-Phase Task Methodology**: Structured research, planning, and implementation workflow for any task
-- **Intelligent Context Management**: Automatic tracking and optimization to prevent session overload
-- **Model-Optimized Phases**: Leverages Claude Opus for deep research and Claude Sonnet for planning/execution
-- **Comprehensive Documentation**: Generates research documents, plans, and progress tracking
-- **Flexible Task Handling**: From online research to document analysis to script creation
-
-## What is Personal Agent Context Engineering?
-
-PACE is a systematic approach that ensures tasks are thoroughly researched, properly planned, and correctly executed. Each phase is optimized for different aspects of task completion:
-
-1. **Research Phase** (Claude Opus) - Deep investigation of information, documents, and online resources
-2. **Planning Phase** (Claude Sonnet) - Task breakdown, strategy development, and resource planning
-3. **Implementation Phase** (Claude Sonnet) - Task execution, documentation creation, and deliverable completion
-
-## PACE Workflow Overview
-
-```text
-PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
-    │                     │                     │                   │
-    ▼                     ▼                     ▼                   ▼
-[/start] ──────────► [/compact] ──────────► [/commit] ──────────► [/clear]
-                          │                                         │
-                          └── Creates ────────┐                     │
-                              progress.md &   │                     │
-                              compaction file │                     │
-                                              │                     │
-                                              ▼                     ▼
-                                                               FRESH START
-                                                                    │
-                                                                    ▼
-                                                              [/continue]
-                                                                    │
-                                              ┌─────────────────────────┘
-                                              │ Reads both files
-                                              │ (progress.md &
-                                              │  compaction file)
-                                              ▼
-                                         [/complete]
-                                              │
-                                              ▼
-                                          [/commit]
-```
-
-### Phase Progression
-
-Each phase in the PACE workflow builds upon the previous:
+PACE commands work **standalone or in sequence**. Use what you need:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                     RESEARCH PHASE (Opus)                       │
-│  • Online research and fact-gathering                           │
-│  • Document and file analysis                                   │
-│  • Information synthesis and pattern identification             │
-│  Output: PACE/research/RESEARCH-XXX-[topic].md                  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    PLANNING PHASE (Sonnet)                      │
-│  • Convert research into actionable plans                       │
-│  • Design task approach and methodology                         │
-│  • Define success criteria and deliverables                     │
-│  Output: PACE/plans/PLAN-XXX-[task].md                         │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                 IMPLEMENTATION PHASE (Sonnet)                   │
-│  • Execute planned tasks                                        │
-│  • Create documentation and deliverables                        │
-│  • Develop helper scripts if needed                            │
-│  Output: Task deliverables + documentation                      │
+│  FLEXIBLE USAGE - Use any command standalone or in sequence     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  /research-start ──► /research-complete                         │
+│        │                                                        │
+│        ▼ (optional)                                             │
+│  /planning-start ──► /planning-complete                         │
+│        │                                                        │
+│        ▼ (optional)                                             │
+│  /execution-start ──► /execution-complete                       │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  CONTEXT MANAGEMENT - Use anytime context gets high             │
+│                                                                 │
+│  [Any work] ──► /compact ──► [Clear session] ──► /continue      │
+│                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Core Commands
+**Examples of flexible usage:**
 
-### Starting a Task Cycle
+- Research only: `/research-start` → `/research-complete` (done)
+- Skip to execution: `/execution-start` → `/execution-complete`
+- Full workflow: Research → Planning → Execution
+- Just need to compact: `/compact` → clear → `/continue`
 
-```bash
-# Begin research on a new topic or task
-/research-start
+## Commands
 
-# Create action plan from research
-/planning-start
-
-# Start executing the planned tasks
-/implementation-start
-```
-
-### Managing Long Sessions
-
-When context approaches 40%, use compaction commands to continue working:
+### Research Phase
 
 ```bash
-# Compact and continue research
-/research-compact
-
-# Compact and continue planning
-/planning-compact
-
-# Compact and continue implementation
-/implementation-compact
+/research-start      # Begin research on a topic
+/research-complete   # Finalize research findings
 ```
 
-### Completing Phases
+### Planning Phase
 
 ```bash
-# Finalize research documentation
-/research-complete
-
-# Finalize task plan
-/planning-complete
-
-# Complete task implementation
-/implementation-complete
+/planning-start      # Create an action plan
+/planning-complete   # Finalize the plan
 ```
 
-### Utility Commands
+### Execution Phase
 
 ```bash
-# Resume work after clearing session
-/continue
-
-# Check current context utilization
-/context-check
-
-# Monitor progress across all phases
-/monitor
-
-# Review deliverables against plan
-/review
-
-# Save work and create documentation
-/commit
+/execution-start     # Start producing deliverables
+/execution-complete  # Finalize deliverables
 ```
-
-## Workflow Examples
-
-### Research Project Example
-
-1. **Start Research** (with Claude Opus):
-   ```bash
-   /research-start
-   # "I need to research best practices for personal knowledge management systems"
-   ```
-
-2. **Manage Context** (when approaching 40%):
-   ```bash
-   /research-compact
-   /commit
-   /clear
-   /continue
-   ```
-
-3. **Complete Research**:
-   ```bash
-   /research-complete
-   /commit
-   ```
-
-4. **Create Action Plan** (switch to Claude Sonnet):
-   ```bash
-   /planning-start
-   # Review research and create implementation plan
-   ```
-
-5. **Execute Plan**:
-   ```bash
-   /implementation-start
-   # Create documents, organize files, write helper scripts
-   ```
-
-### Document Organization Example
-
-1. **Analyze Current State**:
-   ```bash
-   /research-start
-   # "Analyze my project's markdown files and identify organization patterns"
-   ```
-
-2. **Plan Reorganization**:
-   ```bash
-   /planning-start
-   # Create a detailed reorganization strategy
-   ```
-
-3. **Implement Changes**:
-   ```bash
-   /implementation-start
-   # Reorganize files, create index documents, build navigation structure
-   ```
-
-## Directory Structure
-
-The plugin automatically creates and manages the following structure in your project:
-
-```text
-project/
-└── PACE/                         # Root directory for all PACE artifacts
-    ├── research/                 # Research phase documents
-    │   └── RESEARCH-XXX-*.md    # Detailed research findings
-    ├── plans/                    # Planning phase documents
-    │   └── PLAN-XXX-*.md        # Task plans and strategies
-    ├── deliverables/            # Implementation outputs
-    │   └── [various outputs]    # Documents, scripts, organized files
-    └── prompts/                 # Session management
-        ├── implementation-complete/  # Archived implementations
-        └── context-management/   # Progress tracking
-            ├── progress.md      # Current phase progress
-            ├── *.compact.md     # Compacted session data
-            └── subagent-calls/  # Subagent interaction logs
-```
-
-## Key Features
 
 ### Context Management
 
-The plugin maintains <40% context utilization to ensure:
-- Sufficient headroom for complex operations
-- Effective subagent utilization
-- Prevention of context overflow errors
+```bash
+/compact             # Save context and prepare for session clear (works anytime)
+/continue            # Resume work after clearing session
+/context-check       # Check current context utilization
+/monitor             # View context monitoring tools
+```
 
-### Automated Progress Tracking
+### Utility
 
-- Automatic session compaction when context grows
-- Progress persistence across session clears
-- Seamless continuation of interrupted work
+```bash
+/commit              # Save work to version control
+```
 
-### Model Optimization
+## Context Management Workflow
 
-- **Research**: Uses Claude Opus for deep understanding
-- **Planning/Implementation**: Uses Claude Sonnet for efficiency
-- **Automatic Switching**: Commands handle model selection
+When context approaches 40%, compact and continue:
 
-### Documentation Generation
+```text
+[Working] ──► [Context ~40%] ──► /compact ──► [Clear session] ──► /continue
+                                    │                                │
+                                    └── Creates progress.md ────────► Reads
+                                        & compaction file             both files
+```
 
-- Research documents capture findings and insights
-- Plans define task approach and success criteria
-- Progress files track session state
-- Deliverables are organized and documented
+1. Run `/compact` to preserve your work
+2. Clear the Claude Code session
+3. Run `/continue` to resume where you left off
 
-## Best Practices
+## Directory Structure
 
-### When to Use Full PACE Workflow
+PACE creates and manages this structure in your project:
 
-Use the complete three-phase workflow for:
-- Complex research projects
-- Multi-step task planning
-- Document organization projects
-- Decision-making that requires research
-- Creating comprehensive documentation
+```text
+project/
+└── PACE/
+    ├── research/                    # Research documents
+    │   └── RESEARCH-XXX-*.md
+    ├── plans/                       # Plan documents
+    │   └── PLAN-XXX-*.md
+    ├── deliverables/                # Execution outputs
+    │   └── [documents, reports, etc.]
+    └── prompts/
+        ├── EXECUTION-XXX-*.md       # Execution tracking
+        └── context-management/
+            ├── progress.md          # Current progress
+            ├── compacted-*.md       # Compaction files
+            ├── archive/             # Archived progress files
+            └── subagent-calls/      # Subagent logs
+```
 
-### Quick Tasks
+## Model Recommendations
 
-For simple, well-understood tasks:
-- Skip directly to `/implementation-start`
-- Provide clear requirements in the initial prompt
+Different work types benefit from different models:
 
-### Context Management Strategy
+| Work Type | Recommended Model | Why |
+|-----------|------------------|-----|
+| Research | Claude Opus | Deep investigation and synthesis |
+| Planning | Claude Sonnet | Structured task breakdown |
+| Execution | Claude Sonnet | Efficient deliverable creation |
 
-- Check context regularly with `/context-check`
-- Compact proactively before hitting 40%
-- Use `/continue` to resume seamlessly
-
-### Working with Existing Projects
-
-When working in directories with existing content:
-- Start with research phase to understand current state
-- Use planning phase to design improvements
-- Implementation phase executes changes systematically
+Commands will suggest (not require) the appropriate model.
 
 ## Use Cases
 
-### Personal Knowledge Management
-- Research and organize information on topics
-- Create structured documentation
+### Research Projects
+
+- Gather information from multiple sources
+- Synthesize findings into comprehensive documents
 - Build reference materials
 
-### Project Documentation
-- Analyze existing documentation
-- Plan improvements
-- Implement new organization systems
+### Task Planning
 
-### Research Projects
-- Gather information from multiple sources
-- Synthesize findings
-- Create comprehensive reports
+- Break down complex tasks into actionable steps
+- Identify resources and risks
+- Define success criteria
 
-### Task Automation
-- Identify repetitive tasks
-- Plan automation strategy
-- Create helper scripts and workflows
+### Document Creation
 
-### Decision Support
-- Research options and alternatives
-- Create comparison documents
+- Produce reports, analysis, and summaries
+- Create structured documentation
 - Develop decision frameworks
 
-## Plugin Configuration
+### Knowledge Management
 
-### Hooks
+- Research and organize information
+- Create structured documentation
+- Build personal knowledge bases
 
-The plugin includes an automatic subagent logging hook that tracks all subagent interactions for debugging and progress monitoring.
+## Best Practices
+
+### Manage Context
+
+- Check context regularly with `/context-check`
+- Compact proactively before hitting 40%
+- Use `/continue` to resume seamlessly after clearing
+
+### Use Flexibly
+
+- Use only the phases you need
+- Skip directly to `/execution-start` for simple tasks
+- Research can be the entire task (not just a phase)
+
+### Start New Tasks
+
+- When starting unrelated work, archive previous progress
+- Start commands will ask if you want to archive existing progress.md
 
 ## Version History
 
-- **1.0.0** - Initial release adapted from SDD methodology for personal agent use
+- **2.0.0** - Refactored for flexibility: standalone commands, generic `/compact`, renamed implementation→execution, removed software-specific terminology
+- **1.0.0** - Initial release adapted from SDD methodology
 
 ## Support
 
 For issues, feature requests, or questions:
+
 - Create an issue in the plugin repository
 - Check the [Claude Code documentation](https://docs.claude.com/en/docs/claude-code/plugins)
 
@@ -353,4 +214,4 @@ This plugin is provided as-is for use with Claude Code. See the repository for l
 
 ---
 
-**Built for Claude Code** - Transforming AI assistance into a comprehensive personal agent with context-engineered methodology.
+**Built for Claude Code** - Context-first personal agent assistance.
