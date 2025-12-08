@@ -47,7 +47,13 @@ SDD is a systematic approach that ensures features are thoroughly researched, pr
 2. **Planning Phase** (Claude Sonnet) - Technical specification and design documentation
 3. **Implementation Phase** (Claude Sonnet) - Code development following specifications
 
+### Phase Usage + Workflow Management = Success
+
+Each phase is managed by the user according to this SDD workflow.
+
 ## SDD Workflow Overview
+
+It is important to keep the context window below 40%. This MUST be done with human interaction.. YOU!
 
 ```text
 PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
@@ -84,6 +90,18 @@ This workflow represents the complete development cycle:
 - **Continue**: Resume work with `/continue` in a fresh session
 - **Complete**: Finalize the current phase with `/complete`
 - **Commit**: Create final commits with `/commit`
+
+### Context Monitoring
+
+Run this command/utility in a terminal window separate from where Claude Code is running. The idea is to run both terminal windows, utility & Claude Code, in parallel. The command below will show you the amount of context used, `Usage` is the 3rd column. Make sure you are tracking the correct session by matching the session displayed in your current Claude Code terminal window: use `/status` to see match the session id.
+
+NOTE: after running `/clear` Claude Code will launch a new session in the background. Track the new and matching session id for context usage.
+
+#### Context Monitoring Utility
+
+```bash
+CCCONTEXT_WINDOW_SIZE=200000 npx github:pablooliva/cccontext#add-configurable-context-window sessions --live
+```
 
 ### Phase Progression
 
