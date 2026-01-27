@@ -12,6 +12,7 @@ Monitor Claude Code usage and context:
 2. `cccontext` -  https://fubar1346.com/blog/claude-code-context
 3. `sniffly` - https://github.com/chiphuyen/sniffly
 4. `ccusage` - https://github.com/ryoppippi/ccusage
+5. Claude HUD - https://github.com/jarrodwatts/claude-hud
 
 ### claude-monitor
 
