@@ -47,6 +47,8 @@ SDD is a systematic approach that ensures features are thoroughly researched, pr
 2. **Planning Phase** (Claude Sonnet) - Technical specification and design documentation
 3. **Implementation Phase** (Claude Sonnet) - Code development following specifications
 
+Each phase concludes with a **Critical Review** — an adversarial analysis that identifies gaps, mistakes, inconsistencies, and blind spots before proceeding to the next phase.
+
 ### Phase Usage + Workflow Management = Success
 
 Each phase is managed by the user according to this SDD workflow.
@@ -117,6 +119,12 @@ Each phase in the SDD workflow builds upon the previous:
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
+                    ┌───────────────────┐
+                    │ /critical-review  │
+                    │ Adversarial check │
+                    └───────────────────┘
+                              │
+                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    PLANNING PHASE (Sonnet)                      │
 │  • Convert research to specifications                           │
@@ -126,6 +134,12 @@ Each phase in the SDD workflow builds upon the previous:
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
+                    ┌───────────────────┐
+                    │ /critical-review  │
+                    │ Adversarial check │
+                    └───────────────────┘
+                              │
+                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                 IMPLEMENTATION PHASE (Sonnet)                   │
 │  • Write code following specifications                          │
@@ -133,6 +147,12 @@ Each phase in the SDD workflow builds upon the previous:
 │  • Ensure quality standards                                     │
 │  Output: Implemented feature + tests                            │
 └─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │ /critical-review  │
+                    │ Adversarial check │
+                    └───────────────────┘
 ```
 
 ## Core Commands
@@ -178,6 +198,23 @@ Use `/compact` for smaller tasks, ad-hoc work, or when phase-specific compaction
 # Complete implementation
 /implementation-complete
 ```
+
+### Critical Review
+
+Run after completing each phase to perform an adversarial review before proceeding:
+
+```bash
+# Review phase artifacts for gaps, mistakes, and blind spots
+/critical-review
+```
+
+The command automatically detects the current phase by checking for SDD artifacts and applies the appropriate review criteria:
+
+- **After Research**: Checks for completeness gaps, logical weaknesses, and untested assumptions
+- **After Planning**: Checks for ambiguous requirements, research disconnects, and missing edge cases
+- **After Implementation**: Checks for specification deviations, technical vulnerabilities, and test coverage gaps
+
+Review output is saved to `SDD/reviews/` with a dated filename (e.g., `CRITICAL-RESEARCH-[feature]-YYYYMMDD.md`). Can also be used ad-hoc to review any proposed solution outside the SDD lifecycle.
 
 ### Utility Commands
 
@@ -225,25 +262,42 @@ Use `/compact` for smaller tasks, ad-hoc work, or when phase-specific compaction
    /commit
    ```
 
-4. **Create Specification** (switch to Claude Sonnet):
+4. **Critical Review of Research**:
+
+   ```bash
+   /critical-review
+   # Address any findings before proceeding
+   ```
+
+5. **Create Specification** (switch to Claude Sonnet):
 
    ```bash
    /planning-start
    # Review and refine the specification
    ```
 
-5. **Implement Feature**:
+6. **Complete Planning & Critical Review**:
+
+   ```bash
+   /planning-complete
+   /critical-review
+   # Address any findings before proceeding
+   /commit
+   ```
+
+7. **Implement Feature**:
 
    ```bash
    /implementation-start
    # Code is developed following the specification
    ```
 
-6. **Review and Finalize**:
+8. **Review and Finalize**:
 
    ```bash
    /code-review
    /implementation-complete
+   /critical-review
    /commit
    ```
 
@@ -258,6 +312,10 @@ project/
     │   └── RESEARCH-XXX-*.md     # Detailed investigation findings
     ├── requirements/             # Planning phase specifications
     │   └── SPEC-XXX-*.md         # Technical specifications
+    ├── reviews/                  # Critical review documents
+    │   ├── CRITICAL-RESEARCH-*.md  # Research phase reviews
+    │   ├── CRITICAL-SPEC-*.md      # Planning phase reviews
+    │   └── CRITICAL-IMPL-*.md      # Implementation phase reviews
     └── prompts/                  # Session management
         ├── implementation-complete/  # Archived implementations
         └── context-management/   # Progress tracking
