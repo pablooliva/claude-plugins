@@ -26,7 +26,7 @@ Install from a marketplace:
 
 ```bash
 /plugin marketplace add pablooliva/claude-plugins
-/plugin install pablooliva/pace
+/plugin install pace
 ```
 
 This will install the plugin system-wide, making it available in all your projects.
