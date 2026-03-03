@@ -23,7 +23,7 @@ Install from a marketplace:
 
 ```bash
 /plugin marketplace add pablooliva/claude-plugins
-/plugin install pablooliva/sdd
+/plugin install sdd
 ```
 
 This will install the plugin system-wide, making it available in all your projects.
@@ -39,6 +39,7 @@ The Specification-Driven Development (SDD) plugin transforms how you work with C
 - **Model-Optimized Phases**: Leverages Claude Opus for research and Claude Sonnet for planning/implementation
 - **Automated Documentation**: Generates research documents, specifications, and progress tracking
 - **Built-in Code Review**: Ensures implementations match specifications
+- **Test Verification**: Audits test coverage against specification requirements and runs the test suite to confirm all tests pass
 
 ## What is Specification-Driven Development?
 
@@ -150,6 +151,13 @@ Each phase in the SDD workflow builds upon the previous:
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
+                    ┌───────────────────────┐
+                    │ /implementation-test  │
+                    │ Audit coverage &      │
+                    │ run test suite        │
+                    └───────────────────────┘
+                              │
+                              ▼
                     ┌───────────────────┐
                     │ /critical-review  │
                     │ Adversarial check │
@@ -216,6 +224,27 @@ The command automatically detects the current phase by checking for SDD artifact
 - **After Implementation**: Checks for specification deviations, technical vulnerabilities, and test coverage gaps
 
 Review output is saved to `SDD/reviews/` with a dated filename (e.g., `CRITICAL-RESEARCH-[feature]-YYYYMMDD.md`). Can also be used ad-hoc to review any proposed solution outside the SDD lifecycle.
+
+### Test Verification
+
+Run during the implementation phase to audit test coverage and execute the test suite:
+
+```bash
+# Audit test coverage and run tests
+/implementation-test
+```
+
+The command works in seven phases:
+
+1. Load the PROMPT and SPEC documents to understand what was built and what coverage is expected
+2. Discover the project's test infrastructure (frameworks, runner commands, coverage tooling)
+3. Inventory all test files, categorized as unit, integration, or end-to-end
+4. Build a coverage matrix mapping every REQ-XXX, EDGE-XXX, FAIL-XXX, PERF-XXX, and SEC-XXX to the tests that validate it
+5. Execute the test suite — unit, integration, and e2e separately — and capture pass/fail results
+6. Triage any failures: fix the implementation, fix the test, or document as an environment-dependent skip
+7. Produce a timestamped audit report in `SDD/prompts/test-audits/` and update the PROMPT document
+
+The command produces a clear verdict — **Adequate**, **Partial**, or **Insufficient** — and signals whether `/implementation-complete` can safely proceed.
 
 ### Utility Commands
 
@@ -293,7 +322,14 @@ Review output is saved to `SDD/reviews/` with a dated filename (e.g., `CRITICAL-
    # Code is developed following the specification
    ```
 
-8. **Review and Finalize**:
+8. **Test Verification**:
+
+   ```bash
+   /implementation-test
+   # Audits coverage against spec, runs the test suite, and fixes failures
+   ```
+
+9. **Review and Finalize**:
 
    ```bash
    /code-review
@@ -319,6 +355,8 @@ project/
     │   └── CRITICAL-IMPL-*.md      # Implementation phase reviews
     └── prompts/                  # Session management
         ├── implementation-complete/  # Archived implementations
+        ├── test-audits/          # Test coverage audit reports
+        │   └── TEST-AUDIT-XXX-*.md  # Per-feature test audits
         └── context-management/   # Progress tracking
             ├── progress.md       # Current phase progress
             ├── *.compact.md      # Compacted session data
