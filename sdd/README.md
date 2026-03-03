@@ -22,6 +22,7 @@ An example of this process being used: [video](https://www.youtube.com/watch?v=z
 Install from a marketplace:
 
 ```bash
+/plugin marketplace add pablooliva/claude-plugins
 /plugin install pablooliva/sdd
 ```
 

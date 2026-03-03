@@ -25,6 +25,7 @@ This methodology draws from:
 Install from a marketplace:
 
 ```bash
+/plugin marketplace add pablooliva/claude-plugins
 /plugin install pablooliva/pace
 ```
 
