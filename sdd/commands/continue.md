@@ -8,7 +8,7 @@ This command resumes your work after using a compaction command and clearing you
 
 You should run `/continue` when:
 
-- ✅ You've run a compact command (`/compact`, `/research-compact`, `/planning-compact`, `/implementation-compact`)
+- ✅ You've run a compact command (`/adhoc-compact`, `/research-compact`, `/planning-compact`, `/implementation-compact`)
 - ✅ You've cleared your Claude Code session
 - ✅ You're starting fresh and want to resume where you left off
 
@@ -20,7 +20,7 @@ This is the REQUIRED next step after any compaction.
 PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
     │                     │                     │                   │
     ▼                     ▼                     ▼                   ▼
-[/start] ──────────► [/compact] ──────────► [/commit] ──────────► [/clear]
+[/start] ──────────► [/compact*] ─────────► [/commit] ──────────► [/clear]
                           │                                         │
                           └── Creates ────────┐                     │
                               progress.md &   │                     │
@@ -46,7 +46,7 @@ PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
 This workflow represents the complete development cycle:
 
 - **Start**: Begin with `/start` for any phase (research/planning/implementation)
-- **Compact**: When context approaches 40%, use `/compact` to compress session
+- **Compact**: When context approaches 40%, use the appropriate compact command to compress session
 - **Commit**: Save your work with `/commit` before clearing the session
 - **Continue**: Resume work with `/continue` in a fresh session
 - **Complete**: Finalize the current phase with `/complete`
@@ -193,7 +193,7 @@ If any verification fails, ask user for clarification before proceeding.
      ```text
      Context utilization is approaching [X]%.
      Please save your work and run the appropriate compact command:
-     - Quick/lightweight: /compact
+     - Quick/lightweight (ad-hoc work only): /adhoc-compact
      - Research phase: /research-compact
      - Planning phase: /planning-compact
      - Implementation phase: /implementation-compact

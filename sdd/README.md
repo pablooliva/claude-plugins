@@ -63,7 +63,7 @@ It is important to keep the context window below 40%. This MUST be done with hum
 PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
     │                     │                     │                   │
     ▼                     ▼                     ▼                   ▼
-[/start] ──────────► [/compact] ──────────► [/commit] ──────────► [/clear]
+[/start] ──────────► [/compact*] ─────────► [/commit] ──────────► [/clear]
                           │                                         │
                           └── Creates ────────┐                     │
                               progress.md &   │                     │
@@ -89,7 +89,7 @@ PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
 This workflow represents the complete development cycle:
 
 - **Start**: Begin with `/start` for any phase (research/planning/implementation)
-- **Compact**: When context approaches 40%, use `/compact` to compress session
+- **Compact**: When context approaches 40%, use the appropriate compact command to compress session
 - **Commit**: Save your work with `/commit` before clearing the session
 - **Continue**: Resume work with `/continue` in a fresh session
 - **Complete**: Finalize the current phase with `/complete`
@@ -184,16 +184,16 @@ Each phase in the SDD workflow builds upon the previous:
 When context approaches 40%, use compaction commands to continue working:
 
 ```bash
-# Generic lightweight compaction (for smaller tasks or follow-ups)
-/compact
-
-# Phase-specific compaction (detailed templates):
+# Phase-specific compaction (use these during active phases):
 /research-compact
 /planning-compact
 /implementation-compact
+
+# Generic lightweight compaction (for ad-hoc work or follow-ups only):
+/adhoc-compact
 ```
 
-Use `/compact` for smaller tasks, ad-hoc work, or when phase-specific compaction is overkill. Use phase-specific commands when deep in a full workflow and need detailed phase artifacts.
+Use phase-specific commands when in a development phase. Use `/adhoc-compact` only for smaller tasks, ad-hoc work, or follow-ups outside of active phases — it includes phase detection that will redirect you to the correct phase-specific command if needed.
 
 ### Completing Phases
 

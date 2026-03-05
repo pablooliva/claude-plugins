@@ -4,14 +4,44 @@ GENERIC SESSION COMPACTION
 
 Context is getting high during work. Create a lightweight compaction record to preserve your progress while freeing up context. Use this for smaller tasks, follow-up work, or when phase-specific compaction is overkill.
 
+## IMPORTANT: Active Phase Detection
+
+**Before proceeding, check if an SDD development phase is currently active.**
+
+Run the following checks:
+
+```bash
+# Check for active research artifacts
+ls SDD/research/RESEARCH-*.md 2>/dev/null
+
+# Check for active planning/spec artifacts
+ls SDD/requirements/SPEC-*.md 2>/dev/null
+
+# Check for active implementation prompts
+ls SDD/prompts/PROMPT-*.md 2>/dev/null
+
+# Check progress.md for current phase
+cat SDD/prompts/context-management/progress.md 2>/dev/null | head -20
+```
+
+**If any of these indicate an active phase, STOP and redirect the user:**
+
+- **Research artifacts found** → Tell the user: "You appear to be in the **research phase**. Use `/research-compact` instead — it captures research-specific context (investigations, system behavior, critical learnings) that this generic command would lose."
+- **Specification artifacts found** → Tell the user: "You appear to be in the **planning phase**. Use `/planning-compact` instead — it captures specification progress, research alignment, and implementation readiness that this generic command would lose."
+- **Implementation prompts or active coding found** → Tell the user: "You appear to be in the **implementation phase**. Use `/implementation-compact` instead — it captures test status, spec validation, and code change tracking that this generic command would lose."
+
+**Only proceed with this generic compaction if NO active SDD phase is detected**, or if the user explicitly confirms they want the generic version after being warned.
+
+---
+
 ## When to Use This vs Phase-Specific Compaction
 
-| Use `/compact` when: | Use phase-specific when: |
-|---------------------|-------------------------|
-| Working on smaller tasks | Deep in a full phase workflow |
-| Follow-up work after phase completion | Need detailed phase artifacts |
-| Ad-hoc investigations | Want full phase template |
-| Quick context reset needed | Starting fresh development cycle |
+| Use `/adhoc-compact` when:            | Use phase-specific when:              |
+| ------------------------------------- | ------------------------------------- |
+| Working on smaller tasks              | Deep in a full phase workflow         |
+| Follow-up work after phase completion | Need detailed phase artifacts         |
+| Ad-hoc investigations                 | Want full phase template              |
+| Quick context reset needed            | Starting fresh development cycle      |
 
 ## Process
 
