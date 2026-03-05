@@ -80,12 +80,23 @@ Use the following template:
 - Stakeholder clarifications: [Key feedback that changed approach]
 - Implementation considerations: [Technical details that affect the spec]
 
+## Critical Review Status
+[Check for critical review documents in SDD/reviews/CRITICAL-SPEC-*.md and CRITICAL-RESEARCH-*.md]
+- Review performed: [yes/no - check for CRITICAL-SPEC-*.md]
+- Review document: [path to CRITICAL-SPEC-*.md if exists]
+- Prior research review: [path to CRITICAL-RESEARCH-*.md if exists]
+- Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
+- Actions taken: [findings already addressed during this session]
+- Pending actions: [findings that still need attention in next session]
+- Spec changes driven by review: [requirements added/modified due to critical review]
+
 ## Critical References
 [Essential documents/files needed to continue]
 - Research document: SDD/research/RESEARCH-[###]-[feature-name].md
 - Specification in progress: SDD/requirements/SPEC-[###]-[feature-name].md:[lines]
 - Related architecture docs: [path if applicable]
 - Integration contracts: [API specs, interfaces if relevant]
+- Critical review (if exists): SDD/reviews/CRITICAL-SPEC-[feature-name]-YYYYMMDD.md
 
 ## Subagent Delegations Performed
 [Document any subagent research done during planning]

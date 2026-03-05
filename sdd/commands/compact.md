@@ -55,11 +55,19 @@ Use the following streamlined template:
 - [Discovery 1]
 - [Discovery 2]
 
+## Critical Review Status
+[Check for critical review documents in SDD/reviews/CRITICAL-*.md]
+- Review performed: [yes/no]
+- Review document(s): [paths to any CRITICAL-*.md files if they exist]
+- Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
+- Pending actions: [findings that still need attention in next session]
+
 ## Critical References
 
 [Files needed to resume - use file:line format]
 - [Primary file being worked on]
 - [Related reference files]
+- [Critical review document(s) if they exist]
 
 ## Next Session
 

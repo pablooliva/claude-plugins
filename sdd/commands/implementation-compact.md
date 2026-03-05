@@ -62,11 +62,22 @@ Use the following template:
 - Technical decisions: [conscious trade-offs and why]
 - Performance considerations: [optimization decisions]
 
+## Critical Review Status
+[Check for critical review documents in SDD/reviews/CRITICAL-IMPL-*.md, CRITICAL-SPEC-*.md, and CRITICAL-RESEARCH-*.md]
+- Review performed: [yes/no - check for CRITICAL-IMPL-*.md]
+- Review document: [path to CRITICAL-IMPL-*.md if exists]
+- Prior phase reviews: [paths to CRITICAL-SPEC-*.md and CRITICAL-RESEARCH-*.md if they exist]
+- Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
+- Actions taken: [findings already addressed during this session]
+- Pending actions: [findings that still need attention in next session]
+- Code changes driven by review: [implementations modified due to critical review]
+
 ## Critical References
 [2-3 most important documents/files needed to understand this work]
 - Specification: [path to spec document]
 - Related architecture: [path if applicable]
 - Key implementation file: [path to core file]
+- Critical review (if exists): SDD/reviews/CRITICAL-IMPL-[feature-name]-YYYYMMDD.md
 
 ## Next Session Priorities
 

@@ -53,11 +53,20 @@ Use the following template:
 - Technical constraints: [limitations discovered]
 - Edge cases identified: [scenarios that need special handling]
 
+## Critical Review Status
+[Check for critical review documents in SDD/reviews/CRITICAL-RESEARCH-*.md]
+- Review performed: [yes/no]
+- Review document: [path to CRITICAL-RESEARCH-*.md if exists]
+- Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
+- Actions taken: [findings already addressed during this session]
+- Pending actions: [findings that still need attention in next session]
+
 ## Critical References
 [2-3 most important files/documents needed to understand this work]
 - Key implementation file: [path to core file]
 - Related documentation: [path if applicable]
 - Research document in progress: SDD/research/RESEARCH-[###]-[feature-name].md
+- Critical review (if exists): SDD/reviews/CRITICAL-RESEARCH-[feature-name]-YYYYMMDD.md
 
 ## Next Session Priorities
 
