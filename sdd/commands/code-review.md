@@ -94,11 +94,33 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 
 ### 3. TEST SPECIFICATION ALIGNMENT (10% of review time)
 
+#### Test Suite Execution
+
+- [ ] Test suite was run and all tests pass (not just "tests exist" — confirm green run)
+- [ ] Total test count and pass rate documented in PROMPT document (must be 100%)
+- [ ] No tests were skipped or suppressed without justification
+
+#### Test Type Coverage
+
+- [ ] **Unit tests** present — isolated logic, mocked dependencies
+- [ ] **Integration tests** present for all API endpoints (or N/A with justification)
+- [ ] **E2E/Playwright tests** present for all web-facing behavior (or N/A with justification)
+- [ ] Test type breakdown (unit / integration / E2E counts) recorded in PROMPT document
+
+#### E2E Test Verification (Web-Facing Features)
+
+- [ ] Feature web-facing determination is recorded in PROMPT document
+- [ ] If web-facing: Playwright E2E tests exist in the project's E2E test directory
+- [ ] E2E tests cover critical user flows — not just page loads
+- [ ] E2E tests run against real services (Docker Compose or equivalent stack), not mocked
+- [ ] E2E tests verify actual browser behavior: page loads, form submissions, JS execution, HTMX interactions, client-side logic
+- [ ] If no web-facing behavior: E2E tests explicitly marked N/A with justification in PROMPT document
+
 #### Test Coverage
 
 - [ ] Tests directly implement EDGE-XXX scenarios
 - [ ] Tests validate FAIL-XXX error handling
-- [ ] Tests verify all success criteria
+- [ ] Tests verify all success criteria (every REQ-XXX has at least one test)
 - [ ] Tests prevent research-identified production issues
 
 #### Test Quality
@@ -221,7 +243,8 @@ ls SDD/prompts/context-management/subagent-calls/
 **Context Management**: PROMPT files preserved ✅
 **Edge Cases**: All EDGE-XXX scenarios covered ✅
 **Failure Handling**: All FAIL-XXX scenarios handled ✅
-**Tests**: Specification scenarios validated ✅
+**Tests**: [X] tests, 100% pass rate ✅
+**Test Types**: Unit ✅ | Integration ✅ | E2E ✅ (or N/A — [reason])
 
 ## Implementation Strengths
 - [Key alignment points]
@@ -243,6 +266,8 @@ ls SDD/prompts/context-management/subagent-calls/
 5. Context utilization exceeded without justification
 6. Critical edge/failure scenarios unhandled
 7. Success criteria cannot be achieved
+8. Test suite was not run or has failing tests
+9. E2E/Playwright tests are missing for a web-facing feature (N/A requires explicit justification)
 
 ## Approval Criteria ✅
 
@@ -295,7 +320,26 @@ Create `SDD/reviews/REVIEW-XXX-[feature-name]-YYYYMMDD.md`:
 [Context management review]
 
 ## Test Coverage (10%)
-[Test specification alignment]
+
+### Test Suite Execution
+- Tests run: [X] total, [X] passed, [X] failed
+- Pass rate: [X]% (must be 100% to approve)
+
+### Test Type Coverage
+- Unit tests: PRESENT / MISSING
+- Integration tests: PRESENT / MISSING / N/A — [reason]
+- E2E/Playwright tests: PRESENT / MISSING / N/A — [reason]
+
+### E2E Test Verification
+- Web-facing feature: Yes / No
+- If yes — E2E tests in project's E2E test directory: Yes / No
+- E2E tests cover critical user flows (not just page loads): Yes / No / N/A
+- E2E tests run against real services: Yes / No / N/A
+
+### Spec Coverage
+- Every REQ-XXX has a test: Yes / No (list uncovered)
+- Every EDGE-XXX has a test: Yes / No (list uncovered)
+- Every FAIL-XXX has a test: Yes / No (list uncovered)
 
 ## Decision: [APPROVED/REJECTED]
 

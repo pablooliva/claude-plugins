@@ -119,6 +119,109 @@ Consider using /continue to resume implementation work.
 
 **STOP processing if verification fails.**
 
+## Test Verification Gate
+
+**This gate runs BEFORE writing any completion documentation. It is a hard stop — implementation is NOT complete until all checks below pass.**
+
+### Step 1: Run the Full Test Suite
+
+Execute all unit and integration tests and record the results:
+
+```text
+TEST SUITE EXECUTION
+────────────────────────────────────────────────────────────
+□ Unit and integration tests executed
+□ Pass rate: [X]/[X] tests passed (must be 100%)
+□ Zero failing tests
+□ Zero error-level warnings that mask failures
+
+If any tests fail:
+  ⛔ STOP — Implementation is NOT complete.
+  Fix all failing tests before retrying this command.
+────────────────────────────────────────────────────────────
+```
+
+### Step 2: Verify Test Type Coverage
+
+Check that all applicable test types exist. Missing required test types are a **blocking issue**.
+
+```text
+TEST TYPE COVERAGE
+────────────────────────────────────────────────────────────
+Unit Tests
+  □ Unit tests exist for all logic and requirements
+  □ Dependencies are properly mocked
+  Status: PRESENT / MISSING (blocking)
+
+Integration Tests (required if API endpoints exist)
+  □ Integration tests exist for all API endpoints
+  □ Tests use the project's API test client
+  □ External services are mocked at the boundary
+  Status: PRESENT / MISSING (blocking) / N/A — [justification]
+
+E2E / Playwright Tests (required if feature has web-facing behavior)
+  □ Feature web-facing determination recorded in PROMPT document
+  □ If web-facing: Playwright tests exist in the project's E2E test directory
+  □ E2E tests cover critical user flows (not just page loads)
+  □ E2E tests run against the real running stack (not mocked services)
+  □ Tests verify actual browser behavior: page loads, form submissions,
+    JS execution, HTMX interactions, client-side logic
+  □ Test data accounts for real service behavior (NLP, auth, etc. are not mocked in E2E)
+  Status: PRESENT / MISSING (blocking) / N/A — [justification]
+────────────────────────────────────────────────────────────
+```
+
+If a required test type is missing:
+
+```text
+⛔ BLOCKING: Missing required test type
+
+The following test types are required but not present:
+- [Unit/Integration/E2E]: [What is missing]
+- [Why it is required for this feature]
+
+Required Actions:
+1. Write the missing [test type] tests
+2. Confirm they pass
+3. Retry /implementation-complete
+
+Implementation is NOT complete until all required test types are present and passing.
+```
+
+### Step 3: Verify Spec Coverage
+
+Confirm every tracked requirement has at least one test:
+
+```text
+SPEC COVERAGE VERIFICATION
+────────────────────────────────────────────────────────────
+□ Every REQ-XXX has at least one test
+□ Every EDGE-XXX has at least one test
+□ Every FAIL-XXX has at least one test
+□ SEC-XXX requirements with testable criteria have tests
+
+Any requirement without a test:
+  ⛔ STOP — Add tests for uncovered requirements before proceeding.
+────────────────────────────────────────────────────────────
+```
+
+### Step 4: Record Test Results in PROMPT Document
+
+Before writing completion documents, update the PROMPT document's "Test Implementation" section with final results:
+
+```markdown
+### Test Verification Gate — Results
+
+- **Gate Passed:** Yes / No
+- **Suite Execution:** [X] tests run, [X] passed, 0 failed (100% pass rate)
+- **Unit Tests:** [X] tests — covers [list of REQ/EDGE/FAIL IDs]
+- **Integration Tests:** [X] tests — covers [list of endpoints/flows] (or N/A — [reason])
+- **E2E Tests:** [X] tests — covers [list of browser flows] (or N/A — [reason])
+- **Uncovered Requirements:** None (or list with resolution)
+```
+
+**STOP processing if the gate fails. Only proceed to Completion Process once all checks above pass.**
+
 ## Completion Process
 
 ### 1. Finalize PROMPT Document
@@ -159,10 +262,12 @@ All requirements from SPEC-[###] have been implemented and tested:
 - User Experience Requirements: [X/X] Satisfied
 
 ### Test Coverage Achieved
-- Unit Test Coverage: [X]% (Target was [Y]%)
-- Integration Test Coverage: [X]%
-- Edge Case Coverage: [X/X] scenarios tested
-- Failure Scenario Coverage: [X/X] scenarios handled
+- **Test Suite Result:** [X]/[X] tests passed (100%)
+- **Unit Tests:** [X] tests, [X]% coverage (Target: [Y]%)
+- **Integration Tests:** [X] tests (or N/A — [reason])
+- **E2E/Playwright Tests:** [X] tests (or N/A — [reason])
+- **Edge Case Coverage:** [X/X] EDGE-XXX scenarios tested
+- **Failure Scenario Coverage:** [X/X] FAIL-XXX scenarios handled
 
 ### Subagent Utilization Summary
 Total subagent delegations: [X]
@@ -485,10 +590,14 @@ Final verification before marking complete:
 
 ### Testing
 
-- [ ] All unit tests passing
-- [ ] All integration tests passing
-- [ ] Edge cases have specific test coverage
+- [ ] Full test suite run — 100% pass rate confirmed
+- [ ] Unit tests present and passing
+- [ ] Integration tests present and passing (or N/A with justification)
+- [ ] E2E/Playwright tests present and passing for web-facing features (or N/A with justification)
+- [ ] Edge cases (EDGE-XXX) have specific test coverage
+- [ ] Failure scenarios (FAIL-XXX) have test coverage
 - [ ] Performance benchmarks validated
+- [ ] Test Verification Gate results recorded in PROMPT document
 
 ### Specification Compliance
 

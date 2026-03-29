@@ -151,16 +151,26 @@ Create the implementation tracking document using this enhanced template:
 
 ## Test Implementation
 
+### Web-Facing Behavior
+- **Feature has web-facing behavior (UI, JS, HTMX, browser flows):** Yes / No
+- **E2E tests required:** Yes / No / N/A — [justification if N/A]
+
 ### Unit Tests
 - [ ] [Test file]: Tests for [component/requirement]
 - [ ] [Test file]: Tests for [edge case EDGE-XXX]
 
 ### Integration Tests
-- [ ] [Test file]: Integration test for [feature flow]
-- [ ] [Test file]: End-to-end test for [user scenario]
+- [ ] [Test file]: Integration test for [API endpoint/feature flow]
+- [ ] [Test file]: Tests for [failure scenario FAIL-XXX]
+
+### E2E Tests (Playwright — if web-facing)
+- [ ] [Test file]: Browser test for [critical user flow]
+- [ ] [Test file]: Browser test for [HTMX interaction / form submission / JS behavior]
 
 ### Test Coverage
-- Current Coverage: [X]%
+- Unit Tests: [X] tests — [X]% coverage
+- Integration Tests: [X] tests
+- E2E Tests: [X] tests (or N/A)
 - Target Coverage: [As specified in SPEC]
 - Coverage Gaps: [Areas needing additional tests]
 
@@ -218,11 +228,17 @@ Create the implementation tracking document using this enhanced template:
    - Load essential files identified in specification
    - Verify test framework is configured
    - Check for existing related code to build upon
+   - **Identify whether the feature has web-facing behavior** (UI pages, client-side JS, HTMX interactions, CSP changes, multi-step browser flows). Record this determination in the PROMPT document. This drives whether E2E tests are required.
 
 3. **Begin Incremental Implementation:**
    - Start with core functionality (primary success path)
    - Implement one requirement at a time
-   - Write tests alongside implementation
+   - Write tests alongside every component — do not defer test writing
+   - For every feature, consider all three test types:
+     - **Unit tests** (always required): isolated logic with mocked dependencies
+     - **Integration tests** (required if API endpoints are involved): test via API test client with mocked external services
+     - **E2E tests** (required if web-facing behavior exists): Playwright browser tests against the real running stack, in the project's E2E test directory (check CLAUDE.md or equivalent for the project-specific path)
+   - If the feature is web-facing, E2E tests are **mandatory**, not optional
    - Validate against specification criteria continuously
 
 4. **Track Progress Rigorously:**
@@ -268,7 +284,11 @@ Use these subagents (via Task tool) to preserve main context:
 During implementation, continuously verify:
 
 - [ ] Each requirement from SPEC is being addressed
-- [ ] Tests are written for each component/requirement
+- [ ] Tests are written for each component/requirement — not deferred
+- [ ] Unit tests exist for all logic with isolated, mocked dependencies
+- [ ] Integration tests exist for all API endpoints (via test client)
+- [ ] Web-facing behavior identified (yes/no) — recorded in PROMPT document
+- [ ] If web-facing: Playwright E2E tests written in the project's E2E test directory
 - [ ] Edge cases (EDGE-XXX) have specific handling code
 - [ ] Failure scenarios (FAIL-XXX) have error handling
 - [ ] Performance requirements (PERF-XXX) are being measured
@@ -286,6 +306,9 @@ A complete implementation must have:
 - ✓ All failure scenarios have graceful error handling
 - ✓ Performance metrics meet specification targets
 - ✓ Security requirements validated
+- ✓ Unit tests present for all logic
+- ✓ Integration tests present for all API endpoints
+- ✓ E2E/Playwright tests present if feature has web-facing behavior (or explicitly marked N/A with justification)
 - ✓ Test coverage meets project standards
 - ✓ Documentation for any public APIs or configuration
 
