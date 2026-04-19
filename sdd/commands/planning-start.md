@@ -58,6 +58,12 @@ Before creating specification:
 Create the specification using this enhanced template:
 
 ```markdown
+---
+review_panel: [security, performance, data-modeling, api-contract]
+eval_required: false
+cross_cutting_decisions: []
+---
+
 # SPEC-[###]-[feature-name]
 
 ## Executive Summary
@@ -198,6 +204,23 @@ Create the specification using this enhanced template:
 ### Critical Implementation Considerations
 [Important technical details from research that must be considered]
 ```
+
+## Specification Frontmatter Fields
+
+The spec template includes three YAML frontmatter fields consumed by `sdd-flow` and related skills. Populate them thoughtfully based on the research foundation:
+
+- **`review_panel:`** — List of specialist reviewers to convene during `/spec-review-panel`. Default covers API/data-backed features. Adjust based on feature characteristics:
+  - Add `accessibility` for UI features with user-facing interaction.
+  - Add `privacy` for features handling PII, consent, or regulated data.
+  - Add `cost` for data-intensive or high-traffic features.
+  - Add `reliability` for distributed systems, async processing, or retry-heavy flows.
+  - Remove specialists that clearly don't apply (e.g., `api-contract` for pure internal tooling).
+
+- **`eval_required:`** — Boolean. Set to `true` if this feature produces LLM output, probabilistic behavior, classification/extraction/summarization, or any quality dimension that unit tests can't verify. When `true`, `/regression-eval-capture` will scaffold a LangSmith eval dataset at implementation completion. Set to `false` for deterministic features (CRUD, UI, data transforms).
+
+- **`cross_cutting_decisions:`** — List of topic labels (snake_case) for any architectural decisions made during this feature that bind future work across the system. Examples: `orchestration_engine`, `vector_store`, `auth_provider`, `primary_datastore`, `logging_format`. Leave empty `[]` if this feature makes no cross-cutting decisions. During `/planning-complete`, the `cross-cutting-adr` skill will extract details for each label from the research/spec and write ADR files under `SDD/adr/`.
+
+These fields have sensible defaults; populate them intentionally rather than leaving as boilerplate.
 
 ## Planning Process
 

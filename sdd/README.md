@@ -136,6 +136,13 @@ Each phase in the SDD workflow builds upon the previous:
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
+                 ┌─────────────────────────┐
+                 │  /spec-review-panel     │
+                 │  Domain specialists     │
+                 │  (security, perf, etc.) │
+                 └─────────────────────────┘
+                              │
+                              ▼
                     ┌───────────────────┐
                     │ /critical-review  │
                     │ Adversarial check │
@@ -225,6 +232,27 @@ The command automatically detects the current phase by checking for SDD artifact
 
 Review output is saved to `SDD/reviews/` with a dated filename (e.g., `CRITICAL-RESEARCH-[feature]-YYYYMMDD.md`). Can also be used ad-hoc to review any proposed solution outside the SDD lifecycle.
 
+### Specialist Panel Review
+
+Run after `/planning-complete` to convene a panel of domain specialists who review the specification through narrow expert lenses:
+
+```bash
+# Specialist panel review of the current specification
+/spec-review-panel
+```
+
+Unlike `/critical-review` (single adversarial generalist), this command spawns multiple specialist reviewers in parallel — each with precise domain vocabulary and named anti-patterns. The default panel covers **security**, **performance**, **data-modeling**, and **api-contract**. Additional specialists (`accessibility`, `privacy`, `cost`, `reliability`) can be enabled per-spec via the `review_panel:` frontmatter field.
+
+Each specialist produces evidence-backed findings (spec line references required; bare approvals banned). Findings are aggregated into an overall verdict:
+
+- **PROCEED** — only LOW findings (or none). Safe to continue.
+- **REVISE BEFORE PROCEEDING** — 3+ MEDIUM findings, or cross-domain MEDIUM flagged by 2+ specialists.
+- **STOP AND RECONSIDER** — any HIGH finding. Spec is not ready.
+
+Review output is saved to `SDD/reviews/PANEL-SPEC-[feature]-YYYYMMDD.md`.
+
+`/critical-review` and `/spec-review-panel` are **complementary, not redundant**: critical-review challenges assumptions and logic broadly; the panel catches domain-specific anti-patterns (hardcoded secrets, N+1 queries, IDOR, non-idempotent POSTs, missing index on FKs, etc.) that a generalist would miss. Running both on a high-stakes spec is reasonable.
+
 ### Test Verification
 
 Run during the implementation phase to audit test coverage and execute the test suite:
@@ -264,6 +292,26 @@ The command produces a clear verdict — **Adequate**, **Partial**, or **Insuffi
 # Create commits following conventions
 /commit
 ```
+
+## Specification Frontmatter
+
+Specifications created by `/planning-start` include YAML frontmatter with three fields that gate downstream behaviors:
+
+```yaml
+---
+review_panel: [security, performance, data-modeling, api-contract]
+eval_required: false
+cross_cutting_decisions: []
+---
+
+# SPEC-[###]-[feature-name]
+```
+
+- **`review_panel:`** — Which specialists `/spec-review-panel` convenes. Default covers API/data-backed features. Add `accessibility` for UI work, `privacy` for PII/consent features, `cost` for data-intensive features, `reliability` for distributed/async systems.
+- **`eval_required:`** — Set to `true` if the feature produces LLM output, probabilistic behavior, or any quality dimension unit tests can't verify. Consumed by the companion **agent-engineering** plugin (if installed) to scaffold a LangSmith regression eval at implementation completion.
+- **`cross_cutting_decisions:`** — Snake_case labels for architectural decisions made during this feature that bind future work (e.g., `orchestration_engine`, `vector_store`, `primary_datastore`). Consumed by the companion **agent-engineering** plugin (if installed) to capture each as an ADR under `SDD/adr/`.
+
+The fields have sensible defaults and are safe to ignore if the companion plugin isn't installed — `/spec-review-panel` reads `review_panel:` directly from this plugin, and the other two fields become no-ops.
 
 ## Workflow Example
 
@@ -306,12 +354,14 @@ The command produces a clear verdict — **Adequate**, **Partial**, or **Insuffi
    # Review and refine the specification
    ```
 
-6. **Complete Planning & Critical Review**:
+6. **Complete Planning & Reviews**:
 
    ```bash
    /planning-complete
+   /spec-review-panel
+   # Verdict: PROCEED → continue. REVISE or STOP → address findings, re-run.
    /critical-review
-   # Address any findings before proceeding
+   # Address any remaining findings before proceeding
    /commit
    ```
 
@@ -349,10 +399,14 @@ project/
     │   └── RESEARCH-XXX-*.md     # Detailed investigation findings
     ├── requirements/             # Planning phase specifications
     │   └── SPEC-XXX-*.md         # Technical specifications
-    ├── reviews/                  # Critical review documents
-    │   ├── CRITICAL-RESEARCH-*.md  # Research phase reviews
-    │   ├── CRITICAL-SPEC-*.md      # Planning phase reviews
-    │   └── CRITICAL-IMPL-*.md      # Implementation phase reviews
+    ├── reviews/                  # Review documents
+    │   ├── CRITICAL-RESEARCH-*.md  # Research phase critical reviews
+    │   ├── PANEL-SPEC-*.md         # Planning phase specialist panel reviews
+    │   ├── CRITICAL-SPEC-*.md      # Planning phase critical reviews
+    │   └── CRITICAL-IMPL-*.md      # Implementation phase critical reviews
+    ├── adr/                      # Architecture Decision Records (optional)
+    │   ├── NNNN-slug.md          # Created by agent-engineering plugin if installed
+    │   └── README.md             # Auto-generated index
     └── prompts/                  # Session management
         ├── implementation-complete/  # Archived implementations
         ├── test-audits/          # Test coverage audit reports
@@ -433,6 +487,7 @@ The plugin includes an automatic subagent logging hook that tracks all subagent 
 
 ## Version History
 
+- **1.1.0** - Added `/spec-review-panel` command (domain specialist panel review of specs, complementing `/critical-review`). Added YAML frontmatter to the specification template with three fields (`review_panel`, `eval_required`, `cross_cutting_decisions`) that gate downstream behavior and enable integration with the companion **agent-engineering** plugin. Updated Phase Progression diagram and Workflow Example to reflect the new planning-phase review step. Directory structure now documents `PANEL-SPEC-*.md` review outputs and the optional `SDD/adr/` directory used by the companion plugin.
 - **1.0.0** - Initial release with complete SDD methodology
 
 ## Support
