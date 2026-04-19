@@ -1,0 +1,577 @@
+---
+name: sdd-flow
+description: "INVOKE THIS SKILL when the user asks to run end-to-end feature development via the SDD methodology, or runs /sdd-flow with a task description. Takes a task or software requirement and drives it through the complete SDD lifecycle (Research → Planning → Implementation → Done) via subagents with fresh context per phase. Integrates the agent-engineering plugin's cross-cutting skills at phase boundaries: cross-cutting-adr during research and planning, spec-review-panel during planning, regression-eval-capture at implementation completion. Requires the SDD plugin to be installed; frontmatter fields (review_panel, eval_required, cross_cutting_decisions) gate the integrations."
+---
+
+# SDD Flow — End-to-End Feature Development
+
+Takes a task or software requirement and drives it through the complete SDD (Specification-Driven Development) lifecycle: **Research → Planning → Implementation → Done**.
+
+All phases run on **Claude Opus** by default. No model switching required. Phases are executed via subagents, giving each phase a fresh context window.
+
+**Integrates agent-engineering skills at phase boundaries:**
+- `cross-cutting-adr` — during research (ambient detection) and planning (spec frontmatter-driven).
+- `/spec-review-panel` — during planning, after the spec is drafted.
+- `/regression-eval-capture` — at implementation completion, gated by spec frontmatter.
+
+## Usage
+
+```
+/sdd-flow <task or requirement description>
+```
+
+You can also provide a ticket/issue number:
+
+```
+/sdd-flow #42 Add CSV export to the reports page
+```
+
+## How This Skill Works
+
+This skill uses **subagents** to execute each phase of the SDD workflow. The main conversation acts as a lightweight orchestrator — it spawns subagents for research, planning, implementation, reviews, ADR capture, panel review, eval capture, and fixes. Each subagent gets a fresh context window, eliminating the need for manual session clears.
+
+All inter-phase communication happens through the **SDD artifact files on disk** (see Artifact Paths Contract below). Every subagent is given explicit paths for reading inputs and writing outputs.
+
+**The SDD plugin must be installed.** Subagents receive the equivalent instructions from the plugin's commands embedded directly in their prompts (since subagents cannot invoke slash commands).
+
+**SDD plugin location:** `~/.claude/plugins/cache/pablooliva/sdd/` — read command files from the `commands/` subdirectory within the latest version (e.g., `~/.claude/plugins/cache/pablooliva/sdd/1.0.0/commands/`). Do NOT confuse this with other plugins (e.g., PACE) that have similarly named commands.
+
+**Agent-engineering plugin location:** `~/.claude/plugins/cache/pablooliva/agent-engineering/` — contains the `spec-review-panel.md` command (actually located in the SDD plugin's `commands/` directory since it's an SDD-phase operation), the `regression-eval-capture.md` and `adr-capture.md` commands, and the `cross-cutting-adr` and `correction-codifier` skills.
+
+## CRITICAL: Model Override
+
+The SDD plugin commands contain model checks that require Opus for research and Sonnet for planning/implementation. **This skill overrides that behavior.**
+
+When embedding SDD command instructions into subagent prompts, **strip all model verification steps.** Specifically:
+- Remove any "This command requires Claude Sonnet/Opus" checks
+- Remove any "STOP all further processing" instructions related to model verification
+- Remove any warnings about switching models
+
+All phases run on whatever model is currently active — **Opus is the intended default for all phases**.
+
+---
+
+## Artifact Paths Contract
+
+Every subagent MUST use these exact paths. The orchestrator MUST include the resolved paths (with actual values for `[###]`, `[feature-name]`, dates, etc.) in every subagent prompt.
+
+### Canonical Identifiers (resolved at Step 0)
+
+| Identifier | Description | Example |
+|------------|-------------|---------|
+| `[###]` | Issue/ticket number or sequential ID | `042` |
+| `[feature-name]` | Kebab-case feature name | `audit-logging` |
+| `[YYYY-MM-DD]` | Current date | `2026-04-19` |
+| `[YYYY-MM-DD_HH-MM-SS]` | Timestamp (24h, underscores) | `2026-04-19_14-30-45` |
+
+### Phase Artifacts — Exact Paths
+
+| Artifact | Path | Created By | Read By |
+|----------|------|------------|---------|
+| **Scope decomposition** | `SDD/flow/DECOMPOSITION-[###]-[feature-name].md` | Scope assessment subagent | User (manual `/sdd-flow` per item) |
+| **Research document** | `SDD/research/RESEARCH-[###]-[feature-name].md` | Research subagent | Research review, Planning subagent |
+| **Research critical review** | `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md` | Research review subagent | Research fix subagent |
+| **Specification** | `SDD/requirements/SPEC-[###]-[feature-name].md` | Planning subagent | Panel review, Planning review, Implementation subagent |
+| **Spec panel review** | `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md` | Spec panel subagent | Planning fix subagent |
+| **Spec critical review** | `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md` | Planning review subagent | Planning fix subagent |
+| **ADRs** | `SDD/adr/NNNN-slug.md` | cross-cutting-adr skill (research or planning trigger) | Future sdd-flow runs, humans |
+| **ADR index** | `SDD/adr/README.md` | cross-cutting-adr skill (auto-regenerated on write) | — |
+| **Eval scaffolding** | `evals/datasets/[feature-slug].json`, `evals/evaluators/...`, `evals/run_functions/...`, `evals/README.md` | regression-eval-capture command | Future regression runs |
+| **PROMPT tracking doc** | `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md` | Implementation subagent | Code review, Impl review, Completion subagent |
+| **Code review** | `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md` | Code review subagent | Implementation fix subagent |
+| **Impl critical review** | `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md` | Impl review subagent | Implementation fix subagent |
+| **Implementation summary** | `SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md` | Completion subagent | — |
+| **Progress file** | `SDD/prompts/context-management/progress.md` | All subagents (append only) | All subagents |
+
+### Directory Structure
+
+```
+SDD/
+├── adr/
+│   ├── NNNN-slug.md
+│   └── README.md
+├── flow/
+│   └── DECOMPOSITION-[###]-[feature-name].md
+├── research/
+│   └── RESEARCH-[###]-[feature-name].md
+├── requirements/
+│   └── SPEC-[###]-[feature-name].md
+├── prompts/
+│   ├── PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md
+│   ├── implementation-complete/
+│   │   └── IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md
+│   └── context-management/
+│       ├── progress.md
+│       └── subagent-calls/
+└── reviews/
+    ├── CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md
+    ├── PANEL-SPEC-[feature-name]-[YYYYMMDD].md
+    ├── CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md
+    ├── CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md
+    └── REVIEW-[###]-[feature-name]-[YYYYMMDD].md
+
+evals/                    # created only when eval_required: true
+├── README.md
+├── datasets/
+│   └── [feature-slug].json
+├── evaluators/
+│   └── [feature-slug]_evaluator.{py,ts}
+└── run_functions/
+    └── [feature-slug]_run.{py,ts}
+```
+
+### Subagent Path Rules
+
+Every subagent prompt MUST include:
+1. The **resolved** paths for all artifacts it needs to read (inputs)
+2. The **resolved** paths for all artifacts it must write (outputs)
+3. An instruction to **verify input files exist** before starting work (read them; if missing, fail with a clear error message stating which file is missing and what path was expected)
+4. An instruction to **create parent directories** before writing output files (`mkdir -p` as needed)
+5. An instruction to **append** to `progress.md`, never overwrite or delete existing content
+
+---
+
+## Execution Modes
+
+### Step 0: Scope Assessment
+
+When invoked, first:
+
+1. Extract the **task description** from the user's input
+2. Extract **issue/ticket number** if provided (e.g., `#42`, `PROJ-123`), otherwise determine sequential numbering by checking existing SDD artifacts
+3. Derive a **kebab-case feature name** from the task
+4. Resolve all canonical identifiers (see Artifact Paths Contract)
+
+Then spawn a **general-purpose subagent** for scope assessment:
+
+- **Inputs:** Task description, codebase access
+- **Outputs:** Either a decomposition document or a "proceed" signal
+- **Task:** Analyze the requested feature and determine whether it can be completed in a single SDD cycle (research → planning → implementation) or whether it should be decomposed into smaller, independently deliverable chunks.
+
+#### Assessment Heuristics
+
+The subagent should consider:
+
+- **Number of distinct components or systems touched** — A feature that modifies one module is different from one that cuts across the API layer, database schema, frontend, and background jobs.
+- **Number of independent user-facing behaviors** — Multiple distinct behaviors (e.g., "add CSV export AND add scheduled reports AND add a dashboard widget") are likely separate features.
+- **Natural seams** — Can the feature be split at boundaries where each piece delivers standalone value? If so, it probably should be.
+- **Specification complexity** — Would the resulting SPEC document have so many requirements that a single implementation subagent couldn't hold them all in context?
+- **Test surface** — Would the test suite for this feature require testing multiple unrelated subsystems?
+
+This is a judgment call, not a formula. The subagent should explain its reasoning.
+
+#### If the scope is manageable (single SDD cycle)
+
+The subagent reports that the feature fits in one cycle. The orchestrator proceeds directly to **Step 1: Parse Input and Select Mode** with no pause — the user should not notice this gate for small requests.
+
+#### If the scope is too large (decomposition needed)
+
+The subagent produces a decomposition document at:
+
+```
+SDD/flow/DECOMPOSITION-[###]-[feature-name].md
+```
+
+This document contains:
+
+1. **Rationale** — Why this feature request is too large for a single SDD cycle, referencing the heuristics above.
+2. **Decomposition checklist** — An ordered list of smaller, independently deliverable features. Each item includes:
+   - A clear, self-contained task description (suitable as input to `/sdd-flow`)
+   - A brief note on what it delivers and why it's sequenced where it is
+   - Any dependencies on prior checklist items
+3. **Dependency map** — Which items must be completed before others (some may be parallelizable).
+
+The orchestrator presents the decomposition to the user:
+
+> **This feature request is too large for a single SDD cycle.**
+>
+> I've broken it into [N] independently deliverable steps:
+>
+> [Checklist summary]
+>
+> Full decomposition: `SDD/flow/DECOMPOSITION-[###]-[feature-name].md`
+>
+> Review and edit the decomposition as needed, then run `/sdd-flow` for each item when ready. Items marked with dependencies should be completed in order.
+
+The skill then **stops**. The user manually invokes `/sdd-flow <checklist item description>` for each item at their own pace.
+
+---
+
+### Step 1: Parse Input and Select Mode
+
+**Note:** This step is reached only after Step 0 determines the feature fits in a single SDD cycle.
+
+**Ask the user which execution mode they want:**
+
+> **Choose execution mode:**
+>
+> **Supervised** (default) — I'll run autonomously but pause for your approval at two checkpoints:
+> 1. After research is complete (so you can confirm direction before planning/implementation)
+> 2. Before committing implementation (so you can review the code)
+>
+> **Autonomous** — Fully autonomous, no checkpoints. I'll run research → planning → implementation → done without stopping. You'll see the final result when everything is complete.
+>
+> Reply **s** for supervised or **a** for autonomous. (Default: supervised)
+
+If the user's original invocation already includes a mode flag (e.g., `/sdd-flow --auto <task>` or `/sdd-flow --supervised <task>`), skip the prompt and use that mode.
+
+---
+
+## Orchestration Instructions
+
+The orchestrator (main conversation) spawns subagents sequentially. Each subagent receives:
+- The full instructions from the corresponding SDD plugin command (with model checks stripped)
+- Resolved artifact paths for its inputs and outputs
+- The task description and canonical identifiers
+- Any relevant context from previous subagent results
+
+### Step 2: Research Phase
+
+#### 2a. Research Subagent
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:research-start` command (embedded in prompt, model checks stripped)
+- **Inputs:** Task description, codebase access
+- **Outputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, update `progress.md`
+- **Task:** Create the research document and perform the full systematic investigation
+
+Then spawn a second **general-purpose subagent** with:
+- **Instructions from:** `/sdd:research-complete` command
+- **Inputs:** The RESEARCH document at its exact path
+- **Outputs:** Updated RESEARCH document (if gaps found), updated `progress.md`
+- **Task:** Validate completeness against the checklist, fill any remaining gaps
+
+#### 2b. ADR Capture from Research (NEW)
+
+After research is complete, scan the research doc for cross-cutting architectural decisions captured as comparison-with-selection patterns — the places where the research compared alternatives and picked one.
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** embed the `cross-cutting-adr` skill's behavioral instructions with **Trigger C (sdd-flow research hand-off)** active.
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, existing `SDD/adr/` directory (if present)
+- **Outputs:** Zero or more new ADR files at `SDD/adr/NNNN-slug.md`, updated `SDD/adr/README.md`, updated `progress.md`
+- **Task:** Scan the research for cross-cutting decisions with explicit comparison+selection. For each match, apply the skill's scope test, render an ADR, and **confirm with the user** before writing (in supervised mode). In autonomous mode, accept all ADRs that pass the scope test.
+
+If no cross-cutting decisions are detected, this step is a no-op — skip to 2c without writing anything.
+
+#### 2c. Research Critical Review Subagent
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:critical-review` command (research phase section)
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`
+- **Outputs:** `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`
+- **Task:** Adversarial review of the research document
+
+#### 2d. Address Research Review Findings
+
+Spawn a **general-purpose subagent** with:
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md` AND `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`
+- **Outputs:** Updated `SDD/research/RESEARCH-[###]-[feature-name].md`, updated `progress.md`
+- **Task:** Resolve ALL findings from the critical review — HIGH, MEDIUM, and LOW severity. Update the RESEARCH document to fill gaps, strengthen weak evidence, add missing perspectives, and address questionable assumptions. No finding is left unresolved. After fixing, append a "Findings Addressed" section to the review document noting how each finding was resolved.
+
+#### 2e. Commit Research Artifacts
+
+The **orchestrator** runs the commit (not a subagent), following `/sdd:commit` conventions — no co-author attribution. Include any ADRs written in Step 2b in this commit.
+
+#### 2f. Supervised Checkpoint (if supervised mode)
+
+If in **supervised mode**, pause and present a summary to the user:
+
+> **Research phase complete.** Here's what was found:
+> [Brief summary of key research findings and critical review results]
+>
+> Research document: `SDD/research/RESEARCH-[###]-[feature-name].md`
+> Critical review: `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`
+> ADRs captured: [list of ADR numbers, or "none"]
+>
+> **Proceed to planning?** (y/n)
+
+Wait for user confirmation before proceeding to Step 3.
+
+If in **autonomous mode**, proceed directly to Step 3.
+
+---
+
+### Step 3: Planning Phase
+
+#### 3a. Planning Subagent
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:planning-start` command (model checks stripped)
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/context-management/progress.md`, existing `SDD/adr/` directory (to reference accepted ADRs)
+- **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, updated `progress.md`
+- **Task:** Read the research document and create the full specification. The spec MUST include the three YAML frontmatter fields defined by `/sdd:planning-start` — `review_panel`, `eval_required`, `cross_cutting_decisions` — populated thoughtfully based on feature characteristics (see `/sdd:planning-start` for field semantics). If the feature references an existing ADR, cite it in the relevant spec section.
+
+Then spawn a second **general-purpose subagent** with:
+- **Instructions from:** `/sdd:planning-complete` command
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`
+- **Outputs:** Updated SPEC document (if gaps found), updated `progress.md`
+- **Task:** Validate completeness against the checklist, ensure all research findings are incorporated, verify the three frontmatter fields are populated (not left as boilerplate defaults when the feature clearly needs different values).
+
+#### 3b. ADR Capture from Spec Frontmatter (NEW)
+
+Read the spec's `cross_cutting_decisions:` frontmatter field. If the list is non-empty, for each topic label in the list, spawn a **general-purpose subagent**:
+
+- **Instructions from:** embed the `cross-cutting-adr` skill's behavioral instructions with **Trigger C (sdd-flow planning hand-off, frontmatter-declared)** active — frontmatter-declared decisions are pre-approved, so no user confirmation required.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, existing `SDD/adr/` directory
+- **Outputs:** New ADR file at `SDD/adr/NNNN-slug.md`, updated `SDD/adr/README.md`, updated `progress.md`
+- **Task:** Extract details for the given topic label from the spec and research documents (decision, alternatives, rationale, consequences). If the available context is insufficient, the subagent should emit a warning and skip that topic rather than fabricating rationale. Apply the skill's scope test, then write the ADR.
+
+If `cross_cutting_decisions:` is empty or absent, skip this step entirely.
+
+#### 3c. Specialist Panel Review (NEW)
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:spec-review-panel` command
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`. Panel composition comes from the spec's `review_panel:` frontmatter (defaults applied if absent).
+- **Outputs:** `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`
+- **Task:** Convene the specialist panel. The panel-review subagent itself spawns nested subagents for each specialist (per the command's Section 3), collects findings, applies severity aggregation, and emits a verdict.
+
+**Act on the verdict:**
+
+- **`PROCEED`** — continue to 3d.
+- **`STOP AND RECONSIDER`** (any HIGH finding) or **`REVISE BEFORE PROCEEDING`** (3+ MEDIUM or cross-domain MEDIUM) — enter the **fix-and-re-review loop**, bounded by the cap below. Apply in both supervised and autonomous modes; the cap protects against unbounded iteration in either.
+
+**Fix-and-re-review loop (bounded — max 3 iterations):**
+
+Each iteration:
+
+1. **Record iteration state in `progress.md`** under a `## Panel Review Iterations` subsection. Capture: iteration number, HIGH count, MEDIUM count, LOW count, verdict, timestamp.
+2. **Spawn a fix subagent** with:
+   - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`
+   - **Outputs:** Updated spec (in place), "Findings Addressed" section appended to the panel review
+   - **Task:** Resolve every HIGH and MEDIUM finding from the panel review. Each resolution must cite the specific spec change made. Do NOT claim resolution without an actual spec edit.
+3. **Re-run Step 3c** — spawn a fresh panel review subagent with the updated spec. This produces a new or overwritten `PANEL-SPEC-*` review document.
+4. **Compare this iteration's finding counts to the previous iteration:**
+   - **Progress stall check:** if HIGH count did not strictly decrease (when HIGH was non-zero) OR (in REVISE case) if MEDIUM count did not strictly decrease → halt immediately. The fix subagent is not making real progress; further iterations are waste or degrade review quality.
+   - **If panel now returns `PROCEED`** → exit the loop; continue to 3d.
+   - **If still STOP/REVISE and iteration count < 3** → start the next iteration.
+5. **After iteration 3, regardless of verdict** → halt the flow (cap exhausted).
+
+**On halt (either cap exhausted or progress stall):**
+
+- Leave all artifacts in place — do not delete the spec, do not delete any panel review document.
+- Append a final `### Panel Review Halt` entry to `progress.md` with: total iteration count, final HIGH/MEDIUM/LOW counts, halt reason (`cap-exhausted` | `progress-stall`), and an explicit next-action hint for the user.
+- Do NOT proceed to 3d, 3e, 3f, or beyond. The spec has not been accepted.
+- Emit this completion message (identical in supervised and autonomous modes):
+
+> **Flow halted at panel review.** Spec did not pass specialist review after [N] iteration(s). Halt reason: [cap-exhausted | progress-stall].
+>
+> Final verdict: [STOP AND RECONSIDER | REVISE BEFORE PROCEEDING]
+> Unresolved HIGH findings: [count]
+> Unresolved MEDIUM findings: [count]
+> Latest panel review: `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`
+> Iteration history: `SDD/prompts/context-management/progress.md` → "Panel Review Iterations"
+>
+> The fix subagent could not resolve findings autonomously. Review the panel findings, address them manually in the spec (the remaining HIGH/MEDIUM issues likely require design judgment the subagent cannot make), then run `/sdd-flow continue` to resume.
+
+**Why the cap and progress check exist:** unbounded loops in autonomous mode risk three failure modes — (1) infinite iteration burning tokens, (2) cost explosion from 4+ specialist subagents × N iterations per spec, and (3) degraded review quality where the panel starts approving superficial edits that don't resolve the underlying findings. The progress-stall check catches (3) specifically — if a fix iteration doesn't actually reduce findings, we're seeing placating edits rather than real resolution. In both failure modes, routing the problem back to a human is the correct action.
+
+#### 3d. Spec Critical Review Subagent
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:critical-review` command (planning phase section)
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`
+- **Outputs:** `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`
+- **Task:** Adversarial review of the specification, checking for ambiguities, untestable criteria, dropped research findings, contradictions. Complementary to the panel review — critical-review is generalist and adversarial; the panel was domain-specialist.
+
+#### 3e. Address Spec Review Findings (panel + critical, combined)
+
+Spawn a **general-purpose subagent** with:
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`
+- **Outputs:** Updated `SDD/requirements/SPEC-[###]-[feature-name].md`, updated `progress.md`
+- **Task:** Resolve ALL findings from BOTH reviews — panel findings (domain-specific anti-patterns) AND critical-review findings (ambiguity, testability, contradictions). Clarify ambiguous requirements, make criteria testable, add missing edge cases, resolve contradictions, address panel anti-patterns, incorporate dropped research findings. Append "Findings Addressed" sections to both review documents.
+
+#### 3f. Commit Planning Artifacts
+
+The **orchestrator** runs the commit. Include any ADRs written in Step 3b.
+
+#### 3g. Transition
+
+Proceed directly to Step 4 (no checkpoint needed here — the supervised checkpoint covers the most critical decision point at research, and the second checkpoint comes before final implementation commit).
+
+---
+
+### Step 4: Implementation Phase
+
+#### 4a. Implementation Subagent
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:implementation-start` command (model checks stripped)
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/context-management/progress.md`
+- **Outputs:** `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md`, implemented code and tests, updated `progress.md`
+- **Task:** Read the specification and implement ALL requirements:
+  - Core functionality (happy path)
+  - Edge cases (EDGE-XXX from spec)
+  - Failure handling (FAIL-XXX from spec)
+  - Tests alongside each component
+  - Performance and security validation
+  - Update PROMPT tracking document throughout
+
+**Note:** If the implementation is too large for a single subagent's context, the orchestrator should split it into multiple sequential subagents — each handling a subset of requirements. Each subsequent subagent reads the updated PROMPT document to understand what's been completed.
+
+#### 4b. Code Review Subagent
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:code-review` command
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from PROMPT document)
+- **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
+- **Task:** Specification-driven code review (70% spec alignment, 20% context engineering, 10% test alignment)
+
+#### 4c. Address Code Review Findings
+
+Spawn a **general-purpose subagent** with:
+- **Inputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the implemented code files
+- **Outputs:** Updated code and tests, updated PROMPT document, "Findings Addressed" appended to review document
+- **Task:** Fix ALL findings until the implementation meets APPROVED status. Resolve specification misalignment, missing edge/failure handling, test gaps, and all other issues.
+
+#### 4d. Implementation Critical Review Subagent
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:critical-review` command (implementation phase section)
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files, test files
+- **Outputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`
+- **Task:** Adversarial review of the implementation
+
+#### 4e. Address Implementation Review Findings
+
+Spawn a **general-purpose subagent** with:
+- **Inputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files
+- **Outputs:** Updated code and tests, updated PROMPT document, "Findings Addressed" appended to review document
+- **Task:** Resolve ALL findings — fix specification deviations, security vulnerabilities, silent failures, missing test coverage, and every other issue regardless of severity.
+
+#### 4f. Implementation Completion Subagent
+
+Spawn a **general-purpose subagent** with:
+- **Instructions from:** `/sdd:implementation-complete` command (model checks stripped)
+- **Inputs:** `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`
+- **Outputs:** Updated PROMPT document, updated SPEC document, `SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`, updated `progress.md`
+- **Task:** Finalize all documentation, validate all requirements are met, create implementation summary
+
+#### 4g. Regression Eval Capture (NEW, conditional)
+
+Read the spec's `eval_required:` frontmatter field. If `true`, spawn a **general-purpose subagent**:
+
+- **Instructions from:** `/agent-engineering:regression-eval-capture` command
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md` (for feature name, success criteria, frontmatter metadata), repo's existing `evals/` directory if present
+- **Outputs:** LangSmith dataset created (empty, awaiting examples), `evals/evaluators/[feature-slug]_evaluator.{py,ts}`, `evals/run_functions/[feature-slug]_run.{py,ts}`, `evals/README.md` updated
+- **Task:** Scaffold the regression eval infrastructure per the command's instructions.
+
+**Non-blocking behavior:** if the command's prerequisite check fails (no `langsmith` CLI, no API key, etc.), the subagent logs a warning to `progress.md` but does NOT halt the flow. The feature has shipped; the eval is a follow-up concern. sdd-flow should surface the warning to the user in the completion announcement.
+
+If `eval_required:` is `false` or absent, skip this step entirely.
+
+#### 4h. Supervised Checkpoint (if supervised mode)
+
+If in **supervised mode**, pause and present a summary to the user:
+
+> **Implementation complete.** Here's a summary:
+> [Brief summary of what was built, test results, review outcomes]
+>
+> Key artifacts:
+> - Spec: `SDD/requirements/SPEC-[###]-[feature-name].md`
+> - Code review: `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
+> - Critical review: `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`
+> - Implementation summary: `SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md`
+> - [Eval scaffolding: evals/... (if eval_required was true and scaffold succeeded)]
+> - [Eval scaffold warnings: progress.md (if scaffold failed)]
+>
+> **Ready to commit all implementation code?** (y/n)
+
+Wait for user confirmation before committing.
+
+If in **autonomous mode**, proceed directly to commit.
+
+#### 4i. Commit Implementation
+
+The **orchestrator** runs the commit — all implementation code, tests, reviews, SDD artifacts, and any eval scaffolding written in 4g. No co-author attribution.
+
+#### 4j. Completion Announcement
+
+> Implementation complete! All requirements from SPEC-[###] have been implemented, reviewed, and tested.
+> All artifacts committed. Feature is ready for deployment.
+> [If eval_required was true and scaffold succeeded:]
+> Regression eval dataset `regression-[feature-slug]` created on LangSmith (empty). Populate with golden examples after ≥1 week of runtime. See `evals/README.md`.
+> [If eval_required was true but scaffold failed:]
+> ⚠️ Eval scaffolding failed — see progress.md for details. Run `/regression-eval-capture` manually once LangSmith is configured.
+> [If ADRs were captured:]
+> ADRs written: [list]. See `SDD/adr/README.md`.
+
+---
+
+## Continuation Logic
+
+When the user runs `/sdd-flow continue`:
+
+1. Read `SDD/prompts/context-management/progress.md`
+2. Determine which phase and sub-step is active
+3. Resume from the exact sub-step where work was interrupted by spawning the appropriate subagent
+4. If a phase was marked complete in progress.md, advance to the next phase
+
+### Phase Detection Priority
+
+- If "Implementation Phase - COMPLETE" → Done, show final summary
+- If implementation is active → Resume the appropriate sub-step (4a-4j)
+- If "Planning Phase - COMPLETE" → Start Step 4 (implementation)
+- If planning is active → Resume the appropriate sub-step (3a-3g)
+- If "Research Phase - COMPLETE" → Start Step 3 (planning)
+- If research is active → Resume the appropriate sub-step (2a-2f)
+- If no phase info → Start from Step 0 (scope assessment)
+
+## Subagent Guidelines
+
+### Prompt Construction
+
+When spawning each subagent, the orchestrator must include in the prompt:
+1. The full SDD command or agent-engineering command instructions for that step (model checks stripped)
+2. All resolved artifact paths (inputs and outputs)
+3. The task description and canonical identifiers
+4. The project's CLAUDE.md instructions (if relevant to the phase)
+5. An explicit instruction to read input files before starting work
+6. An explicit instruction to create directories before writing output files
+
+### Context Management Within Subagents
+
+- Each subagent gets a fresh context window — no carryover from previous phases
+- If a single subagent's task is too large, the orchestrator should split it into multiple sequential subagents
+- Subagents should use Explore subagents (nested) for file discovery to preserve their own context
+- Subagents should use general-purpose subagents (nested) for complex analysis tasks
+
+### Error Handling
+
+- If a subagent fails or returns incomplete results, the orchestrator should:
+  1. Log the failure in `progress.md`
+  2. Attempt to re-spawn the subagent with additional context about what went wrong
+  3. If the same subagent fails twice, stop and inform the user
+
+## Key Principles
+
+1. **Each phase must be thorough** — don't rush through research to get to implementation
+2. **Research informs planning, planning constrains implementation** — maintain this chain
+3. **Every requirement gets a test** — no exceptions
+4. **Reviews are mandatory, not optional** — critical review happens after every phase, code review happens during implementation, specialist panel review happens on every spec
+5. **ALL review findings must be resolved before proceeding** — every issue (HIGH, MEDIUM, LOW) gets fixed, not just noted. Reviews are gates, not checkboxes
+6. **Panel STOP/REVISE verdicts halt the flow, but the fix loop is bounded** — max 3 fix-and-re-review iterations in either mode. Any iteration that fails to strictly decrease the HIGH (or in REVISE case, MEDIUM) finding count halts immediately. Unresolvable findings route back to the human — the flow does not silently accept placating edits.
+7. **ADRs compound across features** — capture cross-cutting decisions once; future features inherit them.
+8. **Evals scaffold, humans populate** — `eval_required: true` creates infrastructure, not golden examples. Real examples come from production runtime.
+9. **Document deviations** — if implementation diverges from spec, document why
+10. **The spec is the source of truth** — implementation decisions trace back to spec requirements
+11. **Never persist PII or secrets** in SDD documents
+12. **Commit messages have NO co-author attribution** — per project convention
+13. **Explicit paths always** — every subagent gets resolved, concrete file paths. Never rely on a subagent to guess or discover artifact locations.
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `<task>` | The task, requirement, or feature description to develop |
+| `--auto` | Run in fully autonomous mode (no checkpoints) |
+| `--supervised` | Run in supervised mode with checkpoints (default) |
+| `continue` | Resume from the last interruption point |
+
+## Examples
+
+```
+/sdd-flow Add GDPR-compliant audit logging for all anonymization requests
+/sdd-flow --auto #15 Implement allow-list management UI with CRUD operations
+/sdd-flow continue
+```
