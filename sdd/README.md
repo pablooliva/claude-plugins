@@ -97,15 +97,11 @@ This workflow represents the complete development cycle:
 
 ### Context Monitoring
 
-Run this command/utility in a terminal window separate from where Claude Code is running. The idea is to run both terminal windows, utility & Claude Code, in parallel. The command below will show you the amount of context used, `Usage` is the 3rd column. Make sure you are tracking the correct session by matching the session displayed in your current Claude Code terminal window: use `/status` to see match the session id.
+Use Claude Code's built-in `/usage` slash command to check current context utilization at any time. Run `/context-check` for a phase-aware recommendation based on the current reading.
 
-NOTE: after running `/clear` Claude Code will launch a new session in the background. Track the new and matching session id for context usage.
+### Recovering from a Wrong Turn
 
-#### Context Monitoring Utility
-
-```bash
-CCCONTEXT_WINDOW_SIZE=200000 npx github:pablooliva/cccontext#add-configurable-context-window sessions --live
-```
+If you realize Claude has taken a wrong approach mid-phase, use the built-in `/rewind` command (double-Esc) to jump back to an earlier message and re-prompt with corrected guidance. This retains prior file reads while dropping the failed attempt — preferable to a full compact/commit/clear/continue cycle when the issue is an approach error rather than context pressure.
 
 ### Phase Progression
 
@@ -282,9 +278,6 @@ The command produces a clear verdict — **Adequate**, **Partial**, or **Insuffi
 
 # Check current context utilization
 /context-check
-
-# Monitor progress across all phases
-/monitor
 
 # Review code against specifications
 /code-review

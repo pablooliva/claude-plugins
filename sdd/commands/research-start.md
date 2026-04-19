@@ -81,7 +81,7 @@ Begin systematic system understanding:
 ## Context Management
 
 1. Maintain <40% context utilization throughout research
-2. Use the Explore subagent (Task tool with subagent_type=Explore) for file discovery and system mapping
+2. **Delegate codebase sweeps to subagents by default, not as a fallback.** Use the Explore subagent (Task tool with `subagent_type=Explore`) for file discovery, pattern searches, and system mapping; use `subagent_type=general-purpose` for multi-file analysis or architectural investigation. Pull only conclusions and specific file:line references back into the parent context — intermediate tool output (directory listings, raw greps, file scans) belongs in the subagent's context, not yours. Read files directly in the parent only when you already know the exact target.
 3. Focus on understanding before any specification work
 
 ## Deliverable Target

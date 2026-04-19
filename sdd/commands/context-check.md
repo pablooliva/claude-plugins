@@ -6,7 +6,7 @@ Analyze current context utilization and provide compaction recommendations:
 
 ## Context Analysis
 
-1. Estimate current context utilization percentage (target: <40%)
+1. Ask the user to run the built-in `/usage` slash command and paste the reported context usage. Use that figure as the authoritative utilization value (target: <40%). Do not estimate from conversation state — `/usage` is the source of truth.
 2. Identify what's consuming the most context space:
    - File contents loaded
    - Conversation history length
