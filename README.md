@@ -30,6 +30,18 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - Research, planning, and execution phases for any task type
 - Produces deliverables: documents, reports, analysis, plans
 
+### 3. Agent Engineering
+
+Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). Complements the SDD plugin — SDD provides the workflow, agent-engineering provides the guardrails that compound quality over time. Each skill is independently usable in any session.
+
+**Key Features:**
+
+- `correction-codifier` skill — turns mid-session corrections into durable `CLAUDE.md` rules (Institutional Memory)
+- `cross-cutting-adr` skill — captures binding architectural decisions as numbered ADRs (Living Documentation)
+- `sdd-flow` skill — orchestrates the full Research → Planning → Implementation lifecycle via subagents
+- `/regression-eval-capture` command — scaffolds LangSmith regression eval datasets after a feature ships (Observability)
+- `/adr-capture` command — manual entry point for ADR capture
+
 ## Installation
 
 To use these plugins with Claude Code, ensure you have Claude Code installed and configured, then reference this marketplace repository according to the Claude Code Plugins documentation.
