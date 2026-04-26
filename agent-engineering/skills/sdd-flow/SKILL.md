@@ -102,7 +102,12 @@ SDD/
 │   │   └── IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md
 │   └── context-management/
 │       ├── progress.md
-│       └── subagent-calls/
+│       ├── subagent-calls/
+│       ├── counters/
+│       │   └── [step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md
+│       ├── research-compacted-[YYYY-MM-DD_HH-MM-SS].md
+│       ├── planning-compacted-[YYYY-MM-DD_HH-MM-SS].md
+│       └── implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md
 └── reviews/
     ├── CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md
     ├── PANEL-SPEC-[feature-name]-[YYYYMMDD].md
@@ -224,6 +229,67 @@ The orchestrator (main conversation) spawns subagents sequentially. Each subagen
 - Resolved artifact paths for its inputs and outputs
 - The task description and canonical identifiers
 - Any relevant context from previous subagent results
+
+### Orchestrator Discipline
+
+**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step in this skill — research, planning, implementation, ADR capture, panel review, critical review, fix iterations, code review, completion, eval scaffolding — runs inside a spawned subagent. The orchestrator's only direct work is: spawning subagents, running commits, writing user-facing checkpoint messages, and recording state in `progress.md`.
+
+This rule applies even when a sub-step "looks small." A subagent that feels wasteful for a five-line task is far cheaper than the orchestrator absorbing the work, accumulating context, and losing the only available context-reset mechanism. The orchestrator has no `/clear` available to itself; subagent boundaries are the reset.
+
+#### Bounded Subagent Returns
+
+Every subagent's final return to the orchestrator MUST be bounded: **≤200 words of summary plus paths to artifacts written.** The orchestrator reads artifact files only when a decision genuinely requires their content (e.g., reading the spec's frontmatter to gate Step 3b) — not by default. This keeps the orchestrator's own context proportional to the *count* of phase boundaries crossed, not the volume of work done in each.
+
+#### Per-Phase Sizing Strategy
+
+Splitting heuristics differ by phase — a uniform "always pre-split" rule does not fit:
+
+- **Research (Step 2a)** — Scope is unknown until investigation begins, so the orchestrator generally CANNOT pre-split usefully. Spawn a single research subagent and rely on the **Subagent Safety-Net Rule** (below) to trigger a mid-phase handoff if the investigation grows. Exception: if the task description obviously cuts across more than two architectural layers (e.g., "API + database + frontend + jobs"), the orchestrator MAY pre-split research into per-layer sub-investigations, with a final consolidation subagent stitching outputs into one RESEARCH document.
+
+- **Planning (Step 3a)** — Usually a single subagent. Pre-split only if the RESEARCH document is exceptionally long (>1000 lines) OR covers more than three distinct subsystems with non-overlapping concerns. The safety-net rule still applies.
+
+- **Implementation (Step 4a)** — Orchestrator-driven splitting is primary. Before spawning, the orchestrator counts SPEC items: `REQ-XXX` + `EDGE-XXX` + `FAIL-XXX`. If the total exceeds **8** (initial default — tune as needed), pre-split into ⌈total / 5⌉ sequential implementation subagents, each handling a contiguous chunk, each appending to the PROMPT document so the next subagent knows what's done.
+
+#### Subagent Safety-Net Rule
+
+Every phase-execution subagent (2a, 3a, 4a), every fix subagent (2d, 3e, 4c, 4e), and any continuation subagent spawned per the protocol below receives this rule embedded in its prompt. **Nested subagents (Explore or general-purpose subagents spawned from inside a parent subagent's execution) are intentionally out of scope** — they do not get their own counter file and instead are bounded by the parent's `Nested subagents: M/4` trigger; if a parent's nested-spawn count grows toward saturation, the parent itself must bail out.
+
+> **Bail-out triggers (initial defaults — these are triggers, not budgets to spend):**
+> - You have Read more than **10** files, OR
+> - You have spawned more than **4** nested subagents.
+>
+> **When a trigger fires, stop immediately and follow the inlined compact-command instructions (already in your prompt — see below) to write `SDD/prompts/context-management/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md`. Append a `## PARTIAL: needs continuation` block to `progress.md` with the compaction file path and where you left off. Return to the orchestrator with a brief note (≤100 words) stating that a Mid-Phase Handoff is required.**
+>
+> **Counter tracking.** You cannot inspect your own tool-call history reflexively, so the orchestrator gives you a **dedicated counter file** (path provided in your prompt under "Your counter file"). The file has exactly two lines:
+> ```
+> Reads: 0/10
+> Nested subagents: 0/4
+> ```
+> Update the relevant line **immediately after** each Read or nested-subagent call. Check the file (cheap Read) before each new Read or nested-subagent spawn — that is the trigger evaluation. The counter file is **scoped to your subagent run only** — never shared with other subagents and never written to `progress.md`. Continuation subagents receive a fresh counter file at a new path, so `Reads: 0/10` always reflects *this run's* count.
+
+**Orchestrator obligation: pre-embed the compact command AND assign a counter file.** The Safety-Net Rule depends on two things being in place when the subagent starts: the inlined compact-command instructions (so bail-out doesn't require reading a ~100-line file at the moment of context saturation), and a dedicated counter file path. When the orchestrator constructs any phase-execution, fix, or continuation subagent prompt, it MUST:
+1. Inline the matching `/sdd:[phase]-compact` command body (model checks stripped) under a clearly delimited "Compact instructions (use only if the Safety-Net trips)" block.
+2. Generate a unique counter file path under `SDD/prompts/context-management/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` (e.g., `counters/4a-3-2026-04-26_15-12-08.md` for the 3rd chunk of an implementation split). Create the file with the two-line `Reads: 0/10\nNested subagents: 0/4` content. Pass the resolved path in the subagent's prompt under a "Your counter file" heading.
+
+Counter files are per-run and never shared. They can be retained for post-mortem debugging or pruned periodically — they are not consumed by any later phase.
+
+The numbers are initial defaults that can be tuned without changing the protocol. (See "Why count-based, not percentage-based" at the end of this section.)
+
+#### Mid-Phase Handoff Protocol
+
+When a subagent returns with a "needs continuation" signal:
+
+1. The orchestrator reads only the latest compaction file path and the `## PARTIAL` block in `progress.md` — not the full work product.
+2. It spawns a **fresh** subagent whose prompt embeds the SDD plugin's `/sdd:continue` command instructions (model checks stripped). The successor receives: the resolved compaction file path, all resolved phase artifact paths, the safety-net rule, and an explicit instruction to resume from the compaction file's "Current Focus" section.
+3. The successor inherits the safety-net rule and may itself bail out if the work remains too large — the orchestrator can chain multiple handoffs within a single phase.
+
+**Mid-Phase Handoff is distinct from Session Resumption** (the `/sdd-flow continue` user command — see "Session Resumption" below). Both reuse the same artifact formats (`progress.md`, `*-compacted-*.md`), but they trigger differently: Session Resumption fires when the user re-invokes `/sdd-flow continue` in a fresh session; Mid-Phase Handoff fires automatically inside an active flow when a subagent's safety-net trips.
+
+#### Why count-based, not percentage-based
+
+A spawned subagent has no first-class API to read its own context utilization — `/usage` is a harness slash command available only to the top-level interactive Claude, and the Anthropic API returns token counts to the harness, not to the model. Any "self-audit" the subagent performs itself produces output tokens that land back in its own context, partially eating the budget it's trying to measure. Count-based triggers (file Reads, nested subagent calls) are nearly free to evaluate (rule application, not deliberation), are inspectable in `progress.md`, and don't require the subagent to know anything its harness won't tell it.
+
+---
 
 ### Step 2: Research Phase
 
@@ -407,7 +473,7 @@ Spawn a **general-purpose subagent** with:
   - Performance and security validation
   - Update PROMPT tracking document throughout
 
-**Note:** If the implementation is too large for a single subagent's context, the orchestrator should split it into multiple sequential subagents — each handling a subset of requirements. Each subsequent subagent reads the updated PROMPT document to understand what's been completed.
+**Sizing:** Apply the orchestrator-driven splitting heuristic from "Orchestrator Discipline → Per-Phase Sizing Strategy → Implementation". Pre-split before spawning if the SPEC item count exceeds the threshold; each subagent appends to the PROMPT document so the next knows what's done. The Subagent Safety-Net Rule still applies as a backstop if a chunk turns out to be larger than estimated.
 
 #### 4b. Code Review Subagent
 
@@ -498,7 +564,9 @@ The **orchestrator** runs the commit — all implementation code, tests, reviews
 
 ---
 
-## Continuation Logic
+## Session Resumption
+
+This is the user-triggered resume path: the user re-invokes `/sdd-flow continue` in a fresh Claude Code session, and the orchestrator resumes from the most recent state recorded in `progress.md`. It is **distinct from the Mid-Phase Handoff Protocol** in "Orchestrator Discipline" — that one fires automatically inside an active flow when a subagent's safety-net trips. Both reuse the same artifact format (`progress.md`, `*-compacted-*.md`); they differ only in trigger.
 
 When the user runs `/sdd-flow continue`:
 
@@ -528,13 +596,16 @@ When spawning each subagent, the orchestrator must include in the prompt:
 4. The project's CLAUDE.md instructions (if relevant to the phase)
 5. An explicit instruction to read input files before starting work
 6. An explicit instruction to create directories before writing output files
+7. **For phase-execution (2a, 3a, 4a), fix (2d, 3e, 4c, 4e), and continuation subagents:** the Subagent Safety-Net Rule (verbatim from "Orchestrator Discipline → Subagent Safety-Net Rule"), the inlined body of the matching `/sdd:[phase]-compact` command (model checks stripped) under a "Compact instructions (use only if the Safety-Net trips)" delimiter, AND a unique counter file path under "Your counter file" (the orchestrator must create the file at `SDD/prompts/context-management/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with two lines `Reads: 0/10\nNested subagents: 0/4` before spawning the subagent). All three must be embedded up front so the subagent can use them without reading additional files at bail-out time.
+8. The bounded-return contract: ≤200 words of summary plus paths to artifacts written.
 
 ### Context Management Within Subagents
 
-- Each subagent gets a fresh context window — no carryover from previous phases
-- If a single subagent's task is too large, the orchestrator should split it into multiple sequential subagents
-- Subagents should use Explore subagents (nested) for file discovery to preserve their own context
-- Subagents should use general-purpose subagents (nested) for complex analysis tasks
+- Each subagent gets a fresh context window — no carryover from previous phases.
+- Sizing and bail-out are governed by **Orchestrator Discipline** (above): per-phase pre-splitting heuristics and the count-based Subagent Safety-Net Rule. Do not invent new context-management policy here.
+- Subagents should use Explore subagents (nested) for file discovery to preserve their own context.
+- Subagents should use general-purpose subagents (nested) for complex analysis tasks.
+- Each nested subagent counts toward the parent subagent's safety-net threshold.
 
 ### Error Handling
 
@@ -558,6 +629,7 @@ When spawning each subagent, the orchestrator must include in the prompt:
 11. **Never persist PII or secrets** in SDD documents
 12. **Commit messages have NO co-author attribution** — per project convention
 13. **Explicit paths always** — every subagent gets resolved, concrete file paths. Never rely on a subagent to guess or discover artifact locations.
+14. **The orchestrator never executes phase, review, fix, capture, or completion work directly** — every numbered sub-step runs in a spawned subagent, even ones that "look small." The orchestrator has no `/clear` available to itself; subagent boundaries are the only context-reset mechanism. See "Orchestrator Discipline" for the full rule, the bounded-return contract, per-phase sizing heuristics, the Subagent Safety-Net Rule, and the Mid-Phase Handoff Protocol.
 
 ## Arguments
 
