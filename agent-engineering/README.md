@@ -12,6 +12,7 @@ The SDD plugin provides a spec-driven development methodology. This plugin provi
 
 - **`correction-codifier`** — When you correct Claude's behavior mid-session, proposes a durable `Always|Never [X] BECAUSE [Y]` rule and appends it to the project's `CLAUDE.md`. Operationalizes Principle 5 (Institutional Memory).
 - **`cross-cutting-adr`** — Captures cross-cutting architectural decisions (technology choices, conventions that bind future work) as numbered ADRs under `SDD/adr/`. Triggers on comparison-with-selection patterns, explicit invocation, or ambient detection of binding decisions. Operationalizes Principle 3 (Living Documentation).
+- **`improve-claude-md`** — Audits `CLAUDE.md` (or `AGENTS.md`) and `CLAUDE.local.md` to strip discoverable content (tech stack, file maps, command references) and concentrate the file on preferences, behavioral nudges, and corrections that the agent cannot infer from code. Pairs with `correction-codifier`: corrections accumulate, this skill keeps the file lean. Mirrored from [pablooliva/claude-skills](https://github.com/pablooliva/claude-skills).
 - **`sdd-flow`** — End-to-end SDD lifecycle orchestration. Drives Research → Planning → Implementation → Done via subagents, with optional integration of the other skills in this plugin at appropriate phase boundaries. Requires the SDD plugin.
 
 ### Commands
@@ -26,4 +27,4 @@ The SDD plugin provides a spec-driven development methodology. This plugin provi
 
 ## Status
 
-Version 0.1.0 — early, under active iteration.
+Version 0.3.0 — early, under active iteration.
