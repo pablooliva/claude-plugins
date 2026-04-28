@@ -11,8 +11,14 @@ All phases run on **Claude Opus** by default. No model switching required. Phase
 
 **Integrates agent-engineering skills at phase boundaries:**
 - `cross-cutting-adr` — during research (ambient detection) and planning (spec frontmatter-driven).
-- `/spec-review-panel` — during planning, after the spec is drafted.
+- `/spec-review-panel` — during planning, after the spec is drafted. The default panel now includes `module-depth` (Ousterhout deep-module check on the spec's `## Modules` section, introduced in SDD 1.2.0).
 - `/regression-eval-capture` — at implementation completion, gated by spec frontmatter.
+
+**SDD 1.2.0 features picked up automatically:**
+- **Pre-research clarification (`/research-clarify`)** — mandatory gate before Step 2 research, in **both supervised and autonomous modes**. Externalizes the user's design concept into a `CLARIFICATION-[###]` artifact that downstream phases read. The gate is satisfied by a pre-existing artifact, an interactive `/research-clarify` run, or an explicit `--skip-clarify` opt-out. Autonomous mode halts at this gate by default — it is the only mandatory autonomous-mode checkpoint in the flow. See "Step 1.5" below.
+- **Ubiquitous language glossary** — `SDD/UBIQUITOUS_LANGUAGE.md` is incrementally maintained at `/sdd:research-complete` (Step 2a's second subagent) and `/sdd:planning-complete` (Step 3a's second subagent). Loaded by every phase-execution subagent for vocabulary alignment.
+- **Modules section + module-depth specialist** — embedded in `/sdd:planning-start`'s spec template; checked by the `module-depth` panel specialist in Step 3c.
+- **Risk-tiered code review** — embedded in `/sdd:code-review`; Step 4b applies depth proportional to each module's `Risk:` tier.
 
 ## Usage
 
@@ -69,6 +75,8 @@ Every subagent MUST use these exact paths. The orchestrator MUST include the res
 | Artifact | Path | Created By | Read By |
 |----------|------|------------|---------|
 | **Scope decomposition** | `SDD/flow/DECOMPOSITION-[###]-[feature-name].md` | Scope assessment subagent | User (manual `/sdd-flow` per item) |
+| **Clarification document** (SDD 1.2.0, optional, supervised only) | `SDD/research/CLARIFICATION-[###]-[feature-name].md` | User (interactively, via `/research-clarify` outside this flow) | Research subagent, Research critical review |
+| **Ubiquitous language glossary** (SDD 1.2.0, project-wide, single file) | `SDD/UBIQUITOUS_LANGUAGE.md` | Research-complete subagent (incremental updates), Planning-complete subagent (incremental updates) | All phase-execution subagents |
 | **Research document** | `SDD/research/RESEARCH-[###]-[feature-name].md` | Research subagent | Research review, Planning subagent |
 | **Research critical review** | `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md` | Research review subagent | Research fix subagent |
 | **Specification** | `SDD/requirements/SPEC-[###]-[feature-name].md` | Planning subagent | Panel review, Planning review, Implementation subagent |
@@ -87,12 +95,14 @@ Every subagent MUST use these exact paths. The orchestrator MUST include the res
 
 ```
 SDD/
+├── UBIQUITOUS_LANGUAGE.md          # SDD 1.2.0 — project-wide glossary, single file
 ├── adr/
 │   ├── NNNN-slug.md
 │   └── README.md
 ├── flow/
 │   └── DECOMPOSITION-[###]-[feature-name].md
 ├── research/
+│   ├── CLARIFICATION-[###]-[feature-name].md   # SDD 1.2.0 — optional, supervised only
 │   └── RESEARCH-[###]-[feature-name].md
 ├── requirements/
 │   └── SPEC-[###]-[feature-name].md
@@ -222,6 +232,54 @@ If the user's original invocation already includes a mode flag (e.g., `/sdd-flow
 
 ---
 
+### Step 1.5: Pre-Research Clarification Gate
+
+**This gate runs in both supervised and autonomous modes.** The design concept (Brooks) is the most valuable thing to externalize before any work begins, and the cost of skipping it propagates through every downstream phase. Autonomous mode therefore accepts exactly one mandatory checkpoint at this gate — and only this gate. After clarification, autonomous mode runs uninterrupted as before.
+
+**Skip this gate if `SDD/research/CLARIFICATION-[###]-[feature-name].md` already exists** for this feature (the user already ran `/research-clarify` outside this flow, or pre-clarified before invoking `/sdd-flow`). Just proceed to Step 2; the research subagent will pick up the artifact automatically.
+
+**Skip this gate if the user invoked `/sdd-flow` with `--skip-clarify`.** This is the explicit escape hatch — for users who have a crisp ticket with full acceptance criteria, or for very small well-understood changes, or who are deliberately accepting the design-concept risk. The Design Concept Fidelity block at Step 2c will record the gate-skip in the executive summary so the decision is visible downstream.
+
+Otherwise, the gate fires:
+
+#### Supervised mode
+
+Ask the user:
+
+> **Clarify the design concept first?**
+>
+> SDD 1.2.0 introduces `/research-clarify` — a structured interview that externalizes your design concept before any codebase research begins. **Strongly recommended** unless your task description is already crisp.
+>
+> Reply **y** to clarify first (recommended for brief or fuzzy task descriptions), **n** to proceed directly to research and accept the design-concept risk (suitable for crisp tickets with full acceptance criteria, or very small changes), or **s** to skip this gate now and on future invocations of this flow (equivalent to passing `--skip-clarify`).
+
+- Reply **y**: orchestrator instructs the user to run `/research-clarify` interactively, writes a `## Awaiting Clarification` block to `progress.md`, and **stops**. Session Resumption picks up from Step 2 once the artifact exists.
+- Reply **n**: proceed directly to Step 2. The orchestrator writes a `## Clarification Skipped (user opt-out)` block to `progress.md` so Step 2c's critical-review captures the gate-skip in the executive summary.
+- Reply **s**: same as **n**, but also persists the opt-out for the rest of this flow (no further re-prompting on continuation).
+
+#### Autonomous mode
+
+Without an interactive interviewer, the orchestrator cannot grill. The gate halts by default:
+
+1. Write a `## Awaiting Clarification` block to `progress.md` capturing the resolved identifiers (`[###]`, `[feature-name]`) and the chosen mode.
+2. Emit this completion message and stop:
+
+   > **Autonomous flow halted at the clarification gate (Step 1.5).**
+   >
+   > SDD 1.2.0 requires a clarified design concept before research, even in autonomous mode. You have two options:
+   >
+   > 1. **Clarify now (recommended):** Run `/research-clarify` interactively, complete the interview, then run `/sdd-flow continue`. The flow will resume autonomously from Step 2.
+   > 2. **Skip the gate:** Re-invoke as `/sdd-flow --auto --skip-clarify <task>` if you have a crisp specification already and want to accept the design-concept risk.
+   >
+   > Resolved identifiers for this run: `[###]=<value>`, `[feature-name]=<value>`. Use these exact values when running `/research-clarify` so the artifact path aligns.
+
+This is the only mandatory autonomous-mode checkpoint in the entire flow. All downstream phases continue without interruption once cleared.
+
+#### Orchestrator-discipline note
+
+The orchestrator does NOT spawn a subagent to "perform the clarification" itself. Grilling extracts the user's design concept from their head — a subagent reasoning about the task description is not the same artifact and would produce false fidelity. The gate is satisfied by a human-driven `/research-clarify` run, by a pre-existing CLARIFICATION artifact, or by an explicit `--skip-clarify` opt-out. Nothing else.
+
+---
+
 ## Orchestration Instructions
 
 The orchestrator (main conversation) spawns subagents sequentially. Each subagent receives:
@@ -297,15 +355,15 @@ A spawned subagent has no first-class API to read its own context utilization �
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:research-start` command (embedded in prompt, model checks stripped)
-- **Inputs:** Task description, codebase access
+- **Inputs:** Task description, codebase access, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present — supervised users may have run `/research-clarify` first), `SDD/UBIQUITOUS_LANGUAGE.md` (if present — load before any research writing for vocabulary alignment)
 - **Outputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, update `progress.md`
-- **Task:** Create the research document and perform the full systematic investigation
+- **Task:** Create the research document and perform the full systematic investigation. If a CLARIFICATION artifact exists, treat its branches and open questions as required research targets — every branch must be addressed; every open question must be resolved or explicitly deferred with rationale.
 
 Then spawn a second **general-purpose subagent** with:
 - **Instructions from:** `/sdd:research-complete` command
-- **Inputs:** The RESEARCH document at its exact path
-- **Outputs:** Updated RESEARCH document (if gaps found), updated `progress.md`
-- **Task:** Validate completeness against the checklist, fill any remaining gaps
+- **Inputs:** The RESEARCH document at its exact path, `SDD/UBIQUITOUS_LANGUAGE.md` (if present, for incremental update)
+- **Outputs:** Updated RESEARCH document (if gaps found), updated/created `SDD/UBIQUITOUS_LANGUAGE.md` (incremental, not regenerated — preserve stable terms), updated `progress.md`
+- **Task:** Validate completeness against the checklist, fill any remaining gaps. Per `/sdd:research-complete` Step 3, propose and apply incremental updates to the ubiquitous language glossary based on terms introduced or refined during research.
 
 #### 2b. ADR Capture from Research (NEW)
 
@@ -323,9 +381,9 @@ If no cross-cutting decisions are detected, this step is a no-op — skip to 2c 
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:critical-review` command (research phase section)
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present, for the Design Concept Fidelity check), `SDD/UBIQUITOUS_LANGUAGE.md` (if present, for vocabulary-alignment check)
 - **Outputs:** `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`
-- **Task:** Adversarial review of the research document
+- **Task:** Adversarial review of the research document. Per `/sdd:critical-review`'s Research Phase section, apply the Design Concept Fidelity block first — verify every branch from the CLARIFICATION artifact is addressed and every open question resolved or explicitly deferred. If no CLARIFICATION exists, record the gate-skip note in the review's executive summary as instructed.
 
 #### 2d. Address Research Review Findings
 
@@ -363,15 +421,15 @@ If in **autonomous mode**, proceed directly to Step 3.
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:planning-start` command (model checks stripped)
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/context-management/progress.md`, existing `SDD/adr/` directory (to reference accepted ADRs)
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/context-management/progress.md`, existing `SDD/adr/` directory (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present)
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, updated `progress.md`
-- **Task:** Read the research document and create the full specification. The spec MUST include the three YAML frontmatter fields defined by `/sdd:planning-start` — `review_panel`, `eval_required`, `cross_cutting_decisions` — populated thoughtfully based on feature characteristics (see `/sdd:planning-start` for field semantics). If the feature references an existing ADR, cite it in the relevant spec section.
+- **Task:** Read the research document and create the full specification. The spec MUST include the YAML frontmatter fields defined by `/sdd:planning-start` — `review_panel` (default includes `module-depth` as of SDD 1.2.0), `eval_required`, `cross_cutting_decisions` — populated thoughtfully based on feature characteristics. The spec MUST include the `## Modules` section (SDD 1.2.0) with at least one `MODULE-XXX` entry containing `Public Interface`, `Hides`, `Risk` (low/medium/high), and `Spec refs` fields — prefer deep modules over shallow per Ousterhout. Use canonical names from `SDD/UBIQUITOUS_LANGUAGE.md` when present.
 
 Then spawn a second **general-purpose subagent** with:
 - **Instructions from:** `/sdd:planning-complete` command
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`
-- **Outputs:** Updated SPEC document (if gaps found), updated `progress.md`
-- **Task:** Validate completeness against the checklist, ensure all research findings are incorporated, verify the three frontmatter fields are populated (not left as boilerplate defaults when the feature clearly needs different values).
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present)
+- **Outputs:** Updated SPEC document (if gaps found), updated `SDD/UBIQUITOUS_LANGUAGE.md` (incremental — only if the spec introduced new domain terms not already in the glossary), updated `progress.md`
+- **Task:** Validate completeness against the checklist (which now includes the Modules section verification per SDD 1.2.0), ensure all research findings are incorporated, verify frontmatter fields are populated, capture any glossary deltas the spec introduced (per `/sdd:planning-complete` Step 5).
 
 #### 3b. ADR Capture from Spec Frontmatter (NEW)
 
@@ -463,7 +521,7 @@ Proceed directly to Step 4 (no checkpoint needed here — the supervised checkpo
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:implementation-start` command (model checks stripped)
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/context-management/progress.md`
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/context-management/progress.md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present — use canonical names in code, comments, commits, tests)
 - **Outputs:** `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md`, implemented code and tests, updated `progress.md`
 - **Task:** Read the specification and implement ALL requirements:
   - Core functionality (happy path)
@@ -481,7 +539,7 @@ Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:code-review` command
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from PROMPT document)
 - **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
-- **Task:** Specification-driven code review (70% spec alignment, 20% context engineering, 10% test alignment)
+- **Task:** Specification-driven code review (70% spec alignment, 20% context engineering, 10% test alignment). Apply **Risk-Tiered Review Depth** (SDD 1.2.0) — read the `Risk:` field on each `MODULE-XXX` entry in the spec and scale internal-review depth accordingly: `high` → full review of internals; `medium` → default depth; `low` → tested-boundary review only. Escalate any tier that appears misclassified (e.g., a `low`-tagged module touching irreversible state) and flag the misclassification in the review summary's Module Review Log.
 
 #### 4c. Address Code Review Findings
 
@@ -583,6 +641,7 @@ When the user runs `/sdd-flow continue`:
 - If planning is active → Resume the appropriate sub-step (3a-3g)
 - If "Research Phase - COMPLETE" → Start Step 3 (planning)
 - If research is active → Resume the appropriate sub-step (2a-2f)
+- If `## Awaiting Clarification` is the latest block in `progress.md` AND `SDD/research/CLARIFICATION-[###]-[feature-name].md` now exists → resume at Step 2 (the clarification gate is satisfied; research subagent will pick up the artifact). If the artifact still doesn't exist, re-prompt the user to run `/research-clarify` or skip.
 - If no phase info → Start from Step 0 (scope assessment)
 
 ## Subagent Guidelines
@@ -636,8 +695,9 @@ When spawning each subagent, the orchestrator must include in the prompt:
 | Argument | Description |
 |----------|-------------|
 | `<task>` | The task, requirement, or feature description to develop |
-| `--auto` | Run in fully autonomous mode (no checkpoints) |
+| `--auto` | Run in fully autonomous mode (no checkpoints — except the mandatory pre-research clarification gate at Step 1.5; see `--skip-clarify` to suppress that too) |
 | `--supervised` | Run in supervised mode with checkpoints (default) |
+| `--skip-clarify` | Suppress the pre-research clarification gate (Step 1.5). Use when you have a crisp specification already and accept the design-concept risk. The gate-skip is recorded in the Step 2c critical review's executive summary for downstream visibility. |
 | `continue` | Resume from the last interruption point |
 
 ## Examples
