@@ -33,6 +33,22 @@ If no SDD artifacts exist or the user is asking about a specific proposed soluti
 
 If reviewing research artifacts (`RESEARCH-XXX-*.md`):
 
+### Design Concept Fidelity
+
+If a corresponding `SDD/research/CLARIFICATION-[###]-[feature-name].md` exists, load it and verify:
+
+- [ ] **Branches addressed** — Does the research address every branch the clarification walked? Identify any branch where the user's intent was captured in clarification but is silent in the research.
+- [ ] **Open questions resolved or escalated** — For every entry in the clarification's "Open Questions" section: did the research resolve it, deliberately defer it (with rationale), or silently drop it? Silent drops are a HIGH finding.
+- [ ] **Constraints honored** — Are the user's must-have / must-not / strong-preference constraints from the clarification reflected in the research's findings and recommendations?
+- [ ] **Out-of-scope respected** — Has the research drifted into areas the clarification explicitly marked out of scope?
+- [ ] **Vocabulary aligned** — Does the research use terms consistent with the clarification (and with `SDD/UBIQUITOUS_LANGUAGE.md` if present), or has it introduced synonyms that fragment the design concept?
+
+If no clarification artifact exists, note this explicitly in the review:
+
+> Design Concept Fidelity gate: skipped — no `CLARIFICATION-[###]` artifact present. The user's design concept was not externalized before research; the research's framing of intent has not been verified against the user's actual concept. Recommend running `/research-clarify` retroactively if the feature's downstream cost is high.
+
+This is not a hard block — research can proceed without clarification — but the gap should appear in the review's executive summary so the user can decide whether to address it.
+
 ### Completeness Gaps
 
 - [ ] **Missing stakeholder perspectives** - Which teams/roles weren't consulted?

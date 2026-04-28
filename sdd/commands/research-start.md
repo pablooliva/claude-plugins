@@ -11,12 +11,27 @@ IMPORTANT: This command requires Claude Opus. Before proceeding, check your curr
 
 IMPORTANT: Before starting this phase, check if `SDD/prompts/context-management/progress.md` contains any important information. If it does, ask the user if they want to archive it before resetting. Then reset the file to only contain a heading: `# Research Progress`. We are starting on a new task and want to ensure that the progress file is clean.
 
+## Pre-Research Clarification (if available)
+
+Before any codebase investigation, check whether a clarification artifact exists for this feature:
+
+```bash
+ls SDD/research/CLARIFICATION-*.md 2>/dev/null
+```
+
+If a `CLARIFICATION-[###]-[feature-name].md` document exists matching the feature being researched, **load it first.** It contains the user's externalized design concept — clarified problem statement, success criteria, constraints, branches already resolved, and open questions inherited as research risk. The research must address every branch the clarification surfaced; open questions become explicit research targets.
+
+If no clarification exists, the design concept lives only in the user's prompt. If that prompt is fuzzy, recommend running `/research-clarify` first before continuing. If the prompt is crisp, proceed directly.
+
+Also check for `SDD/UBIQUITOUS_LANGUAGE.md` and load it if present — use the project's canonical domain vocabulary throughout the research document.
+
 Set up systematic investigation:
 
 ## Research Setup
 
 1. Create `SDD/research/RESEARCH-[###]-[feature-name].md` document where:
    - `[###]` is the issue/ticket number if available, or use sequential numbering (001, 002, etc.)
+   - **If `SDD/research/CLARIFICATION-[###]-[feature-name].md` already exists for this feature, reuse the same `[###]` and `[feature-name]` for the RESEARCH document — do not increment. Numbering must align across CLARIFICATION → RESEARCH → SPEC → PROMPT.**
    - `[feature-name]` is a kebab-case description (e.g., "user-authentication", "csv-export")
 
 Use this structure for the research document:

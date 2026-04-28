@@ -139,6 +139,29 @@ Traditional quality metrics are secondary to specification alignment:
 - Security best practices
 - Documentation completeness
 
+## Risk-Tiered Review Depth
+
+The spec's `## Modules` section assigns each module a `Risk:` tier. Use it to **scale review depth proportionally**, not to skip review. Specification alignment, test coverage, and the rejection criteria below apply to all modules regardless of tier; what changes is how deeply you inspect implementation internals.
+
+**Reading the tier:**
+
+```bash
+# Extract module risks from the spec
+grep -A 1 "MODULE-" SDD/requirements/SPEC-*-[feature-name].md | grep "Risk:"
+```
+
+If the spec has no `## Modules` section (legacy or config-only changes), treat the entire feature as **medium** by default and note in the review summary that risk tiering was not available.
+
+**Per-tier review depth:**
+
+- **high** — Full review of internals. Trace control flow through every public method into private helpers. Verify error paths line by line. Check for race conditions, resource leaks, security vulnerabilities. Read every test, including assertions. Reserved for: irreversible writes, financial logic, security-critical paths, regulatory exposure, data-integrity guarantees.
+- **medium** — Default depth. Spec-alignment review covers all REQ/EDGE/FAIL. Spot-check internals for obvious issues (silent failures, missing error handling, code smells). Read test names and verify coverage maps; do not necessarily read every assertion.
+- **low** — **Tested-boundary review only.** Verify the public interface matches what the spec promises. Verify tests at the boundary cover the contract (inputs, outputs, documented errors). Do not deep-dive internals. The bet: if the boundary is correct and the tests pass, the internals can be replaced without changing behavior.
+
+**Implausible tier overrides:** If a module is marked `low` but you observe it touches state that is irreversible, security-sensitive, or financial, **escalate to medium or high** in your review and flag the tier as misclassified in the review summary. The reviewer's judgment overrides a misassigned tier; tiers are guidance, not authority.
+
+**Review budget allocation:** Spend more time on high-risk modules and less on low-risk modules. The point is to concentrate scrutiny where the consequence of failure is largest, not to perform identical depth on every module regardless of stakes.
+
 ## Review Process Workflow
 
 ### Step 1: Gather All Artifacts
@@ -178,6 +201,9 @@ ls SDD/prompts/context-management/subagent-calls/
 2. Verify all edge cases have handlers
 3. Check all failure scenarios have error management
 4. Confirm business logic matches intent
+5. Apply **Risk-Tiered Review Depth** (see section above) per module:
+   - For each `MODULE-XXX` in the spec, read the `Risk:` field and apply the matching depth.
+   - Record in the review summary: module name, declared risk, depth applied, and any tier escalation (e.g., "MODULE-002 declared low but escalated to medium — touches payment ledger").
 
 ### Step 5: Review Context Engineering
 
@@ -315,6 +341,17 @@ Create `SDD/reviews/REVIEW-XXX-[feature-name]-YYYYMMDD.md`:
 
 ## Specification Alignment (70%)
 [Detailed alignment analysis]
+
+## Module Review Log
+
+For each module in the spec's `## Modules` section, record the depth applied:
+
+| Module | Declared Risk | Depth Applied | Notes |
+|--------|---------------|---------------|-------|
+| MODULE-001 [name] | high \| medium \| low | full \| default \| boundary | [escalations, deviations, justifications] |
+| MODULE-002 [name] | ... | ... | ... |
+
+If the spec had no `## Modules` section, note: "Risk tiering not available — full medium-depth review applied uniformly."
 
 ## Context Engineering (20%)
 [Context management review]

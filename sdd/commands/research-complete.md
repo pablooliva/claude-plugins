@@ -57,11 +57,29 @@ Confirm that `SDD/research/RESEARCH-[###]-[feature-name].md` contains all requir
 
 Ensure all investigation questions are answered and the research document provides sufficient foundation for specification creation without requiring additional system investigation.
 
-## 3. Record Phase Transition
+## 3. Update Ubiquitous Language Glossary
+
+Maintain `SDD/UBIQUITOUS_LANGUAGE.md` — a project-wide glossary of domain terms shared between user, code, and AI. The goal (Evans, *Domain-Driven Design*) is that every conversation and artifact uses the same names for the same things, so AI thinking traces stay aligned with intent and stop reinventing terminology.
+
+**Maintenance is incremental, not regenerative.** Stable terms must persist across cycles; do not rewrite the file from scratch.
+
+Delegate to a `general-purpose` subagent (via Task tool) with this brief:
+
+> Read `SDD/research/RESEARCH-[###]-[feature-name].md` and the current `SDD/UBIQUITOUS_LANGUAGE.md` (if it exists). Identify domain terms introduced or refined by this research that are not yet in the glossary, and any existing glossary entries this research contradicts or sharpens.
+>
+> Output a proposed update as a unified diff or as explicit add/edit/remove instructions. For each new term, capture: canonical name, one-line definition, synonyms to avoid, and a code or research reference. Group terms by domain area (entities, actions, states, events, roles).
+>
+> Do not invent terms not grounded in the research or codebase. Do not rewrite stable entries unless this research genuinely contradicts them.
+
+If `SDD/UBIQUITOUS_LANGUAGE.md` does not yet exist, the subagent creates it. Apply the proposed update; resolve any contradictions explicitly (note the prior definition and why it changed).
+
+If the research is purely infrastructural and introduces no domain vocabulary, the subagent may report "no glossary changes" — record that in the progress file and skip the update.
+
+## 4. Record Phase Transition
 
 Write brief transition note to `SDD/prompts/context-management/progress.md`:
 
-"Research phase complete. RESEARCH-[###]-[feature-name].md finalized. Ready for /planning-start."
+"Research phase complete. RESEARCH-[###]-[feature-name].md finalized. Glossary updated (or: no glossary changes). Ready for /planning-start."
 
 ## Phase Complete
 

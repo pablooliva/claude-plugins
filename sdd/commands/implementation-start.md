@@ -35,7 +35,11 @@ Proceed with caution if context is above 35%.
    - Identify the specification document referenced
    - Note any important context from the planning phase
 
-2. **Update Progress for Implementation Phase:**
+2. **Read Ubiquitous Language Glossary:**
+   - If `SDD/UBIQUITOUS_LANGUAGE.md` exists, load it. Use the canonical names from this glossary in code, comments, commit messages, and tests — in preference to any synonyms or near-synonyms. If implementation surfaces a term not in the glossary, do not silently invent one; flag it for addition during `/research-complete` of a future cycle (or during this cycle's planning if still open).
+   - If the glossary does not exist, proceed without it.
+
+3. **Update Progress for Implementation Phase:**
    - Add a new implementation section to `SDD/prompts/context-management/progress.md`
    - IMPORTANT: Preserve all research and planning phase information - do NOT delete or reset it
    - Add reference to the PROMPT document being created

@@ -30,6 +30,7 @@ Read the spec's frontmatter for a `review_panel:` directive. If present, use tha
 - `performance`
 - `data-modeling`
 - `api-contract`
+- `module-depth`
 
 Other panel values available:
 - `accessibility` — for UI features with user-facing interaction
@@ -41,7 +42,7 @@ Example frontmatter:
 
 ```yaml
 ---
-review_panel: [security, performance, data-modeling, accessibility]
+review_panel: [security, performance, data-modeling, api-contract, module-depth, accessibility]
 ---
 ```
 
@@ -142,7 +143,30 @@ Resource-oriented design. Idempotency keys. Safe vs idempotent methods. ETags an
 
 **Output schema:** Same as security specialist, with `#### API Contract Findings` header.
 
-### 4.5 Optional Specialists
+### 4.5 Module Depth Specialist
+
+**Identity:** Senior software architect reviewing the specification's `## Modules` section for interface depth, information hiding, and structural quality (Ousterhout, *A Philosophy of Software Design*).
+
+**Vocabulary payload (required context):**
+Deep module vs shallow module (Ousterhout). Information hiding (Parnas). Interface surface area. Hidden complexity. Public interface. Implementation detail. Leaky abstraction. Pass-through wrapper. Façade. Getter/setter exposure. Classitis (small classes proliferating without abstraction value). Conway's law (modules mirror communication structure). Cohesion vs coupling. Dependency direction (caller depends on interface, not implementation). Stable abstractions principle. Boundary types (domain types at the boundary, internal types inside). Module purpose statement. Shallow module = interface ≈ implementation; deep module = interface ≪ implementation. Risk-tier-driven review depth.
+
+**Named anti-patterns to detect:**
+1. **Modules section missing or empty** — Detection: spec has no `## Modules` section, or the section exists but contains no `MODULE-XXX` entries (and the feature is not a config-only change). Resolution: retrofit module entries before proceeding. Output: degrade gracefully — flag as MEDIUM with "Modules section not present — couldn't verify deep-module constraint. Recommend retrofitting before review repeats."
+2. **Pass-through wrapper module** — Detection: `Public Interface` lists methods that delegate 1:1 to a single internal call with no added behavior, transformation, or error handling; `Hides` is empty or trivial. Resolution: inline the wrapper, or add the missing behavior (validation, retries, type coercion, caching) and re-state what's hidden.
+3. **Getter/setter façade** — Detection: `Public Interface` consists primarily of getters and setters per private field with no behavior. Resolution: redesign around domain operations, not field exposure. If the module is a DTO, label it as such — DTOs are not modules in the deep-module sense and should not be in this section.
+4. **Public method per private field** — Detection: 1:1 ratio of public methods to private state, with each method touching one field. Resolution: aggregate operations into intent-named methods (e.g., `applyDiscount(order)`, not `setDiscountPercent + setDiscountReason + setDiscountTimestamp`).
+5. **Wide interface, thin internals** — Detection: `Public Interface` lists more than five methods; `Hides` describes minimal complexity (no algorithms, state machines, or non-trivial logic). Resolution: split the module along cohesion lines, or fold methods into a smaller intent-revealing interface.
+6. **Module with no clear purpose** — Detection: `Public Interface` covers unrelated operations (e.g., user CRUD + email sending + audit logging in one module). Resolution: split by single responsibility; each module owns one coherent concept.
+7. **Implementation types in the public interface** — Detection: `Public Interface` exposes internal data structures, library types, or framework-specific types instead of domain types. Resolution: introduce boundary types in the domain; keep implementation types internal.
+8. **Unjustified shallow module** — Detection: module is shallow but `Justification (if shallow)` is empty, generic ("simple wrapper"), or implausible. Resolution: deepen the module by adding the missing logic, merge it into a caller, or write a real justification (framework requirement, true adapter with no behavior to add, etc.).
+9. **Missing spec refs** — Detection: module has no `Spec refs:` entries, or REQ/EDGE/FAIL items in the spec are not mapped to any module. Resolution: every requirement must have a home; every module should justify its existence by which requirements it satisfies.
+10. **Risk tier missing or implausible** — Detection: `Risk:` is unset, or a high-stakes module (auth, payment, irreversible writes) is marked `low`. Resolution: assign risk based on consequence-of-failure, not size or simplicity.
+
+**Output schema:** Same as security specialist, with `#### Module Depth Findings` header.
+
+**Graceful degradation:** If the spec has no `## Modules` section at all, do not fail the panel. Emit one MEDIUM finding requesting the section be added, list what should be there based on the rest of the spec (which REQ-XXX items imply which module boundaries), and proceed. The aggregate verdict still applies.
+
+### 4.6 Optional Specialists
 
 If `review_panel` includes any of the following, use these specialist definitions (abbreviated; expand inline following the same structure as 4.1–4.4):
 
@@ -191,7 +215,7 @@ SDD/reviews/PANEL-SPEC-[feature-name]-YYYYMMDD.md
 **Date:** YYYY-MM-DD
 **Spec reviewed:** SDD/requirements/SPEC-[###]-[feature-name].md
 **Research context:** SDD/research/RESEARCH-[###]-[feature-name].md
-**Panel:** security, performance, data-modeling, api-contract[, ...]
+**Panel:** security, performance, data-modeling, api-contract, module-depth[, ...]
 
 ## Executive Summary
 
@@ -216,6 +240,9 @@ SDD/reviews/PANEL-SPEC-[feature-name]-YYYYMMDD.md
 
 #### API Contract Findings
 [Output from API contract specialist, verbatim.]
+
+#### Module Depth Findings
+[Output from module-depth specialist, verbatim.]
 
 [Any additional specialists from the panel.]
 

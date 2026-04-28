@@ -478,10 +478,30 @@ The `/commit` command ensures:
 
 The plugin includes an automatic subagent logging hook that tracks all subagent interactions for debugging and progress monitoring.
 
-## Version History
+## Changelog
 
-- **1.1.0** - Added `/spec-review-panel` command (domain specialist panel review of specs, complementing `/critical-review`). Added YAML frontmatter to the specification template with three fields (`review_panel`, `eval_required`, `cross_cutting_decisions`) that gate downstream behavior and enable integration with the companion **agent-engineering** plugin. Updated Phase Progression diagram and Workflow Example to reflect the new planning-phase review step. Directory structure now documents `PANEL-SPEC-*.md` review outputs and the optional `SDD/adr/` directory used by the companion plugin.
-- **1.0.0** - Initial release with complete SDD methodology
+### 1.2.0 — Software-fundamentals integration
+
+Inspired by Matt Pocock's *Software Fundamentals Matter More Than Ever* ([AI Engineer Europe 2026](https://www.youtube.com/watch?v=v4F1gFy-hqg)). Each addition follows a generative-front, verification-back pattern: a constraint is applied during the phase that produces an artifact, and verified at that phase's review gate.
+
+- **`/research-clarify` — pre-research design-concept interview.** New command that externalizes the user's design concept (Brooks) before any codebase research begins. Walks the design tree branch by branch, surfaces ambiguities, captures constraints and out-of-scope. Produces `SDD/research/CLARIFICATION-[###]-[feature-name].md`, which `/research-start` then loads as input. **Verification:** `/critical-review`'s research checklist now includes a *Design Concept Fidelity* block that confirms every clarified branch was addressed and every open question resolved or explicitly deferred.
+- **`SDD/UBIQUITOUS_LANGUAGE.md` — project-wide domain glossary.** Single file maintained incrementally across cycles (Evans, *Domain-Driven Design*). Updated by `/research-complete` (terms introduced during research) and `/planning-complete` (terms introduced during spec). Loaded by `/research-start`, `/planning-start`, `/implementation-start`, and `/research-clarify` so vocabulary stays aligned across phases — AI thinking traces stop reinventing terminology.
+- **`## Modules` section + `module-depth` specialist — deep-module enforcement.** Spec template now includes a `## Modules` section requiring `Public Interface`, `Hides`, `Risk`, and `Spec refs` for each module. `/planning-start` directs Claude to prefer deep modules (Ousterhout) and reject unjustified shallow modules. **Verification:** `/spec-review-panel` adds a `module-depth` specialist (added to the default panel) with vocabulary payload and 10 named anti-patterns (pass-through wrapper, getter/setter façade, wide-thin interface, etc.). Existing specs without a Modules section degrade gracefully — the specialist emits a MEDIUM finding requesting retrofit rather than failing the panel.
+- **Risk-tiered code review.** `/code-review` reads each module's `Risk:` field and scales review depth proportionally: `high` → full review of internals; `medium` → default depth; `low` → tested-boundary review only. The reviewer retains authority to escalate misclassified tiers (e.g., a `low`-tagged module touching irreversible state). Concentrates scrutiny where consequence-of-failure is largest.
+
+**Numbering convention extended:** `CLARIFICATION-[###] → RESEARCH-[###] → SPEC-[###] → PROMPT-[###]` must align — all four artifacts for the same feature share `[###]` and `[feature-name]`.
+
+**Backwards compatibility:** All four additions are non-breaking. Existing specs without `## Modules`, missing `module-depth` in `review_panel`, or pre-1.2.0 research without a CLARIFICATION artifact all continue to work — the new gates degrade gracefully and note the gap rather than failing.
+
+**Companion plugin integration:** The `agent-engineering` plugin's `/sdd-flow` skill has been updated to wire all four additions into the orchestrated lifecycle. Pre-research clarification is a **mandatory gate (Step 1.5) in both supervised and autonomous modes** — autonomous flow halts at this single checkpoint until the user runs `/research-clarify`, the CLARIFICATION artifact already exists, or `--skip-clarify` is passed. Deep-modules and risk-tiering ride along automatically through the updated SDD commands.
+
+### 1.1.0
+
+Added `/spec-review-panel` command (domain specialist panel review of specs, complementing `/critical-review`). Added YAML frontmatter to the specification template with three fields (`review_panel`, `eval_required`, `cross_cutting_decisions`) that gate downstream behavior and enable integration with the companion **agent-engineering** plugin. Updated Phase Progression diagram and Workflow Example to reflect the new planning-phase review step. Directory structure now documents `PANEL-SPEC-*.md` review outputs and the optional `SDD/adr/` directory used by the companion plugin.
+
+### 1.0.0
+
+Initial release with complete SDD methodology.
 
 ## Support
 

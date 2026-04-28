@@ -56,6 +56,14 @@ Confirm that `SDD/requirements/SPEC-[###]-[feature-name].md` contains all requir
 - [ ] Files suitable for subagent delegation identified
 - [ ] Technical constraints from research documented
 
+### Modules
+
+- [ ] `## Modules` section is present
+- [ ] Every module has `Public Interface`, `Hides`, `Risk`, and `Spec refs` filled in
+- [ ] No shallow modules without explicit justification (interface comparable to or larger than what is hidden)
+- [ ] Every REQ-XXX, EDGE-XXX, FAIL-XXX is mapped to at least one module via `Spec refs`
+- [ ] Risk tiers are plausible (high-stakes modules — auth, payment, irreversible writes — are not marked `low`)
+
 ### Validation Strategy
 
 - [ ] Unit test scenarios specified
@@ -162,7 +170,13 @@ Final quality check before completion:
 - [ ] Cross-references between sections are accurate
 - [ ] File path references include specific line numbers where helpful
 
-## 5. Update Progress File for Phase Transition
+## 5. Capture Glossary Deltas Introduced by the Spec
+
+If the spec introduced or refined any domain terms beyond what was added to `SDD/UBIQUITOUS_LANGUAGE.md` during `/research-complete` (e.g., new module names that became canonical, action verbs adopted in REQ-XXX, state names introduced in EDGE-XXX), apply those deltas to the glossary now. This keeps `/implementation-start` and downstream cycles aligned to the same vocabulary.
+
+Maintenance is incremental — do not rewrite stable entries. If the spec uses a term that contradicts an existing glossary entry, resolve the contradiction explicitly (update the entry or rename in the spec — do not let both stand). If the spec introduced no new domain terms, skip this step and note "no glossary changes" in the progress file.
+
+## 6. Update Progress File for Phase Transition
 
 Update `SDD/prompts/context-management/progress.md` with planning completion and implementation handoff:
 
@@ -211,7 +225,7 @@ Planning phase complete. Ready for /implementation-start.
 Specification provides comprehensive implementation guidance.
 ```
 
-## 6. Final Checklist Before Completion
+## 7. Final Checklist Before Completion
 
 Before marking the planning phase as complete:
 

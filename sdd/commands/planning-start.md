@@ -16,7 +16,11 @@ IMPORTANT: This command requires Claude Sonnet. Before proceeding, check your cu
    - Identify the research document referenced
    - Note any important context from the research phase
 
-2. **Update Progress for Planning Phase:**
+2. **Read Ubiquitous Language Glossary:**
+   - If `SDD/UBIQUITOUS_LANGUAGE.md` exists, load it. This is the project-wide glossary of domain terms — use these names exactly when writing the spec, in preference to any synonyms or near-synonyms. Aligning vocabulary with the glossary is non-negotiable; if the spec needs a term not in the glossary, propose it as an addition (captured during `/planning-complete`'s glossary-delta step).
+   - If the glossary does not exist, proceed without it.
+
+3. **Update Progress for Planning Phase:**
    - Add a new planning section to `SDD/prompts/context-management/progress.md`
    - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
    - Add reference to the SPEC document being created
@@ -59,7 +63,7 @@ Create the specification using this enhanced template:
 
 ```markdown
 ---
-review_panel: [security, performance, data-modeling, api-contract]
+review_panel: [security, performance, data-modeling, api-contract, module-depth]
 eval_required: false
 cross_cutting_decisions: []
 ---
@@ -155,6 +159,27 @@ cross_cutting_decisions: []
 - [Performance requirements from stakeholders]
 - [Security requirements from research]
 
+## Modules
+
+For each module created or significantly changed by this feature, articulate the public interface and the complexity it hides. Prefer **deep modules** (Ousterhout): a small interface that hides substantial functionality. Reject shallow modules — wide interfaces over thin internals — as a default position; if a module must be shallow, justify it explicitly.
+
+Each module also carries a **Risk** tier consumed by `/code-review` to scale review depth proportionally.
+
+### MODULE-001: [name]
+- **Public Interface:** [exported functions, types, endpoints, or commands. Keep small. List signatures, not implementation hints.]
+- **Hides:** [the substantive complexity protected behind the interface — algorithms, state machines, external integrations, error recovery, caching, etc. If this section is short, the module is shallow; restructure or justify.]
+- **Risk:** [low | medium | high]
+  - **low** — boundary-only consequences; failure is recoverable and contained. Reviewer attention focuses on interface contract and tests at the boundary.
+  - **medium** — default. Standard review depth.
+  - **high** — failure has outsized consequences (financial, security, data integrity, irreversible side effects, regulatory exposure). Reviewer attention extends to internals.
+- **Spec refs:** [REQ-XXX, EDGE-XXX, FAIL-XXX implemented by this module]
+- **Justification (if shallow):** [Only required if the interface surface is comparable to or larger than what is hidden. Explain why depth was sacrificed — e.g., framework requires this shape, integration adapter with no logic to add, etc.]
+
+### MODULE-002: [name]
+[Same structure.]
+
+[Add as many modules as the feature touches. If the feature does not introduce or significantly change any module — e.g., a config-only change — write a single line stating that and skip module entries.]
+
 ## Validation Strategy
 
 ### Automated Testing
@@ -209,12 +234,12 @@ cross_cutting_decisions: []
 
 The spec template includes three YAML frontmatter fields consumed by `sdd-flow` and related skills. Populate them thoughtfully based on the research foundation:
 
-- **`review_panel:`** — List of specialist reviewers to convene during `/spec-review-panel`. Default covers API/data-backed features. Adjust based on feature characteristics:
+- **`review_panel:`** — List of specialist reviewers to convene during `/spec-review-panel`. Default includes `module-depth` (Ousterhout deep-module check on the `## Modules` section) and covers API/data-backed features. Adjust based on feature characteristics:
   - Add `accessibility` for UI features with user-facing interaction.
   - Add `privacy` for features handling PII, consent, or regulated data.
   - Add `cost` for data-intensive or high-traffic features.
   - Add `reliability` for distributed systems, async processing, or retry-heavy flows.
-  - Remove specialists that clearly don't apply (e.g., `api-contract` for pure internal tooling).
+  - Remove specialists that clearly don't apply (e.g., `api-contract` for pure internal tooling). Removing `module-depth` is rare — almost every spec creates or changes modules.
 
 - **`eval_required:`** — Boolean. Set to `true` if this feature produces LLM output, probabilistic behavior, classification/extraction/summarization, or any quality dimension that unit tests can't verify. When `true`, `/regression-eval-capture` will scaffold a LangSmith eval dataset at implementation completion. Set to `false` for deterministic features (CRUD, UI, data transforms).
 
@@ -243,6 +268,14 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - Identify which files need to be loaded during implementation
    - Mark research tasks that can be delegated to subagents
    - Ensure context requirements stay under 40%
+
+5. **Articulate Modules — Prefer Deep Over Shallow:**
+   - For every module the feature creates or significantly changes, fill in a `MODULE-XXX` entry under the `## Modules` section.
+   - **Deep module** (preferred): small public interface, substantial hidden complexity. Hidden complexity is what callers don't have to know — algorithms, state, retries, caching, integration glue, error recovery.
+   - **Shallow module** (avoid by default): public interface comparable to or larger than what it hides. Examples: pass-through wrapper, getter/setter façade with no logic, public method per private field, module that exists only to call one external service with no added behavior.
+   - If a module must be shallow, fill the `Justification (if shallow)` field. Unjustified shallow modules will be flagged by the `module-depth` specialist in `/spec-review-panel` and should be merged, deepened, or removed.
+   - Assign each module a **Risk** tier (low/medium/high) — this drives review depth in `/code-review`. High-risk = irreversible, financial, security-critical, regulatory. Low-risk = contained, recoverable, boundary-only.
+   - Map every REQ-XXX/EDGE-XXX/FAIL-XXX to at least one module via the `Spec refs:` field — every requirement must have a home.
 
 ## Context Management & Subagent Usage
 
@@ -302,6 +335,9 @@ Before considering the specification complete:
 - [ ] Implementation notes provide clear guidance
 - [ ] Best practices have been researched (via general-purpose subagent if needed)
 - [ ] Architectural decisions are documented with rationale
+- [ ] Every module has a `MODULE-XXX` entry with Interface, Hides, and Risk filled in
+- [ ] No shallow modules without explicit justification
+- [ ] Every REQ-XXX / EDGE-XXX / FAIL-XXX is mapped to at least one module
 
 ---
 
