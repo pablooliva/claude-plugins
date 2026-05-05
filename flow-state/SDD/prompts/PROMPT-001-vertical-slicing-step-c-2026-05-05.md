@@ -54,9 +54,9 @@ APFS is case-insensitive on this volume; `SDD/` collides with the `sdd/` plugin 
 - [x] REQ-018: Version bumps — `sdd` plugin → 2.0.0 (plugin.json + marketplace.json); `agent-engineering` → 0.4.0 (plugin.json + marketplace.json) — Chunk 5 — Status: Complete (sdd/.claude-plugin/plugin.json:4 + agent-engineering/.claude-plugin/plugin.json:4 + .claude-plugin/marketplace.json sdd entry + .claude-plugin/marketplace.json agent-engineering entry; all four version strings byte-aligned per CLAUDE.md drift guidance)
 - [x] REQ-019: `sdd/README.md` two-workflow restructure (decision aid + Whole-feature + Per-slice + Migration/Changelog including agent-engineering 0.4.0+ cross-ref) — Chunk 5 — Status: Complete (sdd/README.md restructured: "Which workflow is right for you?" decision aid at line 59; "Whole-feature workflow" section at line 113 with preserved diagram + workflow example; "Per-slice workflow" section at line 256 with state-machine diagram, slice commands, opt-in instructions, slice-boundary checkpoint matrix, retrospective + ledger model, re-planning trigger, practicality gate; "Migration to 2.0.0" section with /sdd-migrate-layout description, EDGE-004 CLAUDE.md staleness paragraph, EDGE-008 APFS case-collision warning; "Cross-plugin dependency" section satisfies REQ-026 SDD-side; 2.0.0 changelog entry. NOTE: REQ-019's research-side strict greps `prompts/=0` and `PROMPT-=0` cannot hold because REQ-019's own content mandates (breaking-change notice + CLAUDE.md staleness reminder + PROMPT→IMPLEMENTATION-PLAN rename callout) require naming the legacy strings — internal spec contradiction; surfaced to orchestrator)
 - [x] REQ-020: Glossary discipline — additions in same commit as source-code edit introducing the term; no deferred "documentation pass" — Chunk 1 — Status: Complete (added Step 5 to implementation-complete.md mirroring planning-complete Step 5; per-step discipline articulated)
-- [ ] REQ-021: `agent-engineering/README.md` Skills section updates (sdd-flow Step 4 state machine + per-slice integration) + 0.4.0 version + SDD 2.0.0+ minimum dependency clause; repo-root `README.md` Available Plugins note — Chunk 5 — Status: Not Started
+- [x] REQ-021: `agent-engineering/README.md` Skills section updates (sdd-flow Step 4 state machine + per-slice integration) + 0.4.0 version + SDD 2.0.0+ minimum dependency clause; repo-root `README.md` Available Plugins note — Chunk 5 + Step 4c fix — Status: Complete (agent-engineering/README.md done in Chunk 5; repo-root README.md updated in Step 4c per F-2: SDD section now states v2.0.0 + names `delivery_mode: per-slice` opt-in + cross-plugin coupling clause; agent-engineering section now states v0.4.0 + names per-slice support added in 0.4.0 + Requires-SDD-2.0.0+ clause + FAIL-009 reference)
 - [x] REQ-022: `## Slice Progress` table schema (columns `SLICE-ID | Name | Status | Acceptance check | Test result | Notes`; states `Not Started`/`In Progress`/`Acceptance Check Passing`/`Complete`; `/implementation-start` scaffolds; `/slice-retro` updates Status/Test result/Notes only; SLICE-XXX uniqueness invariant) — Chunk 2 — Status: Complete (binding schema documented in slice-start.md / slice-review.md / slice-commit.md; column-write authority in slice-retro.md Step 8; FIRST-WRITE-WINS in slice-start.md Step 5/6)
-- [~] REQ-023: `sdd-flow` Phase Detection legacy-path fallback + resume rules for `## Awaiting Slicing Decision` and `## Recommended Re-planning` — Chunk 4a — Status: Partial (legacy-path fallback DONE in SKILL.md Phase Detection Priority — emits migration prompt directing user to `/sdd-migrate-layout` when `SDD/prompts/context-management/progress.md` or `SDD/prompts/PROMPT-*.md` exist while `SDD/orchestration/progress.md` does not. Resume rules for `## Awaiting Slicing Decision` and `## Recommended Re-planning` deferred to Chunk 4b which owns Step 4 substantive surgery and the corresponding progress.md block writers.)
+- [x] REQ-023: `sdd-flow` Phase Detection legacy-path fallback + resume rules for `## Awaiting Slicing Decision` and `## Recommended Re-planning` — Chunk 4a + Step 4c fix — Status: Complete (legacy-path fallback DONE in Chunk 4a; resume rules added in Step 4c per F-3: SKILL.md Phase Detection Priority list now includes `## Awaiting Slicing Decision` rule — `--fall-back-to-whole-feature` / `--retry-slicing "<hint>"` / no-flag re-prompt branches; `## Recommended Re-planning` rule — three resume options + invalid-flag combination matrix + halt-regardless-of-skip-flag callout per REQ-014; `## Awaiting Re-start Decision` rule — `--confirm-restart SLICE-XXX` per EDGE-013)
 - [x] REQ-024: Slice-ID args validated against `^SLICE-\d{3}$` before path interpolation (path-traversal prevention) — Chunk 2 — Status: Complete (Slice-ID Validation section in all four slice-*.md files); slice-boundary checkpoint axis — Chunk 4b — Status: Complete (SKILL.md per-slice cycle documents the supervised/autonomous × slice-boundary on/off matrix; `--skip-slice-checkpoints` flag added; default-on-in-both-modes rationale captured)
 - [x] REQ-025: Slice-command flag conventions (full inventory: `--resume`, `--force`, `--reconcile-ledger`, `--replan`, `--from-slice`, `--override-replan`; semantics, defaults, supervised-vs-autonomous, validation) — Chunk 2 — Status: Complete (Flag Inventory tables in slice-start.md / slice-review.md / slice-retro.md / slice-commit.md; orchestrator-flag boundary documented in slice-retro.md)
 - [x] REQ-025a: `/slice-retro --reconcile-ledger` 8-step algorithm (manual-edit preservation) — Chunk 2 — Status: Complete (sdd/commands/slice-retro.md `--reconcile-ledger` Mode section)
@@ -67,7 +67,7 @@ APFS is case-insensitive on this volume; `SDD/` collides with the `sdd/` plugin 
 - [x] SEC-001: `/slice-commit` and `/sdd-migrate-layout` MUST NOT bypass git hooks (no `--no-verify`, no force flags) — Chunks 2 + 3 — Status: Complete (slice-commit.md Step 6/7 + sdd-migrate-layout.md safety-posture preamble + Step 6 commit-policy notes; closing-oracle grep for `no-verify` shows only project-policy-prohibition statements, no actual flag usage)
 - [x] SEC-002: `/sdd-migrate-layout` active-flow refusal + fail-closed posture on parse failure — Chunk 3 — Status: Complete (sdd-migrate-layout.md Step 3a–3c: parse `## Phase:`/`## Awaiting `/`## Recommended Re-planning`/`## PARTIAL:` headings, three-way classification with case-iii fail-closed; `--force-no-active` documented as override flag)
 - [x] SEC-003: Slice-ID inputs validated per REQ-024 (path-traversal prevention) — Chunk 2 — Status: Complete (Slice-ID Validation section in all four slice-*.md files)
-- [ ] SEC-004: No new credentials/secrets/PII surfaces; transcript-redaction posture inherited (out of scope) — Chunk 1 (acknowledgment in tracker) — Status: Not Started
+- [x] SEC-004: No new credentials/secrets/PII surfaces; transcript-redaction posture inherited (out of scope) — Chunk 1 (acknowledgment in tracker) — Status: Complete (acknowledgment-only; verified in Step 4c — no new commands or hooks introduce credentials/secrets/PII surfaces; the spec text covers this requirement and the transcript-redaction posture is inherited from existing SDD plugin behavior)
 - [x] UX-001: `/slice-*` inert message names field/required-value/alternative-action; friendly + self-documenting — Chunk 2 — Status: Complete (Inert-Mode Gate Step 2 in all four slice-*.md emits REQ-007 verbatim message naming field, value, and alternative)
 
 ### Edge Case Implementation
@@ -75,12 +75,12 @@ APFS is case-insensitive on this volume; `SDD/` collides with the `sdd/` plugin 
 - [x] EDGE-001: `/sdd-migrate-layout` re-run when already migrated (idempotent "already migrated" exit) — Chunk 3 — Status: Complete (sdd-migrate-layout.md Step 2 four-state machine: State 2 "Already migrated" → "No migration needed; layout is already at 2.0.0 conventions." exit 0; Step 9 post-migration verification re-runs detection)
 - [x] EDGE-002: `/slice-*` invoked when active SPEC has `delivery_mode: whole-feature` or no field (inert message per REQ-007/UX-001) — Chunk 2 — Status: Complete (Inert-Mode Gate in all four slice-*.md files)
 - [x] EDGE-003: `/slice-review` invoked when target slice has no implementation yet (graceful empty-set finding) — Chunk 2 — Status: Complete (slice-review.md Step 3 — `Not Started` row triggers EDGE-003 refusal message)
-- [ ] EDGE-004: User repos with CLAUDE.md hardcoding old paths (out-of-scope; reminder in `/sdd-migrate-layout` output + sdd/README.md) — Chunk 5 — Status: Not Started
-- [ ] EDGE-005: Practicality gate fires (single-MODULE OR every-decomposition-is-build-then-test) — Chunk 1 — Status: Not Started
+- [x] EDGE-004: User repos with CLAUDE.md hardcoding old paths (out-of-scope; reminder in `/sdd-migrate-layout` output + sdd/README.md) — Chunk 5 — Status: Complete (sdd/README.md:596 — "Does NOT modify user-authored docs" reminder names `CLAUDE.md` + `AGENTS.md` staleness; sdd/commands/sdd-migrate-layout.md Step 8 — CLAUDE.md staleness scan emits a directive output reminder)
+- [x] EDGE-005: Practicality gate fires (single-MODULE OR every-decomposition-is-build-then-test) — Chunk 1 — Status: Complete (sdd/commands/planning-start.md:323+ — Step 8 "Practicality Check" enumerates four boolean heuristics + qualitative escape requiring `Qualitative judgment: ` prefix; emits `## Awaiting Slicing Decision` halt block in autonomous mode)
 - [x] EDGE-006: Re-planning recommendation fired but user runs `/sdd-flow continue` without flag (informative refusal listing `--replan` / `--override-replan`) — Chunk 4b — Status: Complete (SKILL.md per-slice 4c.5 EDGE-006 paragraph: orchestrator detects pending `## Recommended Re-planning` block in `progress.md` with no resume-flag block following; emits informative refusal naming the three options before exiting)
 - [x] EDGE-007: RETROSPECTIVE artifact written but ledger update fails (recovery via `--reconcile-ledger` per REQ-025a) — Chunk 2 — Status: Complete (slice-retro.md `--reconcile-ledger` Mode + Two-Write Ordering Invariant section)
-- [ ] EDGE-008: macOS APFS case-insensitive filesystem (this-repo deviation; documented in sdd/README.md migration section) — Chunk 5 — Status: Not Started
-- [ ] EDGE-009: Spec without `delivery_mode:` field (defaults silently to `whole-feature` per OQ-3) — Chunk 1 — Status: Not Started
+- [x] EDGE-008: macOS APFS case-insensitive filesystem (this-repo deviation; documented in sdd/README.md migration section) — Chunk 5 — Status: Complete (sdd/README.md:601–603 — "macOS APFS case-collision warning" subsection in Migration section; warns about `SDD/`↔`sdd/` plugin source-dir collision and prescribes manual rename + re-run)
+- [x] EDGE-009: Spec without `delivery_mode:` field (defaults silently to `whole-feature` per OQ-3) — Chunk 1 — Status: Complete (sdd/commands/planning-start.md:272 — frontmatter prose codifies "Absent → silent default to whole-feature; no log line"; sdd/commands/implementation-start.md:52 — same silent-default rule when reading delivery_mode from spec)
 - [x] EDGE-010: Multiple `Not Started` slices when `/slice-start` has no arg (prompt user; never silently picks) — Chunk 2 — Status: Complete (slice-start.md Step 4 — multi-row branch prompts user / autonomous halt)
 - [x] EDGE-011: `## Slice Progress` table column-write authority (`/implementation-start` scaffolds; `/slice-retro` updates Status/Test result/Notes only) — Chunk 2 — Status: Complete (column-write authority documented in slice-start.md schema + slice-retro.md Step 8)
 - [x] EDGE-012: `/slice-start` re-invocation while another slice is `In Progress` (refusal + `--resume` flag) — Chunk 2 — Status: Complete (slice-start.md Step 5 EDGE-012 conflict refusal + Flag Inventory `--resume`)
@@ -95,30 +95,30 @@ APFS is case-insensitive on this volume; `SDD/` collides with the `sdd/` plugin 
 - [x] FAIL-003: Slice retrospective writes RETROSPECTIVE artifact then disk fills before ledger update (recovery via `--reconcile-ledger`) — Chunk 2 — Status: Complete (slice-retro.md Two-Write Ordering Invariant section + `--reconcile-ledger` Mode 8-step algorithm)
 - [x] FAIL-004: Per-slice review iteration cap (3) exhausted with HIGH count not strictly decreasing (halt slice's loop, route to ledger; halt flow under `--skip-slice-checkpoints`) — Chunk 4b — Status: Complete (per-slice 4c documents the cap, the progress-stall check, the ledger routing under `Open recommendations awaiting user decision`, and the entire-flow halt under autonomous + `--skip-slice-checkpoints`)
 - [x] FAIL-005: `/sdd-migrate-layout` invoked on Windows in cmd.exe or PowerShell (bash-detection refusal with "run from Git Bash" guidance) — Chunk 3 — Status: Complete (sdd-migrate-layout.md Step 0 first-action bash detection: `command -v bash >/dev/null 2>&1 || { echo "ERROR: /sdd-migrate-layout requires bash. On Windows, run from Git Bash."; exit 1; }`)
-- [ ] FAIL-006: Hook path constant updated but migration not yet run (or vice versa) (hook-skew documented; no auto-recovery, manual remediation) — Chunk 1 — Status: Not Started
+- [x] FAIL-006: Hook path constant updated but migration not yet run (or vice versa) (hook-skew documented; no auto-recovery, manual remediation) — Chunk 1 — Status: Complete (sdd/commands/sdd-migrate-layout.md:329 — Hook reminder names path-change explicitly: "ensure your installed SDD plugin is at version 2.0.0 or later. Older versions of sdd/hooks/log_subagent_call.py write to the legacy path... which would silently re-create the legacy directory and produce a split-tree.")
 - [x] FAIL-007: `/slice-start` invoked but `## Slice Progress` table is missing (refusal + recommend re-running `/implementation-start`) — Chunk 2 — Status: Complete (slice-start.md Step 3 — verbatim FAIL-007 refusal message)
 - [x] FAIL-008: `/sdd-migrate-layout` parse-failure during active-flow refusal check (fail-closed refusal per SEC-002) — Chunk 3 — Status: Complete (sdd-migrate-layout.md Step 3c case-iii fail-closed branch — same control-flow surface as EDGE-015, refusal message includes path, parser error, and remediation paths including `--force-no-active` override)
 - [x] FAIL-009: Cross-plugin version mismatch — SDD 2.x with agent-engineering 0.3.x (FAIL-009 surfaced as warning via README cross-refs per REQ-026) — Chunk 5 — Status: Complete (sdd/README.md Cross-plugin dependency section names FAIL-009 explicitly + describes split-tree silent-misbehavior failure mode + non-destructive `git mv` recovery; agent-engineering/README.md "Requires SDD plugin 2.0.0 or later" subsection mirrors the warning + cites FAIL-009)
 
 ### Module Implementation (MODULE-XXX)
 
-- [ ] MODULE-001: `delivery_mode` runtime branch (REQ-001, REQ-002) — Chunk 1 — Status: Not Started
+- [x] MODULE-001: `delivery_mode` runtime branch (REQ-001, REQ-002) — Chunk 1 — Status: Complete (validated at planning-start.md (REQ-001), implementation-start.md (REQ-002), all four slice-*.md (REQ-007 inert-mode gate), and SKILL.md Step 4 routing block (REQ-012); canonical-enum + invalid-value fail-fast applied consistently; absent-field silent-default applied consistently)
 - [x] MODULE-002: Slice-command primitives (`/slice-start`, `/slice-review`, `/slice-retro`, `/slice-commit`) (REQ-003…007, REQ-022, REQ-024, REQ-025, REQ-025a, EDGE-002/010/011/012/013/014, FAIL-003/007) — Chunk 2 — Status: Complete (sdd/commands/slice-start.md, slice-review.md, slice-retro.md, slice-commit.md authored; all four pass closing oracles: inert-mode phrase present, retro emits `## Recommended SPEC Amendments` + `## Recommended Re-planning` headers, zero legacy-path hits, flag inventory documented, `^SLICE-\d{3}$` regex literal in each file, `LEARNINGS-FEATURE-[feature-name]` placeholder consistency)
-- [ ] MODULE-003: Slice-integrity review checks (REQ-009, REQ-010) — Chunk 1 — Status: Not Started
-- [ ] MODULE-004: Practicality gate (REQ-001, REQ-011, EDGE-005) — Chunk 1 — Status: Not Started
+- [x] MODULE-003: Slice-integrity review checks (REQ-009, REQ-010) — Chunk 1 — Status: Complete (critical-review.md:111 — "### Slice Integrity (per-slice mode only)" sub-section per REQ-009; spec-review-panel.md — Slice Integrity Specialist 4.7 + `#### Slice Integrity Findings` deliverable sub-header conditionally rendered on `delivery_mode: per-slice` per REQ-010; mode-gating present in both)
+- [x] MODULE-004: Practicality gate (REQ-001, REQ-011, EDGE-005) — Chunk 1 — Status: Complete (planning-start.md Step 8 — four boolean heuristics + qualitative escape with `Qualitative judgment: ` prefix; halt block matches `## Awaiting Clarification` shape; `Slicing not applicable: <reason>` annotation pattern on escape; supervised + autonomous halt patterns both wired)
 - [x] MODULE-005: Migration helper (`/sdd-migrate-layout`) (REQ-008, SEC-001, SEC-002, EDGE-001, EDGE-008, EDGE-015, FAIL-001, FAIL-002, FAIL-005, FAIL-008) — Chunk 3 — Status: Complete (sdd/commands/sdd-migrate-layout.md authored; closing-oracle gate passed: file exists, all refusal-message strings present, dry-run-by-default documented, idempotence in Step 2 + Step 9, partial-migration recovery in Step 7, bash detection in Step 0, hardcoded move-set paths per ADR 0002 / research Branch 4. EDGE-008 + FAIL-002 are touched by this command's behavior — full closure is in Chunks 4a/5)
-- [ ] MODULE-006: sdd-flow Step 4 per-slice state machine (REQ-012, REQ-013, REQ-014, REQ-015, REQ-022, REQ-023, REQ-025, EDGE-006, FAIL-004) — Chunk 4b — Status: Not Started
-- [ ] MODULE-007: Directory restructure + rename propagation (REQ-002, REQ-003, REQ-005, REQ-016, REQ-017, REQ-022, FAIL-006) — Chunk 1 (paths) + Chunks 2/3 (new commands emit new paths) — Status: Not Started
+- [x] MODULE-006: sdd-flow Step 4 per-slice state machine (REQ-012, REQ-013, REQ-014, REQ-015, REQ-022, REQ-023, REQ-025, EDGE-006, FAIL-004) — Chunk 4b + Step 4c fix — Status: Complete (Chunk 4b implemented Step 4 mode-routing block, per-slice cycle 4a→4b→4c→4c.5→4c.6→PAUSE, end-of-feature shared 4d–4j, slice-boundary checkpoint axis matrix, iteration cap 3 with progress-stall, ledger-only prompt rule, retro recommendations matcher, re-planning halt-regardless-of-skip; Step 4c fix added Phase Detection resume rules per F-3 — closing the REQ-023 gap MODULE-006 indirectly inherits)
+- [x] MODULE-007: Directory restructure + rename propagation (REQ-002, REQ-003, REQ-005, REQ-016, REQ-017, REQ-022, FAIL-006) — Chunk 1 (paths) + Chunks 2/3 (new commands emit new paths) + Step 4c fix — Status: Complete (sdd/commands/*.md path migrations done in Chunk 1; new slice-*.md and sdd-migrate-layout.md emit new layout in Chunks 2/3; SKILL.md path strings done in Chunk 4a; hook updated per REQ-017 in Chunk 1; FAIL-006 hook reminder in sdd-migrate-layout.md:329; Step 4c fix closed F-1 narrative-prose terminology drift — bare "PROMPT document" / "PROMPT tracking document" → "IMPLEMENTATION-PLAN document" / "IMPLEMENTATION-PLAN tracking document")
 - [x] MODULE-008: Documentation surface + version manifests (REQ-018, REQ-019, REQ-020, REQ-021, REQ-026, FAIL-009, RISK-007) — Chunk 5 — Status: Complete (REQ-018 + REQ-019 + REQ-026 + FAIL-009 + RISK-007 closed in Chunk 5; REQ-020 closed in Chunk 1; REQ-021 partially in scope of Chunk 5 — agent-engineering README sdd-flow Skills-section description + Status section bumped to 0.4.0 with What's-new-in-0.4.0 + Requires-SDD-2.0.0+ subsections; repo-root README.md was NOT in this chunk's listed Outputs, deferred for orchestrator disposition)
 
 ### Risk Tracking
 
-- [ ] RISK-001 (high): Partial restructure on commit — closing-oracle grep on every modified file before declaring "verified" — Chunk 1 closing-oracle gate
-- [ ] RISK-002 (medium): Mode-routing bug — bit-for-bit-preservation invariant and smoke-flow primary check — Chunks 1 + 4b
+- [x] RISK-001 (high): Partial restructure on commit — closing-oracle grep on every modified file before declaring "verified" — Chunk 1 closing-oracle gate — Status: Complete (Chunk 1 ran the full closing-oracle grep block — 0 hits on `prompts/context-management` and `PROMPT-` outside the migration helper; locked-region diff oracle returned no diff; LOG_SUBDIR confirmed at new path; review verification table all-PASS)
+- [x] RISK-002 (medium): Mode-routing bug — bit-for-bit-preservation invariant and smoke-flow primary check — Chunks 1 + 4b — Status: Complete (Chunk 4b verified whole-feature 4a–4j sub-step headers intact at lines 533, 549, 557, 564, 572, 579, 587, 600, 621, 625; per-slice cycle inserted as additive section; Step 4 routing block reads delivery_mode and branches without altering whole-feature path; review section MODULE-006 confirms preservation invariant)
 - [x] RISK-003 (high): Migration helper destructive on user repo — active-flow refusal + idempotence + bash-detection — Chunk 3 (mitigations in sdd-migrate-layout.md: dry-run-by-default safety stance, Step 0 bash detection, Step 2 four-state classification, Step 3 active-flow fail-closed, Step 4 clean-tree precondition, Step 7 rollback recipe)
-- [ ] RISK-004 (medium): Marketplace + manifest drift — `grep -n version` across all four files in same commit — Chunk 5
-- [ ] RISK-005 (low): User-authored CLAUDE.md / AGENTS.md staleness — README + migration-output reminder; no auto-edit — Chunk 5
-- [ ] RISK-006 (high): Recursion-trap during this run — every subagent prompt embeds the warning verbatim — All chunks (binding)
+- [x] RISK-004 (medium): Marketplace + manifest drift — `grep -n version` across all four files in same commit — Chunk 5 — Status: Complete (sdd/.claude-plugin/plugin.json:4 → 2.0.0; agent-engineering/.claude-plugin/plugin.json:4 → 0.4.0; .claude-plugin/marketplace.json sdd → 2.0.0 + agent-engineering → 0.4.0; all four byte-aligned per review verification table)
+- [x] RISK-005 (low): User-authored CLAUDE.md / AGENTS.md staleness — README + migration-output reminder; no auto-edit — Chunk 5 — Status: Complete (sdd/README.md:596 reminder + sdd-migrate-layout.md Step 8 staleness scan output; no auto-edit posture honored)
+- [x] RISK-006 (high): Recursion-trap during this run — every subagent prompt embeds the warning verbatim — All chunks (binding) — Status: Complete (every chunk subagent prompt embedded the recursion-trap warning verbatim; this run's artifacts remain at `flow-state/SDD/...` legacy paths; source-code edits emit new layout for FUTURE runs only; review commendation section confirms zero relocation of in-flight artifacts)
 - [x] RISK-007 (medium): Plugin version drift between SDD 2.x and agent-engineering 0.3.x — README cross-references + marketplace.json release notes — Chunk 5 — Status: Complete (mitigated via REQ-026 cross-references; sdd/README.md Cross-plugin-dependency section + agent-engineering/README.md Requires-SDD-2.0.0+ subsection both name the coupling and the silent-misbehavior failure mode)
 
 ---
@@ -348,13 +348,28 @@ Per chunk above. Each chunk subagent reads only its file set; init subagent does
 
 ### In Progress
 
-- **Current Focus:** Chunks 1 + 2 + 3 + 4a + 4b complete; awaiting Chunk 5 dispatch (Versioning + READMEs + cross-plugin coupling).
-- **Files Being Modified:** None (Chunk 4b complete).
-- **Next Steps:** Orchestrator dispatches Chunk 5 subagent.
+- **Current Focus:** Chunks 1 + 2 + 3 + 4a + 4b + 5 complete; Step 4b code-review complete (APPROVED with required fixes); Step 4c fix complete (F-1 + F-2 + F-3 + F-4 all addressed). Awaiting Step 4d/4e/4f orchestrator dispatch.
+- **Files Being Modified:** None (Step 4c fix complete).
+- **Next Steps:** Orchestrator advances to Step 4d (critical-review) or proceeds to completion subagent per `/sdd-flow` Step 4 sequence.
 
 ### Blocked/Pending
 
 - (none)
+
+### Step 4f Closing-Pass Verification (2026-05-05)
+
+All REQ/EDGE/FAIL/MODULE/RISK rows above show on-disk evidence and `Status: Complete`. Closing-oracle re-run by Step 4f subagent:
+
+- `grep -rn 'prompts/context-management' sdd/ agent-engineering/skills/sdd-flow/` → 2 hits in `SKILL.md` (intentional: legacy-path fallback in Phase Detection per REQ-023).
+- `grep -rln 'PROMPT-' sdd/ agent-engineering/skills/sdd-flow/` outside `sdd-migrate-layout.md` and `sdd/README.md` → only `agent-engineering/skills/sdd-flow/SKILL.md` (intentional: legacy-path fallback prose).
+- `grep -n 'prompts/\|PROMPT-' sdd/README.md` → 5 hits, ALL within Directory Structure ASCII tree comment, "Migration to 2.0.0" section, "Cross-plugin dependency" section, and Changelog 2.0.0 entry — all with explicit deprecated framing per spec §Manual Verification line 451 carve-out.
+- `grep -n 'LOG_SUBDIR' sdd/hooks/log_subagent_call.py` → `Path("SDD") / "orchestration" / "subagent-calls"` (REQ-017 ✓).
+- Versions byte-aligned: `sdd/.claude-plugin/plugin.json` 2.0.0 + `agent-engineering/.claude-plugin/plugin.json` 0.4.0 + marketplace.json sdd 2.0.0 + agent-engineering 0.4.0.
+- Step A locked-region diff vs `ffeec97`: `diff <(git show ffeec97:sdd/commands/planning-start.md | sed -n '64,204p') <(sed -n '64,204p' sdd/commands/planning-start.md)` → exit 0, no diff. (Lines 375–379 originally; now at 398–402 due to allowed-region insertions; bytewise content unchanged per Chunk 1 closing-oracle verification.)
+- Slice commands all four contain `^SLICE-\d{3}$` validation regex, inert-mode message verbatim, and the exact retro header strings `## Recommended SPEC Amendments` + `## Recommended Re-planning`.
+- Reviews resolved: REVIEW-001 APPROVED + Step 4c F-1/F-2/F-3/F-4 fixed; CRITICAL-IMPL Step 4d PROCEED + Step 4e M-1..M-5 + L-1..L-7 fixed.
+
+**Status:** All implementation oracles pass. Phase ready to mark COMPLETE.
 
 ---
 
@@ -420,23 +435,23 @@ Per spec Validation Strategy:
 
 ## Security Validation
 
-- [ ] SEC-001 acknowledged: `/slice-commit` and `/sdd-migrate-layout` use plain `git commit` and `git mv`; no `--no-verify`, no force flags. Closing-oracle greps in Chunks 2 + 3 confirm.
-- [ ] SEC-002 acknowledged: `/sdd-migrate-layout` active-flow refusal + fail-closed posture on parse failure. Closing-oracle greps in Chunk 3 confirm refusal-message strings.
-- [ ] SEC-003 acknowledged: Slice-ID inputs validated against `^SLICE-\d{3}$` before path interpolation. Closing-oracle grep in Chunk 2 confirms regex presence in all four `/slice-*` commands.
-- [ ] SEC-004 acknowledged: No new credentials/secrets/PII surfaces. Transcript-redaction posture inherited (out of scope; documented in SPEC).
-- [ ] Authorization checks: N/A. Markdown commands run in user's local environment under user's git credentials.
-- [ ] Input validation: REQ-001 (`delivery_mode` enum), REQ-024 (SLICE-ID regex). All chunk closing-oracle greps confirm presence.
+- [x] SEC-001 acknowledged: `/slice-commit` and `/sdd-migrate-layout` use plain `git commit` and `git mv`; no `--no-verify`, no force flags. Closing-oracle greps in Chunks 2 + 3 confirm.
+- [x] SEC-002 acknowledged: `/sdd-migrate-layout` active-flow refusal + fail-closed posture on parse failure. Closing-oracle greps in Chunk 3 confirm refusal-message strings.
+- [x] SEC-003 acknowledged: Slice-ID inputs validated against `^SLICE-\d{3}$` before path interpolation. Closing-oracle grep in Chunk 2 confirms regex presence in all four `/slice-*` commands.
+- [x] SEC-004 acknowledged: No new credentials/secrets/PII surfaces. Transcript-redaction posture inherited (out of scope; documented in SPEC).
+- [x] Authorization checks: N/A. Markdown commands run in user's local environment under user's git credentials.
+- [x] Input validation: REQ-001 (`delivery_mode` enum), REQ-024 (SLICE-ID regex). All chunk closing-oracle greps confirm presence.
 
 ---
 
 ## Documentation Created
 
-- [ ] REQ-019 — `sdd/README.md` two-workflow restructure (decision aid + Whole-feature + Per-slice + Migration/Changelog) — Chunk 5
-- [ ] REQ-021 — `agent-engineering/README.md` Skills section (sdd-flow Step 4 state machine + per-slice) + 0.4.0 changelog + SDD 2.0.0+ minimum clause — Chunk 5
-- [ ] REQ-021 — repo-root `README.md` Available Plugins note — Chunk 5
-- [ ] REQ-026 — Cross-plugin version coupling cross-references in both READMEs — Chunk 5
-- [ ] EDGE-008 — sdd/README.md migration section: case-insensitive FS note (APFS this-repo deviation) — Chunk 5
-- [ ] EDGE-004 — sdd/README.md migration section: user-CLAUDE staleness reminder — Chunk 5
+- [x] REQ-019 — `sdd/README.md` two-workflow restructure (decision aid + Whole-feature + Per-slice + Migration/Changelog) — Chunk 5
+- [x] REQ-021 — `agent-engineering/README.md` Skills section (sdd-flow Step 4 state machine + per-slice) + 0.4.0 changelog + SDD 2.0.0+ minimum clause — Chunk 5
+- [x] REQ-021 — repo-root `README.md` Available Plugins note — Step 4c fix (per F-2; SDD section names v2.0.0 + `delivery_mode: per-slice` opt-in + cross-plugin coupling; agent-engineering section names v0.4.0 + per-slice support added in 0.4.0 + Requires-SDD-2.0.0+ + FAIL-009 cross-ref)
+- [x] REQ-026 — Cross-plugin version coupling cross-references in both READMEs — Chunk 5
+- [x] EDGE-008 — sdd/README.md migration section: case-insensitive FS note (APFS this-repo deviation) — Chunk 5
+- [x] EDGE-004 — sdd/README.md migration section: user-CLAUDE staleness reminder — Chunk 5
 - [ ] (No new API documentation — markdown commands document themselves via `## Description` and `## Usage` frontmatter+body.)
 
 ---

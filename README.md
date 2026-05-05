@@ -8,13 +8,18 @@ This repository hosts Claude Code plugins that extend the capabilities of Claude
 
 ## Available Plugins
 
-### 1. Spec-Driven Development (SDD)
+### 1. Spec-Driven Development (SDD) — v2.0.0
 
 A comprehensive plugin that provides a standardized Specification-Driven Development methodology for consistent, high-quality software development practices. SDD ensures your projects follow a structured approach through research, planning, and implementation phases.
+
+**v2.0.0 highlights:** Two delivery modes are now supported — `whole-feature` (default; behaves identically to 1.x) and `delivery_mode: per-slice` (new opt-in; vertical-thread implementation cycle with per-slice review, retrospective, and a learnings ledger). The directory layout was restructured (`SDD/prompts/` split into `SDD/implementation/` + `SDD/orchestration/`) and `PROMPT-XXX` was renamed to `IMPLEMENTATION-PLAN-XXX`. Run `/sdd-migrate-layout` once on existing repos. See the SDD plugin README for the full migration guide.
+
+**Cross-plugin coupling:** SDD 2.0.0 requires `agent-engineering` 0.4.0 or later for `sdd-flow` orchestration; install the two together.
 
 **Key Features:**
 
 - Structured development workflow with research, planning, and implementation phases
+- Two delivery modes — whole-feature (default) and per-slice (vertical-thread, with retrospectives + learnings ledger)
 - Built-in code review and context management
 - Automated commit message generation
 - Progress monitoring and tracking
@@ -30,9 +35,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - Research, planning, and execution phases for any task type
 - Produces deliverables: documents, reports, analysis, plans
 
-### 3. Agent Engineering
+### 3. Agent Engineering — v0.4.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). Complements the SDD plugin — SDD provides the workflow, agent-engineering provides the guardrails that compound quality over time. Each skill is independently usable in any session.
+
+**v0.4.0 highlights:** The `sdd-flow` skill now orchestrates both `whole-feature` and `per-slice` delivery modes end-to-end (per-slice support added in 0.4.0). Requires SDD plugin 2.0.0 or later; SDD 2.0.0 + agent-engineering 0.4.0 should be installed together (a version mismatch surfaces FAIL-009 silent-misbehavior in mixed installs).
 
 **Key Features:**
 

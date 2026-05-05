@@ -555,3 +555,139 @@ Dependency chain: **init → 1 → 2 → 3 → 4a → 4b → 5**. Each chunk run
 ### Next gate
 
 Step 4 chunk dispatch — orchestrator dispatches **Chunk 1 (Foundation)** subagent. Tracker is ready; tracker passes through every chunk handoff updating Status flags as REQs/EDGEs/FAILs land.
+
+## Step 4b — Code review
+
+**Date:** 2026-05-05
+**Reviewer:** Step 4b code-review subagent (specification-driven review, codebase-change-feature adaptation).
+**Output:** `SDD/reviews/REVIEW-001-vertical-slicing-step-c-20260505.md`
+**Verdict:** APPROVED with 3 MEDIUM-severity required fixes + 1 LOW-severity hygiene item.
+
+### Closing-oracle gate
+All declared closing-oracle greps PASS:
+- Path migration: zero hits in `sdd/commands/` + `sdd/hooks/` outside the migration helper (documented exception per REQ-008).
+- SKILL.md path migration: one hit at line 725 — the FAIL-002 legacy-detection bullet (documented exception).
+- Step A locked-region byte-identity: lines 64–204 of pre-implementation HEAD `ffeec97` byte-identical at HEAD; lines 375–379 of `ffeec97` byte-identical at HEAD's lines 398–402 (shift due to allowed-region insertions; content preserved).
+- Matcher contract: `/slice-retro` emits `^## Recommended SPEC Amendments$` (line 111) + `^## Recommended Re-planning$` (line 126); SKILL.md matcher (lines 668 + 669) targets exact strings. Byte-aligned producer ↔ consumer.
+- Hook LOG_SUBDIR: `Path("SDD") / "orchestration" / "subagent-calls"`.
+- Version cross-references: 4 strings byte-aligned (sdd 2.0.0 × 2; agent-engineering 0.4.0 × 2).
+- Cross-plugin coupling refs: SDD → ae 0.4.0+ AND ae → SDD 2.0.0+ both present.
+- Inert-mode message in all 4 slice commands; Slice-ID regex literal in all 4; migration helper safety strings (Refusing migration, fail-closed, dry-run, On Windows run from Git Bash, already migrated, nothing to migrate, Could not determine flow status, Both old and new layouts) all present; `delivery_mode` validation literal in planning-start + implementation-start.
+
+### Findings
+- **F-1 [MEDIUM]:** Terminology drift in SKILL.md narrative prose — "PROMPT document" / "PROMPT tracking document" survives at lines 312, 545, 547, 553, 561, 576, 584. The path strings were updated; the bare-term references were missed by the narrow `PROMPT-` (with hyphen) closing oracle but should have been renamed per Chunk 1's tracker stats and ADR 0002 intent.
+- **F-2 [MEDIUM]:** Repo-root `README.md` Available Plugins section did not receive the per-slice opt-in note + version-coupling note REQ-021 mandates. Tracker explicitly flagged this gap (Chunk 5 deferred to orchestrator disposition).
+- **F-3 [MEDIUM]:** `sdd-flow` Phase Detection priority list (SKILL.md lines 723–736) is missing explicit resume rules for `## Awaiting Slicing Decision` and `## Recommended Re-planning` per REQ-023. The legacy-path fallback IS present; the slicing/replanning resume rules are not. Tracker marked REQ-023 as Partial; Chunk 4b implemented the writers (halt block emission) but did not back-port the resume-detection into the Phase Detection list.
+- **F-4 [LOW]:** Tracker checkbox staleness for several REQ/EDGE/FAIL/MODULE entries (EDGE-004/005/008/009, FAIL-006, MODULE-001/003/004/006/007, SEC-004 marked `[ ]` despite on-disk evidence showing Complete). Bookkeeping-only.
+
+### Decision
+APPROVED with required fixes. F-1, F-2, F-3 are mechanical / surgical and can be addressed in Step 4c. None affect runtime correctness for whole-feature mode (bit-for-bit preservation invariant verified). F-3 affects per-slice resumption correctness but is recoverable via manual intervention.
+
+### Next gate
+Step 4c — orchestrator dispatches fix-findings subagent to address F-1 / F-2 / F-3 (and optionally F-4); then re-review or proceed to Step 4d critical-review.
+
+## Step 4c — Address code review findings
+
+**Date:** 2026-05-05
+**Subagent:** Step 4c fix-findings (autonomous mode; bounded prompt)
+**Inputs:** REVIEW-001-vertical-slicing-step-c-20260505.md (verdict: APPROVED with required fixes — 3 MEDIUM + 1 LOW), SPEC-001 REQ-021/REQ-023, ADR 0002.
+
+**Findings resolved (4 of 4):**
+- **F-1 [MEDIUM]** — Bare "PROMPT document" / "PROMPT tracking document" in `agent-engineering/skills/sdd-flow/SKILL.md` (lines 312, 545, 547, 553, 561, 576, 584) substituted to "IMPLEMENTATION-PLAN document" / "IMPLEMENTATION-PLAN tracking document" via `perl -i -pe`. Closing oracle: `grep -n "PROMPT document\|PROMPT tracking" SKILL.md` → 0 hits.
+- **F-2 [MEDIUM]** — Repo-root `README.md` Available Plugins section updated: SDD section heading bumped to v2.0.0 with per-slice opt-in highlights paragraph + cross-plugin coupling paragraph + Two-delivery-modes Key Features bullet; agent-engineering section heading bumped to v0.4.0 with sdd-flow per-slice support paragraph + Requires-SDD-2.0.0+ + FAIL-009 cross-ref. Closing oracle: `grep -n "delivery_mode: per-slice\|v2.0.0\|v0.4.0\|FAIL-009" README.md` → hits at lines 11, 15, 38, 42.
+- **F-3 [MEDIUM]** — `agent-engineering/skills/sdd-flow/SKILL.md` Phase Detection Priority list extended with three new resume-rule bullets (lines 729, 733, 734): `## Awaiting Slicing Decision` (`--fall-back-to-whole-feature` / `--retry-slicing` / no-flag re-prompt), `## Recommended Re-planning` (`--replan` / `--replan --from-slice` / `--override-replan` + invalid-combination matrix + halt-regardless-of-skip per REQ-014), `## Awaiting Re-start Decision` (`--confirm-restart SLICE-XXX` per EDGE-013). Closing oracle: `grep -n "Awaiting Slicing Decision\|Recommended Re-planning\|Awaiting Re-start Decision" SKILL.md` → 4 Phase-Detection hits + 2 existing per-slice-cycle hits.
+- **F-4 [LOW]** — Tracker `flow-state/SDD/prompts/PROMPT-001-vertical-slicing-step-c-2026-05-05.md` checkbox states updated to match on-disk reality: REQ-021, REQ-023, SEC-004, EDGE-004/005/008/009, FAIL-006, MODULE-001/003/004/006/007, RISK-001/002/004/005/006, Security Validation block (6 items), Documentation Created block (6 items), and In-Progress current-focus narrative — all flipped from `[ ]`/`[~]` to `[x]` with file:line evidence in the status notes.
+
+**Artifacts modified:**
+- `agent-engineering/skills/sdd-flow/SKILL.md` (F-1 + F-3)
+- `README.md` (repo root) (F-2)
+- `flow-state/SDD/prompts/PROMPT-001-vertical-slicing-step-c-2026-05-05.md` (F-4)
+- `flow-state/SDD/reviews/REVIEW-001-vertical-slicing-step-c-20260505.md` (appended `## Findings Addressed` section + APPROVED decision)
+
+**Locked-region preservation:** `sdd/commands/planning-start.md` lines 64–204 + 375–379 untouched (F-1/F-2/F-3 do not edit that file).
+
+**Recursion-trap discipline:** This run's artifacts remain at `flow-state/SDD/...` legacy paths; source-code edits emit the new layout for FUTURE runs only. No artifact relocation.
+
+**Status:** Step 4c complete. Orchestrator may advance to Step 4d (critical-review) / 4e (fix-findings if any) / 4f (implementation-complete) per `/sdd-flow` Step 4 sequence.
+
+## Step 4d — Implementation critical review
+
+**Date:** 2026-05-05
+**Subagent:** Step 4d critical-review (adversarial generalist; complementary to Step 4b spec-alignment review)
+**Output:** `flow-state/SDD/reviews/CRITICAL-IMPL-vertical-slicing-step-c-20260505.md`
+**Inputs:** SPEC-001-vertical-slicing-step-c.md, REVIEW-001-vertical-slicing-step-c-20260505.md (APPROVED + fix-findings), implementation files (sdd/commands/slice-*.md, sdd-migrate-layout.md, planning-start.md, implementation-start.md, critical-review.md, spec-review-panel.md, agent-engineering/skills/sdd-flow/SKILL.md, sdd/hooks/log_subagent_call.py).
+
+**Verdict:** PROCEED with awareness — none of the findings block the run; M-1 + M-2 should be addressed before SDD 2.0.0 is announced as release-ready.
+
+**Findings:** 0 HIGH, 5 MEDIUM, 7 LOW.
+
+- **M-1 [MEDIUM]** — Phase Detection rule 1 has ambiguous AND/OR precedence; the line `if A exists OR B files exist AND C does NOT exist` parses as `A OR (B AND not-C)` in Python/Bash precedence, while authorial intent reads `(A OR B) AND not-C`. Affects partly-migrated repo behavior on `/sdd-flow continue`.
+- **M-2 [MEDIUM]** — Halt-block name divergence: `/slice-retro` Step 9 emits `## Awaiting Re-planning Decision` to progress.md, but Phase Detection (SKILL.md:733) and `/sdd-migrate-layout` Step 3b grep regex both look for `## Recommended Re-planning`. Producer/consumer mismatch — re-planning halts may not be detected on resume; migrate-layout will not refuse during a re-planning halt.
+- **M-3 [MEDIUM]** — Migration helper Step 7 Option A (`git reset --hard HEAD`) is unsafe in `--resume-partial` mode: discards prior-run partial moves silently in addition to this run's progress.
+- **M-4 [MEDIUM]** — `--reconcile-ledger` algorithm mis-classifies consolidated ledger entries as orphans when `/slice-retro` Step 7 consolidation rules have rewritten retro learnings away from literal source text.
+- **M-5 [MEDIUM]** — `--replan` resumption from SLICE-001 default does not concretize interaction with the existing `## Slice Progress` table state (rows already at `Complete` from prior plan). Two reasonable interpretations; spec underdetermines.
+- **L-1 through L-7** — practicality heuristic 3 vacuous on single-REQ specs; LOG_SUBDIR change is silent against unupgraded plugin install; CLAUDE.md staleness scan is unbounded recursion; slice-ID regex duplicated 4x; concurrent migrate-layout invocations undefined; submodule-changes precondition gap; inert-mode message terse on typo'd field name.
+
+**Cross-cutting concerns:**
+- **C-1** — matcher contract is byte-aligned at retro-body header but NOT at progress.md halt block (M-2 restated).
+- **C-2** — recursion-trap exception relies on user discipline, not enforced invariants.
+- **C-3** — bit-for-bit preservation of whole-feature flow is well-grounded by mechanical-only diff verification but is an assertion (smoke flow not actually executed).
+
+**Step 4c fix verification:** F-1 (`grep -n "PROMPT document\|PROMPT tracking" SKILL.md` → 0 hits ✓), F-2 (repo-root README has v2.0.0/v0.4.0/version-coupling ✓), F-3 (Phase Detection list contains the three new resume rules ✓), F-4 (tracker checkboxes aligned ✓). All durable on disk.
+
+**Status:** Step 4d complete. Orchestrator may advance to Step 4e (fix-findings — optional, MEDIUM-level only; M-1/M-2 are recommended before release) or directly to Step 4f (implementation-complete) per `/sdd-flow` Step 4 sequence.
+
+## Step 4e — Address critical review findings
+
+**Date:** 2026-05-05
+**Subagent:** Step 4e fix-findings (autonomous; bounded prompt; resolves 5 MEDIUM + 7 LOW from CRITICAL-IMPL Step 4d)
+**Inputs:** CRITICAL-IMPL-vertical-slicing-step-c-20260505.md (verdict PROCEED with awareness; M-2 load-bearing), SPEC-001-vertical-slicing-step-c.md REQ-013/014/022/025/025a, related implementation files.
+
+**Findings resolved (12 of 12):**
+
+- **M-1 [MEDIUM]** — Phase Detection rule 1 ambiguous AND/OR precedence. Resolved by rephrasing rule 1 in `agent-engineering/skills/sdd-flow/SKILL.md` Phase Detection Priority as a checklist with explicit `(C, must-be-true)` and `(A OR B, at-least-one)` clauses; explicit boolean form `(A OR B) AND C` and partly-migrated case documented.
+- **M-2 [MEDIUM, LOAD-BEARING]** — Halt-block name divergence. Resolved by establishing the explicit two-stage matcher contract: retro-body header `## Recommended Re-planning` lives ONLY in the retrospective ARTIFACT (written by `/slice-retro`); progress.md halt block `## Awaiting Re-planning Decision` is written by the ORCHESTRATOR (per-slice 4c.5 Stage 1) when its matcher fires; Phase Detection (Stage 2) reads progress.md for `## Awaiting Re-planning Decision`. Edits: `sdd/commands/slice-retro.md` Step 9 (removed halt-block emission, added two-stage contract subsection), `agent-engineering/skills/sdd-flow/SKILL.md` per-slice 4c.5 (added Stage 1/Stage 2 subsections + fenced halt-block content), Phase Detection bullet renamed to `## Awaiting Re-planning Decision`, EDGE-006 updated. Verification grep oracles all pass.
+- **M-3 [MEDIUM]** — Migration helper Step 7 Option A unsafe in `--resume-partial`. Resolved by mode-aware rollback recipe: pre-flight-clean uses Option A safely; `--resume-partial` suppresses Option A with `⚠️ UNSAFE` warning and recommends Option B (per-move inverse, scoped to THIS run only); `--allow-dirty` notes Option A discards unrelated edits.
+- **M-4 [MEDIUM]** — `--reconcile-ledger` mis-classifies consolidated entries. Resolved by introducing the `Sources:` field convention on every ledger entry (consolidated entries list each contributing SLICE-XXX; manual entries omit the field). Reconcile algorithm Step 3 rewritten from literal-text matching to `Sources:` field check; orphan classifier (Step 5) keys on absence of `Sources:` field. Backward-compatibility note added.
+- **M-5 [MEDIUM]** — `--replan` resumption interaction with `## Slice Progress` table state. Resolved by documenting concrete state-management contract in SKILL.md Phase Detection bullet for `## Awaiting Re-planning Decision`: orchestrator preserves OLD table as `## Archived Slice Progress (pre-replan)`; writes FRESH `## Slice Progress` reflecting the NEW plan's slices, all rows `Not Started`; old retros/reviews/commits NOT auto-deleted (user owns judgment); `--from-slice` validates against NEW spec's `## Delivery Slices` post-replan.
+- **L-1** — Practicality heuristic 3 vacuous on single-REQ specs. Resolved: heuristic 3 disabled when spec has exactly one REQ (`sdd/commands/planning-start.md` Step 8).
+- **L-2** — `LOG_SUBDIR` change silent on un-upgraded plugin install. Resolved: `sdd/commands/sdd-migrate-layout.md` post-migration output now includes a best-effort split-tree detection bash snippet.
+- **L-3** — CLAUDE.md staleness scan unbounded recursion. Resolved: replaced `grep -rn` with `find -maxdepth 3 -prune` excluding `node_modules`, `.venv`, `venv`, `vendor`, `dist`, `build`, `.git`.
+- **L-4** — Slice-ID regex duplicated in 4 files. Resolved: `slice-start.md` designated as canonical regex source; cross-reference notes added to the other three slice-* commands.
+- **L-5** — Concurrent invocation undefined. Resolved: explicit "Concurrent-invocation note" section added to `sdd/commands/sdd-migrate-layout.md` stating helper is NOT concurrent-safe.
+- **L-6** — `git status --porcelain` doesn't detect submodule changes. Resolved: Step 4 callout added pointing users with submodules at `git submodule status --recursive`.
+- **L-7** — Inert-Mode message terse on typo'd field name. Resolved: `slice-start.md` Step 2 absent-field branch now greps for near-miss `mode:` lines and appends a typo-detection hint.
+
+**Verification grep oracles (all pass):**
+
+```
+grep -E "^## Recommended Re-planning" sdd/commands/slice-retro.md           # 1 hit (retro-body header)
+grep -nE "Recommended Re-planning" agent-engineering/skills/sdd-flow/SKILL.md # 4 hits, all in per-slice cycle / Stage-1 (NONE in Phase Detection bullet)
+grep -nE "Awaiting Re-planning Decision" agent-engineering/skills/sdd-flow/SKILL.md # 5 hits (per-slice 4c.5 Stage 1, Stage 2 cross-ref, EDGE-006, Phase Detection bullet)
+grep -nE "Awaiting Re-planning Decision" sdd/commands/slice-retro.md         # 3 hits, ALL labeled as cross-references to orchestrator responsibility
+```
+
+**Artifacts modified:**
+- `agent-engineering/skills/sdd-flow/SKILL.md` (M-1, M-2, M-5)
+- `sdd/commands/slice-retro.md` (M-2 producer side, M-4)
+- `sdd/commands/sdd-migrate-layout.md` (M-2 belt-and-suspenders, M-3, L-2, L-3, L-5, L-6)
+- `sdd/commands/planning-start.md` (L-1)
+- `sdd/commands/slice-start.md` (L-4 canonical, L-7)
+- `sdd/commands/slice-review.md` (L-4 cross-ref)
+- `sdd/commands/slice-commit.md` (L-4 cross-ref)
+- `flow-state/SDD/reviews/CRITICAL-IMPL-vertical-slicing-step-c-20260505.md` (appended `## Findings Addressed` section)
+
+**Locked-region preservation:** `sdd/commands/planning-start.md` lines 64–204 + 375–379 untouched (L-1 edit is at Step 8, ~line 326, well outside the locked region).
+
+**Recursion-trap discipline:** This run's artifacts remain at `flow-state/SDD/...` legacy paths; source-code edits emit the new layout for FUTURE runs only. No artifact relocation.
+
+**Status:** Step 4e complete. All 5 MEDIUM + 7 LOW findings from Step 4d critical review resolved with on-disk source edits. Orchestrator may advance to Step 4f (implementation-complete) per `/sdd-flow` Step 4 sequence. M-2 (load-bearing) was the highest-priority fix and is verified by independent grep oracles.
+
+## Implementation Phase - COMPLETE
+
+- All REQs/EDGEs/FAILs/MODULEs/RISKs satisfied.
+- Code review: APPROVED with fix-findings (Step 4c resolved them).
+- Critical review: PROCEED with awareness; M-1 through M-5 + 7 LOWs resolved by Step 4e.
+- All chunks (Chunk 1-5) committed.
+- Implementation summary: SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-001-2026-05-05_14-15-00.md
+- Ready for end-of-feature commit (Step 4i).

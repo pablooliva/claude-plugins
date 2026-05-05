@@ -39,6 +39,8 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits).`
 
+> **Canonical regex source (resolves L-4):** see `slice-start.md` § "Slice-ID Validation" — that section is the canonical home for this regex. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across `slice-start.md`, `slice-review.md`, `slice-retro.md`, and `slice-commit.md` in a single commit.
+
 ## Step 3: Resolve the active SLICE-XXX
 
 Apply the **Active-Slice Resolution Convention** above. Expected statuses for `/slice-retro`: `In Progress` or `Acceptance Check Passing`.
@@ -196,12 +198,18 @@ If the ledger does not yet exist, scaffold it with this initial structure:
 **Last updated:** YYYY-MM-DD by SLICE-XXX
 
 > The rolling ledger consolidates learnings across all slices of this feature. It is the ONLY context propagated to subsequent slice subagents (per OQ-6 — strictly the ledger). Subagents that need an audit trail can read individual `RETROSPECTIVE-SLICE-XXX-...md` files from disk on demand. The ledger is updated in-place after each retrospective: consolidate, refine, supersede — do not just append.
+>
+> **`Sources:` field convention (REQ-025a; resolves M-4 reconcile-ledger orphan-vs-consolidated ambiguity):** every entry below MUST carry a `Sources:` field listing each contributing SLICE-XXX. Consolidated entries list every retro that contributed (e.g., `Sources: SLICE-001, SLICE-003`). User-authored manual entries (no retro source) carry NO `Sources:` field — that absence is the explicit signal `--reconcile-ledger` uses to flag them as orphans.
 
 ## Interface contract clarifications
 
-(Per-slice entries; cite the originating SLICE-XXX in each entry.)
+(Per-slice entries; each entry carries a `Sources:` field listing every contributing SLICE-XXX.)
+
+- <example entry text> (Sources: SLICE-001)
 
 ## Integration patterns discovered
+
+- <example entry text> (Sources: SLICE-001, SLICE-002)
 
 ## Performance / failure modes observed
 
@@ -216,6 +224,27 @@ If the ledger exists, **consolidate** the new retrospective's ledger-update entr
 - If a new entry REFINES an existing entry (more specific, narrower scope, additional caveat), update the existing entry in place and cite both retros.
 - If a new entry SUPERSEDES an existing entry (contradicts it, but the new observation is more authoritative), replace the existing entry and add a note "superseded by SLICE-XXX retro; original observation preserved at retro path".
 - If the new entry is genuinely novel, append it under the appropriate section.
+
+### `Sources:` field convention (resolves M-4)
+
+Every ledger entry — whether freshly appended or consolidated from multiple retros — MUST carry a `Sources:` field listing each contributing retro by SLICE-ID. This is the durable marker that `--reconcile-ledger` uses to determine "covered" without literal-text matching.
+
+Entry shape:
+
+```markdown
+- **<entry text>**
+  - Sources: SLICE-001, SLICE-003
+```
+
+Or inline:
+
+```markdown
+- <entry text> (Sources: SLICE-001, SLICE-003)
+```
+
+When Step 7 consolidation rewrites an existing entry to fold in a new retro's contribution, the `Sources:` list MUST be updated to include the new SLICE-XXX. When Step 7 supersedes an entry, the new entry's `Sources:` lists the retro that produced the supersession (and may optionally cite the prior retro in a "supersedes:" sub-line for audit trail).
+
+User-edited entries that were authored manually (no retro source) carry no `Sources:` field — that is the explicit signal `--reconcile-ledger` uses to flag orphans (per Step 5 of the algorithm, see `--reconcile-ledger` Mode below).
 
 ## Step 8: Update the `## Slice Progress` table (per REQ-022 column-write authority)
 
@@ -242,18 +271,20 @@ Append an entry to `SDD/orchestration/progress.md` recording the retrospective:
 - **Slice Progress Status advanced to:** <Acceptance Check Passing | Complete>
 ```
 
-If `## Recommended Re-planning` had any entries, ALSO emit a halt-shaped block (mirrors `## Awaiting Clarification` / `## Awaiting Slicing Decision`):
+### Two-stage matcher contract — what `/slice-retro` does NOT write
 
-```markdown
-## Awaiting Re-planning Decision
+`/slice-retro` writes only the `## Slice <SLICE-XXX> - Retrospective Complete` log entry above. It DOES NOT write a `## Awaiting Re-planning Decision` halt block to `progress.md` — that block is the **orchestrator's** responsibility (per `agent-engineering/skills/sdd-flow/SKILL.md` per-slice cycle Step 4c.5).
 
-SLICE-XXX retrospective recommends re-planning. Resume options:
-- `/sdd-flow continue --replan` — re-run Step 3 (planning) with the rolling ledger and triggering retro in scope; resumes implementation from SLICE-001.
-- `/sdd-flow continue --replan --from-slice SLICE-XXX` — same, but resume from a user-specified slice (must match `^SLICE-\d{3}$` AND reference an existing SLICE-XXX in the IMPLEMENTATION-PLAN's ## Slice Progress table per REQ-025 validation).
-- `/sdd-flow continue --override-replan` — continue with the current plan despite the recommendation. Documented but discouraged.
+The contract is two-stage by design (resolves M-2):
 
-This halt fires even under `--skip-slice-checkpoints` (mirrors Step 3c panel-review halt).
-```
+1. **Retro stage (this command):** the retrospective ARTIFACT contains the EXACT header `## Recommended Re-planning` (per Step 6 + the matcher-contract block above) when the slice's learnings warrant a re-plan. The retro-body header is the SOURCE OF TRUTH for the recommendation. `/slice-retro` does NOT itself touch any halt-shaped block in `progress.md`.
+2. **Orchestrator stage (`/sdd-flow` Step 4c.5):** after `/slice-retro` returns, the orchestrator greps the just-written retrospective for `^## Recommended Re-planning$`. On match, the ORCHESTRATOR (not `/slice-retro`) writes the `## Awaiting Re-planning Decision` halt block to `progress.md` and halts the per-slice cycle. On a fresh-session resume, Phase Detection reads `progress.md` for `## Awaiting Re-planning Decision` (the progress-block name) and re-prompts the user.
+
+This separates the two strings unambiguously:
+- `## Recommended Re-planning` lives ONLY in the retrospective artifact (`SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-...md`).
+- `## Awaiting Re-planning Decision` lives ONLY in `progress.md` and is written by the orchestrator (never by `/slice-retro`).
+
+If a manual user runs `/slice-retro` outside `/sdd-flow` orchestration and the retro contains `## Recommended Re-planning` entries, the user is responsible for either invoking `/sdd-flow continue` (which would detect the recommendation via the matcher) or manually consulting the retro's recommendations. `/slice-retro` itself does not halt or write any halt-shaped block; it only records the retrospective and updates the ledger.
 
 ## `--reconcile-ledger` Mode (REQ-025a — full 8-step algorithm)
 
@@ -267,17 +298,21 @@ When the user invokes `/slice-retro SLICE-XXX --reconcile-ledger`, the command d
 
 ### Algorithm
 
+The classifier MUST use the durable `Sources:` field convention introduced in Step 7 above (resolves M-4) — NOT literal-text matching. The `Sources:` field on each ledger entry lists which retros contributed; the reconcile checks whether each retro is in some ledger entry's Sources list.
+
 1. **Read all retros for the active feature:** `ls SDD/implementation/slices/RETROSPECTIVE-SLICE-*-<feature-name>-*.md`. Sort by SLICE-XXX number (lexicographic on the SLICE-ID is correct given the zero-padded `\d{3}` format).
 2. **Read the current ledger:** `SDD/implementation/slices/LEARNINGS-FEATURE-<feature-name>.md`. If absent, treat as empty (the rebuild will scaffold it).
-3. **For each retrospective (in order),** check whether its key learnings (the structured `## Recommended SPEC Amendments`, `## Recommended Re-planning`, and ledger-update sections) appear in the ledger's structured sections (Interface contract clarifications / Integration patterns discovered / Performance / failure modes observed / Open recommendations awaiting user decision).
-4. **If a retrospective's learnings are missing from the ledger,** append them to the appropriate ledger sections — consolidating with existing entries on the same topic, not blind-appending. Use the consolidation rules in Step 7 above.
-5. **Manual-edit-only entries that have no retro source are PRESERVED** — the ledger is not destroyed. Such entries are flagged in the rebuild output as `> orphan entry — no source retro on disk` so the user can decide whether to keep, edit, or remove them.
+3. **For each retrospective (in order),** determine "covered" by reading every ledger entry's `Sources:` field. A retro is COVERED if its `SLICE-XXX` ID appears in at least one ledger entry's `Sources:` list. A retro is NOT covered if its SLICE-XXX is absent from every `Sources:` list — this means its learnings have not yet been incorporated. The classifier does NOT compare retro text to ledger text; consolidation under Step 7 may have rewritten the wording away from the retro's literal text, but the `Sources:` field is the authoritative marker.
+4. **If a retro is NOT covered,** append its ledger-update entries to the appropriate ledger sections — consolidating with existing entries on the same topic, not blind-appending. Use the consolidation rules in Step 7 above. Each newly-appended or newly-consolidated entry MUST carry a `Sources:` field listing the retro's SLICE-XXX (plus any prior contributors if consolidating).
+5. **Ledger entries with no `Sources:` field** are user-authored manual entries. They are PRESERVED — the ledger is not destroyed. Such entries are flagged in the rebuild output as `> orphan entry — no Sources field; review (was this intentionally hand-authored, or did Sources tracking drop?)` so the user can decide. Note: this is **distinct from "consolidated entry"** — consolidated entries carry one or more SLICE-XXX values in `Sources:` and are NOT flagged as orphans. The `Sources:` field convention IS the disambiguator.
 6. **Mark the ledger header** with a `<!-- reconciled at YYYY-MM-DD -->` HTML comment timestamp (visible in source, invisible in rendered markdown).
-7. **Detect conflicts** (e.g., contradictory learnings between two retros, or between retros and existing ledger entries) and surface to the user rather than auto-resolving. List conflicts in the reconcile output; the user resolves manually after the reconcile (with the rebuild as a starting point).
+7. **Detect conflicts** (e.g., contradictory learnings between two retros, or between retros and existing ledger entries) and surface to the user rather than auto-resolving. List conflicts in the reconcile output; the user resolves manually after the reconcile (with the rebuild as a starting point). Conflict detection is heuristic; if a true semantic conflict cannot be cleanly classified, surface as `> may be conflict OR refinement; review` rather than asserting binary classification.
 8. **Confirm with the user (supervised mode) or proceed (autonomous mode):**
    - **Supervised mode:** print a diff between pre- and post-reconcile ledger; user confirms before write.
    - **Autonomous mode:** the diff-confirm step degrades to "write without prompt" — write proceeds and the change is logged to `SDD/orchestration/progress.md` with the reconcile diff captured under a `## Reconcile Ledger Action` block.
    - Always print a summary of what was added, what was preserved as orphan, and what conflicts were surfaced.
+
+**Backward-compatibility note for ledgers predating the `Sources:` convention:** older ledgers may have entries lacking `Sources:` fields that ARE in fact retro-derived (just from before the convention was adopted). On the first reconcile run after upgrading, expect some false-orphans. The user can either (a) add `Sources:` fields manually based on inspection, or (b) accept the false-orphan flag and let the reconcile append fresh entries from the retros (which will carry `Sources:` fields going forward; duplicates can be cleaned up at the user's discretion).
 
 ### Scope
 

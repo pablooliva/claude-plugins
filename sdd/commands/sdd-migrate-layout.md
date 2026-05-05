@@ -21,6 +21,10 @@ This command is **mode-agnostic** — it runs identically whether the active SPE
 
 The orchestrator-level flags (`--replan`, `--from-slice`, `--override-replan`) belong to `/sdd-flow continue`, not to this command.
 
+## Concurrent-invocation note (resolves L-5)
+
+`/sdd-migrate-layout` is **NOT concurrent-safe**. Running two simultaneous invocations against the same repo (e.g., from two terminals or two Claude Code sessions) will produce overlapping `git mv` operations and a chaotic partial-migration state — recovery via Step 7 will be ambiguous because each run's "successful moves" list reflects only its own actions. The helper claims "safe and idempotent re-runs" — that is **serial-idempotence**, not **concurrent-safety**. Run sequentially; if you suspect a concurrent invocation may have occurred, inspect `git status` and the move history manually before re-running.
+
 ## Step 0: Bash availability check (FAIL-005)
 
 The migration script uses bash 3.0+ syntax (parameter expansion `${f//OLD/NEW}`, `for f in glob; do … done` loops with `[ -e "$f" ] || continue` guards). On Windows, Claude Code may invoke commands via PowerShell or cmd.exe by default; those interpreters do not support these constructs and would produce partial moves on failure.
@@ -117,12 +121,20 @@ If the file does not exist AND no legacy artifacts exist (impossible in State 3 
 When `progress.md` IS present at the legacy path, parse it for the most recent phase status block. Look for:
 
 - The latest `## Phase: <name> - <status>` heading (e.g., `## Phase: Research - In Progress`, `## Phase: Planning - COMPLETE`, `## Phase: Implementation - In Progress`).
-- OR any of these alternative active-state headings: `## Awaiting Clarification`, `## Awaiting Slicing Decision`, `## Recommended Re-planning`, `## PARTIAL: needs continuation`.
+- OR any of these alternative active-state headings: `## Awaiting Clarification`, `## Awaiting Slicing Decision`, `## Awaiting Re-planning Decision`, `## Awaiting Re-start Decision`, `## Recommended Re-planning`, `## PARTIAL: needs continuation`.
 - The terminal-success marker is `## Phase: Implementation - COMPLETE` (or, in older trees, `## Implementation Phase - COMPLETE`).
 
 ```bash
 # Parse the latest top-level "## " heading whose text begins with "Phase:" or one of the alternative-active markers.
 # (Use awk/grep to extract; do not eval the file contents.)
+# The `Awaiting ` prefix-match covers Awaiting Clarification, Awaiting Slicing Decision,
+# Awaiting Re-planning Decision (the orchestrator-written halt block per SKILL.md per-slice 4c.5),
+# and Awaiting Re-start Decision (EDGE-013). The `Recommended Re-planning` literal is
+# preserved as belt-and-suspenders even though the orchestrator now writes
+# `Awaiting Re-planning Decision` in progress.md (the `Recommended Re-planning` retro-body
+# header lives in the retrospective ARTIFACT, not in progress.md — but legacy or
+# manually-edited progress.md files may still contain it, and refusing-to-migrate is the
+# safe-default outcome either way).
 LATEST_BLOCK=$(grep -E '^## (Phase:|Awaiting |Recommended Re-planning|PARTIAL:)' "$PROGRESS_PATH" | tail -1)
 ```
 
@@ -143,7 +155,7 @@ Resolve the in-flight flow first (run /sdd-flow continue to completion, or /impl
 
 Exit 1. No moves attempted.
 
-**(iii) Parse FAILS** (file unreadable, malformed, schema unexpected, or no `## Phase:` / `## Awaiting ` / `## Recommended Re-planning` / `## PARTIAL:` heading found at all): per SEC-002 / EDGE-015 / FAIL-008 fail-closed posture, refuse:
+**(iii) Parse FAILS** (file unreadable, malformed, schema unexpected, or no `## Phase:` / `## Awaiting ` (covering Clarification, Slicing Decision, Re-planning Decision, Re-start Decision) / `## Recommended Re-planning` / `## PARTIAL:` heading found at all): per SEC-002 / EDGE-015 / FAIL-008 fail-closed posture, refuse:
 
 ```
 Refusing migration: progress.md exists but cannot be parsed.
@@ -165,6 +177,8 @@ The migration produces a sequence of `git mv` operations. If any individual move
 ```bash
 git status --porcelain
 ```
+
+**Submodule limitation (L-6):** `git status --porcelain` reports modified submodule references but NOT changes inside a submodule's working tree. If your repo uses git submodules with uncommitted changes inside the submodule, those changes are NOT detected by this precondition. To catch them, run `git submodule status --recursive` and inspect manually before invoking with `--apply`. This limitation is informational; most users do not have submodules.
 
 If the output is non-empty (uncommitted changes present), refuse:
 
@@ -327,38 +341,91 @@ Next steps:
                  (uses the project's standard commit policy — no --no-verify, no co-author lines)
 
 Hook reminder: ensure your installed SDD plugin is at version 2.0.0 or later. Older versions of sdd/hooks/log_subagent_call.py write to the legacy path (SDD/prompts/context-management/subagent-calls/), which would silently re-create the legacy directory and produce a split-tree. The 2.0.0 hook writes to SDD/orchestration/subagent-calls/.
+
+Post-migration split-tree detection (resolves L-2 — best-effort check; if `SDD/prompts/context-management/subagent-calls/` reappears after the next subagent call, the installed plugin is still on the legacy hook):
+
+```bash
+# Run this manually after the next /sdd-flow subagent call lands. If it prints "ANOMALY:",
+# your installed plugin is still on the pre-2.0.0 hook and is logging to the legacy path.
+test -d SDD/prompts/context-management/subagent-calls && echo "ANOMALY: legacy subagent-calls directory re-created — installed SDD plugin is older than 2.0.0; update via /plugin install."
+```
+
+This check is informational; the migration helper does not auto-fix because the plugin install lives outside the repo's working tree.
 ```
 
 Then run Step 8 (CLAUDE.md staleness scan) and Step 9 (post-migration verification).
 
 ## Step 7: Partial-migration recovery (FAIL-001) — invoked when `git mv` fails mid-run
 
-Per FAIL-001: a `git mv` failure mid-migration (disk full, permission denied, antivirus interference, etc.) leaves the tree partially migrated. Recovery:
+Per FAIL-001: a `git mv` failure mid-migration (disk full, permission denied, antivirus interference, etc.) leaves the tree partially migrated. The recovery recipe depends on **which mode you ran in** — `git reset --hard HEAD` is NOT universally safe.
+
+### Mode-aware rollback selection (resolves M-3)
+
+Detect the active mode and select the appropriate recipe:
+
+- **Pre-flight clean tree (default; this run is the first migration attempt)** — `git status` was clean before Step 6 began (Step 4 enforced this; or `--allow-dirty` was passed acknowledging the override). The only changes in the working tree / index are this run's `git mv` operations. **Option A (`git reset --hard HEAD`) is safe** here: it discards exactly the half-applied migration and restores the pre-flight tree.
+- **`--resume-partial` mode (this run is resuming a prior partial migration)** — the tree contains `git mv` operations from a PRIOR run that completed but did not commit (the user is resuming the prior partial migration via `/sdd-migrate-layout --apply --resume-partial`). Those prior-run moves are in the index and the working tree. **Option A (`git reset --hard HEAD`) is UNSAFE**: it discards BOTH this run's pending moves AND the prior run's already-staged moves, leaving the user worse off than the original partial state. The prior run's progress is silently lost.
+
+The recovery output below detects which mode was active and surfaces the correct recipe:
 
 ```
 ERROR: git mv failed during migration.
   Failed move: <command and stderr>
-  Successful moves before failure: <list>
-  Pending moves not attempted: <list>
+  Successful moves before failure (THIS RUN): <list>
+  Pending moves not attempted (THIS RUN): <list>
+  Run mode: <pre-flight-clean | --resume-partial | --allow-dirty>
 
 The tree is now partially migrated. To recover:
 
+[IF run mode is pre-flight-clean (default)]:
+
 Option A (simplest — discard the migration entirely):
   git reset --hard HEAD
-  (Safe ONLY because pre-flight verified the working tree was clean. If you ran with --allow-dirty, this will also discard your other uncommitted edits.)
+  (Safe because pre-flight verified the working tree was clean.)
 
 Option B (preserve progress; manually undo the successful moves):
-  <enumerated list of inverse `git mv` operations, one per successful move; each is the source/destination swap of the corresponding move from Step 5>
+  <enumerated list of inverse `git mv` operations, one per THIS-RUN successful move>
 
 Option C (preserve progress; commit what succeeded and address the failure):
   Investigate why <failed move> errored (disk space? permissions? antivirus?), fix, then re-run /sdd-migrate-layout --apply --resume-partial.
+
+[IF run mode is --resume-partial]:
+
+⚠️  Option A (`git reset --hard HEAD`) is **UNSAFE in --resume-partial mode**.
+   It will discard not only this run's failed move but also the PRIOR run's already-staged
+   moves (which is exactly the partial-migration progress you came here to complete).
+   Do NOT use Option A in --resume-partial mode.
+
+Option B (recommended for --resume-partial — manually undo only THIS RUN's successful moves):
+  <enumerated list of inverse `git mv` operations, one per THIS-RUN successful move; the
+   prior run's already-staged moves are NOT touched>
+  Then inspect `git status` — the tree should now reflect ONLY the prior run's partial
+  state (i.e., the state from before you re-ran with --resume-partial). Diagnose the
+  failure (`<failed move>`), then re-attempt with `/sdd-migrate-layout --apply --resume-partial`.
+
+Option C (preserve everything; commit what succeeded across BOTH runs and address the failure):
+  Investigate why <failed move> errored, fix, then re-run /sdd-migrate-layout --apply --resume-partial.
+  (Idempotent — the helper's `[ -e "$f" ] || continue` guards skip moves whose sources are
+   already gone.)
+
+[IF run mode is --allow-dirty]:
+
+⚠️  Option A (`git reset --hard HEAD`) will also discard your unrelated uncommitted edits
+   (you accepted this risk by passing --allow-dirty). Use only if you want to discard
+   ALL working-tree changes including non-migration ones.
+
+Option B (preserve unrelated edits; manually undo only THIS RUN's successful moves):
+  <enumerated list of inverse `git mv` operations, one per THIS-RUN successful move>
+
+Option C (preserve everything; commit what succeeded and address the failure):
+  Investigate why <failed move> errored, fix, then re-run /sdd-migrate-layout --apply --resume-partial.
 
 After recovery, re-run /sdd-migrate-layout to verify a clean state.
 ```
 
 Exit 1.
 
-The recovery recipe is computed dynamically: every move attempted before the failure is added to the "successful moves" list, and its inverse is computed as `git mv <destination> <source>`. The user pastes Option B verbatim into a shell to manually undo. (Option A is recommended as the default — it is idempotent and the cleanest recovery; Option B exists for users who reject the destructive `git reset`.)
+The recovery recipe is computed dynamically: every move attempted before the failure is added to the "successful moves" list (scoped to THIS run only — prior-run moves from `--resume-partial` are NOT enumerated, as the helper does not track them), and its inverse is computed as `git mv <destination> <source>`. The user pastes Option B verbatim into a shell to manually undo. **Option A is the default recommendation ONLY in pre-flight-clean mode; in `--resume-partial` mode Option A is suppressed and Option B is the recommended path.**
 
 ## Step 8: CLAUDE.md staleness scan (EDGE-004)
 
@@ -366,10 +433,18 @@ Per EDGE-004 + spec REQ-019 reminder: the migration helper does NOT auto-edit us
 
 ```bash
 # Scan for legacy-path references in user-authored agent docs.
+# Bounded recursion (resolves L-3): exclude vendored-dependency directories and limit
+# depth to 3 to avoid noisy false-positives from third-party plugin sources or
+# node_modules / .venv mirrors that legitimately reference the legacy paths.
 for pattern in 'SDD/prompts/context-management' 'SDD/prompts/implementation-complete' 'SDD/prompts/PROMPT-' 'PROMPT-XXX' 'PROMPT-[0-9]'; do
-  grep -rn -l "$pattern" --include='CLAUDE.md' --include='AGENTS.md' --include='CLAUDE.local.md' . 2>/dev/null
+  find . -maxdepth 3 \
+    \( -name node_modules -o -name .venv -o -name venv -o -name vendor -o -name dist -o -name build -o -name .git \) -prune -o \
+    \( -name 'CLAUDE.md' -o -name 'AGENTS.md' -o -name 'CLAUDE.local.md' \) -type f -print 2>/dev/null \
+  | xargs grep -nl "$pattern" 2>/dev/null
 done | sort -u
 ```
+
+If your repo legitimately vendors third-party plugin sources beyond depth 3 that themselves reference legacy SDD paths, those references are intentionally NOT flagged here — you cannot fix them without breaking the vendored plugin.
 
 If any hits are found, print:
 

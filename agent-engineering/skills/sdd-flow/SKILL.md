@@ -309,7 +309,7 @@ Splitting heuristics differ by phase — a uniform "always pre-split" rule does 
 
 - **Planning (Step 3a)** — Usually a single subagent. Pre-split only if the RESEARCH document is exceptionally long (>1000 lines) OR covers more than three distinct subsystems with non-overlapping concerns. The safety-net rule still applies.
 
-- **Implementation (Step 4a) — whole-feature mode only.** Orchestrator-driven splitting is primary. Before spawning, the orchestrator counts SPEC items: `REQ-XXX` + `EDGE-XXX` + `FAIL-XXX`. If the total exceeds **8** (initial default — tune as needed), pre-split into ⌈total / 5⌉ sequential implementation subagents, each handling a contiguous chunk, each appending to the PROMPT document so the next subagent knows what's done. **In per-slice mode this REQ-count chunking does NOT apply** — slices are the unit of splitting, one subagent per slice is the strict rule (no bundling), and the safety-net rule remains the in-slice backstop.
+- **Implementation (Step 4a) — whole-feature mode only.** Orchestrator-driven splitting is primary. Before spawning, the orchestrator counts SPEC items: `REQ-XXX` + `EDGE-XXX` + `FAIL-XXX`. If the total exceeds **8** (initial default — tune as needed), pre-split into ⌈total / 5⌉ sequential implementation subagents, each handling a contiguous chunk, each appending to the IMPLEMENTATION-PLAN document so the next subagent knows what's done. **In per-slice mode this REQ-count chunking does NOT apply** — slices are the unit of splitting, one subagent per slice is the strict rule (no bundling), and the safety-net rule remains the in-slice backstop.
 
 #### Subagent Safety-Net Rule
 
@@ -542,15 +542,15 @@ Spawn a **general-purpose subagent** with:
   - Failure handling (FAIL-XXX from spec)
   - Tests alongside each component
   - Performance and security validation
-  - Update PROMPT tracking document throughout
+  - Update IMPLEMENTATION-PLAN tracking document throughout
 
-**Sizing:** Apply the orchestrator-driven splitting heuristic from "Orchestrator Discipline → Per-Phase Sizing Strategy → Implementation". Pre-split before spawning if the SPEC item count exceeds the threshold; each subagent appends to the PROMPT document so the next knows what's done. The Subagent Safety-Net Rule still applies as a backstop if a chunk turns out to be larger than estimated.
+**Sizing:** Apply the orchestrator-driven splitting heuristic from "Orchestrator Discipline → Per-Phase Sizing Strategy → Implementation". Pre-split before spawning if the SPEC item count exceeds the threshold; each subagent appends to the IMPLEMENTATION-PLAN document so the next knows what's done. The Subagent Safety-Net Rule still applies as a backstop if a chunk turns out to be larger than estimated.
 
 #### 4b. Code Review Subagent
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:code-review` command
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from PROMPT document)
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from IMPLEMENTATION-PLAN document)
 - **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
 - **Task:** Specification-driven code review (70% spec alignment, 20% context engineering, 10% test alignment). Apply **Risk-Tiered Review Depth** (SDD 1.2.0) — read the `Risk:` field on each `MODULE-XXX` entry in the spec and scale internal-review depth accordingly: `high` → full review of internals; `medium` → default depth; `low` → tested-boundary review only. Escalate any tier that appears misclassified (e.g., a `low`-tagged module touching irreversible state) and flag the misclassification in the review summary's Module Review Log.
 
@@ -558,7 +558,7 @@ Spawn a **general-purpose subagent** with:
 
 Spawn a **general-purpose subagent** with:
 - **Inputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the implemented code files
-- **Outputs:** Updated code and tests, updated PROMPT document, "Findings Addressed" appended to review document
+- **Outputs:** Updated code and tests, updated IMPLEMENTATION-PLAN document, "Findings Addressed" appended to review document
 - **Task:** Fix ALL findings until the implementation meets APPROVED status. Resolve specification misalignment, missing edge/failure handling, test gaps, and all other issues.
 
 #### 4d. Implementation Critical Review Subagent
@@ -573,7 +573,7 @@ Spawn a **general-purpose subagent** with:
 
 Spawn a **general-purpose subagent** with:
 - **Inputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files
-- **Outputs:** Updated code and tests, updated PROMPT document, "Findings Addressed" appended to review document
+- **Outputs:** Updated code and tests, updated IMPLEMENTATION-PLAN document, "Findings Addressed" appended to review document
 - **Task:** Resolve ALL findings — fix specification deviations, security vulnerabilities, silent failures, missing test coverage, and every other issue regardless of severity.
 
 #### 4f. Implementation Completion Subagent
@@ -581,7 +581,7 @@ Spawn a **general-purpose subagent** with:
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:implementation-complete` command (model checks stripped)
 - **Inputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`
-- **Outputs:** Updated PROMPT document, updated SPEC document, `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`, updated `progress.md`
+- **Outputs:** Updated IMPLEMENTATION-PLAN document, updated SPEC document, `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`, updated `progress.md`
 - **Task:** Finalize all documentation, validate all requirements are met, create implementation summary
 
 #### 4g. Regression Eval Capture (NEW, conditional)
@@ -664,9 +664,32 @@ For each slice in order from the spec's `## Delivery Slices` section:
 
 4. **Per-slice 4c.5 — Slice retrospective (REQ-013).** Spawn a general-purpose subagent with `/sdd:slice-retro <SLICE-XXX>` instructions. The subagent writes `RETROSPECTIVE-SLICE-XXX-[feature-name]-YYYY-MM-DD.md` (audit trail; never modified after writing) and updates the rolling ledger in-place.
 
-   **Recommendation matcher contract (REQ-013):** after the retrospective subagent returns, the orchestrator reads the just-written RETROSPECTIVE artifact and grep-matches for these EXACT header strings:
-   - `^## Recommended SPEC Amendments$` — routine amendment recommendation; surface in the slice-boundary pause message as a per-recommendation summary (one or two lines per affected entry — which `SLICE-XXX`/`MODULE-XXX`/`REQ-XXX` is affected, what should change, why), with the path to the retrospective for the user to open and read the full proposed wording.
-   - `^## Recommended Re-planning$` — elevated severity. Per **REQ-014**, presence of this header HALTS the flow even under `--skip-slice-checkpoints`. The pause message uses the re-planning–specific shape:
+   **Two-stage matcher contract (resolves M-2; REQ-013 + REQ-014):** the contract has TWO surfaces — the retro-body header (in the retrospective ARTIFACT) and the halt block (in `progress.md`). They are DIFFERENT strings written at DIFFERENT times by DIFFERENT actors:
+
+   - **Retro-body header (written by `/slice-retro` Step 6 into the retrospective artifact):**
+     - `## Recommended SPEC Amendments` — required (with content "None." when no amendments).
+     - `## Recommended Re-planning` — optional (omit or use "None." when no re-plan).
+   - **Progress.md halt block (written by THE ORCHESTRATOR — NEVER by `/slice-retro`):**
+     - `## Awaiting Re-planning Decision` — written ONLY when the orchestrator's matcher (below) detects `## Recommended Re-planning` in the just-written retro AND elects to halt.
+
+   **Stage 1 — Retro-stage match (right after `/slice-retro` returns, IN the per-slice cycle):** the orchestrator reads the just-written retrospective ARTIFACT (path returned by the subagent) and grep-matches for these EXACT retro-body header strings:
+   - `^## Recommended SPEC Amendments$` — routine amendment recommendation; surface in the slice-boundary pause message as a per-recommendation summary (one or two lines per affected entry — which `SLICE-XXX`/`MODULE-XXX`/`REQ-XXX` is affected, what should change, why), with the path to the retrospective for the user to open and read the full proposed wording. No halt block written.
+   - `^## Recommended Re-planning$` — elevated severity. Per **REQ-014**, presence of this header HALTS the flow even under `--skip-slice-checkpoints`. On match, the **orchestrator** writes the following halt block to `SDD/orchestration/progress.md`:
+
+     ```markdown
+     ## Awaiting Re-planning Decision
+
+     SLICE-XXX retrospective recommends re-planning. Resume options:
+     - `/sdd-flow continue --replan` — re-run Step 3 (planning) with the rolling ledger and triggering retro in scope; resumes implementation from SLICE-001.
+     - `/sdd-flow continue --replan --from-slice SLICE-XXX` — same, but resume from a user-specified slice (must match `^SLICE-\d{3}$` AND reference an existing SLICE-XXX in the IMPLEMENTATION-PLAN's `## Slice Progress` table per REQ-025 validation).
+     - `/sdd-flow continue --override-replan` — continue with the current plan despite the recommendation. Documented but discouraged.
+
+     This halt fires even under `--skip-slice-checkpoints` (mirrors Step 3c panel-review halt).
+
+     Triggering retrospective: <retro-path>
+     ```
+
+     The pause message printed to the user uses the re-planning–specific shape:
      > **Re-planning recommended.** The slice retrospective has determined the original plan is no longer fit. The flow is halted to await your direction.
      > Resume options:
      >   1. `/sdd-flow continue --replan` — re-run Step 3 (planning) with the ledger and the triggering retrospective in the planning subagent's prompt; produces a revised SPEC; resumes implementation from `SLICE-001` (or from a user-specified slice if some completed slices remain valid).
@@ -676,7 +699,9 @@ For each slice in order from the spec's `## Delivery Slices` section:
 
      **In autonomous + --skip-slice-checkpoints mode**, this halt fires regardless. The autonomous-mode rule "no pauses except mandatory ones" is overridden here because compounding subagent runs on a known-broken plan is the higher-cost failure.
 
-   **EDGE-006 — `/sdd-flow continue` invoked without a flag while a re-planning recommendation is pending:** the orchestrator detects the pending halt (a `## Recommended Re-planning` block in `progress.md` with no resume-flag block following it) and emits an informative refusal naming the three options (`--replan`, manual edit + plain `continue`, `--override-replan`) before exiting. No work is performed.
+   **Stage 2 — Resumption-stage match (Phase Detection on `/sdd-flow continue` from a fresh session):** Phase Detection reads `progress.md` for `## Awaiting Re-planning Decision` (the orchestrator-written progress-block name from Stage 1, NOT the retro-body header). See "Phase Detection Priority" below.
+
+   **EDGE-006 — `/sdd-flow continue` invoked without a flag while a re-planning recommendation is pending:** the orchestrator detects the pending halt (an `## Awaiting Re-planning Decision` block in `progress.md` with no resume-flag block following it) and emits an informative refusal naming the three options (`--replan`, manual edit + plain `continue`, `--override-replan`) before exiting. No work is performed.
 
 5. **Per-slice 4c.6 — Per-slice commit.** Orchestrator runs `/sdd:slice-commit <SLICE-XXX>` (or invokes the equivalent commit logic). Atomic per-slice commit covering: slice code + tests + per-slice review doc + fix-findings notes + retrospective + ledger update. Commit message references `SLICE-XXX` and `SPEC-XXX`; no co-author attribution.
 
@@ -722,10 +747,38 @@ When the user runs `/sdd-flow continue`:
 
 ### Phase Detection Priority
 
-- **Old layout detected (legacy 1.x repo, not yet migrated):** if `SDD/prompts/context-management/progress.md` exists OR any `SDD/prompts/PROMPT-*.md` files exist AND `SDD/orchestration/progress.md` does NOT exist → emit:
+Rules are evaluated top-to-bottom; the first matching rule fires and short-circuits later rules. The legacy-layout rule is FIRST because un-migrated repos cannot meaningfully evaluate any new-layout rule (no `SDD/orchestration/progress.md` exists for halt-block matching).
+
+- **Old layout detected (legacy 1.x repo, not yet migrated)** — fires when **BOTH** of the following are true (resolves M-1):
+  - **(C, must-be-true):** `SDD/orchestration/progress.md` does NOT exist (no new-layout state to read), AND
+  - **(A OR B, at least one must-be-true):**
+    - **(A)** `SDD/prompts/context-management/progress.md` exists, OR
+    - **(B)** any `SDD/prompts/PROMPT-*.md` files exist.
+
+  In boolean form with explicit parenthesization: `(A OR B) AND C`. The author's intended grouping; the bare prose `A OR B AND C` is ambiguous under standard precedence (`A OR (B AND C)`) and is NOT the intended reading. Both legacy artifacts present + new-layout absent triggers the migration prompt.
+
+  When the rule fires, emit:
   > Detected legacy SDD layout (1.x). Run `/sdd-migrate-layout` to migrate to the 2.0.0 layout, then re-run `/sdd-flow continue`. The migration helper has its own active-flow gating; if a flow is in progress, you may need to complete it first.
 
   Halt; do not attempt phase detection on the new layout (it will fail because no artifacts exist there). Do not auto-migrate; the migration helper has its own gates.
+
+  When the new-layout `progress.md` IS present (C is false), this rule does NOT fire even if legacy artifacts also exist — that is the partly-migrated repo state, in which the orchestrator continues to the new-layout halt-block rules below. (`/sdd-migrate-layout`'s `--resume-partial` mode is the user-facing recovery path for fully reconciling a partly-migrated tree; it operates independently of `/sdd-flow continue`.)
+- **`## Awaiting Slicing Decision` block detected** as the latest block in `SDD/orchestration/progress.md` (or legacy `SDD/prompts/context-management/progress.md` if pre-migration; the legacy-layout rule above takes precedence and will halt before reaching this rule on un-migrated repos): the practicality gate halted in autonomous mode. Resume routing depends on the resume flag passed to `/sdd-flow continue`:
+  - `--fall-back-to-whole-feature` → flip the spec's `delivery_mode:` to `whole-feature` (or annotate `Slicing not applicable: <reason>` per REQ-011 escape clause) and route into the whole-feature Step 4 path with the same SPEC.
+  - `--retry-slicing "<hint>"` → re-spawn the planning Step 3a slice-extraction subagent with the hint embedded in its prompt; the practicality gate re-fires after slice extraction.
+  - No flag passed → re-emit the same options the original `## Awaiting Slicing Decision` halt block presented, then halt.
+- **`## Awaiting Re-planning Decision` block detected** as the latest block in `SDD/orchestration/progress.md` (resolves M-2 — this is the progress-block name written by the orchestrator at per-slice 4c.5 Stage 1, NOT the retro-body header `## Recommended Re-planning` which lives only in the retrospective artifact). When detected, branch on the resume flag passed to `/sdd-flow continue`:
+  - `--replan` (alone) → re-run Step 3 (planning) with the rolling ledger and the triggering retrospective in the planning subagent's prompt; produces a revised SPEC; then resume implementation from `SLICE-001` of the **new** plan. **Slice Progress state management (resolves M-5):** the orchestrator does the following when `--replan` (without `--from-slice`) fires:
+    1. Read the existing IMPLEMENTATION-PLAN's `## Slice Progress` table from disk.
+    2. Move it verbatim under a new section header `## Archived Slice Progress (pre-replan)` immediately above the soon-to-be-rewritten `## Slice Progress` section (audit trail; not deleted).
+    3. After Step 3 (planning) re-runs and produces the revised SPEC, instruct the implementation subagent to write a FRESH `## Slice Progress` table reflecting the NEW plan's `## Delivery Slices`, with all rows initialized to `Status: Not Started`. The new SLICE-001 may name a different slice than the prior plan's SLICE-001 (slices may have been renamed, removed, split, or merged).
+    4. Old per-slice review docs (`REVIEW-SLICE-*`), retrospectives (`RETROSPECTIVE-SLICE-*`), and ledger entries are NOT deleted — they remain on disk as audit trail. The old per-slice atomic commits also remain in `git log`.
+    5. The user owns the judgment of which prior commits to keep, revert, or fold-into-the-new-plan. The orchestrator does NOT auto-revert prior commits. If the new plan re-implements work the old plan also did, the slice-review subagent will catch the divergence at the new SLICE-001 and the user gets a chance to address it.
+  - `--replan --from-slice SLICE-XXX` → same as `--replan`, but the user names a slice from the NEW plan to resume from. **Validation (REQ-025):** `SLICE-XXX` MUST match `^SLICE-\d{3}$` AND MUST reference an existing entry in the **new** spec's `## Delivery Slices` (i.e., validation runs AFTER Step 3 re-planning produces the revised SPEC; `--from-slice` cannot be validated until the new plan exists). Invalid → fail with a clear error naming the violation. **State management:** the orchestrator initializes the fresh `## Slice Progress` table with all rows `Not Started` EXCEPT the named slice and any prior slices in the new plan that the user has explicitly imported as `Complete` (default: none — all slices fresh). If the user wants to import prior `Complete` rows, they edit the `## Slice Progress` table manually after `--from-slice` initializes it; the orchestrator does NOT auto-import (the prior plan's slice IDs may not match the new plan's slice IDs).
+  - `--override-replan` → continue with the current plan despite the recommendation. Documented but discouraged. Slice Progress state is unchanged; the orchestrator advances to the next slice in the existing plan.
+  - No flag passed (or `--replan --override-replan`, which is invalid) → re-prompt with the three resume options. `--replan --override-replan` is invalid — fail with a clear error naming the conflict; halt.
+  - Re-planning halts fire **regardless of `--skip-slice-checkpoints`** per REQ-014.
+- **`## Awaiting Re-start Decision` block detected** as the latest block in `progress.md` (slice-start `--force` halted in autonomous mode per EDGE-013): resume requires explicit user confirmation; `/sdd-flow continue --confirm-restart SLICE-XXX` proceeds with the destructive overwrite of the named already-`Complete` slice's row, otherwise re-prompt with the same options the original halt block presented and halt.
 - If "Implementation Phase - COMPLETE" → Done, show final summary
 - If implementation is active → Resume the appropriate sub-step (4a-4j)
 - If "Planning Phase - COMPLETE" → Start Step 4 (implementation)

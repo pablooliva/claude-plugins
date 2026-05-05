@@ -39,9 +39,13 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
   Where `<value>` is either the actual offending value or the literal string `whole-feature (default; field absent)` when the field is missing.
 
+  **Typo-detection hint (resolves L-7):** when emitting the "field absent → default `whole-feature`" branch, ALSO grep the spec frontmatter for any line matching `mode:` (case-insensitive). If a near-miss field is found (e.g., `delvery_mode:`, `Delivery_mode:`, `delivery-mode:`), append a one-line hint to the inert message: `Hint: detected nearby field '<offending-line>' — possible typo of 'delivery_mode:'?`. The hint is informational; the inert message itself is unchanged. Users who genuinely intended `whole-feature` are unaffected.
+
 - **Any other value** (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, `delivry_mode` field-name typos, etc.) → fail per REQ-001 validation: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run /planning-start (or /implementation-start in whole-feature mode).` Do NOT silently fall through to the default branch.
 
-## Slice-ID Validation (REQ-024 / SEC-003)
+## Slice-ID Validation (REQ-024 / SEC-003) — canonical regex shared across slice commands
+
+> **Canonical regex (single source of truth — resolves L-4):** the slice-ID validation regex `^SLICE-\d{3}$` is duplicated verbatim in `slice-start.md`, `slice-review.md`, `slice-retro.md`, and `slice-commit.md`. **`slice-start.md` is the canonical home** for this regex; the other three commands SHOULD cross-reference this section rather than re-deriving the pattern. Future changes (e.g., allowing 4-digit slice IDs `SLICE-####`) MUST be coordinated across all four files in a single commit; a drift between the four would produce inconsistent regex enforcement at command boundaries.
 
 Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}$` BEFORE being interpolated into any read or write path. This prevents directory-traversal attacks (a malicious arg like `../../etc/passwd` would otherwise bypass the path templates).
 

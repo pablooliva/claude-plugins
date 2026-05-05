@@ -39,6 +39,8 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits).`
 
+> **Canonical regex source (resolves L-4):** see `slice-start.md` § "Slice-ID Validation" — that section is the canonical home for this regex. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across `slice-start.md`, `slice-review.md`, `slice-retro.md`, and `slice-commit.md` in a single commit.
+
 ## Step 3: Resolve the active SLICE-XXX
 
 Apply the **Active-Slice Resolution Convention** above. Expected statuses for `/slice-commit`: `In Progress` or `Acceptance Check Passing` (the slice has been implemented and retrospected; the commit is the delivery action).
