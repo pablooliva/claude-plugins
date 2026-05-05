@@ -85,11 +85,11 @@ Every subagent MUST use these exact paths. The orchestrator MUST include the res
 | **ADRs** | `SDD/adr/NNNN-slug.md` | cross-cutting-adr skill (research or planning trigger) | Future sdd-flow runs, humans |
 | **ADR index** | `SDD/adr/README.md` | cross-cutting-adr skill (auto-regenerated on write) | — |
 | **Eval scaffolding** | `evals/datasets/[feature-slug].json`, `evals/evaluators/...`, `evals/run_functions/...`, `evals/README.md` | regression-eval-capture command | Future regression runs |
-| **PROMPT tracking doc** | `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md` | Implementation subagent | Code review, Impl review, Completion subagent |
+| **Implementation plan** | `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` | Implementation subagent | Code review, Impl review, Completion subagent |
 | **Code review** | `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md` | Code review subagent | Implementation fix subagent |
 | **Impl critical review** | `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md` | Impl review subagent | Implementation fix subagent |
-| **Implementation summary** | `SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md` | Completion subagent | — |
-| **Progress file** | `SDD/prompts/context-management/progress.md` | All subagents (append only) | All subagents |
+| **Implementation summary** | `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md` | Completion subagent | — |
+| **Progress file** | `SDD/orchestration/progress.md` | All subagents (append only) | All subagents |
 
 ### Directory Structure
 
@@ -106,15 +106,18 @@ SDD/
 │   └── RESEARCH-[###]-[feature-name].md
 ├── requirements/
 │   └── SPEC-[###]-[feature-name].md
-├── prompts/
-│   ├── PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md
-│   ├── implementation-complete/
-│   │   └── IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md
-│   └── context-management/
-│       ├── progress.md
-│       ├── subagent-calls/
-│       ├── counters/
-│       │   └── [step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md
+├── implementation/
+│   ├── IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md
+│   ├── slices/                                 # SDD 2.0.0 — per-slice mode only; absent for whole-feature mode
+│   │   └── SLICE-[###]-[NN]-[slice-name]-[YYYY-MM-DD].md
+│   └── summaries/
+│       └── IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md
+├── orchestration/
+│   ├── progress.md
+│   ├── subagent-calls/
+│   ├── counters/
+│   │   └── [step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md
+│   └── compacted/
 │       ├── research-compacted-[YYYY-MM-DD_HH-MM-SS].md
 │       ├── planning-compacted-[YYYY-MM-DD_HH-MM-SS].md
 │       └── implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md
@@ -316,7 +319,7 @@ Every phase-execution subagent (2a, 3a, 4a), every fix subagent (2d, 3e, 4c, 4e)
 > - You have Read more than **10** files, OR
 > - You have spawned more than **4** nested subagents.
 >
-> **When a trigger fires, stop immediately and follow the inlined compact-command instructions (already in your prompt — see below) to write `SDD/prompts/context-management/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md`. Append a `## PARTIAL: needs continuation` block to `progress.md` with the compaction file path and where you left off. Return to the orchestrator with a brief note (≤100 words) stating that a Mid-Phase Handoff is required.**
+> **When a trigger fires, stop immediately and follow the inlined compact-command instructions (already in your prompt — see below) to write `SDD/orchestration/compacted/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md`. Append a `## PARTIAL: needs continuation` block to `progress.md` with the compaction file path and where you left off. Return to the orchestrator with a brief note (≤100 words) stating that a Mid-Phase Handoff is required.**
 >
 > **Counter tracking.** You cannot inspect your own tool-call history reflexively, so the orchestrator gives you a **dedicated counter file** (path provided in your prompt under "Your counter file"). The file has exactly two lines:
 > ```
@@ -327,7 +330,7 @@ Every phase-execution subagent (2a, 3a, 4a), every fix subagent (2d, 3e, 4c, 4e)
 
 **Orchestrator obligation: pre-embed the compact command AND assign a counter file.** The Safety-Net Rule depends on two things being in place when the subagent starts: the inlined compact-command instructions (so bail-out doesn't require reading a ~100-line file at the moment of context saturation), and a dedicated counter file path. When the orchestrator constructs any phase-execution, fix, or continuation subagent prompt, it MUST:
 1. Inline the matching `/sdd:[phase]-compact` command body (model checks stripped) under a clearly delimited "Compact instructions (use only if the Safety-Net trips)" block.
-2. Generate a unique counter file path under `SDD/prompts/context-management/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` (e.g., `counters/4a-3-2026-04-26_15-12-08.md` for the 3rd chunk of an implementation split). Create the file with the two-line `Reads: 0/10\nNested subagents: 0/4` content. Pass the resolved path in the subagent's prompt under a "Your counter file" heading.
+2. Generate a unique counter file path under `SDD/orchestration/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` (e.g., `counters/4a-3-2026-04-26_15-12-08.md` for the 3rd chunk of an implementation split). Create the file with the two-line `Reads: 0/10\nNested subagents: 0/4` content. Pass the resolved path in the subagent's prompt under a "Your counter file" heading.
 
 Counter files are per-run and never shared. They can be retained for post-mortem debugging or pruned periodically — they are not consumed by any later phase.
 
@@ -421,7 +424,7 @@ If in **autonomous mode**, proceed directly to Step 3.
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:planning-start` command (model checks stripped)
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/context-management/progress.md`, existing `SDD/adr/` directory (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present)
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, existing `SDD/adr/` directory (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present)
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, updated `progress.md`
 - **Task:** Read the research document and create the full specification. The spec MUST include the YAML frontmatter fields defined by `/sdd:planning-start` — `review_panel` (default includes `module-depth` as of SDD 1.2.0), `eval_required`, `cross_cutting_decisions` — populated thoughtfully based on feature characteristics. The spec MUST include the `## Modules` section (SDD 1.2.0) with at least one `MODULE-XXX` entry containing `Public Interface`, `Hides`, `Risk` (low/medium/high), and `Spec refs` fields — prefer deep modules over shallow per Ousterhout. Use canonical names from `SDD/UBIQUITOUS_LANGUAGE.md` when present.
 
@@ -484,7 +487,7 @@ Each iteration:
 > Unresolved HIGH findings: [count]
 > Unresolved MEDIUM findings: [count]
 > Latest panel review: `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`
-> Iteration history: `SDD/prompts/context-management/progress.md` → "Panel Review Iterations"
+> Iteration history: `SDD/orchestration/progress.md` → "Panel Review Iterations"
 >
 > The fix subagent could not resolve findings autonomously. Review the panel findings, address them manually in the spec (the remaining HIGH/MEDIUM issues likely require design judgment the subagent cannot make), then run `/sdd-flow continue` to resume.
 
@@ -521,8 +524,8 @@ Proceed directly to Step 4 (no checkpoint needed here — the supervised checkpo
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:implementation-start` command (model checks stripped)
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/context-management/progress.md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present — use canonical names in code, comments, commits, tests)
-- **Outputs:** `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md`, implemented code and tests, updated `progress.md`
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present — use canonical names in code, comments, commits, tests)
+- **Outputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, implemented code and tests, updated `progress.md`
 - **Task:** Read the specification and implement ALL requirements:
   - Core functionality (happy path)
   - Edge cases (EDGE-XXX from spec)
@@ -537,7 +540,7 @@ Spawn a **general-purpose subagent** with:
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:code-review` command
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from PROMPT document)
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from PROMPT document)
 - **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
 - **Task:** Specification-driven code review (70% spec alignment, 20% context engineering, 10% test alignment). Apply **Risk-Tiered Review Depth** (SDD 1.2.0) — read the `Risk:` field on each `MODULE-XXX` entry in the spec and scale internal-review depth accordingly: `high` → full review of internals; `medium` → default depth; `low` → tested-boundary review only. Escalate any tier that appears misclassified (e.g., a `low`-tagged module touching irreversible state) and flag the misclassification in the review summary's Module Review Log.
 
@@ -567,8 +570,8 @@ Spawn a **general-purpose subagent** with:
 
 Spawn a **general-purpose subagent** with:
 - **Instructions from:** `/sdd:implementation-complete` command (model checks stripped)
-- **Inputs:** `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`
-- **Outputs:** Updated PROMPT document, updated SPEC document, `SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`, updated `progress.md`
+- **Inputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`
+- **Outputs:** Updated PROMPT document, updated SPEC document, `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`, updated `progress.md`
 - **Task:** Finalize all documentation, validate all requirements are met, create implementation summary
 
 #### 4g. Regression Eval Capture (NEW, conditional)
@@ -595,7 +598,7 @@ If in **supervised mode**, pause and present a summary to the user:
 > - Spec: `SDD/requirements/SPEC-[###]-[feature-name].md`
 > - Code review: `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
 > - Critical review: `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`
-> - Implementation summary: `SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md`
+> - Implementation summary: `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md`
 > - [Eval scaffolding: evals/... (if eval_required was true and scaffold succeeded)]
 > - [Eval scaffold warnings: progress.md (if scaffold failed)]
 >
@@ -628,13 +631,17 @@ This is the user-triggered resume path: the user re-invokes `/sdd-flow continue`
 
 When the user runs `/sdd-flow continue`:
 
-1. Read `SDD/prompts/context-management/progress.md`
+1. Read `SDD/orchestration/progress.md`
 2. Determine which phase and sub-step is active
 3. Resume from the exact sub-step where work was interrupted by spawning the appropriate subagent
 4. If a phase was marked complete in progress.md, advance to the next phase
 
 ### Phase Detection Priority
 
+- **Old layout detected (legacy 1.x repo, not yet migrated):** if `SDD/prompts/context-management/progress.md` exists OR any `SDD/prompts/PROMPT-*.md` files exist AND `SDD/orchestration/progress.md` does NOT exist → emit:
+  > Detected legacy SDD layout (1.x). Run `/sdd-migrate-layout` to migrate to the 2.0.0 layout, then re-run `/sdd-flow continue`. The migration helper has its own active-flow gating; if a flow is in progress, you may need to complete it first.
+
+  Halt; do not attempt phase detection on the new layout (it will fail because no artifacts exist there). Do not auto-migrate; the migration helper has its own gates.
 - If "Implementation Phase - COMPLETE" → Done, show final summary
 - If implementation is active → Resume the appropriate sub-step (4a-4j)
 - If "Planning Phase - COMPLETE" → Start Step 4 (implementation)
@@ -655,7 +662,7 @@ When spawning each subagent, the orchestrator must include in the prompt:
 4. The project's CLAUDE.md instructions (if relevant to the phase)
 5. An explicit instruction to read input files before starting work
 6. An explicit instruction to create directories before writing output files
-7. **For phase-execution (2a, 3a, 4a), fix (2d, 3e, 4c, 4e), and continuation subagents:** the Subagent Safety-Net Rule (verbatim from "Orchestrator Discipline → Subagent Safety-Net Rule"), the inlined body of the matching `/sdd:[phase]-compact` command (model checks stripped) under a "Compact instructions (use only if the Safety-Net trips)" delimiter, AND a unique counter file path under "Your counter file" (the orchestrator must create the file at `SDD/prompts/context-management/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with two lines `Reads: 0/10\nNested subagents: 0/4` before spawning the subagent). All three must be embedded up front so the subagent can use them without reading additional files at bail-out time.
+7. **For phase-execution (2a, 3a, 4a), fix (2d, 3e, 4c, 4e), and continuation subagents:** the Subagent Safety-Net Rule (verbatim from "Orchestrator Discipline → Subagent Safety-Net Rule"), the inlined body of the matching `/sdd:[phase]-compact` command (model checks stripped) under a "Compact instructions (use only if the Safety-Net trips)" delimiter, AND a unique counter file path under "Your counter file" (the orchestrator must create the file at `SDD/orchestration/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with two lines `Reads: 0/10\nNested subagents: 0/4` before spawning the subagent). All three must be embedded up front so the subagent can use them without reading additional files at bail-out time.
 8. The bounded-return contract: ≤200 words of summary plus paths to artifacts written.
 
 ### Context Management Within Subagents
