@@ -80,9 +80,9 @@ The per-feature implementation plan/tracking document. Renamed from `PROMPT` as 
 - Source: proposal §Directory Layout "File rename"; research §Branch 1.
 
 ### `## Slice Progress`
-The table inside an `IMPLEMENTATION-PLAN` (per-slice mode only) that tracks each slice's status: `Not Started` / `In Progress` / `Acceptance Check Passing` / `Complete`. The active slice is the next entry with status `Not Started` (or `In Progress`, if resuming mid-slice).
+The table inside an `IMPLEMENTATION-PLAN` (per-slice mode only) that tracks each slice's status. **Binding column schema:** `SLICE-ID | Name | Status | Acceptance check | Test result | Notes`. **Binding 4-state enum** for the `Status` column: `Not Started`, `In Progress`, `Acceptance Check Passing`, `Complete`. State transitions are forward-only (no backwards transitions encoded in the column; "stuck" surfaces via the ledger's `Open recommendations` section). The active slice is the next entry with status `Not Started` (or `In Progress`, if resuming mid-slice). Column-write authority: `/implementation-start` scaffolds the table; `/slice-retro` updates only `Status`, `Test result`, and `Notes` (never `SLICE-ID`, `Name`, or `Acceptance check` — those are SPEC-derived).
 - Synonyms to avoid: "slice tracker", "slice status", "slice table".
-- Source: proposal §2; research §Branch 3.
+- Source: proposal §2; research §Branch 3 / §"## Slice Progress table schema"; SPEC-001 REQ-022 / EDGE-011.
 
 ### IMPLEMENTATION-SUMMARY
 The whole-feature completion artifact. Filename unchanged across the 2.0.0 restructure (relocation only). Filename pattern: `IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`. Lives at `SDD/implementation/summaries/` (relocated from `SDD/prompts/implementation-complete/`).
