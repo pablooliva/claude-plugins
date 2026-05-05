@@ -25,27 +25,64 @@ The orchestrator-level flags (`--replan`, `--from-slice`, `--override-replan`) b
 
 `/sdd-migrate-layout` is **NOT concurrent-safe**. Running two simultaneous invocations against the same repo (e.g., from two terminals or two Claude Code sessions) will produce overlapping `git mv` operations and a chaotic partial-migration state — recovery via Step 7 will be ambiguous because each run's "successful moves" list reflects only its own actions. The helper claims "safe and idempotent re-runs" — that is **serial-idempotence**, not **concurrent-safety**. Run sequentially; if you suspect a concurrent invocation may have occurred, inspect `git status` and the move history manually before re-running.
 
-## Step 0: Bash availability check (FAIL-005)
+## Step 0: Bash availability + execution-isolation check (FAIL-005)
 
-The migration script uses bash 3.0+ syntax (parameter expansion `${f//OLD/NEW}`, `for f in glob; do … done` loops with `[ -e "$f" ] || continue` guards). On Windows, Claude Code may invoke commands via PowerShell or cmd.exe by default; those interpreters do not support these constructs and would produce partial moves on failure.
+The migration script uses bash 3.0+ syntax (parameter expansion `${f//OLD/NEW}`, `for f in glob; do … done` loops). The risk is twofold:
 
-**First action of the command, before any other check:**
+1. **Bash absent.** On Windows, Claude Code may invoke commands via PowerShell or cmd.exe by default; those interpreters do not support these constructs.
+2. **Bash present but the script runs under a different shell.** On macOS the user's Bash tool is initialized from the user's login shell — typically zsh. Under zsh's default options, an unmatched glob (e.g., `for f in research-compacted-*.md` when no such file exists) raises `nomatch` and aborts the loop *before* the `[ -e "$f" ] || continue` guard runs. `command -v bash` would still pass — bash exists, just isn't the interpreter.
+
+**The mitigation has two parts:**
+
+(a) **Verify bash is on PATH** as the first action of the command:
 
 ```bash
 command -v bash >/dev/null 2>&1 || { echo "ERROR: /sdd-migrate-layout requires bash. On Windows, run from Git Bash."; exit 1; }
 ```
 
-If bash is not available, refuse cleanly with the diagnostic message above and exit. No moves attempted; no rollback needed because no state was changed.
+If bash is not available, refuse cleanly with the diagnostic above and exit. No moves attempted; no rollback needed.
+
+(b) **Execute every move-set block under bash explicitly.** Throughout the rest of this document, blocks that perform moves or use bash-specific glob behavior are wrapped in a `bash <<'EOF' ... EOF` heredoc, with `set -e` and `shopt -s nullglob` enabled at the top of the heredoc body. This guarantees the move set runs under bash regardless of what shell the Bash tool was launched from, and turns unmatched globs into empty expansions instead of `nomatch` errors. **Do not unwrap these blocks** — the heredoc is the load-bearing portability gate, not stylistic decoration.
+
+POSIX-only check blocks (`test -d`, `test -f`, simple `grep`, `git status --porcelain`) work in any shell and are NOT wrapped.
 
 ## Step 1: Plugin-version precondition
 
-The migration helper belongs to the SDD 2.0.0 release. If the installed SDD plugin is older, the source-code path emissions in the rest of the plugin will still target the legacy layout, and migrating now would produce a tree the plugin cannot read. Verify:
+The migration helper belongs to the SDD 2.0.0 release. If the installed SDD plugin is older, the source-code path emissions in the rest of the plugin will still target the legacy layout, and migrating now would produce a tree the plugin cannot read.
+
+The user runs `/sdd-migrate-layout` from a user project, not from the plugin source. The SDD plugin lives at `~/.claude/plugins/cache/<owner>/sdd/<version>/.claude-plugin/plugin.json` (Claude Code's plugin cache layout) — searching the project root for `plugin.json` returns nothing in a real install. Locate the plugin via two checks in priority order:
 
 ```bash
-grep '"version"' "$(find . -path '*/sdd/.claude-plugin/plugin.json' -maxdepth 5 2>/dev/null | head -1)" 2>/dev/null
+# Primary: ${CLAUDE_PLUGIN_ROOT} when set in the command-execution context — points to the
+# ACTIVE install (matters when multiple versions are cached side-by-side).
+PLUGIN_JSON=""
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json" ]; then
+  PLUGIN_JSON="${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
+else
+  # Fallback: scan the plugin cache for the highest-versioned sdd install. The directory
+  # name IS the version, sorted via `sort -V`.
+  PLUGIN_JSON=$(ls -1d ~/.claude/plugins/cache/*/sdd/*/.claude-plugin/plugin.json 2>/dev/null | sort -V | tail -1)
+fi
+
+if [ -z "$PLUGIN_JSON" ] || [ ! -f "$PLUGIN_JSON" ]; then
+  echo "Refusing migration: cannot locate the installed SDD plugin."
+  echo "  Checked: \${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json (unset or missing)"
+  echo "  Checked: ~/.claude/plugins/cache/*/sdd/*/.claude-plugin/plugin.json (no match)"
+  echo "Reinstall via: /plugin install https://github.com/poliva83/claude-plugins sdd"
+  exit 1
+fi
+
+VERSION=$(grep '"version"' "$PLUGIN_JSON" | head -1 | sed 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+MAJOR=$(echo "$VERSION" | cut -d. -f1)
+[ "$MAJOR" -ge 2 ] 2>/dev/null || { \
+  echo "Refusing migration: /sdd-migrate-layout requires the SDD plugin at version 2.0.0 or later."; \
+  echo "  Detected: $VERSION at $PLUGIN_JSON"; \
+  echo "Update via: /plugin install https://github.com/poliva83/claude-plugins sdd"; \
+  echo "Then re-run /sdd-migrate-layout."; \
+  exit 1; }
 ```
 
-If the version is below 2.0.0 (or the file cannot be located), refuse with:
+Refusal text (used when the version gate trips):
 
 ```
 Refusing migration: /sdd-migrate-layout requires the SDD plugin at version 2.0.0 or later.
@@ -121,12 +158,30 @@ If the file does not exist AND no legacy artifacts exist (impossible in State 3 
 When `progress.md` IS present at the legacy path, parse it for the most recent phase status block. Look for:
 
 - The latest `## Phase: <name> - <status>` heading (e.g., `## Phase: Research - In Progress`, `## Phase: Planning - COMPLETE`, `## Phase: Implementation - In Progress`).
+- OR the older-tree form `## Implementation Phase - <status>` (e.g., `## Implementation Phase - In Progress`, `## Implementation Phase - COMPLETE ✓`). Older legacy `progress.md` files use this naming instead of the `## Phase: Implementation - <status>` form; both shapes must be recognized.
 - OR any of these alternative active-state headings: `## Awaiting Clarification`, `## Awaiting Slicing Decision`, `## Awaiting Re-planning Decision`, `## Awaiting Re-start Decision`, `## Recommended Re-planning`, `## PARTIAL: needs continuation`.
-- The terminal-success marker is `## Phase: Implementation - COMPLETE` (or, in older trees, `## Implementation Phase - COMPLETE`).
+- The terminal-success marker is `## Phase: Implementation - COMPLETE` (or, in older trees, `## Implementation Phase - COMPLETE`, optionally with a trailing checkmark or other suffix).
 
 ```bash
-# Parse the latest top-level "## " heading whose text begins with "Phase:" or one of the alternative-active markers.
-# (Use awk/grep to extract; do not eval the file contents.)
+# Parse the latest top-level "## " heading whose text begins with "Phase:", "Implementation Phase",
+# or one of the alternative-active markers. Use grep -E to extract; do not eval the file contents.
+#
+# The `Implementation Phase` alternative covers older legacy progress.md files that
+# pre-date the `## Phase: <name> - <status>` standard. Without this alternative,
+# legacy trees with `## Implementation Phase - COMPLETE` would fall through to the
+# parse-failure branch and force the user onto --force-no-active.
+#
+# Asymmetry note (intentional): the older form is recognized ONLY for the
+# Implementation phase, not Research / Planning / Slicing. Rationale: the migration
+# is a terminal event; only the Implementation phase has a meaningful terminal state
+# (`COMPLETE` after all slices ship). A legacy tree at `## Research Phase - COMPLETE`
+# without a subsequent Implementation block would mean the flow concluded without
+# implementing — extremely unlikely in practice and best routed to manual inspection
+# via parse-failure + --force-no-active rather than silently classified as terminal.
+# If real-world reports surface the Research/Planning legacy forms, extend the
+# regex AND tighten the Step 3c terminal-classification to require an Implementation
+# context before declaring terminal-success.
+#
 # The `Awaiting ` prefix-match covers Awaiting Clarification, Awaiting Slicing Decision,
 # Awaiting Re-planning Decision (the orchestrator-written halt block per SKILL.md per-slice 4c.5),
 # and Awaiting Re-start Decision (EDGE-013). The `Recommended Re-planning` literal is
@@ -135,16 +190,26 @@ When `progress.md` IS present at the legacy path, parse it for the most recent p
 # header lives in the retrospective ARTIFACT, not in progress.md — but legacy or
 # manually-edited progress.md files may still contain it, and refusing-to-migrate is the
 # safe-default outcome either way).
-LATEST_BLOCK=$(grep -E '^## (Phase:|Awaiting |Recommended Re-planning|PARTIAL:)' "$PROGRESS_PATH" | tail -1)
+LATEST_BLOCK=$(grep -E '^## (Phase:|Implementation Phase|Awaiting |Recommended Re-planning|PARTIAL:)' "$PROGRESS_PATH" | tail -1)
 ```
 
 ### Step 3c: classify the parse result and refuse if active
 
-Three classification outcomes:
+Three classification outcomes. Note the status check is a **substring** match for `COMPLETE`, not an exact match — older trees may suffix the status with a checkmark or other glyph (e.g., `## Implementation Phase - COMPLETE ✓`), and an exact-match comparison would misclassify those as active.
 
-**(i) Parse succeeds, status = `COMPLETE`:** safe to migrate. Continue to Step 4.
+```bash
+# Classification: case ... in lets us substring-match COMPLETE without disturbing
+# whatever trailing decoration the heading may carry.
+case "$LATEST_BLOCK" in
+  *COMPLETE*) STATUS=terminal ;;
+  "")          STATUS=parse_failure ;;
+  *)           STATUS=active ;;
+esac
+```
 
-**(ii) Parse succeeds, status != `COMPLETE` (active phase detected):** refuse with REQ-007 message-discipline shape. The diagnostic names the detected condition and the resolution path:
+**(i) `STATUS=terminal` (parse succeeds, contains `COMPLETE`):** safe to migrate. Continue to Step 4.
+
+**(ii) `STATUS=active` (parse succeeds, no `COMPLETE` substring):** refuse with REQ-007 message-discipline shape. The diagnostic names the detected condition and the resolution path:
 
 ```
 Refusing migration: an SDD flow appears to be active.
@@ -155,7 +220,7 @@ Resolve the in-flight flow first (run /sdd-flow continue to completion, or /impl
 
 Exit 1. No moves attempted.
 
-**(iii) Parse FAILS** (file unreadable, malformed, schema unexpected, or no `## Phase:` / `## Awaiting ` (covering Clarification, Slicing Decision, Re-planning Decision, Re-start Decision) / `## Recommended Re-planning` / `## PARTIAL:` heading found at all): per SEC-002 / EDGE-015 / FAIL-008 fail-closed posture, refuse:
+**(iii) `STATUS=parse_failure`** (file unreadable, malformed, schema unexpected, or no `## Phase:` / `## Implementation Phase` / `## Awaiting ` (covering Clarification, Slicing Decision, Re-planning Decision, Re-start Decision) / `## Recommended Re-planning` / `## PARTIAL:` heading found at all): per SEC-002 / EDGE-015 / FAIL-008 fail-closed posture, refuse:
 
 ```
 Refusing migration: progress.md exists but cannot be parsed.
@@ -163,7 +228,9 @@ Path: SDD/prompts/context-management/progress.md
 Reason: <parser error or "no recognizable phase-status heading found">
 Failing closed to avoid data-loss-by-misclassification. The cost of a false-refusal is one inspect-and-rerun; the cost of a false-proceed is silent data-loss. Either:
   1. Repair progress.md manually and re-run, OR
-  2. If progress.md is genuinely orphaned (last flow concluded long ago), back it up with `cp progress.md progress.md.orphan` and re-run with --force-no-active to override this refusal.
+  2. If progress.md is genuinely orphaned (last flow concluded long ago), back it up to a path OUTSIDE SDD/, then re-run with --force-no-active. Recommended:
+       cp SDD/prompts/context-management/progress.md /tmp/progress.md.orphan-$(date +%Y%m%d)
+     (Do NOT place the backup inside SDD/ — anything there would become an untracked file that trips Step 4's dirty-tree refusal on the re-run, and would also block the final `rmdir SDD/prompts/context-management`.)
 ```
 
 Exit 1. No moves attempted.
@@ -199,9 +266,13 @@ Exit 1. No moves attempted.
 
 When `--apply` is NOT passed (dry-run mode, the default), enumerate every move that WOULD be executed and print them. Do NOT actually execute. The user inspects the plan, then re-runs with `--apply` to commit to it.
 
-The move set, exactly per ADR 0002 + research Branch 4:
+The move set, exactly per ADR 0002 + research Branch 4. **The entire block is wrapped in `bash <<'EOF' ... EOF`** so it executes under bash regardless of the parent shell (per Step 0(b)). `set -e` halts on the first failure (Step 7 picks up rollback). `shopt -s nullglob` makes unmatched globs expand to nothing — required so the `for f in <glob>` loops don't trip zsh's `nomatch` if the parent shell were to ever bypass the wrap.
 
 ```bash
+bash <<'EOF'
+set -e
+shopt -s nullglob
+
 # Setup (idempotent — mkdir -p is no-op when target exists)
 mkdir -p SDD/implementation/summaries
 mkdir -p SDD/implementation/slices
@@ -211,7 +282,6 @@ mkdir -p SDD/orchestration/compacted
 
 # 1. Implementation tracker (relocate AND rename PROMPT- → IMPLEMENTATION-PLAN-)
 for f in SDD/prompts/PROMPT-*.md; do
-  [ -e "$f" ] || continue
   newname="${f//PROMPT-/IMPLEMENTATION-PLAN-}"
   newpath="SDD/implementation/$(basename "$newname")"
   git mv "$f" "$newpath"
@@ -220,20 +290,18 @@ done
 # 2. Implementation summaries (relocation only — filename unchanged)
 if [ -d "SDD/prompts/implementation-complete" ]; then
   for f in SDD/prompts/implementation-complete/*.md; do
-    [ -e "$f" ] || continue
     git mv "$f" "SDD/implementation/summaries/$(basename "$f")"
   done
-  rmdir SDD/prompts/implementation-complete 2>/dev/null
+  rmdir SDD/prompts/implementation-complete 2>/dev/null || true
 fi
 
 # 3. Test audits (if present)
 if [ -d "SDD/prompts/test-audits" ]; then
   mkdir -p SDD/implementation/test-audits
   for f in SDD/prompts/test-audits/*.md; do
-    [ -e "$f" ] || continue
     git mv "$f" "SDD/implementation/test-audits/$(basename "$f")"
   done
-  rmdir SDD/prompts/test-audits 2>/dev/null
+  rmdir SDD/prompts/test-audits 2>/dev/null || true
 fi
 
 # 4. Orchestration state — progress.md
@@ -244,36 +312,52 @@ fi
 # 5. Subagent-calls
 if [ -d "SDD/prompts/context-management/subagent-calls" ]; then
   for f in SDD/prompts/context-management/subagent-calls/*; do
-    [ -e "$f" ] || continue
     git mv "$f" "SDD/orchestration/subagent-calls/$(basename "$f")"
   done
-  rmdir SDD/prompts/context-management/subagent-calls 2>/dev/null
+  rmdir SDD/prompts/context-management/subagent-calls 2>/dev/null || true
 fi
 
 # 6. Counters
 if [ -d "SDD/prompts/context-management/counters" ]; then
   for f in SDD/prompts/context-management/counters/*; do
-    [ -e "$f" ] || continue
     git mv "$f" "SDD/orchestration/counters/$(basename "$f")"
   done
-  rmdir SDD/prompts/context-management/counters 2>/dev/null
+  rmdir SDD/prompts/context-management/counters 2>/dev/null || true
 fi
 
-# 7. Compaction files (research-, planning-, implementation-, adhoc-)
+# 7. Compaction files (research-, planning-, implementation-, adhoc-, archives)
+#    progress-archive-*.md exist in older legacy trees as retained retro-history; they
+#    don't match any other source pattern and would otherwise orphan in context-management/
+#    and block the final rmdir.
 for f in SDD/prompts/context-management/research-compacted-*.md \
          SDD/prompts/context-management/planning-compacted-*.md \
          SDD/prompts/context-management/implementation-compacted-*.md \
-         SDD/prompts/context-management/compact-*.md; do
-  [ -e "$f" ] || continue
+         SDD/prompts/context-management/compact-*.md \
+         SDD/prompts/context-management/progress-archive-*.md; do
   git mv "$f" "SDD/orchestration/compacted/$(basename "$f")"
 done
 
+# 7b. Final sweep — anything still in context-management/ at this point is an unrecognized
+#     legacy file that none of the explicit patterns above matched (e.g., a hand-written
+#     note left there by a user, a tool's scratch file, a future legacy form not yet known
+#     to this helper). Move it to compacted/ for safety with a logged warning rather than
+#     orphaning it and blocking the final rmdir. Subdirectories (subagent-calls/, counters/)
+#     are excluded by the [ -f ] guard — they're handled by their own steps above.
+if [ -d "SDD/prompts/context-management" ]; then
+  for f in SDD/prompts/context-management/*; do
+    [ -f "$f" ] || continue
+    echo "WARNING: unrecognized legacy file '$f' — moving to SDD/orchestration/compacted/ for safety; inspect after migration."
+    git mv "$f" "SDD/orchestration/compacted/$(basename "$f")"
+  done
+fi
+
 # 8. Cleanup empty parents
-rmdir SDD/prompts/context-management 2>/dev/null
-rmdir SDD/prompts 2>/dev/null
+rmdir SDD/prompts/context-management 2>/dev/null || true
+rmdir SDD/prompts 2>/dev/null || true
+EOF
 ```
 
-**Cross-platform shell note:** every construct above is bash 3.0+ compatible. The `${f//OLD/NEW}` parameter-expansion is bash-specific (not POSIX `sh`), which is why Step 0's bash detection is the load-bearing portability gate. macOS / Linux / Git Bash for Windows all satisfy this. The `for f in glob; do ... [ -e "$f" ] || continue ... done` idiom handles the no-match case cleanly (the unmatched glob expands to itself; the `-e` test then fails and `continue` skips it).
+**Cross-platform shell note:** the `bash <<'EOF' ... EOF` heredoc wrap is the load-bearing portability gate. The `${f//OLD/NEW}` parameter expansion and the `for f in glob` idiom both behave well under bash with `nullglob` enabled. macOS / Linux / Git Bash for Windows all satisfy Step 0(a)'s bash-availability check, and the heredoc forces bash execution regardless of what shell the Bash tool was launched from. **Do NOT unwrap the heredoc** — without it, on macOS-default zsh the move set's `for f in <glob-with-no-match>` loops will trip `nomatch` and abort midway, leaving the tree partially migrated. (This was a real failure mode reported against the 2.0.0 helper.)
 
 **Hardcoded-path safety (SEC-001 / SEC-003):** every source and destination path in the move set is a HARDCODED string literal in the command body. The command does NOT accept a path argument, does NOT interpolate environment variables into source/destination paths, and does NOT eval any file contents. There is no opportunity for path traversal or arbitrary command execution.
 
@@ -298,7 +382,11 @@ Moves (N total):
   git mv SDD/prompts/context-management/subagent-calls/<N items> SDD/orchestration/subagent-calls/
   git mv SDD/prompts/context-management/counters/<M items> SDD/orchestration/counters/
   git mv SDD/prompts/context-management/research-compacted-001-foo-2026-01-01.md SDD/orchestration/compacted/...
+  git mv SDD/prompts/context-management/progress-archive-001-foo.md SDD/orchestration/compacted/progress-archive-001-foo.md
   ...
+  [If unrecognized files remain in context-management/ at sweep time, lines like:]
+  WARNING: unrecognized legacy file 'SDD/prompts/context-management/<file>' — moving to SDD/orchestration/compacted/ for safety; inspect after migration.
+  git mv SDD/prompts/context-management/<file> SDD/orchestration/compacted/<file>
 
 Cleanup:
   rmdir SDD/prompts/context-management
@@ -312,12 +400,7 @@ If the dry-run shows zero moves (all files match a no-op), report `Nothing to mi
 
 ## Step 6: Apply the move set (only when `--apply` is passed)
 
-When the user re-runs with `--apply`, execute the move set sequentially. Capture each `git mv`'s exit code; on first non-zero exit, halt and route to Step 7 (rollback / partial-migration recovery).
-
-```bash
-set -e  # halt on first failure
-# (run the move set as enumerated in Step 5, but actually execute, not echo)
-```
+When the user re-runs with `--apply`, execute the Step 5 move-set heredoc directly — do NOT print it as a plan, run it. The heredoc already enables `set -e`, so on first non-zero exit the heredoc halts; capture the failure context and route to Step 7 (rollback / partial-migration recovery).
 
 After all moves succeed:
 
@@ -509,6 +592,8 @@ Source paths (legacy, pre-2.0.0):
 - `SDD/prompts/context-management/counters/`
 - `SDD/prompts/context-management/{research,planning,implementation}-compacted-*.md`
 - `SDD/prompts/context-management/compact-*.md`
+- `SDD/prompts/context-management/progress-archive-*.md` (older legacy retro-history)
+- `SDD/prompts/context-management/*` (catch-all sweep for unrecognized residuals → `SDD/orchestration/compacted/`)
 - `SDD/prompts/implementation-complete/*.md`
 - `SDD/prompts/test-audits/*.md` (if present)
 - `SDD/prompts/PROMPT-*.md`
