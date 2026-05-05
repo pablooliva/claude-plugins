@@ -9,7 +9,7 @@
       "name": "sdd",
       "source": "./sdd",
       "description": "Provides a standardized Specification-Driven Development (SDD) methodology that ensures consistent, high-quality software development practices when working with Claude Code.",
-      "version": "1.2.0",
+      "version": "2.0.0",
       "author": {
         "name": "Pablo Oliva"
       }
@@ -27,7 +27,7 @@
       "name": "agent-engineering",
       "source": "./agent-engineering",
       "description": "Cross-cutting skills for disciplined AI-assisted development based on the 10 Claude Code Principles (Forsythe). Includes correction codification, regression eval scaffolding, cross-cutting architectural decision capture, and SDD flow orchestration.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "author": {
         "name": "Pablo Oliva"
       }

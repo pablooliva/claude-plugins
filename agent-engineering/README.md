@@ -13,7 +13,7 @@ The SDD plugin provides a spec-driven development methodology. This plugin provi
 - **`correction-codifier`** — When you correct Claude's behavior mid-session, proposes a durable `Always|Never [X] BECAUSE [Y]` rule and appends it to the project's `CLAUDE.md`. Operationalizes Principle 5 (Institutional Memory).
 - **`cross-cutting-adr`** — Captures cross-cutting architectural decisions (technology choices, conventions that bind future work) as numbered ADRs under `SDD/adr/`. Triggers on comparison-with-selection patterns, explicit invocation, or ambient detection of binding decisions. Operationalizes Principle 3 (Living Documentation).
 - **`improve-claude-md`** — Audits `CLAUDE.md` (or `AGENTS.md`) and `CLAUDE.local.md` to strip discoverable content (tech stack, file maps, command references) and concentrate the file on preferences, behavioral nudges, and corrections that the agent cannot infer from code. Pairs with `correction-codifier`: corrections accumulate, this skill keeps the file lean. Mirrored from [pablooliva/claude-skills](https://github.com/pablooliva/claude-skills).
-- **`sdd-flow`** — End-to-end SDD lifecycle orchestration. Drives Research → Planning → Implementation → Done via subagents, with optional integration of the other skills in this plugin at appropriate phase boundaries. Requires the SDD plugin.
+- **`sdd-flow`** — End-to-end SDD lifecycle orchestration. Drives Research → Planning → Implementation → Done via subagents, with optional integration of the other skills in this plugin at appropriate phase boundaries. Requires the SDD plugin. As of 0.4.0, Step 4 (implementation) is mode-aware: it routes by the spec's `delivery_mode:` frontmatter — `whole-feature` (default; existing single-pass behaviour, preserved bit-for-bit) or `per-slice` (new state machine that fans out into per-slice cycles, integrating the SDD plugin's `/slice-start`, `/slice-review`, `/slice-retro`, and `/slice-commit` commands; a rolling learnings ledger; the `--skip-slice-checkpoints` escape-hatch; and a re-planning halt).
 
 ### Commands
 
@@ -27,4 +27,25 @@ The SDD plugin provides a spec-driven development methodology. This plugin provi
 
 ## Status
 
-Version 0.3.0 — early, under active iteration.
+Version 0.4.0 — early, under active iteration.
+
+### What's new in 0.4.0
+
+- `sdd-flow` Step 4 is now mode-aware. Specs with `delivery_mode: per-slice` drive a new per-slice state machine (per-slice cycle: implement → review → retro → commit, optional slice-boundary checkpoints, rolling learnings ledger, re-planning halt). Specs with `delivery_mode: whole-feature` (the default) continue through the original single-pass implementation flow, preserved bit-for-bit.
+- New arguments on `/sdd-flow`: `--skip-slice-checkpoints`, `--replan`, `--from-slice`, `--override-replan`. See the SDD plugin README's "Per-slice workflow" section for the full state-machine description and resume semantics.
+- Updated artifact paths to match SDD 2.0.0's directory restructure (`SDD/implementation/`, `SDD/orchestration/`, `IMPLEMENTATION-PLAN-XXX-*.md`).
+
+### Requires SDD plugin 2.0.0 or later
+
+The `sdd-flow` skill in this release embeds command bodies and artifact paths that target SDD plugin 2.0.0. **Running 0.4.0 against an older SDD plugin (1.x) — or running an older 0.3.x agent-engineering against SDD 2.0.0 — will silently misbehave** (split-tree artifact writes, `delivery_mode: per-slice` flowing as `whole-feature`, no Step 4 state machine; FAIL-009 in the SDD spec). Both plugins install independently from the marketplace, so updating only one is plausible. To stay aligned:
+
+```bash
+/plugin install https://github.com/poliva83/claude-plugins sdd
+/plugin install https://github.com/poliva83/claude-plugins agent-engineering
+```
+
+If you upgrade SDD to 2.0.0, also upgrade agent-engineering to 0.4.0 in the same step (and vice-versa). See the SDD plugin README's "Cross-plugin dependency" section for the matching cross-reference and the `/sdd-migrate-layout` migration helper.
+
+### 0.3.0 and earlier
+
+Initial releases of `correction-codifier`, `cross-cutting-adr`, `improve-claude-md`, `sdd-flow` (whole-feature only), and the `/regression-eval-capture` and `/adr-capture` commands.
