@@ -309,7 +309,7 @@ Splitting heuristics differ by phase — a uniform "always pre-split" rule does 
 
 - **Planning (Step 3a)** — Usually a single subagent. Pre-split only if the RESEARCH document is exceptionally long (>1000 lines) OR covers more than three distinct subsystems with non-overlapping concerns. The safety-net rule still applies.
 
-- **Implementation (Step 4a)** — Orchestrator-driven splitting is primary. Before spawning, the orchestrator counts SPEC items: `REQ-XXX` + `EDGE-XXX` + `FAIL-XXX`. If the total exceeds **8** (initial default — tune as needed), pre-split into ⌈total / 5⌉ sequential implementation subagents, each handling a contiguous chunk, each appending to the PROMPT document so the next subagent knows what's done.
+- **Implementation (Step 4a) — whole-feature mode only.** Orchestrator-driven splitting is primary. Before spawning, the orchestrator counts SPEC items: `REQ-XXX` + `EDGE-XXX` + `FAIL-XXX`. If the total exceeds **8** (initial default — tune as needed), pre-split into ⌈total / 5⌉ sequential implementation subagents, each handling a contiguous chunk, each appending to the PROMPT document so the next subagent knows what's done. **In per-slice mode this REQ-count chunking does NOT apply** — slices are the unit of splitting, one subagent per slice is the strict rule (no bundling), and the safety-net rule remains the in-slice backstop.
 
 #### Subagent Safety-Net Rule
 
@@ -520,6 +520,16 @@ Proceed directly to Step 4 (no checkpoint needed here — the supervised checkpo
 
 ### Step 4: Implementation Phase
 
+#### Read delivery_mode and route
+
+The orchestrator reads `delivery_mode:` from the spec frontmatter (which was populated by Step 3a per `/sdd:planning-start` Step 7's value-validation rule).
+
+- **`whole-feature` (default):** continue with the existing whole-feature path (sub-steps 4a–4j below). No behavioral change vs. pre-2.0.0.
+- **`per-slice`:** branch to the per-slice path described under "#### Per-slice Step 4 cycle." The whole-feature 4a–4j sub-steps DO NOT run.
+- **Invalid value:** the planning subagent already failed at Step 3a; this branch is unreachable in a well-formed flow.
+
+Whichever branch fires, the post-implementation steps (4f completion, 4g eval, 4i full-feature commit, 4j announcement) are shared and run after the implementation work is done — but their inputs differ depending on the branch.
+
 #### 4a. Implementation Subagent
 
 Spawn a **general-purpose subagent** with:
@@ -623,6 +633,80 @@ The **orchestrator** runs the commit — all implementation code, tests, reviews
 > [If ADRs were captured:]
 > ADRs written: [list]. See `SDD/adr/README.md`.
 
+#### Per-slice Step 4 cycle (`delivery_mode: per-slice`)
+
+When the spec declares `delivery_mode: per-slice`, Step 4 runs the per-slice state machine instead of the whole-feature path. The orchestrator iterates over `SLICE-XXX` entries from the spec's `## Delivery Slices` section, executing the per-slice cycle for each, then runs an end-of-feature cycle once after the last slice lands.
+
+**Slice-boundary checkpoint axis (REQ-024):** A separate axis from the supervised/autonomous (phase-boundary) axis. Default `on` in per-slice mode in BOTH supervised and autonomous modes (without this default, opting into per-slice would degrade into "more internal gates with no human review" — defeating the main reason to opt in). Suppressed via `--skip-slice-checkpoints`.
+
+| Phase-boundary | Slice-boundary | Behavior |
+|---|---|---|
+| supervised | on | Pauses at research-end + each completed slice + impl-end |
+| supervised | off | Pauses at research-end + impl-end; slices run continuously inside |
+| **autonomous** | **on** (default) | Research + planning autonomous; pause between each fully-completed slice; end-of-feature autonomous through commit |
+| autonomous | off (via --skip-slice-checkpoints) | Fully autonomous start-to-finish |
+
+##### Per-slice cycle (runs once per `SLICE-XXX`)
+
+For each slice in order from the spec's `## Delivery Slices` section:
+
+1. **Per-slice 4a — Implement slice.** Spawn ONE general-purpose subagent (strict — no bundling per locked decision) with `/sdd:slice-start <SLICE-XXX>` instructions embedded plus the active spec, the rolling ledger (`SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md`), and the implementation plan path. **The subagent's prompt receives ONLY the ledger** (per OQ-6 default — strictly the ledger; individual retros are out of the prompt path). The subagent implements the slice end-to-end; its bounded return states "Slice X delivered. Acceptance check `<test name>` passes."
+
+2. **Per-slice 4b — Per-slice code review.** Spawn a general-purpose subagent with `/sdd:slice-review <SLICE-XXX>` instructions. Mandatory per slice — not deferred to end-of-feature.
+
+3. **Per-slice 4c — Address per-slice findings.** Spawn a fix subagent if the review found anything HIGH or MEDIUM. Standard fix-and-re-review pattern with the **per-slice review iteration cap (REQ-012)**: max 3 iterations with progress-stall check (HIGH must strictly decrease, OR MEDIUM when HIGH is zero). Mirrors Step 3c's panel-review cap exactly.
+
+   **On halt (cap exhausted or progress stall):**
+   - The slice does NOT proceed to 4c.5 or 4c.6.
+   - The unresolved findings are appended to `LEARNINGS-FEATURE-[feature-name].md` under *Open recommendations awaiting user decision*.
+   - In any mode with slice-checkpoints `on`, surface the halt in the next pause message and do not advance to the next slice without user direction.
+   - In `autonomous + --skip-slice-checkpoints` mode, **halt the entire flow** — analogous to the panel-review halt at Step 3c, since compounding unresolved findings across subsequent slices is too high a risk.
+
+4. **Per-slice 4c.5 — Slice retrospective (REQ-013).** Spawn a general-purpose subagent with `/sdd:slice-retro <SLICE-XXX>` instructions. The subagent writes `RETROSPECTIVE-SLICE-XXX-[feature-name]-YYYY-MM-DD.md` (audit trail; never modified after writing) and updates the rolling ledger in-place.
+
+   **Recommendation matcher contract (REQ-013):** after the retrospective subagent returns, the orchestrator reads the just-written RETROSPECTIVE artifact and grep-matches for these EXACT header strings:
+   - `^## Recommended SPEC Amendments$` — routine amendment recommendation; surface in the slice-boundary pause message as a per-recommendation summary (one or two lines per affected entry — which `SLICE-XXX`/`MODULE-XXX`/`REQ-XXX` is affected, what should change, why), with the path to the retrospective for the user to open and read the full proposed wording.
+   - `^## Recommended Re-planning$` — elevated severity. Per **REQ-014**, presence of this header HALTS the flow even under `--skip-slice-checkpoints`. The pause message uses the re-planning–specific shape:
+     > **Re-planning recommended.** The slice retrospective has determined the original plan is no longer fit. The flow is halted to await your direction.
+     > Resume options:
+     >   1. `/sdd-flow continue --replan` — re-run Step 3 (planning) with the ledger and the triggering retrospective in the planning subagent's prompt; produces a revised SPEC; resumes implementation from `SLICE-001` (or from a user-specified slice if some completed slices remain valid).
+     >   2. Edit the SPEC manually, then `/sdd-flow continue` — user takes the wheel.
+     >   3. `/sdd-flow continue --override-replan` — explicit override; continues with the current plan despite the recommendation.
+     > See `<retro-path>` for the full re-planning rationale.
+
+     **In autonomous + --skip-slice-checkpoints mode**, this halt fires regardless. The autonomous-mode rule "no pauses except mandatory ones" is overridden here because compounding subagent runs on a known-broken plan is the higher-cost failure.
+
+   **EDGE-006 — `/sdd-flow continue` invoked without a flag while a re-planning recommendation is pending:** the orchestrator detects the pending halt (a `## Recommended Re-planning` block in `progress.md` with no resume-flag block following it) and emits an informative refusal naming the three options (`--replan`, manual edit + plain `continue`, `--override-replan`) before exiting. No work is performed.
+
+5. **Per-slice 4c.6 — Per-slice commit.** Orchestrator runs `/sdd:slice-commit <SLICE-XXX>` (or invokes the equivalent commit logic). Atomic per-slice commit covering: slice code + tests + per-slice review doc + fix-findings notes + retrospective + ledger update. Commit message references `SLICE-XXX` and `SPEC-XXX`; no co-author attribution.
+
+6. **PAUSE (slice-boundary).** Fires when slice-boundary checkpoints are `on`. The pause message includes:
+   - Slice X completed; brief summary of what landed.
+   - Acceptance check status.
+   - Any matched recommendations (SPEC amendments and/or re-planning) per the matcher above.
+   - The next slice in queue.
+   Resume via `/sdd-flow continue` (advances to next slice); or one of the re-planning resume options if re-planning was matched.
+
+   When slice-boundary checkpoints are `off` (`--skip-slice-checkpoints`), this pause is skipped — except for the re-planning halt above which fires regardless.
+
+##### End-of-feature cycle (runs once after the last slice's 4c.6 lands)
+
+After all slices in `## Delivery Slices` have completed their per-slice cycle, run:
+
+7. **End-of-feature 4d — Critical review across the assembled feature.** Spawn a general-purpose subagent with `/sdd:critical-review` instructions; reviews the whole assembled feature, not individual slices.
+
+8. **End-of-feature 4e — Address critical review findings.** Standard fix subagent.
+
+9. **End-of-feature 4f — Implementation completion subagent.** Finalize implementation plan, write IMPLEMENTATION-SUMMARY, capture glossary deltas (per REQ-020 in the SDD plugin's `/sdd:implementation-complete` Step 5).
+
+10. **End-of-feature 4g — Eval scaffolding.** Conditional on `eval_required:` frontmatter (unchanged from whole-feature flow).
+
+11. **End-of-feature 4h — Supervised checkpoint.** Fires only in supervised phase-boundary mode. Same shape as today.
+
+12. **End-of-feature 4i — End-of-feature commit.** Covers: critical review doc, fix-findings code from 4e, completion artifacts from 4f, eval scaffolding from 4g. Per-slice code is already committed in each 4c.6.
+
+13. **End-of-feature 4j — Announcement.** Same shape as today; if eval scaffolded, surface; if ADRs captured, surface.
+
 ---
 
 ## Session Resumption
@@ -696,6 +780,8 @@ When spawning each subagent, the orchestrator must include in the prompt:
 12. **Commit messages have NO co-author attribution** — per project convention
 13. **Explicit paths always** — every subagent gets resolved, concrete file paths. Never rely on a subagent to guess or discover artifact locations.
 14. **The orchestrator never executes phase, review, fix, capture, or completion work directly** — every numbered sub-step runs in a spawned subagent, even ones that "look small." The orchestrator has no `/clear` available to itself; subagent boundaries are the only context-reset mechanism. See "Orchestrator Discipline" for the full rule, the bounded-return contract, per-phase sizing heuristics, the Subagent Safety-Net Rule, and the Mid-Phase Handoff Protocol.
+15. **Per-slice cycle is strict** — one subagent per slice (no bundling), mandatory per-slice review (not deferred to end-of-feature), retrospective + ledger update before commit, atomic per-slice commit. Slice subagents receive ONLY the rolling ledger in their prompts (per OQ-6) — individual retrospectives are out of the prompt path. Compounding state lives in the ledger, not in inflated prompts.
+16. **Re-planning recommendations halt the flow regardless of slice-boundary checkpoint setting** — even under `--skip-slice-checkpoints` and even in autonomous mode. Compounding subagent runs on a known-broken plan is the higher-cost failure than the pause. Resume via `--replan`, manual edit + plain `continue`, or explicit `--override-replan`.
 
 ## Arguments
 
@@ -705,6 +791,12 @@ When spawning each subagent, the orchestrator must include in the prompt:
 | `--auto` | Run in fully autonomous mode (no checkpoints — except the mandatory pre-research clarification gate at Step 1.5; see `--skip-clarify` to suppress that too) |
 | `--supervised` | Run in supervised mode with checkpoints (default) |
 | `--skip-clarify` | Suppress the pre-research clarification gate (Step 1.5). Use when you have a crisp specification already and accept the design-concept risk. The gate-skip is recorded in the Step 2c critical review's executive summary for downstream visibility. |
+| `--skip-slice-checkpoints` | Suppress per-slice pauses in `delivery_mode: per-slice` mode. The default is per-slice pauses ON (in both supervised and autonomous), so opting out requires this flag. The re-planning halt (REQ-014) fires regardless. |
+| `--fall-back-to-whole-feature` | Used with `/sdd-flow continue` after a practicality-gate halt: acknowledge the feature ships as a single horizontal pass; the flow resumes with the legacy REQ-based chunking. |
+| `--retry-slicing "<hint>"` | Used with `/sdd-flow continue` after a practicality-gate halt: re-run slice extraction with a user-supplied hint about a slice boundary the subagent missed. |
+| `--replan` | Used with `/sdd-flow continue` after a re-planning recommendation halt: re-run Step 3 (planning) with the ledger and triggering retrospective in the planning subagent's prompt. |
+| `--from-slice SLICE-XXX` | Used with `--replan`: resume implementation from the named slice instead of `SLICE-001`. Validation: `SLICE-XXX` must reference an existing entry in the spec's `## Delivery Slices`; invalid → fail with clear error. |
+| `--override-replan` | Used with `/sdd-flow continue` after a re-planning recommendation halt: explicit override; continue with the current plan despite the recommendation. Cannot be combined with `--replan` (combination invalid; fail). |
 | `continue` | Resume from the last interruption point |
 
 ## Examples
