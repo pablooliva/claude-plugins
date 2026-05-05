@@ -15,7 +15,7 @@ from typing import Any
 # Constants
 DEFAULT_TRANSCRIPT_LINES = 50
 MAX_LINE_LENGTH = 10000  # Prevent memory issues with extremely long lines
-LOG_SUBDIR = Path("SDD") / "prompts" / "context-management" / "subagent-calls"
+LOG_SUBDIR = Path("SDD") / "orchestration" / "subagent-calls"
 
 
 def load_hook_input() -> dict[str, Any]:

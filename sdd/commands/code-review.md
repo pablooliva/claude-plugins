@@ -24,10 +24,10 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
    - All FAIL-XXX scenarios documented
    - Success criteria clearly defined
 
-3. **PROMPT Files** (`SDD/prompts/PROMPT-XXX-[feature-name]-*.md`)
+3. **IMPLEMENTATION-PLAN Files** (`SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-*.md`)
    - All AI-generated code has associated prompt files
    - Context management approach documented
-   - Subagent usage logged (check `SDD/prompts/context-management/subagent-calls/`)
+   - Subagent usage logged (check `SDD/orchestration/subagent-calls/`)
    - Progress summaries for each implementation phase
 
 4. **Context Utilization**
@@ -73,7 +73,7 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 
 #### Prompt File Quality
 
-- [ ] PROMPT-XXX-[name]-YYYYMMDD.md files saved for all AI work
+- [ ] IMPLEMENTATION-PLAN-XXX-[name]-YYYYMMDD.md files saved for all AI work
 - [ ] Prompts contain clear context management strategies
 - [ ] Subagent usage justified and documented
 - [ ] Progress summaries show iterative refinement
@@ -97,7 +97,7 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 #### Test Suite Execution
 
 - [ ] Test suite was run and all tests pass (not just "tests exist" — confirm green run)
-- [ ] Total test count and pass rate documented in PROMPT document (must be 100%)
+- [ ] Total test count and pass rate documented in IMPLEMENTATION-PLAN document (must be 100%)
 - [ ] No tests were skipped or suppressed without justification
 
 #### Test Type Coverage
@@ -105,16 +105,16 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 - [ ] **Unit tests** present — isolated logic, mocked dependencies
 - [ ] **Integration tests** present for all API endpoints (or N/A with justification)
 - [ ] **E2E/Playwright tests** present for all web-facing behavior (or N/A with justification)
-- [ ] Test type breakdown (unit / integration / E2E counts) recorded in PROMPT document
+- [ ] Test type breakdown (unit / integration / E2E counts) recorded in IMPLEMENTATION-PLAN document
 
 #### E2E Test Verification (Web-Facing Features)
 
-- [ ] Feature web-facing determination is recorded in PROMPT document
+- [ ] Feature web-facing determination is recorded in IMPLEMENTATION-PLAN document
 - [ ] If web-facing: Playwright E2E tests exist in the project's E2E test directory
 - [ ] E2E tests cover critical user flows — not just page loads
 - [ ] E2E tests run against real services (Docker Compose or equivalent stack), not mocked
 - [ ] E2E tests verify actual browser behavior: page loads, form submissions, JS execution, HTMX interactions, client-side logic
-- [ ] If no web-facing behavior: E2E tests explicitly marked N/A with justification in PROMPT document
+- [ ] If no web-facing behavior: E2E tests explicitly marked N/A with justification in IMPLEMENTATION-PLAN document
 
 #### Test Coverage
 
@@ -174,10 +174,10 @@ ls SDD/research/RESEARCH-*-[feature-name].md
 ls SDD/requirements/SPEC-*-[feature-name].md
 
 # Locate prompt files
-ls SDD/prompts/PROMPT-*-[feature-name]-*.md
+ls SDD/implementation/IMPLEMENTATION-PLAN-*-[feature-name]-*.md
 
 # Check subagent logs
-ls SDD/prompts/context-management/subagent-calls/
+ls SDD/orchestration/subagent-calls/
 ```
 
 ### Step 2: Read Specification First
@@ -207,7 +207,7 @@ ls SDD/prompts/context-management/subagent-calls/
 
 ### Step 5: Review Context Engineering
 
-1. Read all PROMPT-XXX files
+1. Read all IMPLEMENTATION-PLAN-XXX files
 2. Evaluate context management strategies
 3. Check subagent usage justification
 4. Verify future modification path
@@ -239,8 +239,8 @@ ls SDD/prompts/context-management/subagent-calls/
 ```markdown
 ❌ **Context Engineering Issue**
 
-**Missing Artifact**: [PROMPT file / progress summary / subagent log]
-**Expected Location**: SDD/prompts/PROMPT-XXX-[feature-name]-YYYYMMDD.md
+**Missing Artifact**: [IMPLEMENTATION-PLAN file / progress summary / subagent log]
+**Expected Location**: SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-YYYYMMDD.md
 **Why Required**: [Impact on maintainability/understanding]
 **Action Required**: [Specific documentation needed]
 ```
@@ -266,7 +266,7 @@ ls SDD/prompts/context-management/subagent-calls/
 
 **Specification**: SPEC-XXX-[feature-name] ✅
 **Research Foundation**: RESEARCH-XXX-[feature-name] ✅
-**Context Management**: PROMPT files preserved ✅
+**Context Management**: IMPLEMENTATION-PLAN files preserved ✅
 **Edge Cases**: All EDGE-XXX scenarios covered ✅
 **Failure Handling**: All FAIL-XXX scenarios handled ✅
 **Tests**: [X] tests, 100% pass rate ✅
@@ -288,7 +288,7 @@ ls SDD/prompts/context-management/subagent-calls/
 1. No specification document exists
 2. No research foundation provided
 3. Core specification intent not met
-4. PROMPT files missing for AI-generated code
+4. IMPLEMENTATION-PLAN files missing for AI-generated code
 5. Context utilization exceeded without justification
 6. Critical edge/failure scenarios unhandled
 7. Success criteria cannot be achieved
@@ -336,7 +336,7 @@ Create `SDD/reviews/REVIEW-XXX-[feature-name]-YYYYMMDD.md`:
 ## Artifact Verification
 - [ ] RESEARCH-XXX-[feature-name] found and complete
 - [ ] SPEC-XXX-[feature-name] found and complete
-- [ ] PROMPT-XXX files preserved
+- [ ] IMPLEMENTATION-PLAN-XXX files preserved
 - [ ] Context utilization <40%
 
 ## Specification Alignment (70%)

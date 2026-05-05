@@ -12,7 +12,7 @@ IMPORTANT: This command requires Claude Sonnet. Before proceeding, check your cu
 ## Initial Context Load
 
 1. **Read Progress File:**
-   - Load `SDD/prompts/context-management/progress.md` to understand research completion status
+   - Load `SDD/orchestration/progress.md` to understand research completion status
    - Identify the research document referenced
    - Note any important context from the research phase
 
@@ -21,7 +21,7 @@ IMPORTANT: This command requires Claude Sonnet. Before proceeding, check your cu
    - If the glossary does not exist, proceed without it.
 
 3. **Update Progress for Planning Phase:**
-   - Add a new planning section to `SDD/prompts/context-management/progress.md`
+   - Add a new planning section to `SDD/orchestration/progress.md`
    - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
    - Add reference to the SPEC document being created
    - Document the transition from research to planning phase
@@ -269,6 +269,7 @@ The spec template includes four YAML frontmatter fields consumed by `sdd-flow` a
 - **`cross_cutting_decisions:`** — List of topic labels (snake_case) for any architectural decisions made during this feature that bind future work across the system. Examples: `orchestration_engine`, `vector_store`, `auth_provider`, `primary_datastore`, `logging_format`. Leave empty `[]` if this feature makes no cross-cutting decisions. During `/planning-complete`, the `cross-cutting-adr` skill will extract details for each label from the research/spec and write ADR files under `SDD/adr/`.
 
 - **`delivery_mode:`** — `whole-feature` (default) or `per-slice`. Controls whether the spec must include a `## Delivery Slices` section and whether downstream commands route through per-slice behavior. Default `whole-feature` preserves existing flow exactly; the `## Delivery Slices` section is omitted entirely. Set to `per-slice` to opt into vertical-slicing decomposition — a concentrated function threaded end-to-end through every relevant layer per slice; in that mode the planning subagent must populate `## Delivery Slices`. If the field is absent from a spec written before this change, treat it as `whole-feature`.
+  - **Value validation (binding for every consumer of this field):** the canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Absent → silent default to `whole-feature` (no log line; this is the documented default behavior). Any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) is invalid: fail fast with a clear error naming (a) the SPEC file path, (b) the offending value verbatim, and (c) the canonical enum. Never silently fall through to the default branch. When the planning subagent runs in autonomous mode, surface the failure by emitting an `## Awaiting Slicing Decision` block to `progress.md` (mirrors `## Awaiting Clarification` shape) so the orchestrator halts. When the planning subagent runs in supervised mode, surface inline. The same rule applies wherever `delivery_mode:` is read by downstream commands — `/implementation-start`, the slice commands, `sdd-flow` Step 4, the slice-integrity reviewers, and the practicality gate below — each consumer either fails fast with the same error shape or delegates to a single shared validation step.
 
 These fields have sensible defaults; populate them intentionally rather than leaving as boilerplate.
 
@@ -310,6 +311,28 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - A slice is a vertical thread, not a horizontal layer. Slices that touch only one module when the feature spans multiple are likely horizontal layers in disguise — either widen the thread or justify the single-module slice explicitly in the rationale.
    - REQs may be split across slices; mark partial coverage explicitly (e.g., `REQ-003 (partial: happy path only)`) so later slices can complete them.
    - Every REQ-XXX / EDGE-XXX / FAIL-XXX should be reachable through some slice in the sequence by the time the last slice lands.
+
+7. **Validate `delivery_mode:` value (spec ingestion gate):**
+   - Read the `delivery_mode:` field from the spec frontmatter being created (or, when this command runs against an existing spec, the field already on disk).
+   - Apply the value-validation rule from the frontmatter prose above: exact match against `{whole-feature, per-slice}`; absent → silent default `whole-feature`; any other value → fail fast.
+   - On invalid value, emit the error: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run /planning-start.` In autonomous mode, append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` mirroring the `## Awaiting Clarification` shape so the orchestrator halts; in supervised mode, surface inline and stop processing.
+   - Do NOT silently fall through to the `whole-feature` branch when the value is malformed — that masks user typos and produces silent misbehavior downstream.
+
+8. **Practicality Check (per-slice mode only — the practicality gate):**
+   - Applies only when `delivery_mode: per-slice` is set. Skip otherwise.
+   - After Step 6 has populated `## Delivery Slices`, evaluate whether the slicing the subagent produced is meaningful. Run these four boolean heuristics against the spec's `## Modules` section and the candidate slice set:
+     1. **Single-MODULE touch-set.** Only one `MODULE-XXX` entry exists for the feature, OR every candidate slice's `Modules touched` field lists the same single module.
+     2. **No thinner happy path.** The only honest decomposition the subagent can produce is "build all of it, then test it" — i.e., SLICE-001 cannot be made thinner than the whole feature without losing end-to-end reachability.
+     3. **Universal-slice REQ touch.** Every `REQ-XXX` in the spec is touched by every plausible slice — i.e., the slices are not actually decomposable, they all carry the same REQ load.
+     4. **Single concentrated function.** The feature, examined honestly, has exactly one concentrated function and no candidate slice expresses a different concentrated function.
+   - **Qualitative-judgment escape:** if all four boolean heuristics return false but the subagent's qualitative judgment is that slicing is impractical anyway, that escape may fire — but the `<reason>` text MUST begin with the literal prefix `Qualitative judgment: ` so the audit trail can distinguish boolean firings from free-form ones.
+   - **When the gate fires (any heuristic returns true OR the qualitative escape applies):**
+     - Replace the populated `## Delivery Slices` section with the single line: `Slicing not applicable: <reason citing the firing heuristic or "Qualitative judgment: <specific concern>">`.
+     - Append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` mirroring the `## Awaiting Clarification` shape exactly. The block names the spec, the firing heuristic (or qualitative judgment text), and the user's options.
+     - **Supervised mode** — surface inline:
+       > Per-slice was requested for this feature, but the planning subagent did not find meaningful vertical slices. Either (a) fall back to `whole-feature` for this feature only [recommended], or (b) push back — point at a slice boundary I missed and let me retry.
+     - **Autonomous mode** — halt the flow with the same options surfaced in the completion message; resume via `/sdd-flow continue --fall-back-to-whole-feature` or `/sdd-flow continue --retry-slicing "<hint about slice boundary>"`. This mirrors the Step 1.5 autonomous halt pattern bit-for-bit, with different option flags.
+   - When none of the heuristics fire and the subagent's qualitative judgment is that slicing is meaningful, proceed with the populated `## Delivery Slices` section — no halt, no annotation.
 
 ## Context Management & Subagent Usage
 

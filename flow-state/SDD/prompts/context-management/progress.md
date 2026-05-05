@@ -509,3 +509,49 @@ Verdict `PROCEED` clears the panel as a blocker. Step 3d critical-review can pic
 ### Next gate
 
 Step 3f — planning commit. With both reviews now closed (panel iter-2 PROCEED carrying through, critical review's MEDIUMs resolved), Step 3f can run. Then Step 4 (implementation).
+
+---
+
+## Step 4 init — PROMPT tracker created
+
+**Date:** 2026-05-05
+**Subagent role:** Step 4 init subagent for `/sdd-flow` orchestration. Bounded scope: create the implementation tracker; append this transition block; do NOT begin code edits.
+
+### Tracker artifact
+
+- `SDD/prompts/PROMPT-001-vertical-slicing-step-c-2026-05-05.md` (this run uses the legacy filename per the recursion-trap rule; the new `IMPLEMENTATION-PLAN-XXX-...` naming applies to FUTURE runs in clean repos).
+- Tracker pre-populates Specification Alignment with every REQ-001…026 (incl. REQ-025a), SEC-001…004, UX-001, EDGE-001…015, FAIL-001…009, MODULE-001…008, and RISK-001…007 from the spec — each marked `Status: Not Started` and assigned to a chunk per the chunk plan below.
+
+### Phase status
+
+- **Phase:** Implementation
+- **Status:** READY (tracker created; chunks have not started)
+- **Mode:** autonomous
+- **Delivery mode:** whole-feature (per user directive — meta-irony intended)
+- **Spec:** `SDD/requirements/SPEC-001-vertical-slicing-step-c.md`
+- **Tracker:** `SDD/prompts/PROMPT-001-vertical-slicing-step-c-2026-05-05.md`
+
+### Chunk plan (6 subagents total: init + 5 chunks)
+
+Dependency chain: **init → 1 → 2 → 3 → 4a → 4b → 5**. Each chunk runs in fresh context with bounded prompt, embeds the recursion-trap warning verbatim, embeds the Step A locked-region prohibition verbatim, and runs its closing-oracle grep gate before declaring done.
+
+| Chunk | Scope | REQs / EDGEs / FAILs |
+|-------|-------|----------------------|
+| **1 — Foundation** | Paths, modes, gates, glossary, hook. Modifies `planning-start.md` (allowed regions only — lines 64–204 + 375–379 OFF LIMITS), `implementation-start.md`, `critical-review.md`, `spec-review-panel.md`, all other `sdd/commands/*.md` (path-only updates), `sdd/hooks/log_subagent_call.py:18`, glossary (if needed). | REQ-001/002/009/010/011/016/017/020; EDGE-005/008/009; FAIL-006; SEC-004; MODULE-001/003/004/007 |
+| **2 — New slice commands** | Creates `slice-start.md`, `slice-review.md`, `slice-retro.md`, `slice-commit.md`. CRITICAL: `/slice-retro` MUST emit exact header strings `## Recommended SPEC Amendments` and `## Recommended Re-planning` for Chunk 4b's matcher. | REQ-003/004/005/006/007/022/024/025/025a; EDGE-002/003/007/010/011/012/013/014; FAIL-003/007; SEC-001/003; UX-001; MODULE-002 |
+| **3 — Migration helper** | Creates `sdd-migrate-layout.md`. Detects old layout, refuses on active flow + parse-failure (fail-closed), idempotent, partial-migration refusal, bash-only. | REQ-008; EDGE-001/008/015; FAIL-001/002/005/008; SEC-001/002; MODULE-005 |
+| **4a — SKILL.md mechanical** | Path contract, Directory Structure tree, Subagent Path Rules, Phase Detection Priority (legacy-path fallback + resume rules for `## Awaiting Slicing Decision` / `## Recommended Re-planning`). | REQ-011 (partial — mechanical layer), REQ-023; FAIL-002 |
+| **4b — SKILL.md substantive** | Step 4 mode-routes by `delivery_mode:`; whole-feature unchanged bit-for-bit; per-slice runs per-slice cycle. Iteration cap = 3. Retro recommendations matcher (matches Chunk 2's exact header strings). Re-planning halt-even-under-skip-checkpoints. Slice subagents receive only ledger. `--skip-slice-checkpoints` flag. Flag inventory matches REQ-025. | REQ-012/013/014/015 (REQ-024 slice-boundary checkpoint axis); EDGE-006; FAIL-004; MODULE-006 |
+| **5 — Versioning + READMEs + cross-plugin coupling** | `sdd` 1.2.0 → 2.0.0 (plugin.json + marketplace.json); `agent-engineering` 0.3.0 → 0.4.0 (plugin.json + marketplace.json). `sdd/README.md` two-workflow restructure. `agent-engineering/README.md` updates. Cross-plugin version coupling cross-references. Repo-root `README.md` Available Plugins note. | REQ-018/019/021/026; EDGE-004/008; FAIL-009; RISK-004/005/007; MODULE-008 |
+
+### Discipline (binding for every chunk)
+
+- **Recursion-trap warning:** every chunk subagent prompt MUST embed verbatim — this run's artifacts stay at `flow-state/SDD/...`; source-code edits emit new paths for FUTURE runs.
+- **Step A locked region:** `sdd/commands/planning-start.md` lines 64–204 + 375–379 OFF LIMITS. Chunk 1 only edits line 271 (frontmatter prose) and Step 6 line 305+ (allowed region).
+- **Closing-oracle greps:** every chunk runs its grep block before declaring done. Failure of any grep oracle is a hard halt.
+- **Glossary discipline (REQ-020):** any new term added in same commit as the source-code edit introducing it.
+- **Locked CLARIFICATION decisions:** not relitigated.
+
+### Next gate
+
+Step 4 chunk dispatch — orchestrator dispatches **Chunk 1 (Foundation)** subagent. Tracker is ready; tracker passes through every chunk handoff updating Status flags as REQs/EDGEs/FAILs land.

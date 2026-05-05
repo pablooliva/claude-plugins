@@ -166,6 +166,26 @@ Deep module vs shallow module (Ousterhout). Information hiding (Parnas). Interfa
 
 **Graceful degradation:** If the spec has no `## Modules` section at all, do not fail the panel. Emit one MEDIUM finding requesting the section be added, list what should be there based on the rest of the spec (which REQ-XXX items imply which module boundaries), and proceed. The aggregate verdict still applies.
 
+### 4.7 Slice Integrity Specialist (per-slice mode only)
+
+**Activation gate:** Only fires when the spec's frontmatter declares `delivery_mode: per-slice`. In whole-feature mode (or when the field is absent), this specialist is skipped silently — no findings, no "checked nothing" report, and no `#### Slice Integrity Findings` sub-header is rendered in the deliverable. The specialist's prompt MUST self-check the activation gate at first action and short-circuit when the gate is closed; it must not produce an "N/A" finding (that would dilute the verdict and contradict the bit-for-bit-preserved deliverable shape for whole-feature reviews).
+
+**Identity:** Senior architect reviewing the spec's `## Delivery Slices` section for genuine vertical-thread structure.
+
+**Vocabulary payload (required context):**
+Vertical slice. Horizontal layer. Concentrated function. Thread line. End-to-end happy path. Acceptance check. Slice sequence rationale. Slice-aware module decomposition. Compounding value (each slice de-risks the next). Practicality gate. Slice-integrity smell.
+
+**Named anti-patterns to detect:**
+1. **Layer-in-disguise slice** — Detection: a SLICE-XXX whose `Modules touched` lists only modules at one architectural layer (all-frontend, all-backend, all-DB). Resolution: redesign the slice to thread through layers, or merge it into another slice.
+2. **Single-module slice without justification** — Detection: `Modules touched` has exactly one MODULE-XXX entry, and the feature spans multiple modules, and the `Sequence rationale` doesn't explain why. Resolution: widen the slice or write the justification.
+3. **SLICE-001 not thinnest** — Detection: SLICE-001 includes EDGE-XXX or FAIL-XXX coverage, or REQs not labeled "(partial: happy path only)". Resolution: defer edge cases to later slices.
+4. **Orphan requirements** — Detection: REQ-XXX / EDGE-XXX / FAIL-XXX that no SLICE-XXX claims via its `REQs satisfied` field. Resolution: assign each requirement to at least one slice (whole or partial).
+5. **Bare acceptance checks** — Detection: `Acceptance check` field is empty, says only "manual verification", or duplicates the slice's `Concentrated function` field. Resolution: cite a specific test name or write a focused manual verification step.
+6. **No slicing-rationale** — Detection: `Sequence rationale` is empty, generic ("makes sense to do this first"), or restates the function. Resolution: explain why this slice is at this position relative to other slices.
+7. **Practicality-gate skipped** — Detection: spec's `## Delivery Slices` is empty or contains a `Slicing not applicable: <reason>` note in `per-slice` mode. Resolution: this is acceptable IF the planning subagent's practicality gate fired and the user explicitly chose per-slice anyway. Flag MEDIUM with "verify user intent" if no audit trail of the gate decision exists.
+
+**Output schema:** Same as security specialist, with `#### Slice Integrity Findings` header.
+
 ### 4.6 Optional Specialists
 
 If `review_panel` includes any of the following, use these specialist definitions (abbreviated; expand inline following the same structure as 4.1–4.4):
@@ -243,6 +263,9 @@ SDD/reviews/PANEL-SPEC-[feature-name]-YYYYMMDD.md
 
 #### Module Depth Findings
 [Output from module-depth specialist, verbatim.]
+
+#### Slice Integrity Findings
+[Output from slice-integrity specialist, verbatim. Render this sub-header ONLY when the spec's frontmatter declares `delivery_mode: per-slice`. Omit the sub-header entirely (do not render an empty section, do not render "n/a") when `delivery_mode: whole-feature` or the field is absent — mirrors the specialist's silent-skip activation gate at section 4.7. This keeps whole-feature panel deliverables bit-for-bit identical to the pre-2.0.0 shape.]
 
 [Any additional specialists from the panel.]
 

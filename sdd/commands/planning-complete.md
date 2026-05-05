@@ -178,7 +178,7 @@ Maintenance is incremental — do not rewrite stable entries. If the spec uses a
 
 ## 6. Update Progress File for Phase Transition
 
-Update `SDD/prompts/context-management/progress.md` with planning completion and implementation handoff:
+Update `SDD/orchestration/progress.md` with planning completion and implementation handoff:
 
 ```markdown
 ## Planning Phase - COMPLETE

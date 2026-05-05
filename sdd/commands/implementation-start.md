@@ -31,7 +31,7 @@ Proceed with caution if context is above 35%.
 ## Initial Context Load
 
 1. **Read Progress File:**
-   - Load `SDD/prompts/context-management/progress.md` to understand planning completion status
+   - Load `SDD/orchestration/progress.md` to understand planning completion status
    - Identify the specification document referenced
    - Note any important context from the planning phase
 
@@ -40,37 +40,47 @@ Proceed with caution if context is above 35%.
    - If the glossary does not exist, proceed without it.
 
 3. **Update Progress for Implementation Phase:**
-   - Add a new implementation section to `SDD/prompts/context-management/progress.md`
+   - Add a new implementation section to `SDD/orchestration/progress.md`
    - IMPORTANT: Preserve all research and planning phase information - do NOT delete or reset it
-   - Add reference to the PROMPT document being created
+   - Add reference to the IMPLEMENTATION-PLAN document being created
    - Document the transition from planning to implementation phase
+
+4. **Read `delivery_mode:` from the Spec Frontmatter:**
+   - Open `SDD/requirements/SPEC-[###]-[feature-name].md` and read the YAML frontmatter (the block between `---` markers at the top of the file).
+   - Extract the `delivery_mode:` value. The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated).
+   - **Validation rule (binding — same as `/planning-start`):**
+     - Absent field → silent default to `whole-feature`. No log line. This is the documented default behavior.
+     - Exact match `whole-feature` → continue with the **whole-feature branch** below.
+     - Exact match `per-slice` → continue with the **per-slice branch** below.
+     - Any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) → fail fast with: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run /implementation-start.` Do NOT silently fall through to the default branch.
+   - Record the resolved mode in the implementation tracker's Executive Summary (a `**Delivery mode:**` field below `**Status:**`) and in `SDD/orchestration/progress.md`.
 
 ## Implementation Setup
 
-1. **Check for Existing PROMPT Documents:**
-   - Search for any existing `SDD/prompts/PROMPT-[###]-*.md` files
-   - If a PROMPT document with the same number already exists:
+1. **Check for Existing IMPLEMENTATION-PLAN Documents:**
+   - Search for any existing `SDD/implementation/IMPLEMENTATION-PLAN-[###]-*.md` files
+   - If a IMPLEMENTATION-PLAN document with the same number already exists:
 
      ```text
-     ⚠️ WARNING: PROMPT document already exists!
+     ⚠️ WARNING: IMPLEMENTATION-PLAN document already exists!
 
-     Found: SDD/prompts/PROMPT-[###]-[existing-name].md
+     Found: SDD/implementation/IMPLEMENTATION-PLAN-[###]-[existing-name].md
 
      Options:
-     1. Continue with existing PROMPT document
-     2. Create new PROMPT with different number
+     1. Continue with existing IMPLEMENTATION-PLAN document
+     2. Create new IMPLEMENTATION-PLAN with different number
      3. Archive existing and create new (if previous implementation was abandoned)
 
      Please clarify how to proceed.
      ```
 
-   - Only proceed to create new PROMPT if no duplicate exists or user explicitly approves
+   - Only proceed to create new IMPLEMENTATION-PLAN if no duplicate exists or user explicitly approves
 
-2. Create `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md` document where:
-   - `[###]` matches the specification and research document numbers (e.g., if using SPEC-042, create PROMPT-042)
+2. Create `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` document where:
+   - `[###]` matches the specification and research document numbers (e.g., if using SPEC-042, create IMPLEMENTATION-PLAN-042)
    - `[feature-name]` is a kebab-case description matching the spec document (e.g., "user-authentication", "csv-export")
    - `[YYYY-MM-DD]` is today's date
-   - Full example: `PROMPT-042-user-authentication-2025-10-20.md`
+   - Full example: `IMPLEMENTATION-PLAN-042-user-authentication-2025-10-20.md`
 
 ## Prerequisite Verification
 
@@ -98,10 +108,10 @@ Before starting implementation:
 
 ## Implementation Document Structure
 
-Create the implementation tracking document using this enhanced template:
+Create the implementation tracking document using this enhanced template. **The template is mode-aware:** the `## Slice Progress` section at the bottom is populated only when `delivery_mode: per-slice`. In `whole-feature` mode (the default), omit that section entirely — the rest of the template is unchanged from the pre-2.0.0 implementation-tracker shape (only the filename/path change applies).
 
 ```markdown
-# PROMPT-[###]-[feature-name]: [Feature Description]
+# IMPLEMENTATION-PLAN-[###]-[feature-name]: [Feature Description]
 
 ## Executive Summary
 
@@ -110,6 +120,7 @@ Create the implementation tracking document using this enhanced template:
 - **Start Date:** [YYYY-MM-DD]
 - **Author:** Claude (with [user's name if known])
 - **Status:** In Progress/Testing/Complete
+- **Delivery mode:** whole-feature | per-slice  (read from SPEC frontmatter; canonical enum is exactly these two values)
 
 ## Specification Alignment
 
@@ -219,6 +230,17 @@ Create the implementation tracking document using this enhanced template:
 1. [Specific task to complete next]
 2. [Following priority]
 3. [Subsequent priority]
+
+## Slice Progress
+
+> **Required only when `delivery_mode: per-slice`.** Omit this section entirely when `delivery_mode: whole-feature` (the default). When per-slice, the planning subagent's `## Delivery Slices` from the SPEC seeds this table; `/slice-start` initializes the row to `In Progress`; `/slice-retro` updates `Status`, `Test result`, and `Notes` only (never `SLICE-ID`, `Name`, or `Acceptance check`). State transitions are forward-only — `Not Started` → `In Progress` → `Acceptance Check Passing` → `Complete`. SLICE-XXX values must be unique within this table.
+
+| SLICE-ID  | Name              | Status        | Acceptance check                            | Test result | Notes |
+|-----------|-------------------|---------------|---------------------------------------------|-------------|-------|
+| SLICE-001 | [from SPEC]       | Not Started   | [from SPEC's Acceptance check field]        | —           | —     |
+| SLICE-002 | [from SPEC]       | Not Started   | [from SPEC's Acceptance check field]        | —           | —     |
+
+**Status enum (binding):** `Not Started`, `In Progress`, `Acceptance Check Passing`, `Complete`. Any "stuck" condition lives in the rolling ledger's `Open recommendations awaiting user decision` section, NOT the Status column. The slice commands enforce the column-write authority: `/implementation-start` scaffolds the table; `/slice-start` flips Status to `In Progress`; `/slice-retro` writes `Status`/`Test result`/`Notes` after the slice's review-and-fix loop completes.
 ```
 
 ## Implementation Process
@@ -228,13 +250,18 @@ Create the implementation tracking document using this enhanced template:
    - Identify all requirements, edge cases, and failure scenarios
    - Note essential files and context constraints
 
-2. **Set Up Development Environment:**
+2. **Branch on `delivery_mode:`:**
+   - The mode was already resolved in Initial Context Load step 4. Branch behavior here:
+   - **`whole-feature` (default):** Implement the feature in a single tracked pass against the full REQ/EDGE/FAIL list. Update the IMPLEMENTATION-PLAN's `Specification Alignment` checkboxes as you complete each item. Behavior is bit-for-bit identical to the pre-2.0.0 implementation-tracker flow apart from the filename/path change. **Omit the `## Slice Progress` section from the tracker entirely.**
+   - **`per-slice`:** Populate the `## Slice Progress` table from the SPEC's `## Delivery Slices` section (one row per `SLICE-XXX`, copying `Name` and `Acceptance check` from the SPEC; `Status` initialized to `Not Started`). **Do NOT begin implementing in a single tracked pass.** Instead, use the slice-aware command sequence: `/slice-start <SLICE-ID>` → implement the slice → `/slice-review <SLICE-ID>` → fix findings → `/slice-retro <SLICE-ID>` → `/slice-commit <SLICE-ID>` → repeat for the next slice. The `/slice-*` commands enforce the per-slice cycle and update the `## Slice Progress` table for you.
+
+3. **Set Up Development Environment:**
    - Load essential files identified in specification
    - Verify test framework is configured
    - Check for existing related code to build upon
-   - **Identify whether the feature has web-facing behavior** (UI pages, client-side JS, HTMX interactions, CSP changes, multi-step browser flows). Record this determination in the PROMPT document. This drives whether E2E tests are required.
+   - **Identify whether the feature has web-facing behavior** (UI pages, client-side JS, HTMX interactions, CSP changes, multi-step browser flows). Record this determination in the IMPLEMENTATION-PLAN document. This drives whether E2E tests are required.
 
-3. **Begin Incremental Implementation:**
+4. **Begin Incremental Implementation:**
    - Start with core functionality (primary success path)
    - Implement one requirement at a time
    - Write tests alongside every component — do not defer test writing
@@ -245,8 +272,8 @@ Create the implementation tracking document using this enhanced template:
    - If the feature is web-facing, E2E tests are **mandatory**, not optional
    - Validate against specification criteria continuously
 
-4. **Track Progress Rigorously:**
-   - Update PROMPT document after each component completion
+5. **Track Progress Rigorously:**
+   - Update IMPLEMENTATION-PLAN document after each component completion
    - Mark requirements as implemented in the tracking document
    - Document any deviations or discoveries immediately
 
@@ -281,7 +308,7 @@ Use these subagents (via Task tool) to preserve main context:
 
 - Delegate file discovery and pattern research to preserve context for coding
 - Use parallel subagent calls when investigating independent implementation aspects
-- Document subagent findings in the Session Notes section of PROMPT document
+- Document subagent findings in the Session Notes section of IMPLEMENTATION-PLAN document
 
 ## Quality Checklist
 
@@ -291,7 +318,7 @@ During implementation, continuously verify:
 - [ ] Tests are written for each component/requirement — not deferred
 - [ ] Unit tests exist for all logic with isolated, mocked dependencies
 - [ ] Integration tests exist for all API endpoints (via test client)
-- [ ] Web-facing behavior identified (yes/no) — recorded in PROMPT document
+- [ ] Web-facing behavior identified (yes/no) — recorded in IMPLEMENTATION-PLAN document
 - [ ] If web-facing: Playwright E2E tests written in the project's E2E test directory
 - [ ] Edge cases (EDGE-XXX) have specific handling code
 - [ ] Failure scenarios (FAIL-XXX) have error handling
@@ -305,7 +332,7 @@ During implementation, continuously verify:
 A complete implementation must have:
 
 - ✓ All specification requirements implemented and tested
-- ✓ Complete PROMPT document tracking all progress
+- ✓ Complete IMPLEMENTATION-PLAN document tracking all progress
 - ✓ All edge cases handled with tests
 - ✓ All failure scenarios have graceful error handling
 - ✓ Performance metrics meet specification targets
@@ -321,7 +348,7 @@ A complete implementation must have:
 ### Phase Flow
 
 ```text
-Load SPEC → Create PROMPT → Load Essential Files → Implement Requirements →
+Load SPEC → Create IMPLEMENTATION-PLAN → Load Essential Files → Implement Requirements →
 Write Tests → Validate Against Spec → Document Progress → Handle Edge Cases →
 Measure Performance → Complete Implementation
 ```
@@ -334,4 +361,4 @@ Measure Performance → Complete Implementation
 
 ---
 
-Begin implementation now using the specification as your authoritative guide. Create the `SDD/prompts/PROMPT-[###]-[feature-name]-[YYYY-MM-DD].md` document and start systematic implementation against specification criteria.
+Begin implementation now using the specification as your authoritative guide. Create the `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` document and start systematic implementation against specification criteria.

@@ -8,7 +8,7 @@ Context is getting overloaded during specification creation. Create permanent co
 
 ### 1. Create Timestamped Compaction File
 
-Write to: `SDD/prompts/context-management/planning-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
+Write to: `SDD/orchestration/compacted/planning-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
 
 - `[YYYY-MM-DD_HH-MM-SS]` is the current timestamp (24-hour time)
 - Example: `planning-compacted-2025-10-01_14-30-45.md`
@@ -155,7 +155,7 @@ You've just created a compaction file to preserve your work. Now you MUST:
 ### Step 1: SAVE YOUR WORK
 
 ✅ Compaction file created: `planning-compacted-[timestamp].md`
-✅ Progress file updated: `SDD/prompts/context-management/progress.md`
+✅ Progress file updated: `SDD/orchestration/progress.md`
 
 ### Step 2: CLEAR THIS SESSION (Required)
 
@@ -193,7 +193,7 @@ PHASE START          CONTEXT ~40%         CLEAR SESSION       FRESH START
 
 ### 3. Update Current Progress
 
-Also update `SDD/prompts/context-management/progress.md` with:
+Also update `SDD/orchestration/progress.md` with:
 
 - Latest specification state (sections completed vs remaining)
 - Key decisions made during this session

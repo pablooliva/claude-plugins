@@ -22,7 +22,7 @@ ls SDD/research/RESEARCH-*.md 2>/dev/null
 ls SDD/requirements/SPEC-*.md 2>/dev/null
 
 # Implementation phase artifacts
-ls SDD/prompts/PROMPT-*.md 2>/dev/null
+ls SDD/implementation/IMPLEMENTATION-PLAN-*.md 2>/dev/null
 ```
 
 ### Ad-Hoc Review
@@ -107,6 +107,18 @@ If reviewing specification artifacts (`SPEC-XXX-*.md`):
 - [ ] **Missing edge cases** - What EDGE-XXX scenarios weren't specified?
 - [ ] **Incomplete failure handling** - Which FAIL-XXX scenarios lack recovery paths?
 - [ ] **Contradictions** - Do any requirements conflict with each other?
+
+### Slice Integrity (per-slice mode only)
+
+If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## Delivery Slices` section. If the frontmatter declares `delivery_mode: whole-feature` (or the field is absent), this entire sub-section is skipped silently — no findings to record, no "n/a" placeholder.
+
+> **Slice integrity (per-slice mode only):** Are the slices in `## Delivery Slices` genuinely thin vertical threads through the module set, or are they horizontal layers in disguise (e.g., "SLICE-001: build the frontend; SLICE-002: build the backend")? A slice that touches only one module (when the feature spans multiple) is a smell, unless explicitly justified.
+
+- [ ] **Vertical threads, not horizontal layers** — Does each SLICE-XXX cut through multiple modules, or do they pile up at one layer (e.g., "SLICE-001: frontend, SLICE-002: backend, SLICE-003: DB")? Layered-in-disguise slices are a HIGH finding.
+- [ ] **Single-module slices justified** — A slice that touches only one MODULE-XXX (when the feature spans multiple modules) is a smell unless the rationale field explicitly justifies it (e.g., "this feature only modifies one module"). Unjustified single-module slices are a MEDIUM finding.
+- [ ] **SLICE-001 thinness** — Is SLICE-001 the thinnest possible end-to-end happy path, per the spec template's guidance? A SLICE-001 that bundles edge cases or multiple concentrated functions is a MEDIUM finding (defer those to later slices).
+- [ ] **Coverage** — Will every REQ-XXX / EDGE-XXX / FAIL-XXX be reachable through some slice by the time the last slice lands? Orphan REQs are a HIGH finding.
+- [ ] **Acceptance check quality** — Each slice's `Acceptance check` field cites a single, focused, testable criterion. Bare "manual verification" with no detail is a MEDIUM finding.
 
 ### Research Alignment Issues
 

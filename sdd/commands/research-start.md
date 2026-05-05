@@ -9,7 +9,7 @@ IMPORTANT: This command requires Claude Opus. Before proceeding, check your curr
   1. Warn the user: "WARNING: This command requires Claude Opus but you're currently using [model name]. Please switch to Opus and try again."
   2. STOP all further processing - do not execute any of the instructions below.
 
-IMPORTANT: Before starting this phase, check if `SDD/prompts/context-management/progress.md` contains any important information. If it does, ask the user if they want to archive it before resetting. Then reset the file to only contain a heading: `# Research Progress`. We are starting on a new task and want to ensure that the progress file is clean.
+IMPORTANT: Before starting this phase, check if `SDD/orchestration/progress.md` contains any important information. If it does, ask the user if they want to archive it before resetting. Then reset the file to only contain a heading: `# Research Progress`. We are starting on a new task and want to ensure that the progress file is clean.
 
 ## Pre-Research Clarification (if available)
 
@@ -31,7 +31,7 @@ Set up systematic investigation:
 
 1. Create `SDD/research/RESEARCH-[###]-[feature-name].md` document where:
    - `[###]` is the issue/ticket number if available, or use sequential numbering (001, 002, etc.)
-   - **If `SDD/research/CLARIFICATION-[###]-[feature-name].md` already exists for this feature, reuse the same `[###]` and `[feature-name]` for the RESEARCH document — do not increment. Numbering must align across CLARIFICATION → RESEARCH → SPEC → PROMPT.**
+   - **If `SDD/research/CLARIFICATION-[###]-[feature-name].md` already exists for this feature, reuse the same `[###]` and `[feature-name]` for the RESEARCH document — do not increment. Numbering must align across CLARIFICATION → RESEARCH → SPEC → IMPLEMENTATION-PLAN.**
    - `[feature-name]` is a kebab-case description (e.g., "user-authentication", "csv-export")
 
 Use this structure for the research document:

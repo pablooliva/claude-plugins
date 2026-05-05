@@ -8,7 +8,7 @@ Context is getting overloaded during research phase. Create permanent compaction
 
 ### 1. Create Timestamped Compaction File
 
-Write to: `SDD/prompts/context-management/research-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
+Write to: `SDD/orchestration/compacted/research-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
 
 - `[YYYY-MM-DD_HH-MM-SS]` is the current timestamp (24-hour time)
 - Example: `research-compacted-2025-10-01_14-30-45.md`
@@ -94,7 +94,7 @@ Use the following template:
 
 ### 3. Update Current Progress
 
-Also update `SDD/prompts/context-management/progress.md` with:
+Also update `SDD/orchestration/progress.md` with:
 
 - Latest research state
 - Current blocking questions

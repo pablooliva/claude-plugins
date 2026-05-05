@@ -51,7 +51,7 @@ If > 40%: ⚠️ CRITICAL - Context usage is too high ([X]%).
 
 **Load these documents BEFORE any test discovery:**
 
-1. **PROMPT Document** (`SDD/prompts/PROMPT-[###]-[feature-name]-[date].md`)
+1. **IMPLEMENTATION-PLAN Document** (`SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md`)
    - Review all implemented requirements (REQ-XXX)
    - Note all edge cases (EDGE-XXX) and failure scenarios (FAIL-XXX)
    - Check "Test Implementation" section for any existing test tracking
@@ -62,7 +62,7 @@ If > 40%: ⚠️ CRITICAL - Context usage is too high ([X]%).
    - List all success criteria that must be verifiable through tests
    - Note any explicit test requirements (coverage %, test types, frameworks)
 
-3. **Progress File** (`SDD/prompts/context-management/progress.md`)
+3. **Progress File** (`SDD/orchestration/progress.md`)
    - Confirm implementation phase is active or recently completed
    - Check for any known testing gaps noted during implementation
 
@@ -110,7 +110,7 @@ Delegate to an **Explore subagent** to locate all test files by searching for:
 - Common unit test patterns: `*.test.*`, `*.spec.*`, `*_test.*`, `test_*.py`, files under `__tests__/`, `tests/unit/`, `spec/`
 - Integration test patterns: files under `tests/integration/`, `integration/`, `test/integration/`
 - End-to-end test patterns: files under `e2e/`, `cypress/`, `playwright/`, `tests/e2e/`, `*.e2e.*`
-- Any test files created or modified during this implementation (cross-reference PROMPT document's "Files Being Modified" and "Completed Components")
+- Any test files created or modified during this implementation (cross-reference IMPLEMENTATION-PLAN document's "Files Being Modified" and "Completed Components")
 
 Produce a structured inventory:
 
@@ -138,7 +138,7 @@ For each test file identified, analyze coverage against the specification requir
 
 ### 3.1 Requirement Coverage Matrix
 
-For each requirement in the PROMPT document, determine which tests (if any) validate it:
+For each requirement in the IMPLEMENTATION-PLAN document, determine which tests (if any) validate it:
 
 ```text
 REQUIREMENT COVERAGE MATRIX
@@ -390,7 +390,7 @@ For each failing test, determine the appropriate action:
 
 - The test assertion no longer matches the current specification
 - Update the test to reflect the correct expected behavior
-- Document the change in the PROMPT document
+- Document the change in the IMPLEMENTATION-PLAN document
 
 **Known environment issue** (skip for now):
 
@@ -408,7 +408,7 @@ Repeat until all tests either pass or are categorized as environment-dependent w
 
 ## Phase 6: Generate Test Audit Report
 
-Create `SDD/prompts/test-audits/TEST-AUDIT-[###]-[feature-name]-[YYYY-MM-DD_HH-MM-SS].md`:
+Create `SDD/implementation/test-audits/TEST-AUDIT-[###]-[feature-name]-[YYYY-MM-DD_HH-MM-SS].md`:
 
 ```markdown
 # Test Audit: [Feature Name]
@@ -416,7 +416,7 @@ Create `SDD/prompts/test-audits/TEST-AUDIT-[###]-[feature-name]-[YYYY-MM-DD_HH-M
 ## Audit Overview
 - **Feature:** [Feature Name]
 - **Specification:** SDD/requirements/SPEC-[###]-[feature-name].md
-- **Implementation Tracking:** SDD/prompts/PROMPT-[###]-[feature-name]-[date].md
+- **Implementation Tracking:** SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md
 - **Audit Date:** [YYYY-MM-DD HH:MM:SS]
 - **Auditor:** Claude (with [user's name if known])
 
@@ -485,15 +485,15 @@ Major areas of the specification lack test validation, or multiple tests
 are failing without justification. Review all gaps and failures above.
 ```
 
-## Phase 7: Update PROMPT Document
+## Phase 7: Update IMPLEMENTATION-PLAN Document
 
-Update the "Test Implementation" section in `SDD/prompts/PROMPT-[###]-[feature-name]-[date].md`:
+Update the "Test Implementation" section in `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md`:
 
 ```markdown
 ## Test Implementation (Updated by /implementation-test — [YYYY-MM-DD])
 
 ### Test Audit Reference
-- **Audit Report:** SDD/prompts/test-audits/TEST-AUDIT-[###]-[feature-name]-[timestamp].md
+- **Audit Report:** SDD/implementation/test-audits/TEST-AUDIT-[###]-[feature-name]-[timestamp].md
 - **Audit Verdict:** [ADEQUATE / PARTIAL / INSUFFICIENT]
 
 ### Unit Tests
@@ -556,8 +556,8 @@ Document all subagent delegations in the audit report's Session Notes.
 
 - If context has risen above 35% during this audit, run `/implementation-compact` before proceeding
 - The audit report serves as a durable record — it does not need to remain in context
-- Update the PROMPT document (concise) and let the full detail live in the audit file
+- Update the IMPLEMENTATION-PLAN document (concise) and let the full detail live in the audit file
 
 ---
 
-Begin the test audit now. Load the PROMPT document and specification first, then systematically discover and evaluate test coverage before producing the audit report.
+Begin the test audit now. Load the IMPLEMENTATION-PLAN document and specification first, then systematically discover and evaluate test coverage before producing the audit report.

@@ -19,7 +19,7 @@ If context is NOT high, consider continuing work instead of compacting.
 
 ### 1. Create Timestamped Compaction File
 
-Write to: `SDD/prompts/context-management/implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
+Write to: `SDD/orchestration/compacted/implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
 
 Format: `implementation-compacted-YYYY-MM-DD_HH-MM-SS.md` (24-hour time format)
 Example: `implementation-compacted-2025-10-01_14-30-45.md`
@@ -104,7 +104,7 @@ Use the following template:
 
 ### 3. Update Current Progress
 
-Also update `SDD/prompts/context-management/progress.md` with:
+Also update `SDD/orchestration/progress.md` with:
 
 - Latest implementation state
 - Working functionality status

@@ -57,13 +57,13 @@ This workflow represents the complete development cycle:
 ### 1. Load Progress and Compaction Files
 
 1. **Read Main Progress File:**
-   - Load `SDD/prompts/context-management/progress.md`
+   - Load `SDD/orchestration/progress.md`
    - Identify current phase (research/planning/implementation)
    - Note completion status and next priorities
    - Check for any subagent delegations that need follow-up
 
 2. **Locate Most Recent Compaction File:**
-   - Check `SDD/prompts/context-management/` for latest compaction file:
+   - Check `SDD/orchestration/` for latest compaction file:
      - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
@@ -146,7 +146,7 @@ If any critical information is missing, ask user for clarification before procee
 #### For Implementation Phase Continuation
 
 1. **Load Implementation Context:**
-   - Implementation prompt: `SDD/prompts/PROMPT-[###]-[feature-name]-[date].md`
+   - Implementation prompt: `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md`
    - Specification: `SDD/requirements/SPEC-[###]-[feature-name].md`
    - Files from "Essential Files to Reload"
    - Review any "Technical Decisions" or "Critical Learnings" from compaction
@@ -265,7 +265,7 @@ To ensure smooth continuation:
 
 If continuation fails or context is unclear:
 
-1. Check for most recent compaction file in `SDD/prompts/context-management/`
+1. Check for most recent compaction file in `SDD/orchestration/`
    - Look for: `compact-*.md`, `research-compacted-*.md`, `planning-compacted-*.md`, `implementation-compacted-*.md`
 2. Verify progress.md exists and contains phase information
 3. Ask user which phase to continue if ambiguous

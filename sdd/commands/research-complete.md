@@ -77,7 +77,7 @@ If the research is purely infrastructural and introduces no domain vocabulary, t
 
 ## 4. Record Phase Transition
 
-Write brief transition note to `SDD/prompts/context-management/progress.md`:
+Write brief transition note to `SDD/orchestration/progress.md`:
 
 "Research phase complete. RESEARCH-[###]-[feature-name].md finalized. Glossary updated (or: no glossary changes). Ready for /planning-start."
 

@@ -27,7 +27,7 @@ If > 40%: ⚠️ CRITICAL - Context too high for completion process ([X]%).
   - Clear session and use /continue after compaction
 ```
 
-Note: The completion process requires loading specification, PROMPT document, and creating summary documents, which needs available context.
+Note: The completion process requires loading specification, IMPLEMENTATION-PLAN document, and creating summary documents, which needs available context.
 
 ## Workflow Position
 
@@ -35,7 +35,7 @@ Note: The completion process requires loading specification, PROMPT document, an
 [/implementation-start] ──────► [/implementation-compact] ──────► [/continue]
          │                                 │                           │
          ▼                                 ▼                           ▼
-   Create PROMPT-###              Save progress &                 Resume work
+   Create IMPLEMENTATION-PLAN-###              Save progress &                 Resume work
                                   clear session
                                                                         │
                                      ┌──────────────────────────────────┘
@@ -59,24 +59,24 @@ Note: The completion process requires loading specification, PROMPT document, an
 **IMPORTANT: Load these documents BEFORE proceeding with any completion tasks.**
 
 1. **Progress File:**
-   - Load `SDD/prompts/context-management/progress.md`
+   - Load `SDD/orchestration/progress.md`
    - Verify implementation phase is active
    - Check for any incomplete items or blockers
    - Note any recent compaction files referenced
 
-2. **PROMPT Document:**
-   - Load `SDD/prompts/PROMPT-[###]-[feature-name]-[date].md`
+2. **IMPLEMENTATION-PLAN Document:**
+   - Load `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md`
    - This is your PRIMARY verification source
    - Check "Status" field (should be "In Progress" or "Testing")
    - Review all requirement implementation statuses
 
 3. **Specification Document:**
    - Load `SDD/requirements/SPEC-[###]-[feature-name].md`
-   - Compare requirements against PROMPT document status
+   - Compare requirements against IMPLEMENTATION-PLAN document status
    - Verify all REQ-XXX, PERF-XXX, SEC-XXX, UX-XXX items
 
 4. **Recent Compaction (if exists):**
-   - Check for `SDD/prompts/context-management/implementation-compacted-*.md`
+   - Check for `SDD/orchestration/compacted/implementation-compacted-*.md`
    - Load most recent file to understand any pending items
    - Review "Specification Validation Remaining" section
 
@@ -87,14 +87,14 @@ Note: The completion process requires loading specification, PROMPT document, an
 ```text
 COMPLETION READINESS CHECKLIST
 ────────────────────────────────────────────────────────────
-□ All REQ-XXX requirements show "Complete" in PROMPT document
+□ All REQ-XXX requirements show "Complete" in IMPLEMENTATION-PLAN document
 □ All PERF-XXX performance requirements show "Met" with metrics
 □ All SEC-XXX security requirements show "Validated"
 □ All UX-XXX user experience requirements show "Satisfied"
 □ All EDGE-XXX edge cases show "Complete" implementation
 □ All FAIL-XXX failure scenarios show error handling "Implemented"
 □ Test coverage meets or exceeds target from specification
-□ No "Blocked/Pending" items remain in PROMPT document
+□ No "Blocked/Pending" items remain in IMPLEMENTATION-PLAN document
 □ All subagent delegations have been completed and documented
 ────────────────────────────────────────────────────────────
 ```
@@ -110,7 +110,7 @@ The following items are incomplete:
 
 Required Actions:
 1. Complete remaining implementation tasks
-2. Update PROMPT document with completion status
+2. Update IMPLEMENTATION-PLAN document with completion status
 3. Verify all tests are passing
 4. Then retry this completion command
 
@@ -160,7 +160,7 @@ Integration Tests (required if API endpoints exist)
   Status: PRESENT / MISSING (blocking) / N/A — [justification]
 
 E2E / Playwright Tests (required if feature has web-facing behavior)
-  □ Feature web-facing determination recorded in PROMPT document
+  □ Feature web-facing determination recorded in IMPLEMENTATION-PLAN document
   □ If web-facing: Playwright tests exist in the project's E2E test directory
   □ E2E tests cover critical user flows (not just page loads)
   □ E2E tests run against the real running stack (not mocked services)
@@ -205,9 +205,9 @@ Any requirement without a test:
 ────────────────────────────────────────────────────────────
 ```
 
-### Step 4: Record Test Results in PROMPT Document
+### Step 4: Record Test Results in IMPLEMENTATION-PLAN Document
 
-Before writing completion documents, update the PROMPT document's "Test Implementation" section with final results:
+Before writing completion documents, update the IMPLEMENTATION-PLAN document's "Test Implementation" section with final results:
 
 ```markdown
 ### Test Verification Gate — Results
@@ -224,9 +224,9 @@ Before writing completion documents, update the PROMPT document's "Test Implemen
 
 ## Completion Process
 
-### 1. Finalize PROMPT Document
+### 1. Finalize IMPLEMENTATION-PLAN Document
 
-Update `SDD/prompts/PROMPT-[###]-[feature-name]-[date].md`:
+Update `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md`:
 
 #### Update Header Section
 
@@ -286,36 +286,36 @@ Add implementation results to `SDD/requirements/SPEC-[###]-[feature-name].md`:
 ### Completion Details
 - **Completed:** [YYYY-MM-DD]
 - **Implementation Duration:** [X days]
-- **Final PROMPT Document:** SDD/prompts/PROMPT-[###]-[feature-name]-[date].md
-- **Implementation Summary:** SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md
+- **Final IMPLEMENTATION-PLAN Document:** SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md
+- **Implementation Summary:** SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md
 
 ### Requirements Validation Results
-Based on PROMPT document verification:
+Based on IMPLEMENTATION-PLAN document verification:
 - ✓ All functional requirements: Complete
 - ✓ All non-functional requirements: Complete
 - ✓ All edge cases: Handled
 - ✓ All failure scenarios: Implemented
 
 ### Performance Results
-[Pull from PROMPT document's Performance Metrics section]
+[Pull from IMPLEMENTATION-PLAN document's Performance Metrics section]
 - PERF-001: Achieved [value] ms (Target: [value] ms) ✓
 - PERF-002: Achieved [value] req/s (Target: [value] req/s) ✓
 
 ### Implementation Insights
-[From PROMPT document's Critical Discoveries section]
+[From IMPLEMENTATION-PLAN document's Critical Discoveries section]
 1. [Key architectural pattern that worked well]
 2. [Performance optimization discovered]
 3. [Testing approach that was effective]
 
 ### Deviations from Original Specification
-[From PROMPT document's Implementation Deviations section]
+[From IMPLEMENTATION-PLAN document's Implementation Deviations section]
 - [Any approved changes with rationale]
 - [Trade-offs made and why]
 ```
 
 ### 3. Create Implementation Summary Document
 
-Save to `SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`:
+Save to `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`:
 
 Format: `IMPLEMENTATION-SUMMARY-[###]-YYYY-MM-DD_HH-MM-SS.md` (24-hour format with underscores)
 Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
@@ -326,7 +326,7 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 ## Feature Overview
 - **Specification:** SDD/requirements/SPEC-[###]-[feature-name].md
 - **Research Foundation:** SDD/research/RESEARCH-[###]-[feature-name].md
-- **Implementation Tracking:** SDD/prompts/PROMPT-[###]-[feature-name]-[date].md
+- **Implementation Tracking:** SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md
 - **Completion Date:** [YYYY-MM-DD HH:MM:SS]
 - **Context Management:** Maintained <40% throughout implementation
 
@@ -375,7 +375,7 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 ## Technical Implementation Details
 
 ### Architecture Decisions
-[From PROMPT document's Technical Decisions Log]
+[From IMPLEMENTATION-PLAN document's Technical Decisions Log]
 1. **[Decision]:** [Rationale and impact]
 2. **[Pattern Used]:** [Why chosen over alternatives]
 
@@ -497,15 +497,15 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 
 ### 4. Update Progress File
 
-Update `SDD/prompts/context-management/progress.md`:
+Update `SDD/orchestration/progress.md`:
 
 ```markdown
 ## Implementation Phase - COMPLETE ✓
 
 ### Feature: [Feature Name]
 - **Specification:** SDD/requirements/SPEC-[###]-[feature-name].md
-- **Implementation:** SDD/prompts/PROMPT-[###]-[feature-name]-[date].md
-- **Summary:** SDD/prompts/implementation-complete/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md
+- **Implementation:** SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md
+- **Summary:** SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md
 - **Completion:** [YYYY-MM-DD HH:MM:SS]
 
 ### Final Status
@@ -537,6 +537,16 @@ Update `SDD/prompts/context-management/progress.md`:
 - Ready for staging deployment
 - Production deployment checklist available
 - Post-deployment validation plan ready
+
+---
+
+### 5. Capture Glossary Deltas Introduced by the Implementation
+
+If the implementation introduced or refined any domain terms beyond what was added to `SDD/UBIQUITOUS_LANGUAGE.md` during `/research-complete` and `/planning-complete` (e.g., new module names that became canonical in code, action verbs adopted in tests, state names introduced during implementation), apply those deltas to the glossary now. This keeps subsequent cycles' research and planning aligned to the same vocabulary.
+
+Maintenance is incremental — do not rewrite stable entries. If implementation surfaced a term that contradicts an existing glossary entry, resolve the contradiction explicitly (update the entry or rename in code — do not let both stand). If implementation introduced no new domain terms, skip this step and note "no glossary changes" in the progress file.
+
+Mirrors the existing `/sdd:planning-complete` Step 5 wording. The implementation-phase equivalent gate is per-step in spirit: each major implementation milestone that introduced or refined a term should have updated the glossary in the same commit (per REQ-020 timing rule). This step is the final reconciliation — catch anything that slipped past the per-commit discipline before the implementation phase closes.
 
 ---
 
@@ -597,7 +607,7 @@ Final verification before marking complete:
 - [ ] Edge cases (EDGE-XXX) have specific test coverage
 - [ ] Failure scenarios (FAIL-XXX) have test coverage
 - [ ] Performance benchmarks validated
-- [ ] Test Verification Gate results recorded in PROMPT document
+- [ ] Test Verification Gate results recorded in IMPLEMENTATION-PLAN document
 
 ### Specification Compliance
 
@@ -615,7 +625,7 @@ Final verification before marking complete:
 ## Important Notes
 
 - This command should only be run when ALL implementation work is complete
-- The PROMPT document is the source of truth for completion status
+- The IMPLEMENTATION-PLAN document is the source of truth for completion status
 - Implementation summary uses timestamped format (YYYY-MM-DD_HH-MM-SS)
 - All subagent delegations should be reviewed and documented
 - Context should be managed throughout (<40% utilization)

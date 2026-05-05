@@ -18,10 +18,10 @@ ls SDD/research/RESEARCH-*.md 2>/dev/null
 ls SDD/requirements/SPEC-*.md 2>/dev/null
 
 # Check for active implementation prompts
-ls SDD/prompts/PROMPT-*.md 2>/dev/null
+ls SDD/implementation/IMPLEMENTATION-PLAN-*.md 2>/dev/null
 
 # Check progress.md for current phase
-cat SDD/prompts/context-management/progress.md 2>/dev/null | head -20
+cat SDD/orchestration/progress.md 2>/dev/null | head -20
 ```
 
 **If any of these indicate an active phase, STOP and redirect the user:**
@@ -47,7 +47,7 @@ cat SDD/prompts/context-management/progress.md 2>/dev/null | head -20
 
 ### 1. Create Timestamped Compaction File
 
-Write to: `SDD/prompts/context-management/compact-[YYYY-MM-DD_HH-MM-SS].md`
+Write to: `SDD/orchestration/compacted/compact-[YYYY-MM-DD_HH-MM-SS].md`
 
 Format: `compact-YYYY-MM-DD_HH-MM-SS.md` (24-hour time)
 Example: `compact-2025-10-01_14-30-45.md`
@@ -118,7 +118,7 @@ Use the following streamlined template:
 
 ### 3. Update Progress File
 
-**Before updating `SDD/prompts/context-management/progress.md`, check its contents:**
+**Before updating `SDD/orchestration/progress.md`, check its contents:**
 
 1. **Read existing progress.md** (if it exists)
 2. **Determine relevance:**
