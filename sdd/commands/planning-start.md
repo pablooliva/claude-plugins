@@ -66,6 +66,7 @@ Create the specification using this enhanced template:
 review_panel: [security, performance, data-modeling, api-contract, module-depth]
 eval_required: false
 cross_cutting_decisions: []
+delivery_mode: whole-feature
 ---
 
 # SPEC-[###]-[feature-name]
@@ -180,6 +181,28 @@ Each module also carries a **Risk** tier consumed by `/code-review` to scale rev
 
 [Add as many modules as the feature touches. If the feature does not introduce or significantly change any module — e.g., a config-only change — write a single line stating that and skip module entries.]
 
+## Delivery Slices
+
+> **Required only when `delivery_mode: per-slice`.** Omit this section entirely when `delivery_mode: whole-feature` (the default).
+>
+> A slice is a **concentrated function with a thread line through every relevant layer** this feature touches. It is testable in a focused way; exercising it surfaces the interaction and behavior of every layer it crosses.
+>
+> Slices are **not restricted to user-facing behavior**. A slice could be an internal pipeline trigger, a webhook handler, a batch job's primary path, or a user-facing form submission. The defining property is the **vertical thread**, not the audience.
+>
+> SLICE-001 must be the thinnest possible end-to-end happy path — its only job is to prove the thread exists. Subsequent slices add capability and harden edges.
+
+### SLICE-001: [name]
+- **Concentrated function:** [one-line description of the vertical thread this slice delivers]
+- **REQs satisfied:** [REQ-XXX references — full or partial. A slice may partially satisfy a REQ; later slices fill it in. Mark partial coverage explicitly, e.g., "REQ-003 (partial: happy path only)".]
+- **Modules touched:** [MODULE-XXX entries this slice cuts through. Use the `Spec refs:` field on each module as the raw material for this list.]
+- **Acceptance check:** [a single, focused test that proves the slice works end-to-end. Ideally an automated test name; manual verification step otherwise.]
+- **Sequence rationale:** [why this slice is at this position. SLICE-001 = thinnest end-to-end happy path; subsequent slices add depth, edge cases, and additional concentrated functions.]
+
+### SLICE-002: [name]
+[Same structure.]
+
+[Add as many slices as the feature decomposes into, ordered by delivery sequence.]
+
 ## Validation Strategy
 
 ### Automated Testing
@@ -232,7 +255,7 @@ Each module also carries a **Risk** tier consumed by `/code-review` to scale rev
 
 ## Specification Frontmatter Fields
 
-The spec template includes three YAML frontmatter fields consumed by `sdd-flow` and related skills. Populate them thoughtfully based on the research foundation:
+The spec template includes four YAML frontmatter fields consumed by `sdd-flow` and related skills. Populate them thoughtfully based on the research foundation:
 
 - **`review_panel:`** — List of specialist reviewers to convene during `/spec-review-panel`. Default includes `module-depth` (Ousterhout deep-module check on the `## Modules` section) and covers API/data-backed features. Adjust based on feature characteristics:
   - Add `accessibility` for UI features with user-facing interaction.
@@ -244,6 +267,8 @@ The spec template includes three YAML frontmatter fields consumed by `sdd-flow` 
 - **`eval_required:`** — Boolean. Set to `true` if this feature produces LLM output, probabilistic behavior, classification/extraction/summarization, or any quality dimension that unit tests can't verify. When `true`, `/regression-eval-capture` will scaffold a LangSmith eval dataset at implementation completion. Set to `false` for deterministic features (CRUD, UI, data transforms).
 
 - **`cross_cutting_decisions:`** — List of topic labels (snake_case) for any architectural decisions made during this feature that bind future work across the system. Examples: `orchestration_engine`, `vector_store`, `auth_provider`, `primary_datastore`, `logging_format`. Leave empty `[]` if this feature makes no cross-cutting decisions. During `/planning-complete`, the `cross-cutting-adr` skill will extract details for each label from the research/spec and write ADR files under `SDD/adr/`.
+
+- **`delivery_mode:`** — `whole-feature` (default) or `per-slice`. Controls whether the spec must include a `## Delivery Slices` section and whether downstream commands route through per-slice behavior. Default `whole-feature` preserves existing flow exactly; the `## Delivery Slices` section is omitted entirely. Set to `per-slice` to opt into vertical-slicing decomposition — a concentrated function threaded end-to-end through every relevant layer per slice; in that mode the planning subagent must populate `## Delivery Slices`. If the field is absent from a spec written before this change, treat it as `whole-feature`.
 
 These fields have sensible defaults; populate them intentionally rather than leaving as boilerplate.
 
@@ -276,6 +301,15 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - If a module must be shallow, fill the `Justification (if shallow)` field. Unjustified shallow modules will be flagged by the `module-depth` specialist in `/spec-review-panel` and should be merged, deepened, or removed.
    - Assign each module a **Risk** tier (low/medium/high) — this drives review depth in `/code-review`. High-risk = irreversible, financial, security-critical, regulatory. Low-risk = contained, recoverable, boundary-only.
    - Map every REQ-XXX/EDGE-XXX/FAIL-XXX to at least one module via the `Spec refs:` field — every requirement must have a home.
+
+6. **Define Delivery Slices (per-slice mode only):**
+   - Applies only when `delivery_mode: per-slice` is set in the spec frontmatter. In `whole-feature` mode (the default), omit the `## Delivery Slices` section entirely and skip this step.
+   - Decompose the feature into ordered `SLICE-XXX` entries, each describing a concentrated function threaded end-to-end through every relevant layer. Use each MODULE-XXX entry's `Spec refs:` as raw material — REQs that span multiple modules are candidate slices.
+   - **SLICE-001 must be the thinnest possible end-to-end happy path.** Its only job is to prove the thread exists; resist the urge to put depth or edge cases here.
+   - Subsequent slices add capability or harden edges, building on prior slices. Capture the reason for each slice's position in `Sequence rationale`.
+   - A slice is a vertical thread, not a horizontal layer. Slices that touch only one module when the feature spans multiple are likely horizontal layers in disguise — either widen the thread or justify the single-module slice explicitly in the rationale.
+   - REQs may be split across slices; mark partial coverage explicitly (e.g., `REQ-003 (partial: happy path only)`) so later slices can complete them.
+   - Every REQ-XXX / EDGE-XXX / FAIL-XXX should be reachable through some slice in the sequence by the time the last slice lands.
 
 ## Context Management & Subagent Usage
 
@@ -338,6 +372,11 @@ Before considering the specification complete:
 - [ ] Every module has a `MODULE-XXX` entry with Interface, Hides, and Risk filled in
 - [ ] No shallow modules without explicit justification
 - [ ] Every REQ-XXX / EDGE-XXX / FAIL-XXX is mapped to at least one module
+- [ ] If `delivery_mode: per-slice`, the `## Delivery Slices` section exists and is populated with at least one `SLICE-XXX` entry
+- [ ] If `delivery_mode: per-slice`, every slice declares Concentrated function, REQs satisfied, Modules touched, Acceptance check, and Sequence rationale
+- [ ] If `delivery_mode: per-slice`, SLICE-001 is the thinnest possible end-to-end happy path
+- [ ] If `delivery_mode: per-slice`, slices are ordered by delivery sequence and each REQ-XXX / EDGE-XXX / FAIL-XXX is reachable through some slice by the last slice
+- [ ] If `delivery_mode: whole-feature` (or absent), the `## Delivery Slices` section is omitted
 
 ---
 
