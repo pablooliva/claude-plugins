@@ -36,11 +36,11 @@ APFS is case-insensitive on this volume; `SDD/` collides with the `sdd/` plugin 
 
 - [x] REQ-001: `delivery_mode` validation in `planning-start.md` (allowed regions only) — Chunk 1 — Status: Complete
 - [x] REQ-002: `implementation-start.md` mode-aware tracker scaffolding (whole-feature preserved bit-for-bit; per-slice scaffolds `## Slice Progress`) — Chunk 1 — Status: Complete
-- [ ] REQ-003: `/slice-start` command (active-slice resolution, `## Slice Progress` row update, ledger load) — Chunk 2 — Status: Not Started
-- [ ] REQ-004: `/slice-review` command (thin wrapper over `/code-review`, slice-scoped file set, `[YYYY-MM-DD]` date format) — Chunk 2 — Status: Not Started
-- [ ] REQ-005: `/slice-retro` command (RETROSPECTIVE artifact + in-place ledger update; retro-first ordering; refusal on existing retro per EDGE-014) — Chunk 2 — Status: Not Started
-- [ ] REQ-006: `/slice-commit` command (atomic per-slice commit, looser staging, structured heredoc commit message, no `--no-verify`) — Chunk 2 — Status: Not Started
-- [ ] REQ-007: All four `/slice-*` commands inert outside per-slice mode (friendly message names field/value/alternative) — Chunk 2 — Status: Not Started
+- [x] REQ-003: `/slice-start` command (active-slice resolution, `## Slice Progress` row update, ledger load) — Chunk 2 — Status: Complete (sdd/commands/slice-start.md)
+- [x] REQ-004: `/slice-review` command (thin wrapper over `/code-review`, slice-scoped file set, `[YYYY-MM-DD]` date format) — Chunk 2 — Status: Complete (sdd/commands/slice-review.md)
+- [x] REQ-005: `/slice-retro` command (RETROSPECTIVE artifact + in-place ledger update; retro-first ordering; refusal on existing retro per EDGE-014) — Chunk 2 — Status: Complete (sdd/commands/slice-retro.md)
+- [x] REQ-006: `/slice-commit` command (atomic per-slice commit, looser staging, structured heredoc commit message, no `--no-verify`) — Chunk 2 — Status: Complete (sdd/commands/slice-commit.md)
+- [x] REQ-007: All four `/slice-*` commands inert outside per-slice mode (friendly message names field/value/alternative) — Chunk 2 — Status: Complete (Inert-Mode Gate section in slice-start.md / slice-review.md / slice-retro.md / slice-commit.md emitting REQ-007 verbatim message)
 - [ ] REQ-008: `/sdd-migrate-layout` command (detect old layout, refuse on active flow + parse-failure fail-closed, idempotent, partial-migration refusal, bash-only) — Chunk 3 — Status: Not Started
 - [x] REQ-009: Slice-integrity check in `critical-review.md` (mode-gated on `delivery_mode: per-slice`) — Chunk 1 — Status: Complete
 - [x] REQ-010: Slice-integrity specialist 4.7 in `spec-review-panel.md` + `#### Slice Integrity Findings` deliverable sub-header (mode-gated) — Chunk 1 — Status: Complete
@@ -55,55 +55,55 @@ APFS is case-insensitive on this volume; `SDD/` collides with the `sdd/` plugin 
 - [ ] REQ-019: `sdd/README.md` two-workflow restructure (decision aid + Whole-feature + Per-slice + Migration/Changelog including agent-engineering 0.4.0+ cross-ref) — Chunk 5 — Status: Not Started
 - [x] REQ-020: Glossary discipline — additions in same commit as source-code edit introducing the term; no deferred "documentation pass" — Chunk 1 — Status: Complete (added Step 5 to implementation-complete.md mirroring planning-complete Step 5; per-step discipline articulated)
 - [ ] REQ-021: `agent-engineering/README.md` Skills section updates (sdd-flow Step 4 state machine + per-slice integration) + 0.4.0 version + SDD 2.0.0+ minimum dependency clause; repo-root `README.md` Available Plugins note — Chunk 5 — Status: Not Started
-- [ ] REQ-022: `## Slice Progress` table schema (columns `SLICE-ID | Name | Status | Acceptance check | Test result | Notes`; states `Not Started`/`In Progress`/`Acceptance Check Passing`/`Complete`; `/implementation-start` scaffolds; `/slice-retro` updates Status/Test result/Notes only; SLICE-XXX uniqueness invariant) — Chunk 2 — Status: Not Started
+- [x] REQ-022: `## Slice Progress` table schema (columns `SLICE-ID | Name | Status | Acceptance check | Test result | Notes`; states `Not Started`/`In Progress`/`Acceptance Check Passing`/`Complete`; `/implementation-start` scaffolds; `/slice-retro` updates Status/Test result/Notes only; SLICE-XXX uniqueness invariant) — Chunk 2 — Status: Complete (binding schema documented in slice-start.md / slice-review.md / slice-commit.md; column-write authority in slice-retro.md Step 8; FIRST-WRITE-WINS in slice-start.md Step 5/6)
 - [ ] REQ-023: `sdd-flow` Phase Detection legacy-path fallback + resume rules for `## Awaiting Slicing Decision` and `## Recommended Re-planning` — Chunk 4a — Status: Not Started
-- [ ] REQ-024: Slice-ID args validated against `^SLICE-\d{3}$` before path interpolation (path-traversal prevention) — Chunk 2 — Status: Not Started
-- [ ] REQ-025: Slice-command flag conventions (full inventory: `--resume`, `--force`, `--reconcile-ledger`, `--replan`, `--from-slice`, `--override-replan`; semantics, defaults, supervised-vs-autonomous, validation) — Chunk 2 — Status: Not Started
-- [ ] REQ-025a: `/slice-retro --reconcile-ledger` 8-step algorithm (manual-edit preservation) — Chunk 2 — Status: Not Started
+- [x] REQ-024: Slice-ID args validated against `^SLICE-\d{3}$` before path interpolation (path-traversal prevention) — Chunk 2 — Status: Complete (Slice-ID Validation section in all four slice-*.md files)
+- [x] REQ-025: Slice-command flag conventions (full inventory: `--resume`, `--force`, `--reconcile-ledger`, `--replan`, `--from-slice`, `--override-replan`; semantics, defaults, supervised-vs-autonomous, validation) — Chunk 2 — Status: Complete (Flag Inventory tables in slice-start.md / slice-review.md / slice-retro.md / slice-commit.md; orchestrator-flag boundary documented in slice-retro.md)
+- [x] REQ-025a: `/slice-retro --reconcile-ledger` 8-step algorithm (manual-edit preservation) — Chunk 2 — Status: Complete (sdd/commands/slice-retro.md `--reconcile-ledger` Mode section)
 - [ ] REQ-026: Cross-plugin version coupling README cross-references (sdd ↔ agent-engineering); FAIL-009 surfaced as warning — Chunk 5 — Status: Not Started
 
 #### Non-Functional Requirements (SEC-XXX, UX-XXX)
 
-- [ ] SEC-001: `/slice-commit` and `/sdd-migrate-layout` MUST NOT bypass git hooks (no `--no-verify`, no force flags) — Chunks 2 + 3 — Status: Not Started
+- [~] SEC-001: `/slice-commit` and `/sdd-migrate-layout` MUST NOT bypass git hooks (no `--no-verify`, no force flags) — Chunks 2 + 3 — Status: Partial (slice-commit.md Step 6/7 documents heredoc + no `--no-verify` + no co-author; /sdd-migrate-layout deferred to Chunk 3)
 - [ ] SEC-002: `/sdd-migrate-layout` active-flow refusal + fail-closed posture on parse failure — Chunk 3 — Status: Not Started
-- [ ] SEC-003: Slice-ID inputs validated per REQ-024 (path-traversal prevention) — Chunk 2 — Status: Not Started
+- [x] SEC-003: Slice-ID inputs validated per REQ-024 (path-traversal prevention) — Chunk 2 — Status: Complete (Slice-ID Validation section in all four slice-*.md files)
 - [ ] SEC-004: No new credentials/secrets/PII surfaces; transcript-redaction posture inherited (out of scope) — Chunk 1 (acknowledgment in tracker) — Status: Not Started
-- [ ] UX-001: `/slice-*` inert message names field/required-value/alternative-action; friendly + self-documenting — Chunk 2 — Status: Not Started
+- [x] UX-001: `/slice-*` inert message names field/required-value/alternative-action; friendly + self-documenting — Chunk 2 — Status: Complete (Inert-Mode Gate Step 2 in all four slice-*.md emits REQ-007 verbatim message naming field, value, and alternative)
 
 ### Edge Case Implementation
 
 - [ ] EDGE-001: `/sdd-migrate-layout` re-run when already migrated (idempotent "already migrated" exit) — Chunk 3 — Status: Not Started
-- [ ] EDGE-002: `/slice-*` invoked when active SPEC has `delivery_mode: whole-feature` or no field (inert message per REQ-007/UX-001) — Chunk 2 — Status: Not Started
-- [ ] EDGE-003: `/slice-review` invoked when target slice has no implementation yet (graceful empty-set finding) — Chunk 2 — Status: Not Started
+- [x] EDGE-002: `/slice-*` invoked when active SPEC has `delivery_mode: whole-feature` or no field (inert message per REQ-007/UX-001) — Chunk 2 — Status: Complete (Inert-Mode Gate in all four slice-*.md files)
+- [x] EDGE-003: `/slice-review` invoked when target slice has no implementation yet (graceful empty-set finding) — Chunk 2 — Status: Complete (slice-review.md Step 3 — `Not Started` row triggers EDGE-003 refusal message)
 - [ ] EDGE-004: User repos with CLAUDE.md hardcoding old paths (out-of-scope; reminder in `/sdd-migrate-layout` output + sdd/README.md) — Chunk 5 — Status: Not Started
 - [ ] EDGE-005: Practicality gate fires (single-MODULE OR every-decomposition-is-build-then-test) — Chunk 1 — Status: Not Started
 - [ ] EDGE-006: Re-planning recommendation fired but user runs `/sdd-flow continue` without flag (informative refusal listing `--replan` / `--override-replan`) — Chunk 4b — Status: Not Started
-- [ ] EDGE-007: RETROSPECTIVE artifact written but ledger update fails (recovery via `--reconcile-ledger` per REQ-025a) — Chunk 2 — Status: Not Started
+- [x] EDGE-007: RETROSPECTIVE artifact written but ledger update fails (recovery via `--reconcile-ledger` per REQ-025a) — Chunk 2 — Status: Complete (slice-retro.md `--reconcile-ledger` Mode + Two-Write Ordering Invariant section)
 - [ ] EDGE-008: macOS APFS case-insensitive filesystem (this-repo deviation; documented in sdd/README.md migration section) — Chunk 5 — Status: Not Started
 - [ ] EDGE-009: Spec without `delivery_mode:` field (defaults silently to `whole-feature` per OQ-3) — Chunk 1 — Status: Not Started
-- [ ] EDGE-010: Multiple `Not Started` slices when `/slice-start` has no arg (prompt user; never silently picks) — Chunk 2 — Status: Not Started
-- [ ] EDGE-011: `## Slice Progress` table column-write authority (`/implementation-start` scaffolds; `/slice-retro` updates Status/Test result/Notes only) — Chunk 2 — Status: Not Started
-- [ ] EDGE-012: `/slice-start` re-invocation while another slice is `In Progress` (refusal + `--resume` flag) — Chunk 2 — Status: Not Started
-- [ ] EDGE-013: `/slice-start` re-invocation on a slice already `Complete` (refusal + `--force` flag; autonomous-vs-supervised semantics) — Chunk 2 — Status: Not Started
-- [ ] EDGE-014: `/slice-retro` re-invocation when retrospective already exists (loud refusal; `--reconcile-ledger` is escape hatch) — Chunk 2 — Status: Not Started
+- [x] EDGE-010: Multiple `Not Started` slices when `/slice-start` has no arg (prompt user; never silently picks) — Chunk 2 — Status: Complete (slice-start.md Step 4 — multi-row branch prompts user / autonomous halt)
+- [x] EDGE-011: `## Slice Progress` table column-write authority (`/implementation-start` scaffolds; `/slice-retro` updates Status/Test result/Notes only) — Chunk 2 — Status: Complete (column-write authority documented in slice-start.md schema + slice-retro.md Step 8)
+- [x] EDGE-012: `/slice-start` re-invocation while another slice is `In Progress` (refusal + `--resume` flag) — Chunk 2 — Status: Complete (slice-start.md Step 5 EDGE-012 conflict refusal + Flag Inventory `--resume`)
+- [x] EDGE-013: `/slice-start` re-invocation on a slice already `Complete` (refusal + `--force` flag; autonomous-vs-supervised semantics) — Chunk 2 — Status: Complete (slice-start.md Step 6 EDGE-013 + autonomous `## Awaiting Re-start Decision` halt + Flag Inventory `--force`)
+- [x] EDGE-014: `/slice-retro` re-invocation when retrospective already exists (loud refusal; `--reconcile-ledger` is escape hatch) — Chunk 2 — Status: Complete (slice-retro.md Step 5 EDGE-014 refusal with REQ-005 verbatim message + escape hatches)
 - [ ] EDGE-015: `/sdd-migrate-layout` invoked when `progress.md` cannot be parsed (fail-closed refusal per SEC-002) — Chunk 3 — Status: Not Started
 
 ### Failure Scenario Handling
 
 - [ ] FAIL-001: `/sdd-migrate-layout` partially completes then errors mid-move (manual rollback documented; `git mv` history-preserving) — Chunk 3 — Status: Not Started
 - [ ] FAIL-002: User installs SDD 2.0.0 with active in-flight flow under old layout (active-flow refusal halts; sdd-flow Phase Detection legacy-path fallback recommends migration) — Chunk 4a — Status: Not Started
-- [ ] FAIL-003: Slice retrospective writes RETROSPECTIVE artifact then disk fills before ledger update (recovery via `--reconcile-ledger`) — Chunk 2 — Status: Not Started
+- [x] FAIL-003: Slice retrospective writes RETROSPECTIVE artifact then disk fills before ledger update (recovery via `--reconcile-ledger`) — Chunk 2 — Status: Complete (slice-retro.md Two-Write Ordering Invariant section + `--reconcile-ledger` Mode 8-step algorithm)
 - [ ] FAIL-004: Per-slice review iteration cap (3) exhausted with HIGH count not strictly decreasing (halt slice's loop, route to ledger; halt flow under `--skip-slice-checkpoints`) — Chunk 4b — Status: Not Started
 - [ ] FAIL-005: `/sdd-migrate-layout` invoked on Windows in cmd.exe or PowerShell (bash-detection refusal with "run from Git Bash" guidance) — Chunk 3 — Status: Not Started
 - [ ] FAIL-006: Hook path constant updated but migration not yet run (or vice versa) (hook-skew documented; no auto-recovery, manual remediation) — Chunk 1 — Status: Not Started
-- [ ] FAIL-007: `/slice-start` invoked but `## Slice Progress` table is missing (refusal + recommend re-running `/implementation-start`) — Chunk 2 — Status: Not Started
+- [x] FAIL-007: `/slice-start` invoked but `## Slice Progress` table is missing (refusal + recommend re-running `/implementation-start`) — Chunk 2 — Status: Complete (slice-start.md Step 3 — verbatim FAIL-007 refusal message)
 - [ ] FAIL-008: `/sdd-migrate-layout` parse-failure during active-flow refusal check (fail-closed refusal per SEC-002) — Chunk 3 — Status: Not Started
 - [ ] FAIL-009: Cross-plugin version mismatch — SDD 2.x with agent-engineering 0.3.x (FAIL-009 surfaced as warning via README cross-refs per REQ-026) — Chunk 5 — Status: Not Started
 
 ### Module Implementation (MODULE-XXX)
 
 - [ ] MODULE-001: `delivery_mode` runtime branch (REQ-001, REQ-002) — Chunk 1 — Status: Not Started
-- [ ] MODULE-002: Slice-command primitives (`/slice-start`, `/slice-review`, `/slice-retro`, `/slice-commit`) (REQ-003…007, REQ-022, REQ-024, REQ-025, REQ-025a, EDGE-002/010/011/012/013/014, FAIL-003/007) — Chunk 2 — Status: Not Started
+- [x] MODULE-002: Slice-command primitives (`/slice-start`, `/slice-review`, `/slice-retro`, `/slice-commit`) (REQ-003…007, REQ-022, REQ-024, REQ-025, REQ-025a, EDGE-002/010/011/012/013/014, FAIL-003/007) — Chunk 2 — Status: Complete (sdd/commands/slice-start.md, slice-review.md, slice-retro.md, slice-commit.md authored; all four pass closing oracles: inert-mode phrase present, retro emits `## Recommended SPEC Amendments` + `## Recommended Re-planning` headers, zero legacy-path hits, flag inventory documented, `^SLICE-\d{3}$` regex literal in each file, `LEARNINGS-FEATURE-[feature-name]` placeholder consistency)
 - [ ] MODULE-003: Slice-integrity review checks (REQ-009, REQ-010) — Chunk 1 — Status: Not Started
 - [ ] MODULE-004: Practicality gate (REQ-001, REQ-011, EDGE-005) — Chunk 1 — Status: Not Started
 - [ ] MODULE-005: Migration helper (`/sdd-migrate-layout`) (REQ-008, SEC-001, SEC-002, EDGE-001, EDGE-008, EDGE-015, FAIL-001, FAIL-002, FAIL-005, FAIL-008) — Chunk 3 — Status: Not Started
