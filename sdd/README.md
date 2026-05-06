@@ -732,11 +732,12 @@ For issues, feature requests, or questions:
 
 This plugin is provided as-is for use with Claude Code. See the repository for license details.
 
-## Subagent Types Shipped (v2.1.0+)
+## Subagent Types Shipped (v2.2.0+)
 
-The plugin's `agents/` directory ships 8 named subagent types consumed by `/sdd:critical-review`, `/sdd:spec-review-panel`, and downstream skills (notably `agent-engineering`'s `/sdd-flow`):
+The plugin's `agents/` directory ships 9 named subagent types consumed by `/sdd:critical-review`, `/sdd:spec-review-panel`, and downstream skills (notably `agent-engineering`'s `/sdd-flow`):
 
 - **`sdd-critical-reviewer`** (Opus) — adversarial reviewer for research / spec / implementation phase artifacts; also the panel orchestrator's synthesis role.
+- **`sdd-workhorse`** (Sonnet) — default worker for /sdd-flow's non-adversarial spawn sites (research, planning, ADR capture, fix loops, implementation chunks, code review, completion subagents, eval scaffolding, per-slice cycle workhorses). Replaces `general-purpose` at SDD-flow's workhorse spawn sites for portable cost discipline.
 - **`sdd-spec-security-specialist`** (Sonnet) — `/sdd:spec-review-panel` `security` panel value.
 - **`sdd-spec-performance-specialist`** (Sonnet) — `performance` panel value.
 - **`sdd-spec-data-modeling-specialist`** (Sonnet) — `data-modeling` panel value.
@@ -746,6 +747,26 @@ The plugin's `agents/` directory ships 8 named subagent types consumed by `/sdd:
 - **`sdd-spec-slice-integrity-specialist`** (Sonnet, self-skips for whole-feature mode) — `slice-integrity` panel value (per-slice mode only).
 
 Each specialist's vocabulary + named-anti-pattern payload remains canonical in `/sdd:spec-review-panel` Section 4 and is embedded by the orchestrator at spawn time; the agent files provide identity, model tier, severity rubric, and bounded-return discipline.
+
+### User-level recommendation: general-purpose default model
+
+The SDD plugin's `sdd-workhorse` agent covers /sdd-flow's workhorse spawns, but Claude Code's built-in `general-purpose` subagent is also used by many other tools and skills outside SDD. By default, `general-purpose` inherits the parent session's model — which means heavy Opus parent sessions cascade Opus into every general-purpose spawn.
+
+To opt into Sonnet as your default for `general-purpose` across all projects on a given machine, create `~/.claude/agents/general-purpose.md` with the following content:
+
+```markdown
+---
+name: general-purpose
+description: General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks. Defaults to Sonnet to keep cost predictable across non-adversarial work.
+model: sonnet
+---
+
+You are a general-purpose subagent. You work autonomously on the task described in your prompt and return a bounded result to the orchestrator. Default to Sonnet; the orchestrator can override per-spawn via the Agent tool's `model` parameter — `model: "opus"` for high-stakes adversarial reasoning, `model: "haiku"` for read-only exploration where Sonnet would be overkill.
+```
+
+This is per-machine setup (the file lives in your home directory, not the plugin). The SDD plugin can't ship this for you because user-level agent files take precedence over plugin-shipped agents of the same name and we don't want to silently override your defaults.
+
+For SDD-flow specifically, this user-level setup is **not required** — `sdd-workhorse` handles SDD-flow's spawns regardless. The user-level setting matters for non-SDD workflows on the same machine.
 
 ---
 
