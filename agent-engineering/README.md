@@ -27,15 +27,15 @@ The SDD plugin provides a spec-driven development methodology. This plugin provi
 
 ## Plugin dependencies
 
-`/sdd-flow` depends on the **SDD plugin (≥ v2.1.0)** for two reasons:
+`/sdd-flow` depends on the **SDD plugin (≥ v2.2.0)** for two reasons:
 1. SDD command bodies (`/sdd:research-start`, `/sdd:critical-review`, `/sdd:spec-review-panel`, `/sdd:planning-start`, `/sdd:implementation-start`, `/sdd:implementation-complete`, slice commands) are embedded into subagent prompts.
-2. SDD ships the named subagent types `/sdd-flow` references at its 5 critical-review spawn sites — `sdd-critical-reviewer` (Opus). Without SDD ≥ 2.1.0, those spawns fall back to `subagent_type=general-purpose` and inherit the parent's model, defeating the cost-routing intent.
+2. SDD ships the named subagent types `/sdd-flow` references at every spawn site — `sdd-critical-reviewer` (Opus) for the 5 critical-review spawns, `sdd-workhorse` (Sonnet) for the ~20 non-adversarial workhorse spawns, and the `sdd-spec-*-specialist` agents (Sonnet) for the panel-review nested specialists. Without SDD ≥ 2.2.0, those spawns fall back to `subagent_type=general-purpose` and inherit the parent's model, defeating the cost-routing intent.
 
 Install the SDD plugin alongside `agent-engineering` for the intended behavior.
 
 ## Status
 
-Version 0.5.0 — early, under active iteration.
+Version 0.6.0 — early, under active iteration.
 
 ### What's new in 0.4.0
 

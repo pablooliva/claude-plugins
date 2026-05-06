@@ -160,7 +160,7 @@ When invoked, first:
 3. Derive a **kebab-case feature name** from the task
 4. Resolve all canonical identifiers (see Artifact Paths Contract)
 
-Then spawn a **general-purpose subagent** for scope assessment:
+Then spawn a **sdd-workhorse subagent** for scope assessment:
 
 - **Inputs:** Task description, codebase access
 - **Outputs:** Either a decomposition document or a "proceed" signal
@@ -313,7 +313,7 @@ Splitting heuristics differ by phase — a uniform "always pre-split" rule does 
 
 #### Subagent Safety-Net Rule
 
-Every phase-execution subagent (2a, 3a, 4a), every fix subagent (2d, 3e, 4c, 4e), and any continuation subagent spawned per the protocol below receives this rule embedded in its prompt. **Nested subagents (Explore or general-purpose subagents spawned from inside a parent subagent's execution) are intentionally out of scope** — they do not get their own counter file and instead are bounded by the parent's `Nested subagents: M/4` trigger; if a parent's nested-spawn count grows toward saturation, the parent itself must bail out.
+Every phase-execution subagent (2a, 3a, 4a), every fix subagent (2d, 3e, 4c, 4e), and any continuation subagent spawned per the protocol below receives this rule embedded in its prompt. **Nested subagents (Explore or sdd-workhorse subagents spawned from inside a parent subagent's execution) are intentionally out of scope** — they do not get their own counter file and instead are bounded by the parent's `Nested subagents: M/4` trigger; if a parent's nested-spawn count grows toward saturation, the parent itself must bail out.
 
 > **Bail-out triggers (initial defaults — these are triggers, not budgets to spend):**
 > - You have Read more than **10** files, OR
@@ -356,13 +356,13 @@ A spawned subagent has no first-class API to read its own context utilization �
 
 #### 2a. Research Subagent
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Instructions from:** `/sdd:research-start` command (embedded in prompt, model checks stripped)
 - **Inputs:** Task description, codebase access, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present — supervised users may have run `/research-clarify` first), `SDD/UBIQUITOUS_LANGUAGE.md` (if present — load before any research writing for vocabulary alignment)
 - **Outputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, update `progress.md`
 - **Task:** Create the research document and perform the full systematic investigation. If a CLARIFICATION artifact exists, treat its branches and open questions as required research targets — every branch must be addressed; every open question must be resolved or explicitly deferred with rationale.
 
-Then spawn a second **general-purpose subagent** with:
+Then spawn a second **sdd-workhorse subagent** with:
 - **Instructions from:** `/sdd:research-complete` command
 - **Inputs:** The RESEARCH document at its exact path, `SDD/UBIQUITOUS_LANGUAGE.md` (if present, for incremental update)
 - **Outputs:** Updated RESEARCH document (if gaps found), updated/created `SDD/UBIQUITOUS_LANGUAGE.md` (incremental, not regenerated — preserve stable terms), updated `progress.md`
@@ -372,7 +372,7 @@ Then spawn a second **general-purpose subagent** with:
 
 After research is complete, scan the research doc for cross-cutting architectural decisions captured as comparison-with-selection patterns — the places where the research compared alternatives and picked one.
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Instructions from:** embed the `cross-cutting-adr` skill's behavioral instructions with **Trigger C (sdd-flow research hand-off)** active.
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, existing `SDD/adr/` directory (if present)
 - **Outputs:** Zero or more new ADR files at `SDD/adr/NNNN-slug.md`, updated `SDD/adr/README.md`, updated `progress.md`
@@ -390,7 +390,7 @@ Spawn an **`sdd-critical-reviewer`** subagent (defined in the SDD plugin at `sdd
 
 #### 2d. Address Research Review Findings
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md` AND `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`
 - **Outputs:** Updated `SDD/research/RESEARCH-[###]-[feature-name].md`, updated `progress.md`
 - **Task:** Resolve ALL findings from the critical review — HIGH, MEDIUM, and LOW severity. Update the RESEARCH document to fill gaps, strengthen weak evidence, add missing perspectives, and address questionable assumptions. No finding is left unresolved. After fixing, append a "Findings Addressed" section to the review document noting how each finding was resolved.
@@ -422,13 +422,13 @@ If in **autonomous mode**, proceed directly to Step 3.
 
 #### 3a. Planning Subagent
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Instructions from:** `/sdd:planning-start` command (model checks stripped)
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, existing `SDD/adr/` directory (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present)
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, updated `progress.md`
 - **Task:** Read the research document and create the full specification. The spec MUST include the YAML frontmatter fields defined by `/sdd:planning-start` — `review_panel` (default includes `module-depth` as of SDD 1.2.0), `eval_required`, `cross_cutting_decisions` — populated thoughtfully based on feature characteristics. The spec MUST include the `## Modules` section (SDD 1.2.0) with at least one `MODULE-XXX` entry containing `Public Interface`, `Hides`, `Risk` (low/medium/high), and `Spec refs` fields — prefer deep modules over shallow per Ousterhout. Use canonical names from `SDD/UBIQUITOUS_LANGUAGE.md` when present.
 
-Then spawn a second **general-purpose subagent** with:
+Then spawn a second **sdd-workhorse subagent** with:
 - **Instructions from:** `/sdd:planning-complete` command
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present)
 - **Outputs:** Updated SPEC document (if gaps found), updated `SDD/UBIQUITOUS_LANGUAGE.md` (incremental — only if the spec introduced new domain terms not already in the glossary), updated `progress.md`
@@ -436,7 +436,7 @@ Then spawn a second **general-purpose subagent** with:
 
 #### 3b. ADR Capture from Spec Frontmatter (NEW)
 
-Read the spec's `cross_cutting_decisions:` frontmatter field. If the list is non-empty, for each topic label in the list, spawn a **general-purpose subagent**:
+Read the spec's `cross_cutting_decisions:` frontmatter field. If the list is non-empty, for each topic label in the list, spawn a **sdd-workhorse subagent**:
 
 - **Instructions from:** embed the `cross-cutting-adr` skill's behavioral instructions with **Trigger C (sdd-flow planning hand-off, frontmatter-declared)** active — frontmatter-declared decisions are pre-approved, so no user confirmation required.
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, existing `SDD/adr/` directory
@@ -463,11 +463,11 @@ Spawn an **`sdd-critical-reviewer`** subagent (defined in the SDD plugin; defaul
 Each iteration:
 
 1. **Record iteration state in `progress.md`** under a `## Panel Review Iterations` subsection. Capture: iteration number, HIGH count, MEDIUM count, LOW count, verdict, timestamp.
-2. **Spawn a fix subagent** with:
+2. **Spawn a fix subagent** (`subagent_type=sdd-workhorse`) with:
    - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`
    - **Outputs:** Updated spec (in place), "Findings Addressed" section appended to the panel review
    - **Task:** Resolve every HIGH and MEDIUM finding from the panel review. Each resolution must cite the specific spec change made. Do NOT claim resolution without an actual spec edit.
-3. **Re-run Step 3c** — spawn a fresh panel review subagent with the updated spec. This produces a new or overwritten `PANEL-SPEC-*` review document.
+3. **Re-run Step 3c** — spawn a fresh panel review subagent (`subagent_type=sdd-critical-reviewer`) with the updated spec. This produces a new or overwritten `PANEL-SPEC-*` review document.
 4. **Compare this iteration's finding counts to the previous iteration:**
    - **Progress stall check:** if HIGH count did not strictly decrease (when HIGH was non-zero) OR (in REVISE case) if MEDIUM count did not strictly decrease → halt immediately. The fix subagent is not making real progress; further iterations are waste or degrade review quality.
    - **If panel now returns `PROCEED`** → exit the loop; continue to 3d.
@@ -503,7 +503,7 @@ Spawn an **`sdd-critical-reviewer`** subagent (defined in the SDD plugin; defaul
 
 #### 3e. Address Spec Review Findings (panel + critical, combined)
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`
 - **Outputs:** Updated `SDD/requirements/SPEC-[###]-[feature-name].md`, updated `progress.md`
 - **Task:** Resolve ALL findings from BOTH reviews — panel findings (domain-specific anti-patterns) AND critical-review findings (ambiguity, testability, contradictions). Clarify ambiguous requirements, make criteria testable, add missing edge cases, resolve contradictions, address panel anti-patterns, incorporate dropped research findings. Append "Findings Addressed" sections to both review documents.
@@ -532,7 +532,7 @@ Whichever branch fires, the post-implementation steps (4f completion, 4g eval, 4
 
 #### 4a. Implementation Subagent
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Instructions from:** `/sdd:implementation-start` command (model checks stripped)
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present — use canonical names in code, comments, commits, tests)
 - **Outputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, implemented code and tests, updated `progress.md`
@@ -548,7 +548,7 @@ Spawn a **general-purpose subagent** with:
 
 #### 4b. Code Review Subagent
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Instructions from:** `/sdd:code-review` command
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from IMPLEMENTATION-PLAN document)
 - **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
@@ -556,7 +556,7 @@ Spawn a **general-purpose subagent** with:
 
 #### 4c. Address Code Review Findings
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Inputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the implemented code files
 - **Outputs:** Updated code and tests, updated IMPLEMENTATION-PLAN document, "Findings Addressed" appended to review document
 - **Task:** Fix ALL findings until the implementation meets APPROVED status. Resolve specification misalignment, missing edge/failure handling, test gaps, and all other issues.
@@ -571,14 +571,14 @@ Spawn an **`sdd-critical-reviewer`** subagent (defined in the SDD plugin; defaul
 
 #### 4e. Address Implementation Review Findings
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Inputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files
 - **Outputs:** Updated code and tests, updated IMPLEMENTATION-PLAN document, "Findings Addressed" appended to review document
 - **Task:** Resolve ALL findings — fix specification deviations, security vulnerabilities, silent failures, missing test coverage, and every other issue regardless of severity.
 
 #### 4f. Implementation Completion Subagent
 
-Spawn a **general-purpose subagent** with:
+Spawn a **sdd-workhorse subagent** with:
 - **Instructions from:** `/sdd:implementation-complete` command (model checks stripped)
 - **Inputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`
 - **Outputs:** Updated IMPLEMENTATION-PLAN document, updated SPEC document, `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`, updated `progress.md`
@@ -586,7 +586,7 @@ Spawn a **general-purpose subagent** with:
 
 #### 4g. Regression Eval Capture (NEW, conditional)
 
-Read the spec's `eval_required:` frontmatter field. If `true`, spawn a **general-purpose subagent**:
+Read the spec's `eval_required:` frontmatter field. If `true`, spawn a **sdd-workhorse subagent**:
 
 - **Instructions from:** `/agent-engineering:regression-eval-capture` command
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md` (for feature name, success criteria, frontmatter metadata), repo's existing `evals/` directory if present
@@ -650,11 +650,11 @@ When the spec declares `delivery_mode: per-slice`, Step 4 runs the per-slice sta
 
 For each slice in order from the spec's `## Delivery Slices` section:
 
-1. **Per-slice 4a — Implement slice.** Spawn ONE general-purpose subagent (strict — no bundling per locked decision) with `/sdd:slice-start <SLICE-XXX>` instructions embedded plus the active spec, the rolling ledger (`SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md`), and the implementation plan path. **The subagent's prompt receives ONLY the ledger** (per OQ-6 default — strictly the ledger; individual retros are out of the prompt path). The subagent implements the slice end-to-end; its bounded return states "Slice X delivered. Acceptance check `<test name>` passes."
+1. **Per-slice 4a — Implement slice.** Spawn ONE sdd-workhorse subagent (strict — no bundling per locked decision) with `/sdd:slice-start <SLICE-XXX>` instructions embedded plus the active spec, the rolling ledger (`SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md`), and the implementation plan path. **The subagent's prompt receives ONLY the ledger** (per OQ-6 default — strictly the ledger; individual retros are out of the prompt path). The subagent implements the slice end-to-end; its bounded return states "Slice X delivered. Acceptance check `<test name>` passes."
 
-2. **Per-slice 4b — Per-slice code review.** Spawn a general-purpose subagent with `/sdd:slice-review <SLICE-XXX>` instructions. Mandatory per slice — not deferred to end-of-feature.
+2. **Per-slice 4b — Per-slice code review.** Spawn a sdd-workhorse subagent with `/sdd:slice-review <SLICE-XXX>` instructions. Mandatory per slice — not deferred to end-of-feature.
 
-3. **Per-slice 4c — Address per-slice findings.** Spawn a fix subagent if the review found anything HIGH or MEDIUM. Standard fix-and-re-review pattern with the **per-slice review iteration cap (REQ-012)**: max 3 iterations with progress-stall check (HIGH must strictly decrease, OR MEDIUM when HIGH is zero). Mirrors Step 3c's panel-review cap exactly.
+3. **Per-slice 4c — Address per-slice findings.** Spawn a fix subagent (`subagent_type=sdd-workhorse`) if the review found anything HIGH or MEDIUM. Standard fix-and-re-review pattern with the **per-slice review iteration cap (REQ-012)**: max 3 iterations with progress-stall check (HIGH must strictly decrease, OR MEDIUM when HIGH is zero). Mirrors Step 3c's panel-review cap exactly.
 
    **On halt (cap exhausted or progress stall):**
    - The slice does NOT proceed to 4c.5 or 4c.6.
@@ -662,7 +662,7 @@ For each slice in order from the spec's `## Delivery Slices` section:
    - In any mode with slice-checkpoints `on`, surface the halt in the next pause message and do not advance to the next slice without user direction.
    - In `autonomous + --skip-slice-checkpoints` mode, **halt the entire flow** — analogous to the panel-review halt at Step 3c, since compounding unresolved findings across subsequent slices is too high a risk.
 
-4. **Per-slice 4c.5 — Slice retrospective (REQ-013).** Spawn a general-purpose subagent with `/sdd:slice-retro <SLICE-XXX>` instructions. The subagent writes `RETROSPECTIVE-SLICE-XXX-[feature-name]-YYYY-MM-DD.md` (audit trail; never modified after writing) and updates the rolling ledger in-place.
+4. **Per-slice 4c.5 — Slice retrospective (REQ-013).** Spawn a sdd-workhorse subagent with `/sdd:slice-retro <SLICE-XXX>` instructions. The subagent writes `RETROSPECTIVE-SLICE-XXX-[feature-name]-YYYY-MM-DD.md` (audit trail; never modified after writing) and updates the rolling ledger in-place.
 
    **Two-stage matcher contract (resolves M-2; REQ-013 + REQ-014):** the contract has TWO surfaces — the retro-body header (in the retrospective ARTIFACT) and the halt block (in `progress.md`). They are DIFFERENT strings written at DIFFERENT times by DIFFERENT actors:
 
@@ -807,7 +807,7 @@ When spawning each subagent, the orchestrator must include in the prompt:
 - Each subagent gets a fresh context window — no carryover from previous phases.
 - Sizing and bail-out are governed by **Orchestrator Discipline** (above): per-phase pre-splitting heuristics and the count-based Subagent Safety-Net Rule. Do not invent new context-management policy here.
 - Subagents should use Explore subagents (nested) for file discovery to preserve their own context.
-- Subagents should use general-purpose subagents (nested) for complex analysis tasks.
+- Subagents should use sdd-workhorse subagents (nested) for complex analysis tasks.
 - Each nested subagent counts toward the parent subagent's safety-net threshold.
 
 ### Error Handling
