@@ -752,19 +752,16 @@ Each specialist's vocabulary + named-anti-pattern payload remains canonical in `
 
 The SDD plugin's `sdd-workhorse` agent covers /sdd-flow's workhorse spawns, but Claude Code's built-in `general-purpose` subagent is also used by many other tools and skills outside SDD. By default, `general-purpose` inherits the parent session's model — which means heavy Opus parent sessions cascade Opus into every general-purpose spawn.
 
-To opt into Sonnet as your default for `general-purpose` across all projects on a given machine, create `~/.claude/agents/general-purpose.md` with the following content:
+To opt into Sonnet as your default for `general-purpose` across all projects on a given machine, install `~/.claude/agents/general-purpose.md`. A ready-to-use version ships at the marketplace root in this repo at [`agents/general-purpose.md`](../agents/general-purpose.md) — it sets `model: sonnet`, documents the Opus/Haiku per-spawn override semantics, and includes escalation/downscale guidance the subagent surfaces back to its orchestrator.
 
-```markdown
----
-name: general-purpose
-description: General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks. Defaults to Sonnet to keep cost predictable across non-adversarial work.
-model: sonnet
----
+Copy it into place with:
 
-You are a general-purpose subagent. You work autonomously on the task described in your prompt and return a bounded result to the orchestrator. Default to Sonnet; the orchestrator can override per-spawn via the Agent tool's `model` parameter — `model: "opus"` for high-stakes adversarial reasoning, `model: "haiku"` for read-only exploration where Sonnet would be overkill.
+```bash
+mkdir -p ~/.claude/agents
+cp ~/.claude/plugins/marketplaces/pablooliva/agents/general-purpose.md ~/.claude/agents/
 ```
 
-This is per-machine setup (the file lives in your home directory, not the plugin). The SDD plugin can't ship this for you because user-level agent files take precedence over plugin-shipped agents of the same name and we don't want to silently override your defaults.
+(Adjust the source path if you cloned the marketplace elsewhere.) This is per-machine setup — the file lives in your home directory, not in any plugin. The SDD plugin can't ship this for you because user-level agent files take precedence over plugin-shipped agents of the same name and we don't want to silently override your defaults.
 
 For SDD-flow specifically, this user-level setup is **not required** — `sdd-workhorse` handles SDD-flow's spawns regardless. The user-level setting matters for non-SDD workflows on the same machine.
 
