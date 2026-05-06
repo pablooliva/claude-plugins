@@ -382,7 +382,7 @@ If no cross-cutting decisions are detected, this step is a no-op — skip to 2c 
 
 #### 2c. Research Critical Review Subagent
 
-Spawn a **general-purpose subagent** with:
+Spawn an **`sdd-critical-reviewer`** subagent (defined in the SDD plugin at `sdd/agents/sdd-critical-reviewer.md`; defaults to Opus for adversarial reasoning) with:
 - **Instructions from:** `/sdd:critical-review` command (research phase section)
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present, for the Design Concept Fidelity check), `SDD/UBIQUITOUS_LANGUAGE.md` (if present, for vocabulary-alignment check)
 - **Outputs:** `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`
@@ -447,11 +447,11 @@ If `cross_cutting_decisions:` is empty or absent, skip this step entirely.
 
 #### 3c. Specialist Panel Review (NEW)
 
-Spawn a **general-purpose subagent** with:
+Spawn an **`sdd-critical-reviewer`** subagent (defined in the SDD plugin; defaults to Opus — the synthesis is the adversarial work) with:
 - **Instructions from:** `/sdd:spec-review-panel` command
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`. Panel composition comes from the spec's `review_panel:` frontmatter (defaults applied if absent).
 - **Outputs:** `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`
-- **Task:** Convene the specialist panel. The panel-review subagent itself spawns nested subagents for each specialist (per the command's Section 3), collects findings, applies severity aggregation, and emits a verdict.
+- **Task:** Convene the specialist panel. The panel-review subagent itself spawns nested subagents for each specialist using the per-domain agent types defined in the SDD plugin (`sdd-spec-security-specialist`, `sdd-spec-performance-specialist`, `sdd-spec-data-modeling-specialist`, `sdd-spec-api-contract-specialist`, `sdd-spec-module-depth-specialist`, `sdd-spec-reliability-specialist`, `sdd-spec-slice-integrity-specialist` — all Sonnet). The orchestrator's job (synthesis, severity aggregation, dedup, verdict) is the adversarial work that earns the Opus tier; the per-specialist anti-pattern application stays at Sonnet.
 
 **Act on the verdict:**
 
@@ -495,7 +495,7 @@ Each iteration:
 
 #### 3d. Spec Critical Review Subagent
 
-Spawn a **general-purpose subagent** with:
+Spawn an **`sdd-critical-reviewer`** subagent (defined in the SDD plugin; defaults to Opus) with:
 - **Instructions from:** `/sdd:critical-review` command (planning phase section)
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`
 - **Outputs:** `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`
@@ -563,7 +563,7 @@ Spawn a **general-purpose subagent** with:
 
 #### 4d. Implementation Critical Review Subagent
 
-Spawn a **general-purpose subagent** with:
+Spawn an **`sdd-critical-reviewer`** subagent (defined in the SDD plugin; defaults to Opus) with:
 - **Instructions from:** `/sdd:critical-review` command (implementation phase section)
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files, test files
 - **Outputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`
@@ -718,7 +718,7 @@ For each slice in order from the spec's `## Delivery Slices` section:
 
 After all slices in `## Delivery Slices` have completed their per-slice cycle, run:
 
-7. **End-of-feature 4d — Critical review across the assembled feature.** Spawn a general-purpose subagent with `/sdd:critical-review` instructions; reviews the whole assembled feature, not individual slices.
+7. **End-of-feature 4d — Critical review across the assembled feature.** Spawn an `sdd-critical-reviewer` subagent (defined in the SDD plugin; defaults to Opus) with `/sdd:critical-review` instructions; reviews the whole assembled feature, not individual slices.
 
 8. **End-of-feature 4e — Address critical review findings.** Standard fix subagent.
 
