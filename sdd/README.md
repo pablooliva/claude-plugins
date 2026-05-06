@@ -732,6 +732,21 @@ For issues, feature requests, or questions:
 
 This plugin is provided as-is for use with Claude Code. See the repository for license details.
 
+## Subagent Types Shipped (v2.1.0+)
+
+The plugin's `agents/` directory ships 8 named subagent types consumed by `/sdd:critical-review`, `/sdd:spec-review-panel`, and downstream skills (notably `agent-engineering`'s `/sdd-flow`):
+
+- **`sdd-critical-reviewer`** (Opus) — adversarial reviewer for research / spec / implementation phase artifacts; also the panel orchestrator's synthesis role.
+- **`sdd-spec-security-specialist`** (Sonnet) — `/sdd:spec-review-panel` `security` panel value.
+- **`sdd-spec-performance-specialist`** (Sonnet) — `performance` panel value.
+- **`sdd-spec-data-modeling-specialist`** (Sonnet) — `data-modeling` panel value.
+- **`sdd-spec-api-contract-specialist`** (Sonnet) — `api-contract` panel value.
+- **`sdd-spec-module-depth-specialist`** (Sonnet) — `module-depth` panel value.
+- **`sdd-spec-reliability-specialist`** (Sonnet) — `reliability` panel value.
+- **`sdd-spec-slice-integrity-specialist`** (Sonnet, self-skips for whole-feature mode) — `slice-integrity` panel value (per-slice mode only).
+
+Each specialist's vocabulary + named-anti-pattern payload remains canonical in `/sdd:spec-review-panel` Section 4 and is embedded by the orchestrator at spawn time; the agent files provide identity, model tier, severity rubric, and bounded-return discipline.
+
 ---
 
 **Built for Claude Code** - Enhancing AI-assisted development with a specification-driven systematic methodology.

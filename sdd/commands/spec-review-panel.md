@@ -50,7 +50,18 @@ review_panel: [security, performance, data-modeling, api-contract, module-depth,
 
 Each specialist reviews the spec **independently**. Generator-evaluator separation is mandatory: if this session produced the spec, the review specialists MUST run as subagents (fresh context per specialist) rather than self-review in the current session.
 
-Spawn one subagent per specialist via the `Task` tool with `subagent_type=general-purpose`. Pass each specialist the spec path, research path, and their specialist prompt (below). Collect findings.
+Spawn one subagent per specialist via the `Task` tool. Each panel value maps to a dedicated agent type defined in this plugin's `agents/` directory (the agent's frontmatter pre-loads its identity and model tier; pass the spec path, research path, and the specialist's full vocabulary + anti-pattern payload from Section 4 below):
+
+- `security` → `subagent_type=sdd-spec-security-specialist` (Sonnet)
+- `performance` → `subagent_type=sdd-spec-performance-specialist` (Sonnet)
+- `data-modeling` → `subagent_type=sdd-spec-data-modeling-specialist` (Sonnet)
+- `api-contract` → `subagent_type=sdd-spec-api-contract-specialist` (Sonnet)
+- `module-depth` → `subagent_type=sdd-spec-module-depth-specialist` (Sonnet)
+- `reliability` → `subagent_type=sdd-spec-reliability-specialist` (Sonnet)
+- `slice-integrity` → `subagent_type=sdd-spec-slice-integrity-specialist` (Sonnet; self-skips silently when `delivery_mode: whole-feature`)
+- `accessibility`, `cost`, `privacy` → no dedicated agent type yet; fall back to `subagent_type=general-purpose` and pass the inline specialist prompt generated per Section 4.6's P6 pattern.
+
+The orchestrator (which is itself an `sdd-critical-reviewer` Opus agent — see `/sdd:critical-review` and the `sdd-critical-reviewer` agent definition) collects each specialist's output and applies the synthesis rules in Section 5.
 
 If subagent spawning is not available or user explicitly requests in-session review (e.g., exploratory use), apply each specialist lens sequentially in a separate conversation turn — do not merge them.
 
