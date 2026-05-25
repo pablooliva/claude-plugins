@@ -31,6 +31,15 @@
       "author": {
         "name": "Pablo Oliva"
       }
+    },
+    {
+      "name": "langsmith-skills",
+      "source": "./langsmith-skills",
+      "description": "Skills that drive the LangSmith CLI to query/export traces, build evaluation datasets, and create evaluators for your own LLM apps. Requires the langsmith CLI and a LangSmith API key. Distinct from the official langsmith-tracing plugin.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Pablo Oliva"
+      }
     }
   ]
 }

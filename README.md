@@ -49,6 +49,18 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `/regression-eval-capture` command — scaffolds LangSmith regression eval datasets after a feature ships (Observability)
 - `/adr-capture` command — manual entry point for ADR capture
 
+### 4. LangSmith Skills — v0.1.0
+
+Three skills that drive the [`langsmith` CLI](https://github.com/langchain-ai/langsmith-cli) to trace, build evaluation datasets for, and evaluate **your own** LLM applications. Distinct from the official `langsmith-tracing` plugin (which traces Claude Code sessions themselves) — the two are complementary and can both be installed.
+
+**Key Features:**
+
+- `langsmith-trace` skill — add tracing to an app, or query/export trace and run data
+- `langsmith-dataset` skill — create, upload, and manage evaluation datasets
+- `langsmith-evaluator` skill — build LLM-as-judge or custom-code evaluation pipelines
+
+**Prerequisites:** the `langsmith` CLI binary and a `LANGSMITH_API_KEY`. See the [plugin README](./langsmith-skills/README.md) for setup.
+
 ## Installation
 
 To use these plugins with Claude Code, ensure you have Claude Code installed and configured, then reference this marketplace repository according to the Claude Code Plugins documentation.
