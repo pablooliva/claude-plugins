@@ -611,8 +611,8 @@ This plugin composes with the **agent-engineering** plugin's `sdd-flow` skill fo
 - **To stay aligned**, install or update both plugins together:
 
   ```bash
-  /plugin install https://github.com/poliva83/claude-plugins sdd
-  /plugin install https://github.com/poliva83/claude-plugins agent-engineering
+  /plugin install https://github.com/pablooliva/claude-plugins sdd
+  /plugin install https://github.com/pablooliva/claude-plugins agent-engineering
   ```
 
 The matching cross-reference lives in the agent-engineering plugin's README ("What's new in 0.4.0" + "Requires SDD plugin 2.0.0 or later" sections).

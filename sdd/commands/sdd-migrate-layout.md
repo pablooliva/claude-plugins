@@ -68,7 +68,7 @@ if [ -z "$PLUGIN_JSON" ] || [ ! -f "$PLUGIN_JSON" ]; then
   echo "Refusing migration: cannot locate the installed SDD plugin."
   echo "  Checked: \${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json (unset or missing)"
   echo "  Checked: ~/.claude/plugins/cache/*/sdd/*/.claude-plugin/plugin.json (no match)"
-  echo "Reinstall via: /plugin install https://github.com/poliva83/claude-plugins sdd"
+  echo "Reinstall via: /plugin install https://github.com/pablooliva/claude-plugins sdd"
   exit 1
 fi
 
@@ -77,7 +77,7 @@ MAJOR=$(echo "$VERSION" | cut -d. -f1)
 [ "$MAJOR" -ge 2 ] 2>/dev/null || { \
   echo "Refusing migration: /sdd-migrate-layout requires the SDD plugin at version 2.0.0 or later."; \
   echo "  Detected: $VERSION at $PLUGIN_JSON"; \
-  echo "Update via: /plugin install https://github.com/poliva83/claude-plugins sdd"; \
+  echo "Update via: /plugin install https://github.com/pablooliva/claude-plugins sdd"; \
   echo "Then re-run /sdd-migrate-layout."; \
   exit 1; }
 ```
@@ -87,7 +87,7 @@ Refusal text (used when the version gate trips):
 ```
 Refusing migration: /sdd-migrate-layout requires the SDD plugin at version 2.0.0 or later.
 The migration ships in the 2.0.0 release; older versions of the plugin write artifacts at the legacy paths and migrating now would orphan them.
-Update via: /plugin install https://github.com/poliva83/claude-plugins sdd
+Update via: /plugin install https://github.com/pablooliva/claude-plugins sdd
 Then re-run /sdd-migrate-layout.
 ```
 
