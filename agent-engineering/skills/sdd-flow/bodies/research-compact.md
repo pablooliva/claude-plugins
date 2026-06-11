@@ -1,0 +1,128 @@
+# Research Progress Compaction
+
+You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. You cannot spawn subagents and cannot invoke slash commands; all work happens inline in your own context.
+
+You are reading this because your Reads-counter safety-net tripped mid-phase. Follow these compaction instructions to write `SDD/orchestration/compacted/research-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` with the compaction file path and where you left off, then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
+
+---
+
+RESEARCH PROGRESS COMPACTION
+
+Context is getting overloaded during research phase. Create permanent compaction record to preserve your work while freeing up context.
+
+## Process
+
+### 1. Create Timestamped Compaction File
+
+Write to: `SDD/orchestration/compacted/research-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
+
+- `[YYYY-MM-DD_HH-MM-SS]` is the current timestamp (24-hour time)
+- Example: `research-compacted-2025-10-01_14-30-45.md`
+
+### 2. Document Structure
+
+Use the following template:
+
+```markdown
+# Research Compaction - [Feature Name] - [Date/Time]
+
+## Session Context
+
+- Compaction trigger: [context %] utilization
+- Research focus: [what we were investigating]
+- Session duration: [approximate time/interactions]
+
+## Recent Investigations
+[List specific areas/files investigated with file:line references where relevant]
+- Area 1: [brief description of what was discovered]
+- Area 2: [brief description of what was discovered]
+
+**Avoid large code blocks** - use file:line references instead
+
+## Research Progress
+- **Completed**: [research areas fully understood and documented]
+- **In Progress**: [current investigation areas and their status]
+- **Planned**: [remaining areas to investigate]
+
+## System Behavior Discovered
+[Key insights about how the system works]
+- Architecture patterns: [important patterns found]
+- Data flow: [how data moves through the system]
+- Integration points: [how components interact]
+- Performance characteristics: [bottlenecks, optimization opportunities]
+
+## Critical Learnings
+[Important discoveries that must be preserved - patterns, root causes, architectural insights]
+- Critical files located: [specific paths:line numbers that matter]
+- Production issues found: [concrete problems with issue numbers]
+- Stakeholder insights: [what we learned about user/business needs]
+- Technical constraints: [limitations discovered]
+- Edge cases identified: [scenarios that need special handling]
+
+## Critical Review Status
+[Check for critical review documents in SDD/reviews/CRITICAL-RESEARCH-*.md]
+- Review performed: [yes/no]
+- Review document: [path to CRITICAL-RESEARCH-*.md if exists]
+- Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
+- Actions taken: [findings already addressed during this session]
+- Pending actions: [findings that still need attention in continuation]
+
+## Critical References
+[2-3 most important files/documents needed to understand this work]
+- Key implementation file: [path to core file]
+- Related documentation: [path if applicable]
+- Research document in progress: SDD/research/RESEARCH-[###]-[feature-name].md
+- Critical review (if exists): SDD/reviews/CRITICAL-RESEARCH-[feature-name]-YYYYMMDD.md
+
+## Continuation Priorities
+
+**Essential Files to Reload:**
+- [Specific paths and line ranges needed to resume work]
+
+**Current Focus:**
+- Exact investigation being conducted: [specific area/question]
+- Blocking questions: [if any]
+
+**Research Priorities:**
+1. [Specific next area to investigate]
+2. [Following investigation]
+3. [Subsequent investigation]
+
+**Outstanding Research Questions:**
+- [ ] [Question not yet answered]
+- [ ] [Area not yet explored]
+- [ ] [Hypothesis not yet validated]
+- [ ] [Stakeholder input needed]
+
+## Other Notes
+[Any additional context, investigation approaches to try, or important information for continuation]
+```
+
+### 3. Update Current Progress
+
+Also update `SDD/orchestration/progress.md` with:
+
+- Latest research state
+- Current blocking questions
+- Continuation point
+- Reference to this compaction file
+
+Append a `## PARTIAL: needs continuation` block that includes the compaction file path and the exact point where work stopped. Do not overwrite existing entries — append only.
+
+---
+
+## Guidelines
+
+- **Be thorough but concise** - capture key discoveries without overwhelming context
+- **Avoid excessive code snippets** - prefer file:line references over large code blocks
+- **Include precise references** - enable quick reload of critical files
+- **Document insights** - preserve understanding of system behavior and patterns
+- **Mark clear status** - distinguish completed vs. in-progress vs. planned research
+
+This preserves complete research journey while enabling fresh context continuation.
+
+## After Compaction
+
+After writing the compaction file and appending the `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md`, return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required, including the compaction file path and the exact point where work stopped.
+
+Research phase is incomplete — the orchestrator will spawn a continuation agent to resume from the compaction record.
