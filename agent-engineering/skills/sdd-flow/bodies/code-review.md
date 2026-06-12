@@ -82,7 +82,7 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 
 #### Context Management Approach
 
-- [ ] Context utilization stayed under 40% target
+- [ ] Safety-Net discipline followed (counter updated; any trips handled via handoff)
 - [ ] Large file handling strategies documented
 - [ ] Context handoffs between phases are clean
 - [ ] Future modification path is clear
@@ -339,7 +339,7 @@ Create `SDD/reviews/REVIEW-XXX-[feature-name]-YYYYMMDD.md`:
 - [ ] RESEARCH-XXX-[feature-name] found and complete
 - [ ] SPEC-XXX-[feature-name] found and complete
 - [ ] IMPLEMENTATION-PLAN-XXX files preserved
-- [ ] Context utilization <40%
+- [ ] Safety-Net discipline followed (no unhandled trips)
 
 ## Specification Alignment (70%)
 [Detailed alignment analysis]

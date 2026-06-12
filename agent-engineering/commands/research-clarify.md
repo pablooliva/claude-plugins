@@ -8,11 +8,6 @@ This is **input clarification, not codebase research**. `/research-start` invest
 
 If the feature is already crisply specified (e.g., a clear ticket with explicit acceptance criteria, or a small well-understood change), skip this command and go straight to `/research-start`.
 
-IMPORTANT: This command requires Claude Opus. Before proceeding, check your current model ID. If you are NOT running on a Claude Opus model, immediately:
-
-  1. Warn the user: "WARNING: This command requires Claude Opus but you're currently using [model name]. Please switch to Opus and try again."
-  2. STOP all further processing.
-
 ## 1. Load Existing Glossary (If Present)
 
 If `SDD/UBIQUITOUS_LANGUAGE.md` exists, load it before interviewing. Use the project's canonical domain terms in your questions and in the resulting CLARIFICATION document — do not introduce synonyms that fragment vocabulary already established in prior cycles. If the user's words conflict with the glossary, surface that mismatch as a topic to resolve during the interview (either rename the glossary entry or have the user adopt the canonical term).

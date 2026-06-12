@@ -62,7 +62,15 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 1.0.0.
+Version 1.0.1.
+
+### What's new in 1.0.1
+
+Post-review fixes to 1.0.0 (no behavioral redesign):
+
+- **Per-slice tracker scaffolding.** New per-slice step 4a.0: the orchestrator spawns `bodies/implementation.md` in scaffold-only mode to create the IMPLEMENTATION-PLAN with its `## Slice Progress` table before the first slice (previously nothing created it, and `slice-start` would halt per FAIL-007). The body's per-slice branch is now explicitly scaffold-only — it never implements slices inline.
+- **Interactive `research-clarify` model check stripped** (was carried over from the source verbatim).
+- **Consistency fixes:** compaction files and the continuation body now agree on `## Continuation Priorities`; the default panel is enumerated (`security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, + `slice-integrity` in per-slice mode); the tracker template regains its `## Context Management → Essential Files Loaded` section for handoffs; panel specialists return bounded severity counts; residual context-percentage fields replaced with Safety-Net wording; assorted stale labels and cross-references cleaned up.
 
 ### What's new in 1.0.0
 

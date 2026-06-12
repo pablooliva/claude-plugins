@@ -110,7 +110,7 @@ Regression evaluator for [Feature Name].
 Spec reference: SDD/requirements/SPEC-[###]-[feature-name].md
 Dataset: regression-[feature-slug]
 
-IMPORTANT (from langsmith-evaluator skill's Golden Rule):
+IMPORTANT (Golden Rule):
 Before trusting this evaluator, run the feature's entry point on 2-3 real
 inputs, inspect the actual output shape, and verify the extraction logic
 in `_extract_output` matches what the agent actually produces.
@@ -180,7 +180,7 @@ Return a JSON object: {{"score": 0 or 1, "comment": "explanation"}}"""
  * Spec reference: SDD/requirements/SPEC-[###]-[feature-name].md
  * Dataset: regression-[feature-slug]
  *
- * IMPORTANT (from langsmith-evaluator skill's Golden Rule):
+ * IMPORTANT (Golden Rule):
  * Before trusting this evaluator, run the feature's entry point on 2-3 real
  * inputs, inspect the actual output shape, and verify the extraction logic
  * in `extractOutput` matches what the agent actually produces.

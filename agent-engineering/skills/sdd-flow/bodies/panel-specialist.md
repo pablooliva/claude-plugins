@@ -2,7 +2,7 @@
 
 You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. You cannot spawn subagents and cannot invoke slash commands; all work happens inline in your own context.
 
-Your spawn prompt names exactly ONE panel value (e.g. `security`). Apply ONLY the matching Section (e.g. Section 4.1 for security) to the specification under review. Write your findings to the PANEL-FINDINGS path given in your prompt (form: `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md`). You write exactly one findings file; you do NOT synthesize and you spawn nothing. A separate synthesis subagent will read your findings file from disk.
+Your spawn prompt names exactly ONE panel value (e.g. `security`). Apply ONLY the matching Section (e.g. Section 4.1 for security) to the specification under review. Write your findings to the PANEL-FINDINGS path given in your prompt (form: `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md`). You write exactly one findings file; you do NOT synthesize and you spawn nothing. A separate synthesis subagent will read your findings file from disk. After writing the file, return a bounded summary to the orchestrator: ≤200 words — finding counts (HIGH=N / MEDIUM=N / LOW=N), top finding titles, and your findings-file path. Do not paste finding bodies into your return.
 
 ## Inputs
 

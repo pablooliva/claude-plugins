@@ -182,6 +182,12 @@ Create the implementation tracking document using this enhanced template. **The 
 - [ ] User documentation: [file path or N/A]
 - [ ] Configuration documentation: [file path or N/A]
 
+## Context Management
+
+### Essential Files Loaded
+- [file path]:[lines] - [purpose]
+- [file path]:[lines] - [purpose]
+
 ## Session Notes
 
 ### Critical Discoveries
@@ -215,7 +221,7 @@ Create the implementation tracking document using this enhanced template. **The 
 2. **Branch on `delivery_mode:`:**
    - The mode was already resolved in Initial Context Load step 4. Branch behavior here:
    - **`whole-feature` (default):** Implement the feature in a single tracked pass against the full REQ/EDGE/FAIL list. Update the IMPLEMENTATION-PLAN's `Specification Alignment` checkboxes as you complete each item. Behavior is bit-for-bit identical to the pre-2.0.0 implementation-tracker flow apart from the filename/path change. **Omit the `## Slice Progress` section from the tracker entirely.**
-   - **`per-slice`:** Populate the `## Slice Progress` table from the SPEC's `## Delivery Slices` section (one row per `SLICE-XXX`, copying `Name` and `Acceptance check` from the SPEC; `Status` initialized to `Not Started`). **Do NOT begin implementing in a single tracked pass.** Instead, work through each slice sequentially inline: set the slice's row to `In Progress`, implement the slice, run the review-and-fix loop, update `Status`/`Test result`/`Notes`, record a retro note in Session Notes, then move to the next slice. The `## Slice Progress` table enforces forward-only state transitions.
+   - **`per-slice`:** **Scaffold-only mode — you implement nothing.** Populate the `## Slice Progress` table from the SPEC's `## Delivery Slices` section (one row per `SLICE-XXX`, copying `Name` and `Acceptance check` from the SPEC; `Status` initialized to `Not Started`; the table enforces forward-only state transitions). Complete the rest of the tracker scaffold (including the web-facing determination from Implementation Process step 3, if determinable from the SPEC), append your progress.md entry, and **return**. The orchestrator drives the per-slice cycle (implement → review → retro → commit, one subagent per slice) from the table you scaffolded — slice subagents do all implementation. Skip the remaining Implementation Process steps; they are whole-feature-only. If your prompt marks this run as a post-replan re-scaffold, write a FRESH `## Slice Progress` table from the revised SPEC (the orchestrator has already archived the prior table under `## Archived Slice Progress (pre-replan)`).
 
 3. **Set Up Development Environment:**
    - Load essential files identified in specification

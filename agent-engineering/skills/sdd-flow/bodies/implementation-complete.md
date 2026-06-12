@@ -217,7 +217,7 @@ Update `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md`:
 - **Implementation Duration:** [X days]
 - **Author:** Claude (with [user's name if known])
 - **Status:** Complete ✓
-- **Final Context Utilization:** [X]% (maintained <40% target)
+- **Safety-Net Status:** [no trips | N mid-phase handoffs]
 ```
 
 #### Add Completion Summary
@@ -489,10 +489,9 @@ Update `SDD/orchestration/progress.md`:
 - Security requirements: ✓ Validated
 - Documentation: ✓ Complete
 
-### Subagent Utilization
-- Total delegations: [X]
-- Context saved through delegation: ~[Y]%
-- Most valuable delegation type: [Explore/General-purpose]
+### Inline Investigation Summary
+- Key investigations performed inline: [brief list]
+- Safety-Net handoffs required: [none | N]
 
 ### Implementation Metrics
 - Duration: [X] days

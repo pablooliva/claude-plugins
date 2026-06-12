@@ -41,7 +41,7 @@ If any critical information is missing, note the gap in `SDD/orchestration/progr
 1. **Load Research Context:**
    - Research document: `SDD/research/RESEARCH-[###]-[feature-name].md`
    - Files from "Essential Files to Reload" section in compaction
-   - Recent investigation areas from "Next Session Priorities"
+   - Recent investigation areas from "Continuation Priorities"
 
 2. **Verify Research State:**
    - Review "Research Progress" section (completed/in-progress/planned)
@@ -113,7 +113,7 @@ If any verification fails, document the issue in `SDD/orchestration/progress.md`
 
 2. **Update Progress File:**
    - Add new accomplishments to `SDD/orchestration/progress.md`
-   - Update "Next Session Priorities" section
+   - Update "Continuation Priorities" section
    - Note any new blocking items discovered
    - **IMPORTANT: DO NOT reset or delete previous phase information — append to it**
 
@@ -142,7 +142,7 @@ If the phase completes fully, return a bounded result (≤200 words + artifact p
 3. **Document Incremental Progress:**
    - Update `SDD/orchestration/progress.md` after each significant milestone
    - Note any new discoveries or blockers immediately
-   - Keep "Next Session Priorities" current
+   - Keep "Continuation Priorities" current
 
 ## Important Notes
 

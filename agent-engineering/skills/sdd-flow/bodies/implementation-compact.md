@@ -72,7 +72,7 @@ Use the following template:
 - Key implementation file: [path to core file]
 - Critical review (if exists): SDD/reviews/CRITICAL-IMPL-[feature-name]-YYYYMMDD.md
 
-## Next Session Priorities
+## Continuation Priorities
 
 **Essential Files to Reload:**
 - [Specific paths and line ranges needed to resume work]

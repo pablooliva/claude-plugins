@@ -19,6 +19,17 @@ A **separate axis** from the supervised/autonomous (phase-boundary) axis. Defaul
 
 ---
 
+## Per-slice 4a.0 — Scaffold the implementation tracker (once per feature)
+
+Before the first slice, check whether `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` already exists with a `## Slice Progress` table (it will, when resuming). If absent, spawn ONE **`agent-engineering:sdd-workhorse`** subagent:
+- **Body:** `bodies/implementation.md` — its `per-slice` branch is **scaffold-only**: create the tracker with the `## Slice Progress` table populated from the spec's `## Delivery Slices` (all rows `Not Started`), then return without implementing anything.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `progress.md`.
+- **Output:** the IMPLEMENTATION-PLAN tracker; append `progress.md`.
+
+After a `--replan`, re-run this step with a post-replan note in the prompt — the orchestrator archives the old table under `## Archived Slice Progress (pre-replan)` first (see `phases/protocols.md`), and the subagent writes a FRESH table from the revised spec. Without this scaffold, `bodies/slice-start.md` halts per FAIL-007 (missing `## Slice Progress` table).
+
+---
+
 ## Per-slice cycle (runs once per `SLICE-XXX`, in order)
 
 ### Per-slice 4a — Implement slice

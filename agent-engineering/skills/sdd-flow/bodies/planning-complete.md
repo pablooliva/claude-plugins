@@ -83,7 +83,7 @@ Confirm that `SDD/requirements/SPEC-[###]-[feature-name].md` contains all requir
 ### Implementation Notes
 
 - [ ] Suggested implementation approach provided
-- [ ] Areas for subagent delegation marked
+- [ ] Areas requiring careful inline analysis marked
 - [ ] Critical implementation considerations from research included
 
 ## 2. Stakeholder Alignment Verification
@@ -136,7 +136,7 @@ Evaluate specification readiness for implementation phase:
 
 - [ ] Context management plan documented (<40% utilization)
 - [ ] Essential files identified with line ranges
-- [ ] Subagent delegation opportunities marked
+- [ ] Areas requiring careful inline analysis marked
 - [ ] Implementation approach provides clear direction
 
 ### Blocking Items Resolved

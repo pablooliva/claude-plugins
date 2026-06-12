@@ -34,7 +34,7 @@ If `cross_cutting_decisions:` is empty/absent, skip this step.
 
 ## 3c. Specialist Panel Review — two stages
 
-Panel composition comes from the spec's `review_panel:` frontmatter (defaults applied if absent; defaults include `module-depth`).
+Panel composition comes from the spec's `review_panel:` frontmatter. If absent or empty, apply the **default panel**: `security`, `performance`, `data-modeling`, `api-contract`, `module-depth` — plus `slice-integrity` when the spec declares `delivery_mode: per-slice`. (Other available values: `reliability`, `accessibility`, `cost`, `privacy`.)
 
 ### Stage 1 — specialists in parallel
 

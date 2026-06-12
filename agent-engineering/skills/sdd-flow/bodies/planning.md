@@ -1,10 +1,10 @@
 # Initialize Planning/Specification Phase
 
+You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. You cannot spawn subagents and cannot invoke slash commands; all work happens inline in your own context.
+
 SPECIFICATION PHASE INITIALIZATION
 
 Starting planning phase based on completed research.
-
-You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. You cannot spawn subagents and cannot invoke slash commands; all work happens inline in your own context.
 
 ## Initial Context Load
 
@@ -144,7 +144,7 @@ delivery_mode: per-slice
 ## Implementation Constraints
 
 ### Context Requirements
-- **Maximum context utilization:** <40% during implementation
+- **Context discipline:** implementation subagents operate under the sdd-flow Safety-Net Reads budget (no percentage self-checks)
 - **Essential files for implementation:**
   - [file path]:lines [why needed]
   - [file path]:lines [why needed]

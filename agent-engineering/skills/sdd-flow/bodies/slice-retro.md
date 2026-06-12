@@ -323,9 +323,9 @@ The reconcile uses the FULL retro corpus for the active feature, NOT just the na
 
 This body recognizes ONE flag.
 
-| Flag | Semantics | Default (without flag) |
-|------|-----------|------------------------|
-| `--reconcile-ledger SLICE-XXX` | Re-reads every `RETROSPECTIVE-SLICE-XXX-...md` for the active feature; rebuilds `LEARNINGS-FEATURE-[feature-name].md` per the 8-step algorithm above. | Writes a new retro + updates ledger (or refuses per EDGE-014 if a retro already exists). |
+| Flag | Semantics | Default (without flag) | Supervised flow | Autonomous flow |
+|------|-----------|------------------------|-----------------|-----------------|
+| `--reconcile-ledger SLICE-XXX` | Re-reads every `RETROSPECTIVE-SLICE-XXX-...md` for the active feature; rebuilds `LEARNINGS-FEATURE-[feature-name].md` per the 8-step algorithm above. | Writes a new retro + updates ledger (or refuses per EDGE-014 if a retro already exists). | The orchestrator passes the flag only on an explicit user recovery directive; produce a diff between pre- and post-reconcile ledger and surface it via your bounded return so the user can confirm at the next checkpoint. | Same algorithm; the diff-confirm step degrades to "write without prompt" but the change is logged to `progress.md`. |
 
 The `--reconcile-` prefix is the convention for "reconstruct derived state from authoritative sources" (the retros are authoritative; the ledger is derived). Future flags following the same pattern (`--reconcile-progress`, `--reconcile-counters`) inherit this convention.
 
