@@ -1,6 +1,6 @@
 # ADR Capture — Subagent Body
 
-You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. You cannot spawn subagents and cannot invoke slash commands; all work happens inline in your own context.
+You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
 Your prompt names the input doc (research doc or spec), the existing `SDD/adr/` directory, and whether you are in CONFIRM mode (supervised ambient detection at research) or AUTO mode (autonomous, or frontmatter-declared decisions which are pre-approved). In CONFIRM mode: for each candidate ADR, instead of asking the user, append an `## Awaiting ADR Confirmation` block (the proposed ADR title + summary + options) to `SDD/orchestration/progress.md` and return to the orchestrator WITHOUT writing the ADR. In AUTO mode: write every ADR that passes the scope test directly, then regenerate `SDD/adr/README.md`. If no cross-cutting decision is detected, do nothing and return a no-op note.
 

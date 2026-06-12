@@ -1,6 +1,6 @@
 # Mid-Phase Handoff Continuation
 
-You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. You cannot spawn subagents and cannot invoke slash commands; all work happens inline in your own context.
+You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
 You are a continuation subagent spawned because a prior phase subagent tripped the safety-net and bailed out. Read the compaction file named in your prompt FIRST, resume the interrupted phase from its 'Current Focus' section, and inherit the same Reads-counter safety-net (you may bail out again, producing another handoff).
 

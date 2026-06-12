@@ -1,6 +1,6 @@
 # Retrospective for a Vertical Slice
 
-You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. You cannot spawn subagents and cannot invoke slash commands; all work happens inline in your own context.
+You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
 You are running the per-slice retrospective for a single `SLICE-XXX` within a feature whose SPEC declares `delivery_mode: per-slice`. This body writes TWO artifacts in a strict order (per OQ-E conservative default — FIRST-WRITE-WINS): the immutable `RETROSPECTIVE-SLICE-XXX-...md` audit trail FIRST, then the rolling `LEARNINGS-FEATURE-[feature-name].md` ledger update SECOND.
 

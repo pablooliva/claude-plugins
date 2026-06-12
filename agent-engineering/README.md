@@ -22,9 +22,9 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 
 ### Architecture (1.0.0)
 
-- **One-level spawning.** Claude Code permits exactly one level of subagent nesting. Every spawn happens at the orchestrator (main-conversation) level; spawned subagents cannot spawn subagents and cannot invoke slash commands or skills. Every body is pre-adapted for inline execution.
+- **One-level spawning.** Every spawn happens at the orchestrator (main-conversation) level; spawned subagents must not spawn subagents and must not invoke slash commands or skills. Every body is pre-adapted for inline execution. *(Was a platform limit on Claude Code ≤2.1.171; since 2.1.172 the platform allows nesting to depth 5 — the flat design is retained deliberately. See `proposals/nested-subagents-analysis-2026-06-12.md` before refactoring toward nesting.)*
 - **Two-stage specialist panel.** During planning, the orchestrator spawns one specialist subagent per `review_panel:` value in parallel (Stage 1; each writes a `PANEL-FINDINGS-*` file), then one `sdd-critical-reviewer` synthesis subagent reads those files from disk and emits the verdict (Stage 2). The bounded fix-and-re-review loop (max 3 iterations, progress-stall halt) is unchanged.
-- **Reads-only safety net.** A spawned subagent can never spawn, so there is no nested-subagent counter — the only safety-net signal is file Reads (default trigger >15; >20 for implementation chunks). On trip, the subagent compacts and hands off.
+- **Reads-only safety net.** Spawned subagents do not spawn in this flow, so there is no nested-subagent counter — the only safety-net signal is file Reads (default trigger >15; >20 for implementation chunks). On trip, the subagent compacts and hands off.
 - **Per-slice authoring default.** The planning body sets `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices (then `whole-feature` with a one-line justification). The PARSE default (frontmatter absent → whole-feature) is unchanged for backward compatibility.
 - **Progressive disclosure.** `SKILL.md` is a slim orchestrator core; per-phase detail lives in `skills/sdd-flow/phases/` (`setup`, `research`, `planning`, `implementation-whole-feature`, `implementation-per-slice`, `protocols`), read at each phase boundary.
 
@@ -62,7 +62,17 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 1.0.2.
+Version 1.0.3.
+
+### What's new in 1.0.3
+
+Hardening from the first live test of the 1.0.2 rotation procedure (three real-fixture runs; findings in `proposals/rotation-test-findings-2026-06-12.md`) plus annotations for the Claude Code 2.1.172 nested-subagents platform change:
+
+- **Byte-fidelity invariant (F1).** Everything that remains in the live `progress.md` after a rotation is preserved byte-identical — never retyped, reflowed, re-encoded, or summarized; the only newly written text is the `## Current State` head and the rotation stamp. (The live test caught a rotation silently mutating 55 kept lines, including meaning changes.)
+- **Sub-feature archival granularity (F2).** Size rotation now also archives completed-phase history of the still-active feature (phases with a recorded COMPLETE banner); blocks of the active phase always stay live. Previously a single long-running feature could keep the live file over the ~500-line target indefinitely.
+- **Open halt-header matching (F3).** Pending halt blocks are matched by prefix (`## Awaiting *`, `## PARTIAL*`), not a fixed five-entry list — real files contain custom halt headers.
+- **Literal phase markers (F4).** The rewritten `## Current State` must carry canonical phase-state lines verbatim (e.g., `Implementation Phase - COMPLETE`) — Phase Detection matches these literal markers, not paraphrases.
+- **Nested-subagents annotations.** Claude Code 2.1.172 (2026-06-09) allows nested subagent spawning to depth 5; the flow's one-level rule is now documented everywhere as a deliberate design contract rather than a platform fact, and shipped agents are instructed not to spawn even where the tool works. Analysis, empirical results (including a `general-purpose` spawn-delivery failure on 2.1.174 — prefer named subagent types), and refactor gate criteria: `proposals/nested-subagents-analysis-2026-06-12.md`. The flat architecture is unchanged.
 
 ### What's new in 1.0.2
 

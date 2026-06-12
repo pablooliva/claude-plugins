@@ -1,6 +1,6 @@
 # Regression Eval Capture
 
-You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. You cannot spawn subagents and cannot invoke slash commands; all work happens inline in your own context.
+You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
 Scaffold a LangSmith regression eval dataset for a just-shipped feature so future model or prompt changes can be tested against golden examples. This sets up the infrastructure; it does NOT populate the dataset with examples. Real golden examples require real runtime data, which only accumulates after the feature runs in production.
 

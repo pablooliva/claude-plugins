@@ -156,10 +156,12 @@ Update/create with:
 
 Compaction shrinks the *session*; `progress.md` is durable state that every future session and subagent re-reads — compacting context without rotating an oversized progress file re-imports the same cost next session. If `progress.md` exceeds **~500 lines**:
 
-1. Create `SDD/orchestration/progress-archive/` if absent; move completed-feature history and verbose *resolved* blocks to `progress-archive/progress-[scope]-[YYYY-MM-DD_HH-MM-SS].md`.
-2. Rewrite the live head as a bounded `## Current State` (active feature, phase status, artifact pointers, "History archived to <path>").
-3. **Carry forward verbatim, as the latest blocks, anything still pending** (`## Awaiting *`, `## PARTIAL: needs continuation`) — resumption matches the latest block in the live file and never reads archives.
+1. Create `SDD/orchestration/progress-archive/` if absent; move completed-feature history and verbose *resolved* blocks (including completed-phase history of the still-active feature) to `progress-archive/progress-[scope]-[YYYY-MM-DD_HH-MM-SS].md`.
+2. Rewrite the live head as a bounded `## Current State` (active feature, phase status with canonical phase-state lines carried verbatim, artifact pointers, "History archived to <path>").
+3. **Carry forward verbatim, as the latest blocks, anything still pending** (any `## Awaiting *` or `## PARTIAL*` header — prefix match, not a fixed list) — resumption matches the latest block in the live file and never reads archives.
 4. Note the rotation in the new head.
+
+Everything that remains in the live file must stay **byte-identical** — move content mechanically, never retype, reflow, or summarize it; the only newly written text is the `## Current State` head and the rotation note.
 
 ## Guidelines
 

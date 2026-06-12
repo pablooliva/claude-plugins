@@ -22,7 +22,11 @@ The main conversation is a lightweight **orchestrator**: it spawns one subagent 
 
 ## The one-level-spawning contract (read this first)
 
-Claude Code permits **exactly one level of subagent nesting**. Every spawn happens here, at the orchestrator (main-conversation) level. **Spawned subagents cannot spawn subagents** (the Agent/Task tool is inert inside them) and **cannot invoke slash commands or skills.** Consequences that shape this whole skill:
+This flow uses **exactly one level of subagent nesting**. Every spawn happens here, at the orchestrator (main-conversation) level. **Spawned subagents must not spawn subagents** and **must not invoke slash commands or skills.**
+
+> **Version note (2026-06-12):** on Claude Code ≤2.1.171 this was a platform limit (the Agent/Task tool was inert inside subagents). From **2.1.172** (2026-06-09) the platform allows nested subagents up to depth 5 — the flow **deliberately does not use it** (flat orchestration keeps every spawn observable and all state in `progress.md`). Do not "fix" bodies or agents to delegate; see `proposals/nested-subagents-analysis-2026-06-12.md` before any refactor.
+
+Consequences that shape this whole skill:
 
 - The orchestrator does discovery sweeps inline only via the subagent it spawns; subagents do their own file discovery **inline** (Grep/Glob/Read), never by delegating.
 - There is **no nested-subagent counter** anywhere. The only safety-net counter is **Reads**.
@@ -104,7 +108,7 @@ evals/{README.md, datasets/, evaluators/, run_functions/}   # only when eval_req
 `progress.md` sits in the read path of nearly every spawn and of phase detection — its size is paid on every read. Three rules keep it bounded:
 
 1. **Rotate at feature completion (Step 4j).** Move the finished feature's full history to `SDD/orchestration/progress-archive/progress-SPEC-[###]-[YYYY-MM-DD_HH-MM-SS].md`; leave a one-line summary (feature, outcome, artifact pointers). The live file carries full history ONLY for the active feature.
-2. **Checkpoint on size.** If the live file exceeds **~500 lines**, rotate at the next quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6): archive resolved verbose blocks, rewrite the head as a bounded `## Current State` (phase status, artifact pointers, archive path). **Pending halt blocks (`## Awaiting *`, `## PARTIAL: needs continuation`) are carried forward verbatim as the latest blocks** — phase detection matches the latest block in the live file and never scans archives.
+2. **Checkpoint on size.** If the live file exceeds **~500 lines**, rotate at the next quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6): archive resolved verbose blocks (including completed-phase history of the still-active feature), rewrite the head as a bounded `## Current State` (phase status with canonical phase-state lines verbatim, artifact pointers, archive path). **Pending halt blocks (`## Awaiting *`, `## PARTIAL*` — prefix match, not a fixed list) are carried forward verbatim as the latest blocks** — phase detection matches the latest block in the live file and never scans archives. Everything kept in the live file stays byte-identical; only the new head and rotation stamp are newly written text.
 3. **Bounded appends.** Subagent progress entries are **≤10 lines**: status, artifact paths, one-line key decision, anything pending. Narrative belongs in the artifact the subagent wrote, referenced by path.
 
 Rotation is **orchestrator-only**, happens only between spawns (never mid-subagent), and is recorded in the fresh head. Append-only applies *within* a generation; rotation starts a new one. Full procedure: `phases/protocols.md` → Progress Rotation.
@@ -117,7 +121,7 @@ Rotation is **orchestrator-only**, happens only between spawns (never mid-subage
 >
 > **Counter tracking.** You cannot inspect your own tool-call history. The orchestrator gives you a **dedicated counter file** (path in your prompt under "Your counter file"). It holds exactly one line: `Reads: 0/15`. Update it immediately after each Read; check it (cheap Read) before each new Read — that is the trigger evaluation. The counter file is scoped to your run only; never shared, never written to `progress.md`.
 
-**Orchestrator obligation per spawn of a phase-execution / fix / continuation subagent:** (1) embed the Safety-Net Rule verbatim; (2) create the counter file at `SDD/orchestration/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with the single line `Reads: 0/15` (use `/20` for implementation chunks) and pass its path under "Your counter file"; (3) pass the matching compact body path (`SKILL_ROOT/bodies/[phase]-compact.md`) under "Compact instructions — use only if the Safety-Net trips". Counter is **Reads-only** — a subagent can never spawn, so there is no nested-subagent count. Defaults (15 / 20) are tunable without changing the protocol.
+**Orchestrator obligation per spawn of a phase-execution / fix / continuation subagent:** (1) embed the Safety-Net Rule verbatim; (2) create the counter file at `SDD/orchestration/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with the single line `Reads: 0/15` (use `/20` for implementation chunks) and pass its path under "Your counter file"; (3) pass the matching compact body path (`SKILL_ROOT/bodies/[phase]-compact.md`) under "Compact instructions — use only if the Safety-Net trips". Counter is **Reads-only** — subagents are contractually barred from spawning (a platform limit on Claude Code ≤2.1.171, a deliberate design rule from 2.1.172 onward), so there is no nested-subagent count. Defaults (15 / 20) are tunable without changing the protocol.
 
 ### Spawn-prompt construction checklist
 
