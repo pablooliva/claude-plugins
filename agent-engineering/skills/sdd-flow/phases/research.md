@@ -57,6 +57,8 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent (fix subagent — no bod
 
 The **orchestrator** runs the commit directly (not a subagent), per `commands/commit.md` conventions — **no co-author attribution**. Include any ADRs written in 2b.
 
+If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation) — a phase-boundary commit is a quiet point.
+
 ---
 
 ## 2f. Supervised Checkpoint (supervised mode only)

@@ -103,6 +103,8 @@ Wait for confirmation before committing. In **autonomous mode**, proceed directl
 
 The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts, and any eval scaffolding from 4g. No co-author attribution.
 
+If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
+
 ---
 
 ## 4j. Completion Announcement  *(shared)*
@@ -112,3 +114,5 @@ The **orchestrator** runs the commit per `commands/commit.md` — all implementa
 > [If eval_required and scaffold succeeded:] Regression eval dataset `regression-[feature-slug]` created on LangSmith (empty). Populate with golden examples after ≥1 week of runtime. See `evals/README.md`.
 > [If eval_required but scaffold failed:] ⚠️ Eval scaffolding failed — see progress.md. Run `/regression-eval-capture` manually once LangSmith is configured.
 > [If ADRs were captured:] ADRs written: [list]. See `SDD/adr/README.md`.
+
+After the announcement, perform the **feature-completion rotation** (`phases/protocols.md` → Progress Rotation): archive this feature's full progress history to `SDD/orchestration/progress-archive/` and leave a one-line summary in the live `progress.md`.

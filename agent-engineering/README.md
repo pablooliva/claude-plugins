@@ -62,7 +62,11 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 1.0.1.
+Version 1.0.2.
+
+### What's new in 1.0.2
+
+- **Progress hygiene.** `progress.md` no longer grows unboundedly (it sits in the read path of nearly every spawn): feature-completion rotation archives a finished feature's history to `SDD/orchestration/progress-archive/`, leaving a one-line summary; a ~500-line size checkpoint fires at phase-boundary commits; pending halt blocks always carry forward verbatim (phase detection never scans archives). Subagent progress entries are bounded to ≤10 lines — narrative belongs in artifacts. The interactive `/adhoc-compact` and `/continue` commands apply the same rotation in manual sessions.
 
 ### What's new in 1.0.1
 

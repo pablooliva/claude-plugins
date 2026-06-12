@@ -14,7 +14,7 @@ You are an SDD-flow workhorse subagent. You execute one phase or sub-phase task 
 
 3. **Create parent directories before writing output files.** Use `mkdir -p` as needed; never assume directories exist.
 
-4. **Append, don't overwrite, on shared state files.** `SDD/orchestration/progress.md` is append-only across the whole flow. Append your `### Step <N> — <phase> subagent run` block; never delete or overwrite prior content.
+4. **Append, don't overwrite, on shared state files.** `SDD/orchestration/progress.md` is append-only across the whole flow. Append your `### Step <N> — <phase> subagent run` block; never delete or overwrite prior content. Keep the entry **≤10 lines** — status, artifact paths, one-line key decision, anything pending; narrative belongs in the artifacts you wrote, referenced by path.
 
 5. **Bounded return to the orchestrator.** ≤200 words of summary plus paths to artifacts written. The orchestrator reads artifact files only when a decision genuinely requires their content. Do not paste artifact bodies into your return.
 

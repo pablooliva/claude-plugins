@@ -113,6 +113,8 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 
 The **orchestrator** runs the commit per `commands/commit.md` — no co-author attribution. Include any ADRs written in 3b.
 
+If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
+
 ---
 
 ## 3g. Transition

@@ -14,6 +14,22 @@ Fires when a phase-execution / fix / continuation subagent trips its Reads Safet
 
 ---
 
+## Progress Rotation (orchestrator-only)
+
+`progress.md` is append-only **within a generation**; rotation starts a new generation. Only the orchestrator rotates, only between spawns (never mid-subagent).
+
+**Triggers:** (a) feature completion — Step 4j / per-slice end-of-feature 4j; (b) the live file exceeds ~500 lines at a phase-boundary commit (2e, 3f, 4i, per-slice 4c.6) or during an interactive compact/continue.
+
+**Procedure:**
+1. Create `SDD/orchestration/progress-archive/` if absent. Move the verbose history to `progress-archive/progress-[SPEC-### or scope]-[YYYY-MM-DD_HH-MM-SS].md` — feature-completion rotation moves that feature's full history; size rotation moves all *resolved* blocks.
+2. Rewrite the live `progress.md` head as a bounded `## Current State`: canonical identifiers, SKILL_ROOT, mode + flags, per-feature status table with artifact pointers, and "History archived to <path>".
+3. **Carry forward verbatim, as the latest blocks, every pending halt block:** `## Awaiting Clarification`, `## Awaiting Slicing Decision`, `## Awaiting Re-planning Decision`, `## Awaiting Re-start Decision`, `## PARTIAL: needs continuation` — anything Phase Detection or the Mid-Phase Handoff protocol still needs. Resolved blocks are archived; pending ones never are.
+4. Append a `### Progress rotated ([YYYY-MM-DD_HH-MM-SS])` line recording the archive path.
+
+**Invariants:** Phase Detection (below) operates ONLY on the live `progress.md`; archives are never scanned. Pending blocks survive every rotation. The audit trail is preserved in the archive files and in git history (phase-boundary commits include `progress.md`).
+
+---
+
 ## Session Resumption (user-triggered `/sdd-flow continue`)
 
 The user re-invokes `/sdd-flow continue` in a fresh session; the orchestrator resumes from the most recent state in `progress.md`:
@@ -25,7 +41,7 @@ The user re-invokes `/sdd-flow continue` in a fresh session; the orchestrator re
 
 ### Phase Detection Priority
 
-Rules are evaluated top-to-bottom; the first matching rule fires and short-circuits later rules. The legacy-layout rule is FIRST because un-migrated repos cannot evaluate any new-layout rule (no `SDD/orchestration/progress.md` exists for halt-block matching).
+Rules are evaluated top-to-bottom; the first matching rule fires and short-circuits later rules. Detection operates ONLY on the live `progress.md` — archives under `progress-archive/` are never scanned (Progress Rotation above carries pending blocks forward). The legacy-layout rule is FIRST because un-migrated repos cannot evaluate any new-layout rule (no `SDD/orchestration/progress.md` exists for halt-block matching).
 
 - **Old layout detected (legacy 1.x repo, not yet migrated)** — fires when **BOTH** hold (resolves M-1): **(C, must-be-true)** `SDD/orchestration/progress.md` does NOT exist, AND **(A OR B, at least one)** **(A)** `SDD/prompts/context-management/progress.md` exists, OR **(B)** any `SDD/prompts/PROMPT-*.md` files exist. In boolean form: `(A OR B) AND C` (the bare prose `A OR B AND C` parses as `A OR (B AND C)` under standard precedence and is NOT the intended reading). When it fires, emit:
   > Detected legacy SDD layout (1.x). Run `/sdd-migrate-layout` to migrate to the 2.0.0 layout, then re-run `/sdd-flow continue`. The migration helper has its own active-flow gating; if a flow is in progress, you may need to complete it first.

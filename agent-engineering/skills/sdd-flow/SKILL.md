@@ -99,6 +99,16 @@ evals/{README.md, datasets/, evaluators/, run_functions/}   # only when eval_req
 - **Explicit resolved paths in every spawn prompt** — never let a subagent guess artifact locations.
 - **Per-phase sizing:** Research — single subagent (scope unknown until investigated); pre-split per-layer only if the task obviously cuts across >2 architectural layers. Planning — single subagent; pre-split only if RESEARCH >1000 lines or >3 disjoint subsystems. Implementation (whole-feature) — count SPEC items `REQ-XXX`+`EDGE-XXX`+`FAIL-XXX`; if >8, pre-split into ⌈total/5⌉ sequential chunks, each appending to IMPLEMENTATION-PLAN. **Per-slice mode: one subagent per slice, strict, no bundling** — REQ-count chunking does NOT apply.
 
+### Progress Hygiene (rotation + bounded appends)
+
+`progress.md` sits in the read path of nearly every spawn and of phase detection — its size is paid on every read. Three rules keep it bounded:
+
+1. **Rotate at feature completion (Step 4j).** Move the finished feature's full history to `SDD/orchestration/progress-archive/progress-SPEC-[###]-[YYYY-MM-DD_HH-MM-SS].md`; leave a one-line summary (feature, outcome, artifact pointers). The live file carries full history ONLY for the active feature.
+2. **Checkpoint on size.** If the live file exceeds **~500 lines**, rotate at the next quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6): archive resolved verbose blocks, rewrite the head as a bounded `## Current State` (phase status, artifact pointers, archive path). **Pending halt blocks (`## Awaiting *`, `## PARTIAL: needs continuation`) are carried forward verbatim as the latest blocks** — phase detection matches the latest block in the live file and never scans archives.
+3. **Bounded appends.** Subagent progress entries are **≤10 lines**: status, artifact paths, one-line key decision, anything pending. Narrative belongs in the artifact the subagent wrote, referenced by path.
+
+Rotation is **orchestrator-only**, happens only between spawns (never mid-subagent), and is recorded in the fresh head. Append-only applies *within* a generation; rotation starts a new one. Full procedure: `phases/protocols.md` → Progress Rotation.
+
 ### Subagent Safety-Net Rule (embed verbatim in every phase-execution, fix, and continuation prompt)
 
 > **Bail-out trigger (a trigger, not a budget to spend):** you have Read more than **15** files (implementation chunks: more than **20**).
@@ -111,7 +121,7 @@ evals/{README.md, datasets/, evaluators/, run_functions/}   # only when eval_req
 
 ### Spawn-prompt construction checklist
 
-Every spawn prompt includes: (1) the **absolute body path** `SKILL_ROOT/bodies/<file>.md` with "Read this file FIRST — it is your complete instruction set"; (2) all resolved input + output artifact paths; (3) the task description + canonical identifiers; (4) "verify input files exist before starting; create parent dirs before writing; append (never overwrite) progress.md"; (5) for phase-execution/fix/continuation subagents — the Safety-Net Rule + counter-file path + compact body path; (6) the bounded-return contract (≤200 words + paths).
+Every spawn prompt includes: (1) the **absolute body path** `SKILL_ROOT/bodies/<file>.md` with "Read this file FIRST — it is your complete instruction set"; (2) all resolved input + output artifact paths; (3) the task description + canonical identifiers; (4) "verify input files exist before starting; create parent dirs before writing; append (never overwrite) progress.md — entry ≤10 lines: status, artifact paths, one-line key decision, anything pending; narrative stays in your artifacts"; (5) for phase-execution/fix/continuation subagents — the Safety-Net Rule + counter-file path + compact body path; (6) the bounded-return contract (≤200 words + paths).
 
 ## Model Routing
 

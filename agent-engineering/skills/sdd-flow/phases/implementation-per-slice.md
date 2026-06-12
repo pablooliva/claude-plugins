@@ -89,6 +89,8 @@ The pause message uses the re-planning-specific shape:
 ### Per-slice 4c.6 — Per-slice commit
 The **orchestrator** runs the atomic per-slice commit (commit conventions in `commands/commit.md`) covering: slice code + tests + per-slice review doc + fix-findings notes + retrospective + ledger update. Message references `SLICE-XXX` and `SPEC-XXX`; **no co-author attribution**.
 
+If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
+
 ### PAUSE (slice-boundary)
 Fires when slice-boundary checkpoints are `on`. The pause message includes: slice X completed + brief summary of what landed; acceptance-check status; any matched recommendations (SPEC amendments and/or re-planning) per the matcher; the next slice in queue. Resume via `/sdd-flow continue` (advances to next slice), or a re-planning resume option if re-planning was matched.
 
@@ -104,7 +106,7 @@ When checkpoints are `off` (`--skip-slice-checkpoints`), this pause is skipped �
 10. **End-of-feature 4g — Eval scaffolding.** Conditional on `eval_required:`. *(Shared — §4g.)*
 11. **End-of-feature 4h — Supervised checkpoint.** Fires only in supervised phase-boundary mode. *(Shared — §4h.)*
 12. **End-of-feature 4i — End-of-feature commit.** Covers: critical review doc, fix-findings code from 4e, completion artifacts from 4f, eval scaffolding from 4g. Per-slice code is already committed in each 4c.6.
-13. **End-of-feature 4j — Announcement.** *(Shared — §4j.)* Surface eval scaffold result and any ADRs.
+13. **End-of-feature 4j — Announcement.** *(Shared — §4j.)* Surface eval scaffold result and any ADRs. Then perform the **feature-completion rotation** per §4j (`phases/protocols.md` → Progress Rotation).
 
 ---
 

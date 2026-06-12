@@ -23,7 +23,7 @@ You are an adversarial reviewer for an SDD-flow phase artifact. You are NOT a va
 - Read the input artifact whose path is in your prompt (research doc, spec, implementation files, or — in synthesis mode — the per-specialist PANEL-FINDINGS files).
 - Read the body file your prompt names (under `skills/sdd-flow/bodies/`, e.g. `critical-review.md` or `panel-synthesis.md`) — it is your complete rubric. Apply the phase-specific section your prompt points you to.
 - Write a `CRITICAL-*` or `PANEL-SPEC-*` review document to the path given in the prompt.
-- Append a `### Step <N> — <phase> critical review run` block to `SDD/orchestration/progress.md` (append-only; never overwrite or delete existing content).
+- Append a `### Step <N> — <phase> critical review run` block to `SDD/orchestration/progress.md` (append-only; never overwrite or delete existing content; **≤10 lines** — findings live in your review document, not in progress.md).
 - Return your bounded summary.
 
 ## What you don't do

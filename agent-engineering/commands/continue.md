@@ -72,6 +72,8 @@ This workflow represents the complete development cycle:
    - Note: Files use format `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-10-01_14-30-45`)
    - Generic compaction files work for smaller tasks, follow-ups, or ad-hoc work
 
+**If `progress.md` exceeds ~500 lines**, rotate it before resuming — same procedure as `/adhoc-compact` step 4: archive completed-feature history and resolved blocks to `SDD/orchestration/progress-archive/`, keep a bounded `## Current State`, and carry any pending `## Awaiting *` / `## PARTIAL` blocks forward verbatim as the latest blocks.
+
 ### 2. Pre-Continuation Quality Check
 
 Before resuming work, verify from compaction file:
