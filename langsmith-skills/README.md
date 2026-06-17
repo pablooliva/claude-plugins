@@ -10,6 +10,23 @@ Three Claude Code skills that drive the [`langsmith` CLI](https://github.com/lan
 
 > **Not the same as `langsmith-tracing`.** The official [`langsmith-tracing`](https://github.com/langchain-ai/langsmith-claude-code-plugins) plugin traces *your Claude Code sessions* to LangSmith. This plugin packages skills for instrumenting and evaluating *your own applications*. The names overlap; the purposes don't. You can run both.
 
+## Why this plugin exists
+
+The three skills here originate from LangChain's official [`langsmith-skills`](https://github.com/langchain-ai/langsmith-skills) repository (announced in [this post](https://www.langchain.com/blog/langsmith-cli-skills)), where they're distributed as cross-agent skills via `npx skills add langchain-ai/langsmith-skills`. This plugin **repackages that same skill content** as a versioned Claude Code plugin in the `pablooliva` marketplace.
+
+The point isn't different functionality — the skills are kept byte-identical to upstream (see "Staying in sync" below). The point is **packaging**: getting these skills under the same `/plugin install` + version-bump lifecycle as the rest of this marketplace, instead of living as loose `~/.claude/skills/` files (their original home here) or requiring a separate `npx`-based install flow. If you'd rather track upstream directly and don't need them inside a marketplace, the official `npx skills add` route works just as well — pick whichever fits your setup.
+
+### Staying in sync
+
+These skills are a point-in-time mirror of upstream, **not an automatic pull** — they only change when this plugin is re-synced and its version bumped. The relationship is verified by `diff`-ing each `SKILL.md` against `langchain-ai/langsmith-skills` (`config/skills/<name>/SKILL.md`).
+
+| | |
+|---|---|
+| **Upstream** | [`langchain-ai/langsmith-skills`](https://github.com/langchain-ai/langsmith-skills) |
+| **Last synced** | 2026-06-17 (plugin `0.1.1`) — byte-identical to upstream at that date |
+
+To re-sync later: diff the three `skills/*/SKILL.md` files against upstream, apply any upstream changes, bump the version in **both** `.claude-plugin/plugin.json` and the marketplace's `.claude-plugin/marketplace.json`, and update the "Last synced" row above.
+
 ## Prerequisites
 
 These skills are thin guides over an external CLI and a hosted API. Two things must exist on the machine before the skills are useful:
