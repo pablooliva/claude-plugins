@@ -8,13 +8,13 @@ This repository hosts Claude Code plugins that extend the capabilities of Claude
 
 ## Available Plugins
 
-### 1. Spec-Driven Development (SDD) — v2.0.0
+### 1. Spec-Driven Development (SDD) — v2.2.0
 
 A comprehensive plugin that provides a standardized Specification-Driven Development methodology for consistent, high-quality software development practices. SDD ensures your projects follow a structured approach through research, planning, and implementation phases.
 
-**v2.0.0 highlights:** Two delivery modes are now supported — `whole-feature` (default; behaves identically to 1.x) and `delivery_mode: per-slice` (new opt-in; vertical-thread implementation cycle with per-slice review, retrospective, and a learnings ledger). The directory layout was restructured (`SDD/prompts/` split into `SDD/implementation/` + `SDD/orchestration/`) and `PROMPT-XXX` was renamed to `IMPLEMENTATION-PLAN-XXX`. Run `/sdd-migrate-layout` once on existing repos. See the SDD plugin README for the full migration guide.
+**Delivery modes:** Two are supported — `whole-feature` (default) and `delivery_mode: per-slice` (opt-in; vertical-thread implementation cycle with per-slice review, retrospective, and a learnings ledger). The 2.0.0 release restructured the directory layout (`SDD/prompts/` split into `SDD/implementation/` + `SDD/orchestration/`) and renamed `PROMPT-XXX` to `IMPLEMENTATION-PLAN-XXX`; run `/sdd-migrate-layout` once on repos created before 2.0.0. See the SDD plugin README for the full migration guide.
 
-**Cross-plugin coupling:** SDD 2.0.0 requires `agent-engineering` 0.4.0 or later for `sdd-flow` orchestration; install the two together.
+**Standalone by design:** SDD is a human-driven methodology you run via its slash commands — it does **not** require any other plugin. For the *agent-orchestrated* version of this lifecycle (subagents driving Research → Planning → Implementation with fresh context per phase), see the self-contained `sdd-flow` skill in the **Agent Engineering** plugin below.
 
 **Key Features:**
 
@@ -24,7 +24,7 @@ A comprehensive plugin that provides a standardized Specification-Driven Develop
 - Automated commit message generation
 - Progress monitoring and tracking
 
-### 2. Personal Agent Context Engineer (PACE)
+### 2. Personal Agent Context Engineer (PACE) — v2.0.0
 
 Context management for Claude Code as a personal agent. PACE keeps Claude operating within optimal context limits (<40%) while providing flexible research, planning, and execution workflows for non-coding tasks.
 
@@ -35,21 +35,22 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - Research, planning, and execution phases for any task type
 - Produces deliverables: documents, reports, analysis, plans
 
-### 3. Agent Engineering — v0.4.0
+### 3. Agent Engineering — v1.0.3
 
-Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). Complements the SDD plugin — SDD provides the workflow, agent-engineering provides the guardrails that compound quality over time. Each skill is independently usable in any session.
+Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
 
-**v0.4.0 highlights:** The `sdd-flow` skill now orchestrates both `whole-feature` and `per-slice` delivery modes end-to-end (per-slice support added in 0.4.0). Requires SDD plugin 2.0.0 or later; SDD 2.0.0 + agent-engineering 0.4.0 should be installed together (a version mismatch surfaces FAIL-009 silent-misbehavior in mixed installs).
+**v1.0.0 highlights:** `sdd-flow` became a self-contained fork — it no longer depends on the `sdd` plugin at runtime and ships its own forked agents, hooks, and per-phase bodies. It orchestrates both `whole-feature` and `per-slice` delivery modes end-to-end. (Later 1.0.x releases add post-review fixes and progress-log hygiene — rotation, archives, and bounded appends.)
 
 **Key Features:**
 
 - `correction-codifier` skill — turns mid-session corrections into durable `CLAUDE.md` rules (Institutional Memory)
 - `cross-cutting-adr` skill — captures binding architectural decisions as numbered ADRs (Living Documentation)
-- `sdd-flow` skill — orchestrates the full Research → Planning → Implementation lifecycle via subagents
+- `improve-claude-md` skill — audits and trims `CLAUDE.md`/`AGENTS.md` files to focus on preferences and behavioral nudges
+- `sdd-flow` skill — self-contained orchestration of the full Research → Planning → Implementation lifecycle via subagents (no SDD plugin required)
 - `/regression-eval-capture` command — scaffolds LangSmith regression eval datasets after a feature ships (Observability)
 - `/adr-capture` command — manual entry point for ADR capture
 
-### 4. LangSmith Skills — v0.1.0
+### 4. LangSmith Skills — v0.1.1
 
 Three skills that drive the [`langsmith` CLI](https://github.com/langchain-ai/langsmith-cli) to trace, build evaluation datasets for, and evaluate **your own** LLM applications. Distinct from the official `langsmith-tracing` plugin (which traces Claude Code sessions themselves) — the two are complementary and can both be installed.
 
