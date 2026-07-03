@@ -36,6 +36,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **`correction-codifier`** — When you correct Claude's behavior mid-session, proposes a durable `Always|Never [X] BECAUSE [Y]` rule and appends it to the project's `CLAUDE.md`. Operationalizes Principle 5 (Institutional Memory).
 - **`cross-cutting-adr`** — Captures cross-cutting architectural decisions as numbered ADRs under `SDD/adr/`. Triggers on comparison-with-selection patterns, explicit invocation, or ambient detection. Operationalizes Principle 3 (Living Documentation).
 - **`improve-claude-md`** — Audits `CLAUDE.md`/`AGENTS.md` and `CLAUDE.local.md` to strip discoverable content and concentrate on preferences, behavioral nudges, and corrections. Mirrored from [pablooliva/claude-skills](https://github.com/pablooliva/claude-skills).
+- **`todo-tidy`** — Promotes a free-form `scratch.md` working list into a structured `TODO.md` (renaming, or folding both together when both exist) and reorganizes the contents into a consistent, hierarchical checkbox list. Reformats only — it never acts on an item, drops content, or edits `.gitignore` (it checks and warns).
 
 ### Commands
 

@@ -1,7 +1,7 @@
 {
     "name": "agent-engineering",
     "description": "Cross-cutting skills for disciplined AI-assisted development based on the 10 Claude Code Principles (Forsythe). Includes correction codification, regression eval scaffolding, cross-cutting architectural decision capture, and self-contained SDD flow orchestration (no SDD plugin required).",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "author": {
         "name": "Pablo Oliva",
         "email": "p.o@pablooliva.de"
