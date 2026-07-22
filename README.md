@@ -47,7 +47,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `cross-cutting-adr` skill — captures binding architectural decisions as numbered ADRs (Living Documentation)
 - `improve-claude-md` skill — audits and trims `CLAUDE.md`/`AGENTS.md` files to focus on preferences and behavioral nudges
 - `todo-tidy` skill — promotes a free-form `scratch.md` into a structured, content-preserving `TODO.md`
-- `worktree-create` skill — spins up an isolated git worktree at a sibling path for a scoped task, on its own `you/type-desc` branch
+- `worktree-create` skill — spins up an isolated git worktree at a sibling path for a scoped task, on its own `you/type-desc` branch, and symlinks the main repo's git-ignored `.env*` files into it so config/secrets git never copies are available
 - `worktree-handoff` skill — closes the loop: generates a merge-back handoff from inside the worktree, then merges + cleans up (with confirmation) from the main repo
 - `sdd-flow` skill — self-contained orchestration of the full Research → Planning → Implementation lifecycle via subagents (no SDD plugin required)
 - `/regression-eval-capture` command — scaffolds LangSmith regression eval datasets after a feature ships (Observability)

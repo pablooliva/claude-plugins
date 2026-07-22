@@ -1,11 +1,13 @@
 ---
 name: worktree-create
-description: "INVOKE THIS SKILL when the user wants to start an isolated piece of work in a fresh git worktree — e.g. 'spin up a worktree', 'create a worktree for this', 'let me work on X in a separate worktree', 'give me an isolated branch/checkout to try Y', or runs a /worktree-create entry point. Asks for the task TYPE (feature/fix/refactor/spike/chore/docs/review) and a short description, then creates a git worktree at a SIBLING path `../<project>-WT/<you>/<type>-<desc>` on a new branch `<you>/<type>-<desc>`, and writes a `WORKTREE.md` breadcrumb recording the base branch, base commit, and main-repo path. Pairs with the `worktree-handoff` skill, which merges the work back and cleans the worktree up. Does NOT nest the worktree inside the repo; does NOT commit or push."
+description: "INVOKE THIS SKILL when the user wants to start an isolated piece of work in a fresh git worktree — e.g. 'spin up a worktree', 'create a worktree for this', 'let me work on X in a separate worktree', 'give me an isolated branch/checkout to try Y', or runs a /worktree-create entry point. Asks for the task TYPE (feature/fix/refactor/spike/chore/docs/review) and a short description, then creates a git worktree at a SIBLING path `../<project>-WT/<you>/<type>-<desc>` on a new branch `<you>/<type>-<desc>`, symlinks the main repo's git-ignored `.env*` files (`.env`, `.env.prod`, `.env.test`, etc.) into the worktree so runtime config git never copies is available, and writes a `WORKTREE.md` breadcrumb recording the base branch, base commit, main-repo path, and linked env files. Pairs with the `worktree-handoff` skill, which merges the work back and cleans the worktree up. Does NOT nest the worktree inside the repo; does NOT commit or push."
 ---
 
 # Worktree Create
 
 Spins up an **isolated git worktree** so a discrete task can be done on its own branch, in its own directory, in its own Claude Code session — without disturbing the main working tree. The worktree lives *beside* the repo (never nested inside it), and carries a `WORKTREE.md` breadcrumb so the companion `worktree-handoff` skill can later merge the work back and delete the worktree with no guesswork.
+
+Because a worktree checks out from a **commit**, git-ignored files never travel into it — a fresh worktree has no `.env` or other secret/config files, since git doesn't track them. This skill closes that gap: it **symlinks the main repo's git-ignored `.env*` files** (`.env`, `.env.prod`, `.env.test`, `.env.local`, …) into the new worktree, so the isolated checkout can run against the same config without hand-copying secrets.
 
 This skill is the **spin-up half** of a two-skill lifecycle:
 
@@ -14,7 +16,7 @@ This skill is the **spin-up half** of a two-skill lifecycle:
 
 ## Expert Vocabulary
 
-Git worktree. Linked worktree vs. main worktree. Sibling placement (out-of-tree). Detached vs. branch-backed worktree. Branch namespace (`user/task` slash form). Task type taxonomy (feature/fix/refactor/spike/chore/docs/review). Slugification. Base branch / base commit. Breadcrumb metadata (`WORKTREE.md`). Path collision. Branch collision. Isolation of working state. Quoting paths with spaces.
+Git worktree. Linked worktree vs. main worktree. Sibling placement (out-of-tree). Detached vs. branch-backed worktree. Branch namespace (`user/task` slash form). Task type taxonomy (feature/fix/refactor/spike/chore/docs/review). Slugification. Base branch / base commit. Breadcrumb metadata (`WORKTREE.md`). Path collision. Branch collision. Isolation of working state. Quoting paths with spaces. Git-ignored files (never checked out into a worktree). `.env` family / dotenv files. `git check-ignore` (consults `.gitignore`). Symbolic link (absolute-target). Shared vs. isolated config. Secret leakage.
 
 ## Anti-Pattern Watchlist
 
@@ -27,6 +29,10 @@ Before running `git worktree add`, check the plan against these:
 5. **Unquoted paths.** The repo or parent path contains spaces (common on macOS), and an unquoted command splits the path. Detection: any path in a command not wrapped in quotes. Resolution: quote every path in every command.
 6. **Missing breadcrumb.** Creating the worktree but not recording where it came from, so `worktree-handoff` later can't find the main repo or base. Detection: no `WORKTREE.md` written. Resolution: always write the breadcrumb as the last creation step.
 7. **Committing or pushing on the user's behalf.** Detection: any `git commit`/`git push` in this skill. Resolution: this skill only *creates* the worktree — the user does the work. Do not commit or push.
+8. **Symlinking a *tracked* env file.** Linking an env file that git already tracks (e.g. a committed `.env.example`). Detection: `git check-ignore -q "<file>"` returns non-zero (the file is NOT ignored). Resolution: only symlink git-ignored files — a tracked env file is already in the worktree's checkout, and linking over it would clobber the real checked-out copy. Filter every candidate through `git check-ignore`.
+9. **Clobbering an existing worktree file with a symlink.** A file with the same name already exists at the worktree path (a tracked template, or a link from a rerun). Detection: `[ -e "<worktree>/<name>" ]` before linking. Resolution: skip and report it; never overwrite. A rerun of this skill is thus idempotent (existing links are left alone).
+10. **Assuming a symlink gives the worktree its *own* env.** A symlink points at the *same* main-repo file — editing env in the worktree edits it everywhere, and vice versa. Detection: the user expects to diverge the worktree's config from main. Resolution: clarify that symlinks share one file; if they want an independent env, copy (`cp`) instead of linking. Default remains symlink (the user asked for it and it's usually the intent for secrets).
+11. **Leaking secrets to the wrong place.** Symlinking env files into a worktree that is itself inside a synced/shared or world-readable location. Detection: worktree root under a cloud-synced or shared path. Resolution: the sibling-root placement (Anti-Pattern 1) keeps it beside the repo; note that the links expose the same secrets there, and skip linking if the user objects.
 
 ## When to Activate
 
@@ -91,11 +97,43 @@ git worktree add -b "<branch>" "<worktree-path>" "<base>"
 
 (Omit the trailing `<base>` to use current HEAD.) Confirm the command succeeded via `git worktree list`.
 
-### Step 6: Write the breadcrumb
+### Step 6: Symlink git-ignored env files into the worktree
 
-Write `WORKTREE.md` at the worktree path root (see **Output Format**), recording: task type, description, branch, base branch, base commit SHA, main-repo absolute path, and creation context. This is what `worktree-handoff` reads to merge back. (It lives only in the worktree and disappears when the worktree is removed — do not commit it unless the user wants to; if the repo would otherwise track it, mention it so they can `.gitignore` or commit as they prefer.)
+A worktree checks out from a commit, so **git-ignored files never come with it** — the fresh worktree has no `.env`. Link the main repo's git-ignored env files in so the isolated checkout can run against the same config.
 
-### Step 7: Report and point to the next step
+**Discover** the candidates — every `.env`-family file at the main repo root that git actually ignores. Use `git check-ignore`, which consults `.gitignore` for real (robust; no glob-pattern parsing), and keep only ignored files (a *tracked* `.env.example` is already in the checkout — Anti-Pattern 8):
+
+```bash
+# Run against the MAIN repo toplevel ("<main>"); "<worktree-path>" is the new worktree.
+find "<main>" -maxdepth 1 -type f \( -name '.env' -o -name '.env.*' \) | while IFS= read -r f; do
+  git -C "<main>" check-ignore -q "$f" || continue   # skip tracked env files (Anti-Pattern 8)
+  name="$(basename "$f")"
+  dest="<worktree-path>/$name"
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    echo "skip (exists): $name"                        # never clobber (Anti-Pattern 9)
+    continue
+  fi
+  ln -s "$f" "$dest"                                    # absolute target → resolves from anywhere
+  echo "linked: $name"
+done
+```
+
+Notes and clarifications:
+
+- **Absolute target.** `find` yields an absolute `$f`, so the symlink resolves regardless of the worktree's location. Do not use a relative target.
+- **This matches `.env`, `.env.prod`, `.env.test`, `.env.local`, `.env.production`, …** — any `.env.*` variant at the repo root, plus bare `.env`.
+- **Shared, not isolated (Anti-Pattern 10).** A symlink shares the *one* main-repo file — edits in the worktree change it everywhere. That's the usual intent for secrets. If the user wants the worktree to have an independent env it can diverge, `cp` instead of `ln -s`.
+- **Parent-directory env (the "directory that contains the main repo" case).** If the project keeps a shared env file one level *up* (in the parent of the repo) rather than at the repo root, and the repo root has none, offer to link that parent-level file too — same `check-ignore` + no-clobber rules. Do this only when it applies; the default source is the repo root.
+- **If nothing is found,** say so briefly and move on — many repos have no `.env` (this one, `claude-plugins`, has none). Do not treat it as an error.
+- **Idempotent.** Rerunning leaves existing links untouched.
+
+Record the linked filenames for the breadcrumb (Step 7) and the final report (Step 8).
+
+### Step 7: Write the breadcrumb
+
+Write `WORKTREE.md` at the worktree path root (see **Output Format**), recording: task type, description, branch, base branch, base commit SHA, main-repo absolute path, the env files symlinked in (Step 6), and creation context. This is what `worktree-handoff` reads to merge back. (It lives only in the worktree and disappears when the worktree is removed — do not commit it unless the user wants to; if the repo would otherwise track it, mention it so they can `.gitignore` or commit as they prefer.)
+
+### Step 8: Report and point to the next step
 
 Tell the user:
 
@@ -115,12 +153,15 @@ Worktree created ✓
   Branch:    pablo-oliva/fix-login-redirect
   Location:  ../claude-plugins-WT/pablo-oliva/fix-login-redirect
   Based on:  main @ 695d075
+  Env links: .env, .env.prod, .env.test  (symlinked from the main repo; shared, not copies)
 
 Next:
   cd "/Volumes/.../claude-plugins-WT/pablo-oliva/fix-login-redirect"
   # start a new Claude Code session there and do the work
   # when done, run the worktree-handoff skill from inside it
 ```
+
+(Omit the `Env links:` line, or show `Env links: none found`, when the main repo has no git-ignored env files.)
 
 `WORKTREE.md` breadcrumb written into the worktree:
 
@@ -133,9 +174,11 @@ Next:
 - **Base branch:** main
 - **Base commit:** 695d075
 - **Main repo:** /Volumes/Crucial Data/Documents/Code & Dev/claude-plugins
+- **Env links:** `.env`, `.env.prod`, `.env.test` (symlinked from the main repo; `none` if there were none)
 - **Created:** from `worktree-create`
 
 <!-- Read by the worktree-handoff skill to merge this branch back and remove the worktree. -->
+<!-- Env links are symlinks into the main repo — removing the worktree removes the links, not the originals. -->
 ```
 
 ## Examples
@@ -149,8 +192,15 @@ Next:
 3. Compute branch `pablo-oliva/fix-login-redirect`, path `../claude-plugins-WT/pablo-oliva/fix-login-redirect`.
 4. No collision.
 5. `git worktree add -b pablo-oliva/fix-login-redirect "<path>" main`.
-6. Write `WORKTREE.md`.
-7. Report path + branch + "start a new session there; run worktree-handoff when done."
+6. Symlink git-ignored env files: `find` the repo root's `.env*`, keep the ones `git check-ignore` confirms are ignored, `ln -s` each into the worktree (skipping any that already exist). Say "linked `.env`, `.env.prod`" — or "no env files to link" if there are none.
+7. Write `WORKTREE.md` (including the linked env files).
+8. Report path + branch + env links + "start a new session there; run worktree-handoff when done."
+
+### GOOD — env files linked in
+
+**User:** "Make a worktree for the payments spike — I'll need the API keys from `.env`."
+
+The main repo root has git-ignored `.env` and `.env.test` (both matched by `git check-ignore`) and a tracked `.env.example`. After `git worktree add`, symlink `.env` and `.env.test` into the worktree (absolute targets) and **skip `.env.example`** — it's tracked, so it's already in the checkout and linking would clobber it (Anti-Pattern 8). Report: "Env links: `.env`, `.env.test` (symlinked — shared with main, not copies)."
 
 ### BAD — nesting inside the repo
 
@@ -170,4 +220,4 @@ Branch `pablo-oliva/fix-login-redirect` already exists from a prior attempt. Wro
 
 ## Scope Boundary
 
-This skill **creates** a single sibling worktree and its breadcrumb, and nothing more. It does not commit, push, run the task, or merge anything. Merging the work back and removing the worktree is the job of the paired **`worktree-handoff`** skill. It operates only within one git repository (shared `.git`); it does not clone or fork.
+This skill **creates** a single sibling worktree, symlinks the main repo's git-ignored `.env*` files into it, and writes its breadcrumb — and nothing more. It does not commit, push, run the task, or merge anything. It links only git-ignored env files (tracked ones are already in the checkout) and never overwrites an existing file at the worktree path. Merging the work back and removing the worktree — which drops the symlinks but leaves the original env files untouched — is the job of the paired **`worktree-handoff`** skill. It operates only within one git repository (shared `.git`); it does not clone or fork.

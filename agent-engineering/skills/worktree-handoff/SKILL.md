@@ -1,6 +1,6 @@
 ---
 name: worktree-handoff
-description: "INVOKE THIS SKILL to close the loop on an isolated git worktree created by `worktree-create`. It is CONTEXT-AWARE. (A) Run it from INSIDE the worktree — 'generate a handoff', 'I'm done in this worktree', 'hand this back to main', 'wrap up this worktree' — and it writes a `HANDOFF.md` and prints a ready-to-paste block summarizing what was done, the branch, and a merge+cleanup request. (B) Paste that block into your MAIN repo session and run it there — 'merge this worktree back', 'integrate the handoff', 'merge <branch> and clean up' — and it merges the branch into the target branch, verifies, and (with confirmation before each destructive step) removes the worktree and deletes the branch. Confirms before `git worktree remove` and `git branch -d`; never force-deletes unmerged work silently."
+description: "INVOKE THIS SKILL to close the loop on an isolated git worktree created by `worktree-create`. It is CONTEXT-AWARE. (A) Run it from INSIDE the worktree — 'generate a handoff', 'I'm done in this worktree', 'hand this back to main', 'wrap up this worktree' — and it writes a `HANDOFF.md` and prints a ready-to-paste block summarizing what was done, the branch, and a merge+cleanup request. (B) Paste that block into your MAIN repo session and run it there — 'merge this worktree back', 'integrate the handoff', 'merge <branch> and clean up' — and it merges the branch into the target branch, verifies, reconciles any *copied* `.env*` files that diverged from main before removal (symlinked env files need nothing), and (with confirmation before each destructive step) removes the worktree and deletes the branch. Confirms before `git worktree remove` and `git branch -d`; never force-deletes unmerged work or a diverged copied env silently."
 ---
 
 # Worktree Handoff
@@ -12,7 +12,7 @@ Closes the loop opened by **`worktree-create`**. The isolated work done in a sib
 
 ## Expert Vocabulary
 
-Handoff artifact. Merge-back / integration. Context detection (linked worktree vs. main worktree). `git-dir` discriminator (`/worktrees/` substring). Base branch / merge-base. Fast-forward vs. merge commit. Diffstat / commit range (`base..HEAD`). Dirty tree guard. `git worktree remove`. `git branch -d` (safe) vs. `-D` (force). Prune. Confirmation gate. Non-destructive-on-conflict. Breadcrumb (`WORKTREE.md`).
+Handoff artifact. Merge-back / integration. Context detection (linked worktree vs. main worktree). `git-dir` discriminator (`/worktrees/` substring). Base branch / merge-base. Fast-forward vs. merge commit. Diffstat / commit range (`base..HEAD`). Dirty tree guard. `git worktree remove`. `git branch -d` (safe) vs. `-D` (force). Prune. Confirmation gate. Non-destructive-on-conflict. Breadcrumb (`WORKTREE.md`). Symlinked vs. copied env file. Env divergence / reconciliation. Git-ignored files invisible to `git status`. Untracked-file safety (no git history to recover from).
 
 ## Anti-Pattern Watchlist
 
@@ -21,13 +21,15 @@ Check the plan against these before acting:
 1. **Wrong-mode execution.** Trying to merge from inside the worktree, or trying to generate a handoff from the main repo. Detection: mode not derived from `git rev-parse --git-dir`. Resolution: always detect mode first (Step 0). `/worktrees/` in git-dir ⇒ Handoff mode; otherwise ⇒ Merge mode.
 2. **Destructive-on-conflict.** Removing the worktree or deleting the branch after a merge that conflicted or failed. Detection: `git merge` exited non-zero or left conflict markers. Resolution: **stop** — report the conflict, leave the worktree and branch fully intact, let the user resolve. Cleanup only ever follows a *clean, completed* merge.
 3. **Force-deleting unmerged branch work.** Using `git branch -D` to push past git's refusal that the branch isn't merged. Detection: reaching for `-D`. Resolution: use `-d`; if it refuses "not fully merged", the work is *not* in the target — stop, surface why, and ask. Never `-D` to bypass an unmerged branch silently.
-4. **Blocked worktree removal (expected — handle, don't force blindly).** `git worktree remove` refuses because the worktree contains untracked/modified files. This is the NORMAL case: the worktree always carries the `WORKTREE.md` and `HANDOFF.md` breadcrumbs, which are untracked by design (committing them would merge junk into the target branch). Detection: `remove` fails "contains modified or untracked files". Resolution: inspect `git status --porcelain` in the worktree; if the ONLY entries are the known breadcrumbs (`WORKTREE.md`, `HANDOFF.md`), `git worktree remove --force` is correct and safe — the breadcrumbs are disposable. If ANY other modified/untracked file is present, that's real unexpected work: STOP and ask. Do NOT try to `rm` the breadcrumbs first — if they are tracked, deleting them on disk just creates a `modified` state that also blocks plain removal.
+4. **Blocked worktree removal (expected — handle, don't force blindly).** `git worktree remove` refuses because the worktree contains untracked/modified files. This is the NORMAL case: the worktree always carries the `WORKTREE.md` and `HANDOFF.md` breadcrumbs, which are untracked by design (committing them would merge junk into the target branch). Detection: `remove` fails "contains modified or untracked files". Resolution: inspect `git status --porcelain` in the worktree; if the ONLY entries are the known breadcrumbs (`WORKTREE.md`, `HANDOFF.md`), `git worktree remove --force` is correct and safe — the breadcrumbs are disposable. If ANY other modified/untracked file is present, that's real unexpected work: STOP and ask. Do NOT try to `rm` the breadcrumbs first — if they are tracked, deleting them on disk just creates a `modified` state that also blocks plain removal. **Caveat (see Anti-Pattern 11):** `git status` will NOT list git-ignored env files (`.env*`), so a copied env in the worktree is invisible here and `--force` would delete it unremarked — run the env reconciliation (Merge mode M5.5) BEFORE removal.
 5. **Skipping the confirmation gate.** Removing the worktree / deleting the branch without asking. Detection: destructive command issued before an explicit user yes. Resolution: after showing the merge result, ask before *each* destructive step (worktree removal, branch deletion). Wait for confirmation.
 6. **Handing off dirty/uncommitted work.** Generating a handoff while the worktree has uncommitted changes (beyond the breadcrumbs), so the summary references work that isn't on the branch. Detection: `git status --porcelain` non-empty in Handoff mode. Resolution: tell the user to commit (or stash) first; offer to commit. The handoff describes *committed* work.
 7. **Losing the paste block.** Emitting only a file, or only screen text, when the user needs both. Detection: HANDOFF.md written but no paste block printed, or vice-versa. Resolution: in Handoff mode always do both — write `HANDOFF.md` **and** print the delimited paste block.
 8. **Guessing the target branch.** Merging into whatever branch happens to be checked out in main rather than the recorded base. Detection: target branch not cross-checked against `WORKTREE.md` / the handoff. Resolution: default to the recorded base branch; if the currently checked-out branch differs, confirm which is the merge target before merging.
 9. **Wrong cleanup order.** Running `git branch -d` before removing the worktree. Detection: branch deletion fails "used by worktree at …". Resolution: always `git worktree remove` FIRST (a branch checked out by a live worktree cannot be deleted), then `git branch -d`.
 10. **Unquoted paths.** Worktree paths contain spaces on this machine. Detection: any unquoted path. Resolution: quote every path.
+11. **Silently deleting a divergent copied env.** `worktree-create` symlinks env files by default, but the user may have *copied* them instead (to let the worktree's env diverge). A copied `.env*` is git-ignored, so it never appears in `git status` — `git worktree remove --force` deletes it permanently with no warning and no git history to recover from. Detection: before removal, an explicit scan finds a **regular-file** (not symlink) `.env*` in the worktree whose contents differ from main's, or that doesn't exist in main. Resolution: run env reconciliation (M5.5) BEFORE removal — surface the diff and let the user apply-to-main / preserve-aside / discard. **Symlinked env files need nothing** (they *are* main's file; edits already landed there) — skip them.
+12. **Blindly copying an env back over main's.** "Reconcile" turning into `cp worktree/.env main/.env` without a diff or a backup. Detection: overwriting main's `.env*` unconditionally. Resolution: main's env is untracked — there is no `git checkout` to undo a bad overwrite. Show the diff, confirm per file, and back up main's current version (`.env.bak`) before applying. Never auto-apply; when unsure, preserve both and let the user merge by hand.
 
 ## When to Activate
 
@@ -80,6 +82,21 @@ git diff --stat "<base>..HEAD"           # files changed
 
 **H4 — Write `HANDOFF.md`** at the worktree root (see **Output Format**).
 
+**H4b — Flag copied-env divergence (heads-up for the main session).** `worktree-create` *symlinks* env files by default — those need no action, since editing a symlink edits main's file directly. But if env files were *copied* here (to isolate the worktree's env), a copy may have diverged and would be **lost when the worktree is removed** — and it's git-ignored, so `git status` won't show it. Scan explicitly and skip symlinks:
+
+```bash
+# "<main>" is the main-repo path from WORKTREE.md.
+find . -maxdepth 1 \( -name '.env' -o -name '.env.*' \) | while IFS= read -r f; do
+  [ -L "$f" ] && continue                             # symlink → shared with main; nothing to reconcile
+  name="$(basename "$f")"; main_f="<main>/$name"
+  if [ ! -e "$main_f" ]; then echo "env NEW here (absent from main): $name"
+  elif ! diff -q "$f" "$main_f" >/dev/null 2>&1; then echo "env DIVERGED from main: $name"
+  fi
+done
+```
+
+If this reports anything, add an **⚠ Env to reconcile** line to `HANDOFF.md` and the paste block (see **Output Format**) so the main session runs M5.5 before removing the worktree. If it reports nothing (the common all-symlinks case), say nothing.
+
 **H5 — Print the paste block.** Print the same content between clear delimiters, with an explicit instruction: *paste this into your MAIN repo Claude Code session.* The block must include the branch, worktree path, main-repo path, base branch, commit list, summary, and an explicit **merge + cleanup request** so the main session knows to invoke Merge mode.
 
 ---
@@ -112,6 +129,27 @@ Show the result (fast-forward, merge commit, or conflict). **If it conflicts or 
 > Merge is clean. Remove the worktree at `<path>` and delete branch `<branch>`?
 
 Wait for an explicit yes. If the user only wants the merge, stop here.
+
+**M5.5 — Reconcile copied env files (BEFORE removal).** Removing the worktree deletes its working files — including any *copied* `.env*`, which is git-ignored and therefore invisible to `git status` (Anti-Patterns 4, 11). Scan the worktree explicitly and classify each env file; **symlinks need nothing** and are skipped (they already point at main's file):
+
+```bash
+# We are in the main repo; "<worktree-path>" comes from the handoff, "<main>" is this repo's toplevel.
+find "<worktree-path>" -maxdepth 1 \( -name '.env' -o -name '.env.*' \) | while IFS= read -r f; do
+  [ -L "$f" ] && continue                              # symlink → shared with main; nothing to copy back
+  name="$(basename "$f")"; main_f="<main>/$name"
+  if [ ! -e "$main_f" ]; then echo "NEW: $name"        # exists here, not in main → offer to copy in
+  elif ! diff -q "$f" "$main_f" >/dev/null 2>&1; then echo "DIVERGED: $name"   # differs → show diff, offer to apply
+  else echo "identical: $name"; fi                     # same → nothing to do
+done
+```
+
+For each **NEW** or **DIVERGED** file, show the diff (`diff "<main>/<name>" "<worktree-path>/<name>"`) and let the user choose — never auto-apply, never blind-overwrite (Anti-Pattern 12):
+
+- **Apply to main** — back up main's current file first (`cp "<main>/<name>" "<main>/<name>.bak"`), then copy the worktree's version over it. (main's env is untracked; the `.bak` is the only undo.)
+- **Preserve aside** — copy the worktree's version into main under a side name (`cp "<worktree-path>/<name>" "<main>/<name>.from-worktree"`) so nothing is lost and the user merges by hand later.
+- **Discard** — proceed to removal; the worktree's copy dies with it. Confirm explicitly, since it's unrecoverable.
+
+If everything is a symlink or identical, say "env: nothing to reconcile" and move on. Only after this is settled proceed to M6.
 
 **M6 — Clean up (on confirmation).** Order matters: remove the worktree **before** deleting the branch (a branch checked out by a live worktree can't be deleted).
 
@@ -155,6 +193,10 @@ remove the worktree and delete the branch (via the worktree-handoff skill).
   Main repo:   /Volumes/.../claude-plugins
   Base branch: main   (base commit 695d075)
 
+  ⚠ Env to reconcile: .env.test  (COPIED here and diverged from main — reconcile
+    before removing the worktree, or the changes are lost. Omit this line entirely
+    when env files were symlinked or match main.)
+
   Commits:
     a1b2c3d  fix: guard null redirect target
     d4e5f6a  test: cover empty redirect param
@@ -177,9 +219,12 @@ remove the worktree and delete the branch (via the worktree-handoff skill).
 ```
 Integrated ✓
   Merged pablo-oliva/fix-login-redirect → main (fast-forward to a1b2c3d)
+  Env:              .env.test applied to main (backup at .env.test.bak); .env was symlinked (no action)
   Removed worktree: ../claude-plugins-WT/pablo-oliva/fix-login-redirect
   Deleted branch:   pablo-oliva/fix-login-redirect
 ```
+
+(Show the `Env:` line only when there was something to reconcile; omit it for the all-symlink case.)
 
 ## Examples
 
@@ -199,6 +244,10 @@ Merge succeeds, and the skill immediately runs `git worktree remove` + `git bran
 
 `git branch -d` refuses because the branch has commits not in the target. Wrong: escalating to `git branch -D`. **Right:** surface that the branch is unmerged, explain what would be lost, and ask — the refusal is a safety feature, not an obstacle.
 
+### GOOD — reconciling a copied, diverged env
+
+Merge is clean. Before removal, the M5.5 scan finds the worktree's `.env` is a **symlink** (skip — its edits already reached main) but `.env.test` is a **regular file** that differs from main's (the user added a test key during the work). **Right:** show the diff, and since the worktree copy is about to be deleted, offer to apply it to main (backing up `.env.test.bak` first), preserve it as `.env.test.from-worktree`, or discard. Only after the user picks, proceed to remove the worktree. **Wrong:** running `git worktree remove --force` straight away — `.env.test` is git-ignored, wouldn't show in `git status`, and the diverged copy would vanish with no backup and no git history to recover it.
+
 ## Questions This Skill Answers
 
 - "Generate a handoff for this worktree."
@@ -209,4 +258,4 @@ Merge succeeds, and the skill immediately runs `git worktree remove` + `git bran
 
 ## Scope Boundary
 
-This skill handles the **return trip** of a worktree created by `worktree-create`: it produces a handoff from inside the worktree and, in the main repo, merges the branch and (with confirmation) removes the worktree and deletes the branch. It never force-deletes unmerged work, never cleans up after a conflicted or failed merge, and never removes a worktree or branch without an explicit yes. Creating worktrees is out of scope — that's `worktree-create`.
+This skill handles the **return trip** of a worktree created by `worktree-create`: it produces a handoff from inside the worktree and, in the main repo, merges the branch and (with confirmation) removes the worktree and deletes the branch. Before removal it reconciles any *copied* env files that diverged from main (symlinked env files — the `worktree-create` default — need nothing, as their edits already reached main); it shows the diff and lets the user apply-to-main, preserve-aside, or discard, and never overwrites main's env or deletes a diverged copy without an explicit choice. It never force-deletes unmerged work, never cleans up after a conflicted or failed merge, and never removes a worktree or branch without an explicit yes. Creating worktrees is out of scope — that's `worktree-create`.
