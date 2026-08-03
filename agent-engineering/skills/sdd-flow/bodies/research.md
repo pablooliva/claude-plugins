@@ -28,6 +28,7 @@ Set up systematic investigation:
 
 1. Create `SDD/research/RESEARCH-[###]-[feature-name].md` document where:
    - `[###]` is the issue/ticket number if available, or use sequential numbering (001, 002, etc.)
+   - **If a `WORKTREE.md` at the repo root has an `SDD numbers reserved:` line (`grep 'SDD numbers reserved' WORKTREE.md`), use its reserved `SPEC-NNN` value as `[###]` and do not recompute.** You are in an isolated worktree; that number was reserved against every sibling worktree and branch, whereas a local listing cannot see numbers already claimed by uncommitted work elsewhere — and duplicates merge back with no git conflict.
    - **If `SDD/research/CLARIFICATION-[###]-[feature-name].md` already exists for this feature, reuse the same `[###]` and `[feature-name]` for the RESEARCH document — do not increment. Numbering must align across CLARIFICATION → RESEARCH → SPEC → IMPLEMENTATION-PLAN.**
    - `[feature-name]` is a kebab-case description (e.g., "user-authentication", "csv-export")
 
