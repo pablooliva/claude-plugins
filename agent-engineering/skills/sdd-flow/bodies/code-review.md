@@ -164,6 +164,25 @@ If the spec has no `## Modules` section (legacy or config-only changes), treat t
 
 **Review budget allocation:** Spend more time on high-risk modules and less on low-risk modules. The point is to concentrate scrutiny where the consequence of failure is largest, not to perform identical depth on every module regardless of stakes.
 
+## Agentic-Surface Lens (conditional)
+
+**Gate:** read the spec's `agent_security:` frontmatter. `true` → run this lens. `false` → skip it entirely. `auto` or absent → run the scope test below and run the lens only if it passes. Your spawn prompt provides the absolute path of the control catalog, `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`, whenever the gate may be open.
+
+```bash
+# Gate
+grep -m1 "^agent_security:" SDD/requirements/SPEC-*-[feature-name].md
+```
+
+**Scope test (resolving `auto`).** The lens applies when the implemented code contains at least one of: an LLM/model call; a tool or function definition exposed to a model, or MCP server/client wiring; agent memory, conversation persistence, or a retrieval store feeding model context; message passing between agents or a model-driven subagent spawn; a model output that drives an action on an external system. If none is present, skip the lens and record one line in the review document saying so.
+
+**What to apply.** Read the catalog and apply **Section 4 (Code-Level Checks)** — 12 named anti-patterns covering wildcard tool config, untrusted content concatenated into prompts, unvalidated or unisolated memory writes, approvals not bound to the executed action, open-failure paths, missing output schemas at the tool-call boundary, sensitive data in logs, absent rate limiting and anomaly signals, unsigned inter-agent messages, unbounded recursion or retries, and adversarial tests weakened in the same change. Do **not** apply the catalog's Section 3 — those are spec-level checks that Step 3c's `agent-security` panel value already covered; re-litigating them here produces findings the code cannot resolve.
+
+**How it interacts with the review budget.** The 70/20/10 split describes the base review. This lens is an overlay, not a fourth slice of that budget: it runs after Step 4 of the workflow below, over the agentic files only, and its findings are reported in their own section. Treat any HIGH here as a rejection criterion on the same footing as a spec-alignment failure.
+
+**Evidence rules.** Every finding cites `file:line` and resolves to a concrete code change. Classical appsec findings belong to the base review, not this lens. If the implementation contradicts an `agent-security` finding the spec panel already resolved, say so explicitly — that is a regression between spec and code, and it is at least MEDIUM.
+
+**Abuse cases.** Close the lens by listing the catalog Section 5 rows this implementation's threat surface makes relevant, each with its expected denial, and whether a test currently covers it. Uncovered rows carry forward to Step 4g's eval capture.
+
 ## Review Process Workflow
 
 ### Step 1: Gather All Artifacts
@@ -296,6 +315,7 @@ ls SDD/orchestration/subagent-calls/
 7. Success criteria cannot be achieved
 8. Test suite was not run or has failing tests
 9. E2E/Playwright tests are missing for a web-facing feature (N/A requires explicit justification)
+10. The Agentic-Surface Lens ran and produced a HIGH finding
 
 ## Approval Criteria ✅
 
@@ -354,6 +374,21 @@ For each module in the spec's `## Modules` section, record the depth applied:
 | MODULE-002 [name] | ... | ... | ... |
 
 If the spec had no `## Modules` section, note: "Risk tiering not available — full medium-depth review applied uniformly."
+
+## AI Agent Security (conditional — Agentic-Surface Lens)
+
+Include this section only when the lens ran. When it was skipped, replace it with one line: "Agentic-surface lens skipped — `agent_security: false`" or "Agentic-surface lens skipped — no agentic surface in the implemented code."
+
+**Agentic surface reviewed:** [model calls, tool/MCP definitions, memory and retrieval stores, agent-to-agent edges, external actions — with paths]
+
+- **[HIGH|MEDIUM|LOW]** [Named anti-pattern from catalog Section 4]
+  - Evidence: [`file:line` + the offending code]
+  - Risk: [threat-catalog vocabulary]
+  - Resolution: [concrete code change, file named]
+
+**Abuse-case coverage:** [catalog Section 5 rows relevant here | expected denial | covered by test? (test name or NOT COVERED)]
+
+**Spec-to-code regressions:** [any `agent-security` panel finding the spec resolved but the code does not honor, or "None."]
 
 ## Context Engineering (20%)
 [Context management review]

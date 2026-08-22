@@ -29,6 +29,10 @@ ls SDD/implementation/IMPLEMENTATION-PLAN-*.md 2>/dev/null
 
 If no SDD artifacts exist or the user is asking about a specific proposed solution outside the SDD lifecycle, review that proposal directly.
 
+### Not in scope here
+
+Agentic-system security — prompt injection, tool over-scoping, memory poisoning, excessive autonomy over irreversible actions, multi-agent trust, Denial of Wallet — belongs to the `ai-agent-security-review` skill, which applies the vendored OWASP AI Agent Security control catalog. If the target has an agentic surface, note it in one line and point the user there rather than improvising those findings here.
+
 ## 2. Research Phase Critical Review
 
 If reviewing research artifacts (`RESEARCH-XXX-*.md`):

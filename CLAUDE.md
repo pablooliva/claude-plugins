@@ -31,9 +31,9 @@ plugin/
 ```
 agent-engineering/
 ├── .claude-plugin/plugin.json      # metadata + SubagentStop hook (as of 1.0.0)
-├── agents/                         # 9 forked subagent types sdd-flow spawns:
+├── agents/                         # 10 forked subagent types sdd-flow spawns:
 │                                   #   sdd-workhorse (sonnet), sdd-critical-reviewer (opus),
-│                                   #   7× sdd-spec-*-specialist (sonnet)
+│                                   #   8× sdd-spec-*-specialist (sonnet)
 ├── hooks/log_subagent_call.py      # logs subagent transcripts
 ├── commands/                       # interactive (depth-0) commands the user runs:
 │                                   #   adr-capture, regression-eval-capture, research-clarify,
@@ -43,11 +43,13 @@ agent-engineering/
 │   │   ├── phases/                 #   per-phase chapters (setup, research, planning,
 │   │   │                           #   implementation-whole-feature, implementation-per-slice, protocols)
 │   │   └── bodies/                 #   complete instruction sets for spawned subagents (read by path)
+│   ├── ai-agent-security-review/   # OWASP AI-agent control catalog (vendored) +
+│   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── correction-codifier/, cross-cutting-adr/, improve-claude-md/, todo-tidy/,
 │   │                       #   worktree-create/, worktree-handoff/
 └── README.md
 ```
-`sdd-flow` is the flow's single source of truth: the orchestrator (main conversation) spawns one subagent per step, passing each its body file BY PATH (never embedding content). Spawned subagents must not themselves spawn or invoke slash commands/skills (one-level nesting) — every body is pre-adapted for inline execution. NOTE: this was a platform limit on Claude Code ≤2.1.171; since 2.1.172 (2026-06-09) the platform allows nesting to depth 5, but the flat design is retained deliberately — do not refactor toward nesting without reading `proposals/nested-subagents-analysis-2026-06-12.md`. The other three skills are invoked by the user (or `sdd-flow`) at decision points.
+`sdd-flow` is the flow's single source of truth: the orchestrator (main conversation) spawns one subagent per step, passing each its body file BY PATH (never embedding content). Spawned subagents must not themselves spawn or invoke slash commands/skills (one-level nesting) — every body is pre-adapted for inline execution. NOTE: this was a platform limit on Claude Code ≤2.1.171; since 2.1.172 (2026-06-09) the platform allows nesting to depth 5, but the flat design is retained deliberately — do not refactor toward nesting without reading `proposals/nested-subagents-analysis-2026-06-12.md`. The other skills are invoked by the user (or `sdd-flow`) at decision points. `ai-agent-security-review` is dual-use: a standalone review, and the canonical control catalog that `sdd-flow` reads at three `agent_security:`-gated hook points (Step 3c panel value, Step 4b code-review lens, Step 4g abuse-case evals).
 
 ## How It Works
 

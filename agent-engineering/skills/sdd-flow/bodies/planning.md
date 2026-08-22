@@ -63,6 +63,7 @@ review_panel: [security, performance, data-modeling, api-contract, module-depth]
 eval_required: false
 cross_cutting_decisions: []
 delivery_mode: per-slice
+agent_security: auto
 ---
 
 # SPEC-[###]-[feature-name]
@@ -251,18 +252,32 @@ Each module also carries a **Risk** tier consumed by code review to scale review
 
 ## Specification Frontmatter Fields
 
-The spec template includes four YAML frontmatter fields consumed by sdd-flow and related phases. Populate them thoughtfully based on the research foundation:
+The spec template includes five YAML frontmatter fields consumed by sdd-flow and related phases. Populate them thoughtfully based on the research foundation:
 
 - **`review_panel:`** — List of specialist reviewers to convene during spec-review-panel. Default includes `module-depth` (Ousterhout deep-module check on the `## Modules` section) and covers API/data-backed features. Adjust based on feature characteristics:
   - Add `accessibility` for UI features with user-facing interaction.
   - Add `privacy` for features handling PII, consent, or regulated data.
   - Add `cost` for data-intensive or high-traffic features.
   - Add `reliability` for distributed systems, async processing, or retry-heavy flows.
+  - Add `agent-security` for agentic features — see `agent_security:` below, which normally appends this value for you.
   - Remove specialists that clearly don't apply (e.g., `api-contract` for pure internal tooling). Removing `module-depth` is rare — almost every spec creates or changes modules.
 
 - **`eval_required:`** — Boolean. Set to `true` if this feature produces LLM output, probabilistic behavior, classification/extraction/summarization, or any quality dimension that unit tests can't verify. When `true`, regression-eval-capture will scaffold a LangSmith eval dataset at implementation completion. Set to `false` for deterministic features (CRUD, UI, data transforms).
 
 - **`cross_cutting_decisions:`** — List of topic labels (snake_case) for any architectural decisions made during this feature that bind future work across the system. Examples: `orchestration_engine`, `vector_store`, `auth_provider`, `primary_datastore`, `logging_format`. Leave empty `[]` if this feature makes no cross-cutting decisions. During planning-complete, the cross-cutting-adr step will extract details for each label from the research/spec and write ADR files under `SDD/adr/`.
+
+- **`agent_security:`** — `auto` (default), `true`, or `false`. Gates the OWASP AI-agent security controls at three points in the flow: the `agent-security` panel value at Step 3c, the agentic-surface lens in the Step 4b code review, and abuse-case seeding at Step 4g eval capture. The control catalog is `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`.
+
+  **Agentic-surface detection (resolving `auto`).** Set `agent_security: true` and append `agent-security` to `review_panel:` when the research or the spec you are writing describes any of:
+  - a call to an LLM / foundation model (direct API, SDK, or framework);
+  - a tool or function definition exposed to a model, or an MCP server or client;
+  - agent memory, conversation persistence, or a retrieval (RAG) store that feeds a model's context;
+  - message passing between two or more agents, or a model-driven subagent spawn;
+  - a model output that drives an action on an external system (shell, HTTP write, payment, deploy, file mutation, message send).
+
+  When none applies, leave `auto` (or set `false` explicitly if the feature merely mentions agents without building one). Set `true` by hand to force the review on regardless of detection; set `false` to suppress it — the user's declaration wins over detection in both directions. `auto` is not a silent skip: it is re-evaluated by the orchestrator at Step 3c, and the specialist runs its own scope gate and short-circuits cheaply when the surface is absent.
+
+  This field is about **agentic** risk — prompt injection, tool over-scoping, memory poisoning, excessive autonomy, Denial of Wallet. Classical appsec stays with the `security` panel value; do not drop `security` because you added `agent-security`.
 
 - **`delivery_mode:`** — `whole-feature` (default) or `per-slice`. Controls whether the spec must include a `## Delivery Slices` section and whether downstream phases route through per-slice behavior.
 
@@ -369,6 +384,7 @@ Before considering the specification complete:
 - [ ] If `delivery_mode: per-slice`, SLICE-001 is the thinnest possible end-to-end happy path
 - [ ] If `delivery_mode: per-slice`, slices are ordered by delivery sequence and each REQ-XXX / EDGE-XXX / FAIL-XXX is reachable through some slice by the last slice
 - [ ] If `delivery_mode: whole-feature` (or absent), the `## Delivery Slices` section is omitted
+- [ ] `agent_security:` is populated, and when the feature has an agentic surface the value is `true` and `review_panel:` includes `agent-security`
 
 ---
 

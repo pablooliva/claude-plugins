@@ -39,7 +39,7 @@ Spawn ONE **`agent-engineering:sdd-workhorse`** subagent (strict — no bundling
 - **Task:** Implement the slice end-to-end. Bounded return: "Slice X delivered. Acceptance check `<test name>` passes."
 
 ### Per-slice 4b — Per-slice code review
-Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/slice-review.md` for `SLICE-XXX`. **Mandatory per slice** — not deferred to end-of-feature. Writes `SDD/reviews/REVIEW-SLICE-*`.
+Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/slice-review.md` for `SLICE-XXX`. **Mandatory per slice** — not deferred to end-of-feature. Writes `SDD/reviews/REVIEW-SLICE-*`. When the spec's `agent_security:` gate is `true` or `auto`/absent, pass the resolved **CATALOG** path so the body's Agentic-Surface Lens can run over the slice's file set.
 
 ### Per-slice 4c — Address per-slice findings
 If the review found anything HIGH or MEDIUM, spawn an **`agent-engineering:sdd-workhorse`** fix subagent. Standard fix-and-re-review with the **per-slice iteration cap (REQ-012):** max 3 iterations with progress-stall check (HIGH must strictly decrease, OR MEDIUM when HIGH is zero) — mirrors Step 3c's panel cap exactly.
@@ -103,7 +103,7 @@ When checkpoints are `off` (`--skip-slice-checkpoints`), this pause is skipped �
 7. **End-of-feature 4d — Critical review across the assembled feature.** Spawn an `agent-engineering:sdd-critical-reviewer` subagent with `bodies/critical-review.md` (Implementation Phase section); reviews the whole assembled feature, not individual slices.
 8. **End-of-feature 4e — Address critical review findings.** Standard `agent-engineering:sdd-workhorse` fix subagent.
 9. **End-of-feature 4f — Implementation completion subagent.** `bodies/implementation-complete.md` — finalize plan, write IMPLEMENTATION-SUMMARY, capture glossary deltas. *(Shared step — see `implementation-whole-feature.md` §4f.)*
-10. **End-of-feature 4g — Eval scaffolding.** Conditional on `eval_required:`. *(Shared — §4g.)*
+10. **End-of-feature 4g — Eval scaffolding.** Conditional on `eval_required:` **or** an open `agent_security:` gate (abuse-case-only mode when just the latter). *(Shared — §4g.)* Uncovered abuse cases flagged in the per-slice reviews carry forward here.
 11. **End-of-feature 4h — Supervised checkpoint.** Fires only in supervised phase-boundary mode. *(Shared — §4h.)*
 12. **End-of-feature 4i — End-of-feature commit.** Covers: critical review doc, fix-findings code from 4e, completion artifacts from 4f, eval scaffolding from 4g. Per-slice code is already committed in each 4c.6.
 13. **End-of-feature 4j — Announcement.** *(Shared — §4j.)* Surface eval scaffold result and any ADRs. Then perform the **feature-completion rotation** per §4j (`phases/protocols.md` → Progress Rotation).

@@ -8,7 +8,9 @@ Operationalizes the **Observability Imperative**: every model migration or promp
 
 ## When Invoked
 
-This body is invoked at the end of the implementation phase when the spec frontmatter declares `eval_required: true`. It is not intended for manual invocation.
+This body is invoked at the end of the implementation phase when the spec frontmatter declares `eval_required: true`, **or** when the `agent_security:` gate is open (agentic features get an adversarial regression suite whether or not their ordinary output needs LLM-as-judge grading). It is not intended for manual invocation.
+
+**Abuse-case-only mode:** when `eval_required: false` but the `agent_security:` gate is open, run Sections 1–4, Section 4b, and Section 7–8 only. Skip the evaluator and run-function stubs (Sections 5 and 6) — there is no quality rubric to grade; the abuse-case rows assert denials, not quality. Say so in the progress log.
 
 Not every feature needs this. Good candidates: LLM-heavy pipelines (summarization, classification, extraction, RAG), agent workflows with probabilistic output, features where "quality" cannot be verified by a unit test. Bad candidates: deterministic CRUD, UI tweaks, pure data transforms that can be unit-tested.
 
@@ -46,6 +48,7 @@ Read the current feature's spec from `SDD/requirements/SPEC-[###]-[feature-name]
 - `langsmith_project:` frontmatter (if present) — overrides the env var for this feature's dataset.
 - `eval_dataset_type:` frontmatter (if present): `final_response` (default) | `single_step` | `trajectory` | `rag`.
 - `eval_evaluator_type:` frontmatter (if present): `llm_as_judge` (default) | `custom_code`.
+- `agent_security:` frontmatter: `auto` (default) | `true` | `false`. When the gate is open (see Section 4b), the abuse-case matrix is seeded into the dataset alongside the ordinary golden examples.
 - Success criteria section — these will be transformed into the evaluator's grading rubric.
 - Implementation-notes section — tells you the feature's entry point and output shape.
 
@@ -96,6 +99,26 @@ To verify the dataset was created (or already exists), you may run:
 langsmith dataset list
 langsmith dataset get "regression-[feature-slug]"
 ```
+
+## 4b. Seed the Abuse-Case Rows (conditional)
+
+**Gate:** `agent_security: true` → run this section. `false` → skip. `auto`/absent → run it only if the feature has an agentic surface (model call, tool/MCP definition, agent memory or retrieval store, inter-agent messaging, or a model output driving an action on an external system). Your prompt provides the absolute path of the control catalog, `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`, when the gate may be open.
+
+Read the catalog's **Section 5 (Abuse-Case Test Matrix)** — and only Section 5; Sections 3 and 4 are review checks, already applied at Steps 3c and 4b. Also read the `## AI Agent Security` section of the code review (`SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`, or the per-slice reviews) for its abuse-case coverage table: rows already marked covered by a passing test do not need a dataset row.
+
+Write the remaining rows to `evals/datasets/abuse-cases-[feature-slug].jsonl` — one JSON object per line, each with `abuse_case`, `input` (a concrete adversarial input for THIS feature, not the generic case name), `expected_denial` (what the system must refuse or contain), and `source: "owasp-ai-agent-cheat-sheet"`. Generic rows are worthless: "Prompt override" must become an actual injected instruction aimed at this feature's prompt, and the expected denial must be checkable.
+
+Upload them to the dataset:
+
+```bash
+langsmith dataset upload \
+  --name "regression-[feature-slug]" \
+  --file "evals/datasets/abuse-cases-[feature-slug].jsonl"
+```
+
+**Same non-blocking rule as the rest of this body:** if the CLI or API key is unavailable, keep the `.jsonl` file on disk, log a warning to `progress.md`, and continue — the rows are version-controlled and can be uploaded later. Never put secrets or customer data in the fixtures.
+
+Note in the progress log how many abuse-case rows were seeded and which catalog rows were skipped as already covered. When the gate is closed, skip this section silently — an empty abuse-case file is worse than none, because it reads as "tested".
 
 ## 5. Write the Evaluator Stub
 

@@ -26,6 +26,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **Two-stage specialist panel.** During planning, the orchestrator spawns one specialist subagent per `review_panel:` value in parallel (Stage 1; each writes a `PANEL-FINDINGS-*` file), then one `sdd-critical-reviewer` synthesis subagent reads those files from disk and emits the verdict (Stage 2). The bounded fix-and-re-review loop (max 3 iterations, progress-stall halt) is unchanged.
 - **Reads-only safety net.** Spawned subagents do not spawn in this flow, so there is no nested-subagent counter — the only safety-net signal is file Reads (default trigger >15; >20 for implementation chunks). On trip, the subagent compacts and hands off.
 - **Per-slice authoring default.** The planning body sets `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices (then `whole-feature` with a one-line justification). The PARSE default (frontmatter absent → whole-feature) is unchanged for backward compatibility.
+- **Gated AI-agent security review (2.1.0).** Spec frontmatter `agent_security: auto|true|false` gates three hook points: the `agent-security` panel value at Step 3c (spec-level checks), the Agentic-Surface Lens in the Step 4b / per-slice code review (code-level checks), and abuse-case seeding at Step 4g eval capture. `auto` resolves by detecting an agentic surface — a model call, a tool/MCP definition, agent memory or a retrieval store, inter-agent messaging, or a model output driving an external action.
 - **Progressive disclosure.** `SKILL.md` is a slim orchestrator core; per-phase detail lives in `skills/sdd-flow/phases/` (`setup`, `research`, `planning`, `implementation-whole-feature`, `implementation-per-slice`, `protocols`), read at each phase boundary.
 
 ## Contents
@@ -36,6 +37,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **`correction-codifier`** — When you correct Claude's behavior mid-session, proposes a durable `Always|Never [X] BECAUSE [Y]` rule and appends it to the project's `CLAUDE.md`. Operationalizes Principle 5 (Institutional Memory).
 - **`cross-cutting-adr`** — Captures cross-cutting architectural decisions as numbered ADRs under `SDD/adr/`. Triggers on comparison-with-selection patterns, explicit invocation, or ambient detection. Operationalizes Principle 3 (Living Documentation).
 - **`improve-claude-md`** — Audits `CLAUDE.md`/`AGENTS.md` and `CLAUDE.local.md` to strip discoverable content and concentrate on preferences, behavioral nudges, and corrections. Mirrored from [pablooliva/claude-skills](https://github.com/pablooliva/claude-skills).
+- **`ai-agent-security-review`** — Adversarial security review of **agentic** systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt-injection defense, memory/context security, human-in-the-loop for high-impact actions, output guardrails, monitoring, multi-agent trust, data protection, adversarial validation). Runs standalone on a spec, research doc, diff, or codebase; the same vendored control catalog (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) is what `sdd-flow` consumes at its three gated hook points. Distinct from classical appsec, which stays with the `security` panel value and `/critical-review`.
 - **`todo-tidy`** — Promotes a free-form `scratch.md` working list into a structured `TODO.md` (renaming, or folding both together when both exist) and reorganizes the contents into a consistent, hierarchical checkbox list. Reformats only — it never acts on an item, drops content, or edits `.gitignore` (it checks and warns).
 
 ### Commands
@@ -63,7 +65,17 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 1.0.3.
+Version 2.1.0.
+
+### What's new in 2.1.0
+
+OWASP AI Agent Security review, as one catalog with two entry points:
+
+- **New skill `ai-agent-security-review`** — standalone, target-detecting (explicit path → active SDD artifact → working diff → repo), writes `SDD/reviews/AGENT-SECURITY-*.md` with the same severity rubric and verdict thresholds as the sdd-flow panel.
+- **Vendored control catalog** — `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`, split into spec-level checks (§3), code-level checks (§4), and the abuse-case test matrix (§5). Deliberately not fetched at review time: reviews must be deterministic and offline-safe. Refresh by re-reading the source and bumping the retrieval date.
+- **`sdd-flow` hook points** — `agent-security` panel value (Step 3c, new `sdd-spec-agent-security-specialist` agent, Sonnet); Agentic-Surface Lens in `code-review.md` and `slice-review.md` (Step 4b — a HIGH finding is a rejection criterion); abuse-case seeding in `eval-capture.md` (Step 4g, including an abuse-case-only mode when `eval_required: false`).
+- **New spec frontmatter field `agent_security:`** — `auto` (default) | `true` | `false`. The planning body resolves `auto` by agentic-surface detection and appends `agent-security` to `review_panel:`.
+- **New orchestrator constant `CATALOG`** — resolved at Step 0 alongside `SKILL_ROOT`. A missing catalog closes the gate for the run with a warning; the flow does not halt.
 
 ### What's new in 1.0.3
 
