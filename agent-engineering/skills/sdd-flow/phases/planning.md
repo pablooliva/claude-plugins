@@ -10,7 +10,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning.md`
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present).
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, append `progress.md`.
-- **Task:** Read the research and create the full specification. The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `eval_required`, `cross_cutting_decisions`, `delivery_mode` — populated thoughtfully. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force.
+- **Task:** Read the research and create the full specification. The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `eval_required`, `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force.
 
 Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning-complete.md`
@@ -34,13 +34,20 @@ If `cross_cutting_decisions:` is empty/absent, skip this step.
 
 ## 3c. Specialist Panel Review — two stages
 
-Panel composition comes from the spec's `review_panel:` frontmatter. If absent or empty, apply the **default panel**: `security`, `performance`, `data-modeling`, `api-contract`, `module-depth` — plus `slice-integrity` when the spec declares `delivery_mode: per-slice`. (Other available values: `reliability`, `accessibility`, `cost`, `privacy`.)
+Panel composition comes from the spec's `review_panel:` frontmatter. If absent or empty, apply the **default panel**: `security`, `performance`, `data-modeling`, `api-contract`, `module-depth` — plus `slice-integrity` when the spec declares `delivery_mode: per-slice`, plus `agent-security` when the spec's `agent_security:` gate is open (see below). (Other available values: `reliability`, `accessibility`, `cost`, `privacy`.)
+
+**`agent-security` gate.** Read the spec's `agent_security:` frontmatter — `auto` (default when absent), `true`, or `false`:
+- `true` → include `agent-security` in the panel, and the specialist skips its own scope gate.
+- `false` → never include it; the user has declared the feature non-agentic.
+- `auto` → include it when the spec describes an agentic surface (LLM/model call, tool or MCP definition, agent memory or retrieval store feeding model context, inter-agent messaging, or a model output driving an action on an external system). The planning body (3a) normally resolves `auto` and appends the value to `review_panel:` itself; when it did not, the orchestrator applies the same test. Including it under `auto` is cheap — the specialist short-circuits when its own scope gate is closed.
+
+The `agent_security:` value also gates Step 4b's agentic-surface code-review lens and Step 4g's abuse-case eval seeding, so it must be resolved even when `review_panel:` was authored by hand.
 
 ### Stage 1 — specialists in parallel
 
 Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, multiple spawns). Each uses its matching shipped agent type `agent-engineering:sdd-spec-<panel-value>-specialist`:
 - **Body:** `bodies/panel-specialist.md` ("apply ONLY the Section your panel value names").
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, the panel value, and the resolved PANEL-FINDINGS output path.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, the panel value, and the resolved PANEL-FINDINGS output path. For the `agent-security` value, also pass the resolved **CATALOG** path (`SKILL.md` → SKILL_ROOT resolution).
 - **Output:** `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md`.
 - Each specialist writes exactly one findings file and spawns nothing. (The `slice-integrity` specialist short-circuits unless `delivery_mode: per-slice`.)
 

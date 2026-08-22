@@ -26,7 +26,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/code-review.md`
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from IMPLEMENTATION-PLAN).
 - **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`.
-- **Task:** Specification-driven review (70% spec alignment, 20% context engineering, 10% test alignment). Apply **Risk-Tiered Review Depth** — read each `MODULE-XXX`'s `Risk:` field and scale internal-review depth: `high` → full internals; `medium` → default; `low` → tested-boundary only. Escalate any tier that looks misclassified (e.g., a `low`-tagged module touching irreversible state) and flag it in the Module Review Log.
+- **Task:** Specification-driven review (70% spec alignment, 20% context engineering, 10% test alignment). The body's **Agentic-Surface Lens** fires when the spec's `agent_security:` gate is open — pass the resolved **CATALOG** path in the prompt whenever `agent_security:` is `true` or `auto`/absent. A HIGH lens finding is a rejection criterion. Apply **Risk-Tiered Review Depth** — read each `MODULE-XXX`'s `Risk:` field and scale internal-review depth: `high` → full internals; `medium` → default; `low` → tested-boundary only. Escalate any tier that looks misclassified (e.g., a `low`-tagged module touching irreversible state) and flag it in the Module Review Log.
 
 ---
 
@@ -70,13 +70,13 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 
 ## 4g. Regression Eval Capture (conditional)  *(shared)*
 
-Read the spec's `eval_required:` frontmatter. If `true`, spawn an **`agent-engineering:sdd-workhorse`** subagent:
+Read the spec's `eval_required:` and `agent_security:` frontmatter. Run this step if **either** `eval_required: true` **or** the `agent_security:` gate is open (`true`, or `auto`/absent with an agentic surface in the implemented code). When only the security gate is open, the subagent runs in **abuse-case-only mode** (no evaluator/run-function stubs). Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/eval-capture.md`
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md` (feature name, success criteria, frontmatter), repo's existing `evals/` (if present).
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md` (feature name, success criteria, frontmatter), repo's existing `evals/` (if present). When the `agent_security:` gate is open, also pass `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md` (for its abuse-case coverage table) and the resolved **CATALOG** path.
 - **Outputs:** LangSmith dataset created (empty, awaiting examples) via the `langsmith` CLI, `evals/evaluators/[feature-slug]_evaluator.{py,ts}`, `evals/run_functions/[feature-slug]_run.{py,ts}`, `evals/README.md` updated.
-- **Task:** Scaffold the regression eval infrastructure. **Non-blocking:** if the `langsmith` CLI / API key is missing, log a warning to `progress.md` and return WITHOUT halting — the feature has shipped; eval is a follow-up. Surface the warning in 4j.
+- **Task:** Scaffold the regression eval infrastructure, and seed the abuse-case rows (body §4b) when the security gate is open. **Non-blocking:** if the `langsmith` CLI / API key is missing, log a warning to `progress.md` and return WITHOUT halting — the feature has shipped; eval is a follow-up. Surface the warning in 4j.
 
-If `eval_required:` is `false`/absent, skip this step.
+If `eval_required:` is `false`/absent **and** the `agent_security:` gate is closed, skip this step.
 
 ---
 

@@ -1,7 +1,7 @@
 {
     "name": "agent-engineering",
-    "description": "Cross-cutting skills for disciplined AI-assisted development based on the 10 Claude Code Principles (Forsythe). Includes correction codification, regression eval scaffolding, cross-cutting architectural decision capture, isolated git-worktree task lifecycle (create + handoff/merge), and self-contained SDD flow orchestration (no SDD plugin required).",
-    "version": "2.0.0",
+    "description": "Cross-cutting skills for disciplined AI-assisted development based on the 10 Claude Code Principles (Forsythe). Includes correction codification, regression eval scaffolding, cross-cutting architectural decision capture, OWASP AI-agent security review (standalone + wired into the SDD flow), isolated git-worktree task lifecycle (create + handoff/merge), and self-contained SDD flow orchestration (no SDD plugin required).",
+    "version": "2.1.0",
     "author": {
         "name": "Pablo Oliva",
         "email": "p.o@pablooliva.de"

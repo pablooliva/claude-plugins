@@ -6,7 +6,7 @@ Operationalizes the **Observability Imperative**: every model migration or promp
 
 ## When to Use This Command
 
-- **Automated (via sdd-flow):** invoked at the end of the implementation phase if spec frontmatter declares `eval_required: true`.
+- **Automated (via sdd-flow):** invoked at the end of the implementation phase if spec frontmatter declares `eval_required: true`, or if the spec's `agent_security:` gate is open (agentic features get an abuse-case regression suite even when `eval_required: false` — see `skills/sdd-flow/bodies/eval-capture.md` §4b).
 - **Manual:** invoked any time after a feature ships, when you realize the feature's output quality is something you'll want to regression-test across model upgrades or prompt changes.
 
 Not every feature needs this. Good candidates: LLM-heavy pipelines (summarization, classification, extraction, RAG), agent workflows with probabilistic output, features where "quality" cannot be verified by a unit test. Bad candidates: deterministic CRUD, UI tweaks, pure data transforms that can be unit-tested.
@@ -348,7 +348,7 @@ Do not auto-create without confirmation — external writes (Vikunja API, shared
 
 When invoked by `sdd-flow` at the end of the implementation phase:
 
-- sdd-flow only invokes this command if the spec has `eval_required: true` in frontmatter.
+- sdd-flow invokes this command when the spec has `eval_required: true`, or when its `agent_security:` gate is open (abuse-case-only mode).
 - If any prerequisite check (Section 1) fails, this command emits a warning but does not halt sdd-flow. The feature has shipped; the eval is a follow-up concern. sdd-flow should log the failure to the flow's progress file for user attention but continue to "Done" state.
 - If the scaffold succeeds, sdd-flow appends a reference to the created artifacts in its final status report.
 

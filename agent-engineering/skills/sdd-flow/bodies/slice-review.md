@@ -89,6 +89,8 @@ Apply the following review process to the computed slice file set. The full revi
 
 **Implausible-tier override:** if a module is marked `low` but you observe it touches state that is irreversible, security-sensitive, or financial, escalate to `medium` or `high` and note the override in the Module Review Log.
 
+**Agentic-Surface Lens (conditional).** Read the SPEC's `agent_security:` frontmatter. `true` → run the lens over this slice's file set. `false` → skip. `auto`/absent → run it only if this slice's files contain an agentic surface (model call, tool/MCP definition, agent memory or retrieval store, inter-agent messaging, or a model output driving an external action). When it runs, read the control catalog at the path your prompt provides (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) and apply **Section 4 (Code-Level Checks)** only — Section 3 is spec-level and was covered at Step 3c. Report findings under a `## AI Agent Security` heading in the slice review document, with `file:line` evidence and concrete code resolutions; a HIGH finding rejects the slice. When the lens is skipped, record the one-line reason instead. Uncovered abuse cases from catalog Section 5 carry forward to the end-of-feature eval capture — note them in the slice's findings so the ledger picks them up.
+
 ## Step 6: Write the per-slice review document
 
 Write the review output to:

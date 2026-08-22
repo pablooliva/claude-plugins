@@ -1,6 +1,6 @@
 ---
 name: sdd-flow
-description: "INVOKE THIS SKILL when the user asks to run end-to-end feature development via the SDD methodology, or runs /sdd-flow with a task description. Takes a task or software requirement and drives it through the complete SDD lifecycle (Research → Planning → Implementation → Done) via subagents with fresh context per phase. Self-contained: ships its own forked phase bodies, agents, and hooks — the SDD plugin is NOT required and need not be installed. Integrates cross-cutting-adr at research/planning boundaries, a two-stage specialist panel during planning, and regression-eval scaffolding at implementation completion; spec frontmatter (review_panel, eval_required, cross_cutting_decisions, delivery_mode) gates each."
+description: "INVOKE THIS SKILL when the user asks to run end-to-end feature development via the SDD methodology, or runs /sdd-flow with a task description. Takes a task or software requirement and drives it through the complete SDD lifecycle (Research → Planning → Implementation → Done) via subagents with fresh context per phase. Self-contained: ships its own forked phase bodies, agents, and hooks — the SDD plugin is NOT required and need not be installed. Integrates cross-cutting-adr at research/planning boundaries, a two-stage specialist panel during planning, OWASP AI-agent security review for agentic features (spec panel, code-review lens, abuse-case evals), and regression-eval scaffolding at implementation completion; spec frontmatter (review_panel, eval_required, cross_cutting_decisions, delivery_mode, agent_security) gates each."
 ---
 
 # SDD Flow — End-to-End Feature Development
@@ -40,6 +40,8 @@ At Step 0 the orchestrator resolves **SKILL_ROOT** = the absolute path of this s
 2. **Dev/repo checkout:** the `agent-engineering/skills/sdd-flow` directory of the working repo.
 
 Every body path in a spawn prompt is the **resolved absolute** `SKILL_ROOT/bodies/<file>.md`. Compact bodies are passed the same way (read only if the Safety-Net trips).
+
+The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), the code-review / slice-review agentic lens (4b), and eval capture (4g). Record both in `progress.md` alongside SKILL_ROOT. If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run and a one-line warning goes to `progress.md` — the flow does not halt.
 
 ## Canonical Identifiers (resolved at Step 0)
 
@@ -134,7 +136,7 @@ Routing is carried by **shipped agent frontmatter** — no runtime model switchi
 | Spawn site | Agent type | Model |
 |---|---|---|
 | Research, planning, ADR capture, fixes, impl chunks, code review, completion, eval, slice cycle | `agent-engineering:sdd-workhorse` | sonnet |
-| Each panel specialist (Stage 1) | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
+| Each panel specialist (Stage 1), including `agent-security` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
 | Research/spec/impl critical review; panel synthesis (Stage 2) | `agent-engineering:sdd-critical-reviewer` | opus |
 
 The workhorse's escalation protocol stays: if a task needs Opus depth, it surfaces "needed Opus depth" in its bounded return and the orchestrator re-spawns (or per-spawn-overrides) at Opus.
