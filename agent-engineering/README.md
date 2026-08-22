@@ -51,14 +51,15 @@ These are **interactive commands you run yourself** (depth 0, so they may delega
 - **`/research-clarify`** — Structured interview that externalizes your design concept before any codebase research. Satisfies the `sdd-flow` Step 1.5 clarification gate.
 - **`/critical-review`** — Standalone adversarial review of a research doc, spec, or implementation.
 - **`/continue`** — Resume an interrupted SDD session from `progress.md`.
-- **`/adhoc-compact`** — Compact the current working context mid-phase.
+- **`/adhoc-compact`** — Generic mid-phase compaction, for ad-hoc or follow-up work. Detects an active SDD phase and redirects to the phase-specific command below.
+- **`/research-compact`**, **`/planning-compact`**, **`/implementation-compact`** — Phase-specific compaction. Thin wrappers that read `sdd-flow`'s own compaction bodies (`skills/sdd-flow/bodies/<phase>-compact.md`) and run them interactively, so a manual compaction produces the same artifact an orchestrated run would — no second copy of the templates to drift.
 - **`/commit`** — Commit conventions (no co-author attribution), including atomic per-slice commits.
 
 ## Coexisting with the SDD plugin
 
 The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it. If you keep both installed:
 
-- **Command-name disambiguation.** Several command names exist in both plugins (`/critical-review`, `/continue`, `/commit`, `/adhoc-compact`, `/research-clarify`). Claude Code may require the `/agent-engineering:` prefix (e.g. `/agent-engineering:critical-review`) to pick this plugin's copy.
+- **Command-name disambiguation.** Several command names exist in both plugins (`/critical-review`, `/continue`, `/commit`, `/adhoc-compact`, `/research-clarify`, `/research-compact`, `/planning-compact`, `/implementation-compact`). Claude Code may require the `/agent-engineering:` prefix (e.g. `/agent-engineering:critical-review`) to pick this plugin's copy.
 - **Duplicate transcript logs.** Both plugins register a `SubagentStop` hook pointing at their own `log_subagent_call.py`. With both installed, each subagent stop is logged twice — harmless, just duplicate transcript entries.
 
 ## Other dependencies
@@ -67,7 +68,16 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 2.1.0.
+Version 2.2.0.
+
+### What's new in 2.2.0
+
+Phase-specific compaction is reachable again from an interactive session:
+
+- **New commands `/research-compact`, `/planning-compact`, `/implementation-compact`.** `/adhoc-compact` and `/continue` had redirected to these three names since the 1.0.0 fork, but they only ever existed in the `sdd` plugin — with `agent-engineering` installed alone the redirect pointed at nothing, and with both installed it silently reached sdd's frozen 2.2.0 copies.
+- **Wrappers, not a second fork.** Each command resolves `skills/sdd-flow/bodies/<phase>-compact.md` (the same body the orchestrator passes on a Safety-Net trip), tells the model to drop the spawned-subagent framing — no orchestrator, no Reads-counter, no ≤100-word return contract — and follow the rest interactively. The templates stay single-source, so manual and orchestrated compactions cannot drift.
+- **Prefixed references.** All three names collide with the `sdd` plugin, so `/adhoc-compact` and `/continue` now name them as `/agent-engineering:<phase>-compact`.
+- **`/implementation-compact` confirms before committing.** The body's commit step is correct for a subagent but not for an interactive run; the wrapper requires showing the user what will be staged first.
 
 ### What's new in 2.1.0
 

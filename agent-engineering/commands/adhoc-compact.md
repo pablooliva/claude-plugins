@@ -26,15 +26,17 @@ cat SDD/orchestration/progress.md 2>/dev/null | head -20
 
 **If any of these indicate an active phase, STOP and redirect the user:**
 
-- **Research artifacts found** → Tell the user: "You appear to be in the **research phase**. Use `/research-compact` instead — it captures research-specific context (investigations, system behavior, critical learnings) that this generic command would lose."
-- **Specification artifacts found** → Tell the user: "You appear to be in the **planning phase**. Use `/planning-compact` instead — it captures specification progress, research alignment, and implementation readiness that this generic command would lose."
-- **Implementation prompts or active coding found** → Tell the user: "You appear to be in the **implementation phase**. Use `/implementation-compact` instead — it captures test status, spec validation, and code change tracking that this generic command would lose."
+- **Research artifacts found** → Tell the user: "You appear to be in the **research phase**. Use `/agent-engineering:research-compact` instead — it captures research-specific context (investigations, system behavior, critical learnings) that this generic command would lose."
+- **Specification artifacts found** → Tell the user: "You appear to be in the **planning phase**. Use `/agent-engineering:planning-compact` instead — it captures specification progress, research alignment, and implementation readiness that this generic command would lose."
+- **Implementation prompts or active coding found** → Tell the user: "You appear to be in the **implementation phase**. Use `/agent-engineering:implementation-compact` instead — it captures test status, spec validation, and code change tracking that this generic command would lose."
 
 **Only proceed with this generic compaction if NO active SDD phase is detected**, or if the user explicitly confirms they want the generic version after being warned.
 
 ---
 
 ## When to Use This vs Phase-Specific Compaction
+
+The phase-specific commands are `/agent-engineering:research-compact`, `/agent-engineering:planning-compact`, and `/agent-engineering:implementation-compact`. They share their instruction sets with `sdd-flow`'s compaction bodies, so a manual compaction produces the same artifact an orchestrated run would. Use the `/agent-engineering:` prefix — the bare names also exist in the `sdd` plugin, which ships the older, frozen copies.
 
 | Use `/adhoc-compact` when:            | Use phase-specific when:              |
 | ------------------------------------- | ------------------------------------- |

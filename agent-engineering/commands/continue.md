@@ -8,7 +8,7 @@ This command resumes your work after using a compaction command and clearing you
 
 You should run `/continue` when:
 
-- ✅ You've run a compact command (`/adhoc-compact`, `/research-compact`, `/planning-compact`, `/implementation-compact`)
+- ✅ You've run a compact command (`/adhoc-compact`, `/agent-engineering:research-compact`, `/agent-engineering:planning-compact`, `/agent-engineering:implementation-compact`)
 - ✅ You've cleared your Claude Code session
 - ✅ You're starting fresh and want to resume where you left off
 
@@ -178,9 +178,9 @@ If any verification fails, ask user for clarification before proceeding.
      Context utilization is approaching [X]%.
      Please save your work and run the appropriate compact command:
      - Quick/lightweight (ad-hoc work only): /adhoc-compact
-     - Research phase: /research-compact
-     - Planning phase: /planning-compact
-     - Implementation phase: /implementation-compact
+     - Research phase: /agent-engineering:research-compact
+     - Planning phase: /agent-engineering:planning-compact
+     - Implementation phase: /agent-engineering:implementation-compact
      ```
 
 3. **Update Progress File:**
