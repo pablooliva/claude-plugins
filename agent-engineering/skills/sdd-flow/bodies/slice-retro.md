@@ -129,7 +129,7 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 
 ## Recommended Re-planning
 
-[Structured, optional, ELEVATED severity. Each entry follows the same template as SPEC Amendments but signals a fundamental plan-level failure rather than a local clarification. If no re-planning is recommended, state "None." explicitly OR omit the section entirely. **Presence of even one entry HALTS the flow** even under `--skip-slice-checkpoints` per REQ-014 — see "Three-Tier Recommendation Surfacing" below.]
+[Structured, REQUIRED, ELEVATED severity. Each entry follows the same template as SPEC Amendments but signals a fundamental plan-level failure rather than a local clarification. If no re-planning is recommended, the section body MUST be the single line `None.` — do NOT omit the section. **One or more entries HALT the flow** even under `--skip-slice-checkpoints` per REQ-014; a `None.` body does not — see "Three-Tier Recommendation Surfacing" below.]
 
 ### Re-plan trigger 1: <short label>
 
@@ -168,7 +168,15 @@ The retrospective MUST emit these EXACT header strings when learnings warrant SP
 
 These header strings are the **matcher contract** for the flow orchestrator's Step 4b/4c orchestration logic. Any deviation (e.g., `## Recommended Spec Amendments`, `## Spec Amendments`, `## Re-planning Recommended`) breaks the matcher and the orchestrator will fail to surface the recommendations correctly.
 
-Even when no amendments or re-planning are recommended, the `## Recommended SPEC Amendments` section is REQUIRED in the retrospective body (with content "None.") — its absence is detected as malformed retro by the orchestrator. The `## Recommended Re-planning` section is OPTIONAL when there are no re-plan recommendations; either omit it entirely, or include it with content "None."
+BOTH sections are **REQUIRED** in every retrospective, whether or not there is anything to recommend. When there is nothing to recommend, the section body is the exact single line:
+
+```
+None.
+```
+
+Accepted spellings for the no-op body: `None.` or `None`, any case. Nothing else — not "N/A", not "No amendments needed", not a sentence beginning with "None" followed by justification on the same line. The orchestrator's Stage-1 matcher tests this one string; free prose in the body reads as a live recommendation and will halt the flow. Put any rationale on a LATER line if you want it recorded.
+
+Omitting either section is a **malformed retro** — the orchestrator cannot distinguish "no recommendation" from "the subagent forgot the section", so it treats absence as malformed rather than as a "no".
 
 ## Three-Tier Recommendation Surfacing (REQ-014 reference)
 
@@ -176,7 +184,7 @@ Retrospectives can raise recommendations at three escalating tiers (per REQ-014 
 
 1. **Normal recommendation** — structured `## Recommended SPEC Amendments` entries (slice-bounded; user reviews at next slice-boundary pause OR at the consolidated announcement under `--skip-slice-checkpoints`; **no halt**).
 2. **Iteration-cap-exhaustion** — per-slice review-fix-rerun loop fails to reduce HIGH findings across the cap (REQ-013); halts the slice's iteration loop, routes findings to ledger's `Open recommendations awaiting user decision` section; in `--skip-slice-checkpoints` mode halts the whole flow.
-3. **Re-planning recommendation** — `## Recommended Re-planning` (this retro section); **halts the flow even under `--skip-slice-checkpoints`** (mirrors Step 3c panel-review halt).
+3. **Re-planning recommendation** — `## Recommended Re-planning` (this retro section) with a **non-`None.` body**; **halts the flow even under `--skip-slice-checkpoints`** (mirrors Step 3c panel-review halt). The section with a `None.` body is the required no-re-plan shape and does not halt.
 
 Each tier has its own surfacing mechanism. Implementations SHOULD treat the three as distinct user-decision points; UI/CLI surfaces SHOULD label them by tier so users grasp the severity at a glance.
 
@@ -279,14 +287,20 @@ This body writes only the `## Slice <SLICE-XXX> - Retrospective Complete` log en
 
 The contract is two-stage by design (resolves M-2):
 
-1. **Retro stage (this body):** the retrospective ARTIFACT contains the EXACT header `## Recommended Re-planning` (per Step 6 + the matcher-contract block above) when the slice's learnings warrant a re-plan. The retro-body header is the SOURCE OF TRUTH for the recommendation. This body does NOT itself touch any halt-shaped block in `progress.md`.
-2. **Orchestrator stage (flow Step 4c.5):** after this body returns, the orchestrator greps the just-written retrospective for `^## Recommended Re-planning$`. On match, the ORCHESTRATOR (not this body) writes the `## Awaiting Re-planning Decision` halt block to `progress.md` and halts the per-slice cycle. On a fresh-session resume, Phase Detection reads `progress.md` for `## Awaiting Re-planning Decision` (the progress-block name) and re-prompts the user.
+1. **Retro stage (this body):** the retrospective ARTIFACT always contains the EXACT header `## Recommended Re-planning` (per Step 6 + the matcher-contract block above); its BODY carries the answer — entries when the slice's learnings warrant a re-plan, `None.` when they do not. The retro ARTIFACT (not this body's return summary) is the SOURCE OF TRUTH for the recommendation. This body does NOT itself touch any halt-shaped block in `progress.md`.
+2. **Orchestrator stage (flow Step 4c.5):** after this body returns, the orchestrator reads the just-written retrospective and matches `^## Recommended Re-planning$` **AND** a first non-empty body line that is not `None.` (it never keys off this body's return summary). On match, the ORCHESTRATOR (not this body) writes the `## Awaiting Re-planning Decision` halt block to `progress.md` and halts the per-slice cycle. On a fresh-session resume, Phase Detection reads `progress.md` for `## Awaiting Re-planning Decision` (the progress-block name) and re-prompts the user.
 
 This separates the two strings unambiguously:
 - `## Recommended Re-planning` lives ONLY in the retrospective artifact (`SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-...md`).
 - `## Awaiting Re-planning Decision` lives ONLY in `progress.md` and is written by the orchestrator (never by this body).
 
 If this body is invoked outside the flow orchestrator and the retro contains `## Recommended Re-planning` entries, the user is responsible for either invoking the orchestrator's continue/resume step (which detects the recommendation via the matcher) or manually consulting the retro's recommendations. This body does not halt or write any halt-shaped block; it only records the retrospective and updates the ledger.
+
+### Bounded return — what to report about the two recommendation sections
+
+Your return MUST state the absolute path of the retrospective you wrote, and MUST quote the first non-empty body line of `## Recommended SPEC Amendments` and of `## Recommended Re-planning` **verbatim, re-read from the file you just wrote** — not from memory of what you intended to write.
+
+Do NOT assert that you did or did not emit a section. Self-reports of that shape have been observed to contradict the artifact on disk. The orchestrator matches the file regardless; a return that contradicts it only creates a discrepancy the orchestrator must reconcile.
 
 ## `--reconcile-ledger` Mode (REQ-025a — full 8-step algorithm)
 
@@ -337,7 +351,7 @@ The flags `--replan`, `--from-slice SLICE-XXX`, and `--override-replan` are **NO
 |------|------|-----------|---------|-------|
 | `--replan` | orchestrator continue | Re-runs the planning phase with the ledger and triggering retro in scope; resumes implementation from SLICE-001. | Without `--replan`, the orchestrator's continue step proceeds along the existing flow. | Triggered by `## Recommended Re-planning` retro recommendations. |
 | `--from-slice SLICE-XXX` | orchestrator continue (only meaningful with `--replan`) | Resume implementation from the named slice after the re-plan completes. | Without the flag, re-plan resumes from `SLICE-001`. | **Validation:** `--from-slice` value MUST match `^SLICE-\d{3}$` AND MUST reference an existing SLICE-XXX in the IMPLEMENTATION-PLAN's `## Slice Progress` table. Invalid value (regex mismatch or unknown slice) refuses with the REQ-007 message-discipline shape. |
-| `--override-replan` | orchestrator continue | Continues with the current plan despite a `## Recommended Re-planning` recommendation. Documented but discouraged. | Without the flag, a `## Recommended Re-planning` halts the flow per REQ-014 (even under `--skip-slice-checkpoints`). | The orchestrator does NOT silently emit `--override-replan`; in autonomous mode the halt fires per REQ-014. |
+| `--override-replan` | orchestrator continue | Continues with the current plan despite a `## Recommended Re-planning` recommendation. Documented but discouraged. | Without the flag, a non-`None.` `## Recommended Re-planning` halts the flow per REQ-014 (even under `--skip-slice-checkpoints`). | The orchestrator does NOT silently emit `--override-replan`; in autonomous mode the halt fires per REQ-014. |
 
 **Combination semantics for the orchestrator's continue step:**
 

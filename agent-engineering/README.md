@@ -68,7 +68,16 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 2.2.0.
+Version 2.2.1.
+
+### What's new in 2.2.1
+
+Two defects found running a real per-slice flow, plus one missing review step:
+
+- **The re-planning halt matched too eagerly.** `sdd-flow`'s Step 4c.5 Stage-1 matcher halted the flow on the mere presence of a `## Recommended Re-planning` header — while the retro-body contract explicitly permitted emitting that header with a `None.` body to mean *no re-planning*. A compliant retro could therefore halt the whole flow and demand an operator `--replan` decision for a plan it had just declared fit. The match is now conjunctive: header present **AND** first non-empty body line is not `None.`
+- **The section is now required, not optional.** `## Recommended Re-planning` joins `## Recommended SPEC Amendments` as a mandatory retro section with a mandatory bare `None.` body when there is nothing to recommend. An absent section is a malformed retro, not a "no" — previously nothing distinguished "no re-planning" from "the subagent forgot the section".
+- **Never trust the subagent's self-report.** A retro subagent stated it had not emitted the re-planning header; it had. Stage 1 now says explicitly that the artifact is the only evidence — the return supplies the path, the file supplies the answer — and the retro body's return contract requires quoting the section bodies re-read from disk rather than from memory of what it meant to write.
+- **New: Project Review Checklist Walk.** Both `bodies/slice-review.md` (Step 5.5) and `bodies/code-review.md` (Step 4b) now discover and walk the project's own review checklist — a `CLAUDE.md`/`AGENTS.md` pre-merge section, a PR template, a named docs checklist — with a PASS/FAIL/N-A verdict and evidence per item. Project bookkeeping items (indexes, status tables, registries) apply even when the code didn't touch them, which is exactly the class of obligation a spec-driven review misses.
 
 ### What's new in 2.2.0
 

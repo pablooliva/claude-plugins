@@ -54,12 +54,32 @@ If the review found anything HIGH or MEDIUM, spawn an **`agent-engineering:sdd-w
 Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/slice-retro.md` for `SLICE-XXX`. It writes `RETROSPECTIVE-SLICE-XXX-[feature-name]-YYYY-MM-DD.md` (audit trail; never modified after writing) and updates the rolling ledger in place.
 
 **Two-stage matcher contract (resolves M-2; REQ-013 + REQ-014).** TWO surfaces — the retro-body header (in the retrospective ARTIFACT) and the halt block (in `progress.md`) — DIFFERENT strings, DIFFERENT times, DIFFERENT actors:
-- **Retro-body header** (written by `bodies/slice-retro.md` into the retrospective artifact): `## Recommended SPEC Amendments` — required (content "None." when none); `## Recommended Re-planning` — optional (omit or "None." when no re-plan).
-- **Progress.md halt block** (written by **THE ORCHESTRATOR**, never by the retro body): `## Awaiting Re-planning Decision` — written ONLY when the orchestrator's matcher detects `## Recommended Re-planning` in the just-written retro AND elects to halt.
+- **Retro-body header** (written by `bodies/slice-retro.md` into the retrospective artifact): BOTH `## Recommended SPEC Amendments` and `## Recommended Re-planning` are REQUIRED sections. When there is nothing to recommend, the section's body is the exact single line `None.` (case-insensitive, trailing period optional). A section whose body is `None.` carries NO recommendation; an absent section is a **malformed retro** (see the malformed-retro rule in Stage 1), not a "no" answer.
+- **Progress.md halt block** (written by **THE ORCHESTRATOR**, never by the retro body): `## Awaiting Re-planning Decision` — written ONLY when the orchestrator's matcher finds a **non-`None.`** `## Recommended Re-planning` section in the just-written retro AND elects to halt.
 
-**Stage 1 — Retro-stage match (right after the retro subagent returns, IN this cycle):** the orchestrator reads the just-written retrospective ARTIFACT (path from the subagent's return) and grep-matches the EXACT retro-body header strings:
-- `^## Recommended SPEC Amendments$` → routine amendment recommendation; surface it in the slice-boundary pause as a per-recommendation summary (one or two lines per affected `SLICE-XXX`/`MODULE-XXX`/`REQ-XXX` — what should change, why), with the retrospective path for the user to read full wording. No halt block written.
-- `^## Recommended Re-planning$` → elevated severity. Per **REQ-014**, presence of this header HALTS the flow even under `--skip-slice-checkpoints`. On match, the **orchestrator** writes this halt block to `SDD/orchestration/progress.md`:
+**Stage 1 — Retro-stage match (right after the retro subagent returns, IN this cycle):** the orchestrator reads the just-written retrospective ARTIFACT (path from the subagent's return) and matches the EXACT retro-body header strings against the **artifact**.
+
+**The artifact is the only evidence.** NEVER key Stage 1 off the retro subagent's bounded return, its summary, or any claim it makes about which sections it emitted — subagent self-reports about their own output have been observed to be wrong in both directions. The return supplies the retrospective PATH; the file supplies the answer.
+
+**The match is conjunctive: header present AND body is not a no-op.** A section whose first non-empty body line is `None.` (case-insensitive, trailing period optional) is a declared "nothing to recommend" and MUST NOT be treated as a recommendation. Reference matcher:
+
+```bash
+# first non-empty line of the named section's body, or empty if the section is absent
+section_body() {
+  awk -v h="$2" '$0==h{f=1;next} f&&/^## /{exit} f&&NF{print;exit}' "$1"
+}
+BODY=$(section_body "$RETRO" '## Recommended Re-planning')
+[ -z "$BODY" ] && echo "MALFORMED: section absent or empty"        # neither yes nor no
+printf '%s\n' "$BODY" | grep -qiv '^none\.\?$' && echo "RE-PLANNING RECOMMENDED"  # halt
+```
+
+Apply the same conjunction to `## Recommended SPEC Amendments`. A missing or empty section on either header is a **malformed retro** — surface it at the slice-boundary pause and do NOT infer "no recommendation" from the absence.
+
+**The matcher fails safe toward halting.** A body line that merely BEGINS with `None.` and continues into prose (`None. SLICE-002's ordering remains valid...`) does not match the no-op string and WILL halt. That is deliberate: the alternative — accepting a `None.` prefix — would silently swallow a genuine recommendation phrased as `None of the remaining slices survive...`. A missed halt is the more expensive failure. If a retro halts on this shape, the recommendation is a contract violation in the retro body, and `/sdd-flow continue --override-replan` is the correct operator resolution.
+
+Header-match outcomes:
+- `^## Recommended SPEC Amendments$` with a non-`None.` body → routine amendment recommendation; surface it in the slice-boundary pause as a per-recommendation summary (one or two lines per affected `SLICE-XXX`/`MODULE-XXX`/`REQ-XXX` — what should change, why), with the retrospective path for the user to read full wording. No halt block written.
+- `^## Recommended Re-planning$` **whose first non-empty body line is not `None.`** → elevated severity. Per **REQ-014**, this HALTS the flow even under `--skip-slice-checkpoints`. The header alone does NOT halt — the body contract above permits `None.` as the declared no-re-plan shape, so halting on bare presence is a false positive. On match, the **orchestrator** writes this halt block to `SDD/orchestration/progress.md`:
 
 ```markdown
 ## Awaiting Re-planning Decision

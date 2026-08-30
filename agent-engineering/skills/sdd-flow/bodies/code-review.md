@@ -164,6 +164,27 @@ If the spec has no `## Modules` section (legacy or config-only changes), treat t
 
 **Review budget allocation:** Spend more time on high-risk modules and less on low-risk modules. The point is to concentrate scrutiny where the consequence of failure is largest, not to perform identical depth on every module regardless of stakes.
 
+## Project Review Checklist Walk
+
+Projects often carry their own review checklist — a `CLAUDE.md`/`AGENTS.md` section listing pre-merge checks, a conventions doc, a PR template. **A checklist only fires if the reviewer is told to walk it**, so this walk is a required part of every review. The 70/20/10 priority order covers specification alignment, context engineering, and tests; it knows nothing about project-local obligations (register the feature in an index, update a status table, bump a compatibility matrix), and those are exactly the items a spec-driven review misses.
+
+**Discovery (bounded — do not scan the whole repo).** In priority order, take the FIRST that exists:
+
+1. An explicit checklist path passed in your spawn prompt.
+2. A section in the repo-root `CLAUDE.md` or `AGENTS.md` whose heading names a review checklist, pre-merge checks, definition of done, or equivalent.
+3. The same in a `CLAUDE.md`/`AGENTS.md` inside a directory the implementation touches (nearest-ancestor wins).
+4. `.github/PULL_REQUEST_TEMPLATE.md`, or a `docs/`-level review checklist the root doc points to by name.
+
+If none exists, record one line — "No project review checklist found — searched: <the locations you checked>" — and move on. Absence is a normal outcome, not a finding.
+
+**The walk.** When a checklist is found, walk **every** item explicitly, in order, with a verdict per item. Never infer a blanket pass, never silently skip an item, never summarize the checklist as "followed":
+
+- **PASS** — verified, with the evidence (`file:line`, command output, or artifact path) that establishes it.
+- **FAIL** — not satisfied. Raise it as a normal review finding at the severity its content warrants, naming the checklist item. A FAIL on a project-mandated item is a rejection criterion when the checklist says it is.
+- **N/A** — genuinely out of scope, with a one-line reason. Project-level bookkeeping items (indexes, registries, status tables) apply to nearly every feature; "the code didn't touch it" rarely makes them N/A.
+
+Like the Agentic-Surface Lens, this walk is an overlay on the 70/20/10 budget, not a fourth slice of it.
+
 ## Agentic-Surface Lens (conditional)
 
 **Gate:** read the spec's `agent_security:` frontmatter. `true` → run this lens. `false` → skip it entirely. `auto` or absent → run the scope test below and run the lens only if it passes. Your spawn prompt provides the absolute path of the control catalog, `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`, whenever the gate may be open.
@@ -225,6 +246,10 @@ ls SDD/orchestration/subagent-calls/
 5. Apply **Risk-Tiered Review Depth** (see section above) per module:
    - For each `MODULE-XXX` in the spec, read the `Risk:` field and apply the matching depth.
    - Record in the review summary: module name, declared risk, depth applied, and any tier escalation (e.g., "MODULE-002 declared low but escalated to medium — touches payment ledger").
+
+### Step 4b: Walk the Project Review Checklist
+
+Run the discovery + walk described in the **Project Review Checklist Walk** section above. Record every item's verdict; route FAIL items into the review's findings at their warranted severity.
 
 ### Step 5: Review Context Engineering
 
@@ -374,6 +399,16 @@ For each module in the spec's `## Modules` section, record the depth applied:
 | MODULE-002 [name] | ... | ... | ... |
 
 If the spec had no `## Modules` section, note: "Risk tiering not available — full medium-depth review applied uniformly."
+
+## Project Review Checklist Walk
+
+**Checklist source:** <path + section heading, or "none found — searched: ...">
+
+| # | Checklist item | Verdict | Evidence / reason |
+|---|----------------|---------|-------------------|
+| 1 | <item verbatim> | PASS \| FAIL \| N/A | <`file:line`, command output, artifact path, or N/A reason> |
+
+[FAIL rows are also raised as findings above, at their warranted severity.]
 
 ## AI Agent Security (conditional — Agentic-Surface Lens)
 

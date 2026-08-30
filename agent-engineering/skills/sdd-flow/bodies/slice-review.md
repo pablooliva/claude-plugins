@@ -91,6 +91,27 @@ Apply the following review process to the computed slice file set. The full revi
 
 **Agentic-Surface Lens (conditional).** Read the SPEC's `agent_security:` frontmatter. `true` → run the lens over this slice's file set. `false` → skip. `auto`/absent → run it only if this slice's files contain an agentic surface (model call, tool/MCP definition, agent memory or retrieval store, inter-agent messaging, or a model output driving an external action). When it runs, read the control catalog at the path your prompt provides (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) and apply **Section 4 (Code-Level Checks)** only — Section 3 is spec-level and was covered at Step 3c. Report findings under a `## AI Agent Security` heading in the slice review document, with `file:line` evidence and concrete code resolutions; a HIGH finding rejects the slice. When the lens is skipped, record the one-line reason instead. Uncovered abuse cases from catalog Section 5 carry forward to the end-of-feature eval capture — note them in the slice's findings so the ledger picks them up.
 
+## Step 5.5: Project Review Checklist Walk (conditional)
+
+Projects often carry their own review checklist — a `CLAUDE.md`/`AGENTS.md` section listing pre-merge checks, a conventions doc, a PR template. **A checklist only fires if the reviewer is told to walk it**, so walking it is a required step here, not a nicety: the review process in Step 5 covers SPEC alignment and code quality, and knows nothing about project-local obligations (register the feature in an index, update a status table, bump a compatibility matrix).
+
+**Discovery (bounded — do not scan the whole repo).** In priority order, take the FIRST that exists:
+
+1. An explicit checklist path passed in your spawn prompt.
+2. A section in the repo-root `CLAUDE.md` or `AGENTS.md` whose heading names a review checklist, pre-merge checks, definition of done, or equivalent.
+3. The same in a `CLAUDE.md`/`AGENTS.md` inside a directory the slice's file set touches (nearest-ancestor wins).
+4. `.github/PULL_REQUEST_TEMPLATE.md`, or a `docs/`-level review checklist the root doc points to by name.
+
+If none exists, record one line in the review document — "No project review checklist found — searched: <the locations you checked>" — and move on. Absence is a normal outcome, not a finding.
+
+**The walk.** When a checklist is found, walk **every** item explicitly, in order, and record a verdict per item. Never infer a blanket pass, never silently skip an item, and never summarize the checklist as "followed":
+
+- **PASS** — verified, with the evidence (`file:line`, command output, or artifact path) that establishes it.
+- **FAIL** — the item is not satisfied. Raise it as a normal review finding at the severity its content warrants, in the slice's findings section, and name the checklist item.
+- **N/A** — genuinely out of scope for this slice's file set, with the one-line reason. "The slice didn't touch it" is only N/A when the item is scoped to code; a project-registry or status-table item usually applies to EVERY slice that adds a feature.
+
+Items outside the slice's file set still apply when the checklist item is about project-level bookkeeping rather than code. Scope the walk to the slice's contribution, not to the slice's diff.
+
 ## Step 6: Write the per-slice review document
 
 Write the review output to:
@@ -122,6 +143,16 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 ## Slice-Specific Findings
 
 [All standard review sections apply, scoped to the slice's REQ/EDGE/FAIL entries.]
+
+## Project Review Checklist Walk
+
+**Checklist source:** <path + section heading, or "none found — searched: ...">
+
+| # | Checklist item | Verdict | Evidence / reason |
+|---|----------------|---------|-------------------|
+| 1 | <item verbatim> | PASS \| FAIL \| N/A | <`file:line`, command output, artifact path, or N/A reason> |
+
+[FAIL rows are also raised as findings above, at their warranted severity.]
 
 ## Module Review Log (Risk-Tiered Depth Applied)
 
