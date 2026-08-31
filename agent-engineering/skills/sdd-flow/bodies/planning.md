@@ -105,12 +105,25 @@ agent_security: auto
 ### Functional Requirements
 - REQ-001: [Specific, testable requirement]
 - REQ-002: [Another specific requirement]
-- REQ-003: [Include measurable criteria where possible]
+- REQ-003: [Whenever a requirement targets or constrains a quantity, state the number and its unit. "Improves relevance", "shifts appropriately", "significantly reduces" are not requirements — they are placeholders for a number nobody wrote down.]
 
 ### Non-Functional Requirements
 - PERF-001: [Performance requirement with specific metrics]
-- SEC-001: [Security requirement from research]
+- SEC-001: [Security requirement from research — if it caps, bounds, or budgets a quantity, state the bound and its unit]
 - UX-001: [User experience requirement]
+
+### Quantitative Ledger
+
+> Every number this spec asserts, in one table — the goals it must hit and the bounds it must respect, side by side. Downstream reviewers do arithmetic against this table; they do not go hunting for numbers scattered across the document.
+>
+> If the spec asserts no quantities at all, replace the table with the single line `No quantitative goals or constraints.` and move on. Do not fabricate numbers to fill it.
+
+| ID | Kind | Quantity (with unit) | Value or bound | Bears on |
+|---|---|---|---|---|
+| [REQ-XXX] | goal | [what is being moved or reached, with unit] | [target value, threshold to cross, or required delta] | [IDs of constraints that limit this] |
+| [SEC-XXX / PERF-XXX] | constraint | [the same or an overlapping quantity, with unit] | [cap, bound, budget, or ceiling] | [IDs of goals this limits] |
+
+> **Kind** is `goal` (a value to reach, a threshold to cross, a delta to produce) or `constraint` (a cap, bound, limit, budget, rate/size/latency ceiling). **Bears on** is the cross-reference that makes the arithmetic checkable: for each goal, list every constraint acting on the same quantity or on the mechanism that moves it; leave `—` only when genuinely none does.
 
 ## Edge Cases (Research-Backed)
 
@@ -352,6 +365,12 @@ These fields have sensible defaults; populate them intentionally rather than lea
      - **Autonomous mode** — halt and return a bounded completion message (≤200 words) describing the two options: (a) fall back to `whole-feature` for this feature only, or (b) provide a hint about a slice boundary to retry slicing. Include the SPEC file path and `SDD/orchestration/progress.md` as artifact paths. This mirrors the autonomous halt pattern, with different option labels.
    - When none of the heuristics fire and qualitative judgment is that slicing is meaningful, proceed with the populated `## Delivery Slices` section — no halt, no annotation.
 
+9. **Run the Feasibility Arithmetic Self-Check:**
+   - Applies only when the `### Quantitative Ledger` table has at least one row of kind `goal`. If the ledger says `No quantitative goals or constraints.`, skip this step — do not manufacture a check.
+   - For each `goal` row, take every constraint named in its `Bears on` column and do the arithmetic: does the headroom the constraint permits cover the movement the goal requires? Convert to a common unit first; a unit mismatch is itself a finding.
+   - If any goal needs more headroom than its constraints permit, the spec is internally contradictory — effective and compliant are mutually exclusive. Do NOT write the spec around it. Resolve it now: relax the constraint, lower the goal, or specify a different mechanism, and record which you chose in `## Implementation Notes`.
+   - If a goal's `Bears on` column is empty because no constraint was written down, re-read the Non-Functional Requirements before accepting that — an unstated cap that shows up later as an eval criterion is the same failure, discovered more expensively.
+
 ## Deliverable Expectations
 
 A complete specification must have:
@@ -384,6 +403,9 @@ Before considering the specification complete:
 - [ ] If `delivery_mode: per-slice`, SLICE-001 is the thinnest possible end-to-end happy path
 - [ ] If `delivery_mode: per-slice`, slices are ordered by delivery sequence and each REQ-XXX / EDGE-XXX / FAIL-XXX is reachable through some slice by the last slice
 - [ ] If `delivery_mode: whole-feature` (or absent), the `## Delivery Slices` section is omitted
+- [ ] Every requirement that targets or constrains a quantity states the number and its unit — no qualitative stand-ins ("appropriately", "meaningfully", "significantly")
+- [ ] `### Quantitative Ledger` is populated with every goal and constraint the spec asserts, or carries the single line `No quantitative goals or constraints.`
+- [ ] Each `goal` row's `Bears on` column names the constraints acting on it, and the arithmetic clears — no goal requires more headroom than its constraints permit
 - [ ] `agent_security:` is populated, and when the feature has an agentic surface the value is `true` and `review_panel:` includes `agent-security`
 
 ---
