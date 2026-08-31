@@ -110,6 +110,30 @@ If reviewing specification artifacts (`SPEC-XXX-*.md`):
 - [ ] **Incomplete failure handling** - Which FAIL-XXX scenarios lack recovery paths?
 - [ ] **Contradictions** - Do any requirements conflict with each other?
 
+### Feasibility Arithmetic (Quantitative Ledger gate)
+
+Do the spec's own numbers permit its own goals? This is arithmetic over a table, not a judgment call — run it mechanically and move on.
+
+**Gate.** Read the spec's `### Quantitative Ledger`. If it carries the line `No quantitative goals or constraints.`, or the spec states no quantities anywhere, short-circuit: record the single line below in the review under this heading and produce no findings for it.
+
+> Feasibility arithmetic: skipped — spec asserts no quantitative goals. Nothing to reconcile.
+
+If the ledger section is missing but the spec does state numbers, build the table yourself from the spec text before proceeding, and record its absence as a MEDIUM finding (the spec should carry the ledger).
+
+**Procedure.** For each row of kind `goal`:
+
+1. Normalize units. Restate the goal and each constraint named in its `Bears on` column in one common unit. A unit mismatch that cannot be reconciled is a HIGH finding on its own — the two requirements are not talking about the same quantity.
+2. Compute required headroom (target minus current, or the delta the goal demands) and permitted headroom (the tightest constraint acting on the same quantity or on the mechanism that moves it).
+3. Compare. **Required > permitted is a HIGH finding that blocks the spec.** It is not a note, not a tension, not a trade-off to revisit during implementation: the spec as written cannot be both effective and compliant, and every downstream reviewer will pass it because each requirement is individually sound.
+4. Check the constraint set is complete. Scan `### Non-Functional Requirements`, `## Implementation Constraints`, and `## Validation Strategy` for caps, bounds, budgets, and rate/size/latency ceilings that act on a goal's quantity but are absent from that goal's `Bears on` column. An omitted constraint is a MEDIUM finding; an omitted constraint that also fails the arithmetic is HIGH.
+
+**Unquantified success criteria.** Separately, flag every success criterion stated qualitatively where the thing it measures is quantitative — "shifts appropriately", "improves meaningfully", "significantly reduces", "performs well under load". Each is a MEDIUM finding, and HIGH when a constraint elsewhere in the spec bounds the same quantity: an unquantified goal cannot be checked against a quantified cap, which is exactly how a contradiction survives review. Resolution is always the same — state the number and its unit, then re-run step 3.
+
+- [ ] **Ledger present and complete** — Does `### Quantitative Ledger` list every number the spec asserts, with units?
+- [ ] **Arithmetic clears** — Does every goal fit inside the headroom its constraints permit?
+- [ ] **Constraint coverage** — Does each goal's `Bears on` name every constraint acting on its quantity?
+- [ ] **No qualitative stand-ins** — Is any quantitative success criterion stated in words instead of numbers?
+
 ### Slice Integrity (per-slice mode only)
 
 If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## Delivery Slices` section. If the frontmatter declares `delivery_mode: whole-feature` (or the field is absent), this entire sub-section is skipped silently — no findings to record, no "n/a" placeholder.
@@ -155,6 +179,18 @@ If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## De
 1. **[REQ-XXX]**: [What's unclear]
    - Possible interpretations: [A vs B vs C]
    - Recommendation: [Specific clarification needed]
+
+### Feasibility Arithmetic
+[One line if the gate short-circuited. Otherwise, per infeasible goal:]
+1. **[REQ-XXX] vs [SEC-XXX/PERF-XXX]** — HIGH: [quantity, in a common unit]
+   - Goal requires: [required headroom, with unit and how it was derived]
+   - Constraints permit: [permitted headroom, with unit, and which constraint is tightest]
+   - Verdict: infeasible as specified — the spec cannot be both effective and compliant.
+   - Resolution: [relax the named constraint to X, lower the goal to Y, or specify a different mechanism — pick one; the spec must say which]
+
+### Unquantified Success Criteria
+1. **[REQ-XXX]**: "[quoted qualitative phrase]" measures [quantity], which [SEC-XXX/PERF-XXX] bounds at [value]
+   - Suggested restatement: [criterion with a number and unit]
 
 ### Missing Specifications
 1. **[Category]**: [What's not specified]
@@ -334,7 +370,7 @@ Create a review document at the appropriate location:
 1. **Executive Summary**: One paragraph on overall assessment
 2. **Critical Findings**: Prioritized list of problems found
 3. **Recommended Actions**: Specific steps to address findings
-4. **Proceed/Hold Decision**: Clear recommendation on whether to continue
+4. **Proceed/Hold Decision**: Clear recommendation on whether to continue. A failed feasibility-arithmetic check is an automatic HOLD — a spec whose own constraints forbid its own goals cannot be implemented correctly, and no amount of implementation care recovers it.
 
 ## Remember
 

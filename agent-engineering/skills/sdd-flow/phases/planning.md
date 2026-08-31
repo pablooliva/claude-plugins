@@ -103,7 +103,7 @@ Spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus):
 - **Body:** `bodies/critical-review.md` — apply its **Planning Phase** section.
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`.
 - **Outputs:** `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`.
-- **Task:** Adversarial review of the spec — ambiguities, untestable criteria, dropped research findings, contradictions. Complementary to the panel: critical-review is generalist/adversarial; the panel was domain-specialist.
+- **Task:** Adversarial review of the spec — ambiguities, untestable criteria, dropped research findings, contradictions, and the feasibility-arithmetic gate over the spec's `### Quantitative Ledger` (do the spec's own numeric constraints permit its own numeric goals?). Complementary to the panel: critical-review is generalist/adversarial; the panel was domain-specialist.
 
 ---
 
