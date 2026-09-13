@@ -46,6 +46,7 @@ Check the plan against these before acting:
 
 - **No worktree involved.** A normal branch merge with no worktree to remove is just `git merge` — this skill's cleanup half doesn't apply.
 - **Creating a worktree.** That's `worktree-create`.
+- **Setting a repo up for worktrees** (authoring `.worktreeinclude` / `.env-setup.sh`). That's `bb-worktree-init`.
 - **Mid-work, nothing to hand off.** If the user is still working and hasn't committed, don't force a handoff — point them to commit first.
 - **Not in a git repo.** Stop and say so.
 

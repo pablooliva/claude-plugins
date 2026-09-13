@@ -69,7 +69,24 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 2.2.1.
+Version 2.4.0.
+
+### What's new in 2.4.0
+
+A one-time setup skill for the BB IDE worktree contract that `worktree-create` requires:
+
+- **New skill `bb-worktree-init`.** Makes a new or existing repo ready for BB IDE and `worktree-create` worktrees. It inspects untracked config, env keys (names and value shapes only — never values), lockfiles, and local databases; proposes a plan for approval; and renders bundled templates into `.worktreeinclude`, `.env-setup.sh`, the `.bb-env-setup.sh` symlink, and — only when setup creates resources outside the worktree — `.bb-env-teardown.sh`. In a repo that already has these files it proposes edits instead of replacing them. It does not commit.
+- **The symlink is required, not decoration.** BB IDE only runs `.bb-env-setup.sh`, and a missing one is not an error: BB copies `.env`, skips setup, and opens a worktree whose paths still point at main. The skill always creates the link, checks it, and runs its trial through it.
+- **The setup template fails safe.** It refuses to run in the main checkout (comparing symlink-resolved paths, so macOS `/var` vs `/private/var` can't slip past), rewrites *every* copied `.env`/`.env.*` rather than a fixed list, verifies each rewritten path without printing values, fails if main has `.env` but the copy never arrived, and emits the marker line `worktree-handoff` uses to skip reconciliation.
+- **Validation before commit.** Syntax, leftover placeholders, symlink, a guard test on a truncated copy of the script, a dry-run of the copy list, and — on approval — a throwaway worktree that is removed afterwards.
+- **`worktree-create` points to it** when its precondition gate finds either file missing.
+
+### What's new in 2.3.0
+
+A planning-time gate for goals and constraints that can't both hold:
+
+- **Quantitative Ledger in the spec template.** `bodies/planning.md` adds one table of every numeric goal and constraint, with units and a `Bears on` cross-reference; requirement placeholders now demand numbers, and the planning self-check and quality checklist cover it.
+- **Feasibility Arithmetic gate in critical review.** `bodies/critical-review.md` does the subtraction no single reviewer does: when required headroom exceeds what the constraints permit, it is a blocking HIGH finding and an automatic HOLD. Specs with no quantities short-circuit; qualitative stand-ins for quantitative criteria are flagged.
 
 ### What's new in 2.2.1
 
