@@ -46,7 +46,7 @@ agent-engineering/
 │   ├── ai-agent-security-review/   # OWASP AI-agent control catalog (vendored) +
 │   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── correction-codifier/, cross-cutting-adr/, improve-claude-md/, todo-tidy/,
-│   │                       #   worktree-create/, worktree-handoff/
+│   │                       #   worktree-create/, bb-worktree-init/, worktree-handoff/
 └── README.md
 ```
 `sdd-flow` is the flow's single source of truth: the orchestrator (main conversation) spawns one subagent per step, passing each its body file BY PATH (never embedding content). Spawned subagents must not themselves spawn or invoke slash commands/skills (one-level nesting) — every body is pre-adapted for inline execution. NOTE: this was a platform limit on Claude Code ≤2.1.171; since 2.1.172 (2026-06-09) the platform allows nesting to depth 5, but the flat design is retained deliberately — do not refactor toward nesting without reading `proposals/nested-subagents-analysis-2026-06-12.md`. The other skills are invoked by the user (or `sdd-flow`) at decision points. `ai-agent-security-review` is dual-use: a standalone review, and the canonical control catalog that `sdd-flow` reads at three `agent_security:`-gated hook points (Step 3c panel value, Step 4b code-review lens, Step 4g abuse-case evals).

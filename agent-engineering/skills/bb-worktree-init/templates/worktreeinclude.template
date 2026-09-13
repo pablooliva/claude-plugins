@@ -1,0 +1,34 @@
+# Untracked files copied into each new worktree (gitignore syntax: one pattern
+# per line, # for comments, ! to negate an earlier pattern).
+#
+# Read by BB IDE and by the worktree-create skill. Both copy every UNTRACKED
+# file in the source checkout that matches a pattern, BEFORE .bb-env-setup.sh
+# runs — which is what lets that script rewrite the copies for the worktree.
+#
+# Rules (enforced by the copier, not by this file):
+#   * files only — symlinks in the source checkout are skipped
+#   * nothing already in the worktree is replaced (tracked files win)
+#   * a pattern that matches nothing is reported, not fatal
+#
+# This file must be COMMITTED: a worktree only checks out tracked files.
+
+# @@SECTION:ENV@@
+# Local credentials and config the worktree needs. Copied, not shared —
+# .env-setup.sh rewrites the path/port variables in these copies so a worktree
+# can never write to the main checkout's real sinks.
+.env
+.env.*
+!.env.example
+
+# @@SECTION:EXTRA@@
+# Other untracked, SMALL files the project needs at runtime or in tests
+# (local certs, harness allowlists, scratch dirs). One line each, with why.
+# .claude/settings.local.json
+
+# @@SECTION:EXCLUDED@@
+# NOT copied on purpose — keep this list; it stops the next person "fixing" it:
+#   node_modules/ .venv/ target/   — rebuilt by the setup script; BB copies
+#                                    directories file by file, which is slow
+#                                    and leaves broken absolute shebangs
+#   *.db / *.sqlite                — a plain copy of a live (WAL) database can
+#                                    be torn; the setup script snapshots it

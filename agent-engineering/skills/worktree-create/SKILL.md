@@ -97,7 +97,7 @@ Use `-e`, not `-f`: `.bb-env-setup.sh` is conventionally a **symlink** to `.env-
 
 **If either is MISSING: STOP.** Create nothing — no worktree, no branch, no directories. Report the failure in the shape shown under **Output Format → Precondition failure**, naming each missing file and what it is for. Do not improvise a fallback (Anti-Pattern 17): no symlinking, no ad-hoc `cp` of `.env*`, no proceeding-with-a-warning.
 
-You may **offer** to help author the missing file(s) — that is genuinely useful, since the pair is small and the reference shape is well known. But it is a **separate action the user must approve**, and this skill never writes them silently or as part of a create run. If the user accepts, author the files, then re-run this skill from Step 1.
+You may **offer** to help author the missing file(s) — that is genuinely useful, since the pair is small and the reference shape is well known. But it is a **separate action the user must approve**, and this skill never writes them silently or as part of a create run. If the user accepts, hand off to the **`bb-worktree-init`** skill, which inspects the repo, renders both files from its templates, and validates them — then re-run this skill from Step 1.
 
 Record which script was found (`.env-setup.sh` or `.bb-env-setup.sh`) — Step 7 runs that exact one.
 
@@ -323,8 +323,8 @@ Both files are required. `worktree-create` copies untracked config into the work
 and then rewrites it for that worktree; without .worktreeinclude nothing is copied,
 and without the setup script the copies still point at this repo's real paths.
 
-I can draft the missing file(s) for you — say the word and I'll write them, then you
-can re-run this. I won't create them as part of a worktree run.
+I can draft the missing file(s) with the bb-worktree-init skill — say the word, then
+you can re-run this. I won't create them as part of a worktree run.
 ```
 
 Show `Missing:` for each absent file and `Present:` for the one that exists (omit `Present:` when both are missing). Never print a "created" report alongside this.

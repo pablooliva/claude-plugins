@@ -35,7 +35,7 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - Research, planning, and execution phases for any task type
 - Produces deliverables: documents, reports, analysis, plans
 
-### 3. Agent Engineering — v2.2.1
+### 3. Agent Engineering — v2.4.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
 
@@ -51,6 +51,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `todo-tidy` skill — promotes a free-form `scratch.md` into a structured, content-preserving `TODO.md`
 - `ai-agent-security-review` skill — adversarial review of agentic systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt injection, memory security, human-in-the-loop, output guardrails, multi-agent trust, adversarial testing); runs standalone, and the same vendored catalog gates three hook points inside `sdd-flow`
 - `worktree-create` skill — spins up an isolated git worktree at a sibling path for a scoped task, on its own `you/type-desc` branch, provisions the untracked runtime config git never checks out per the repo's `.worktreeinclude` + `.env-setup.sh` contract, and reserves collision-free SDD ADR/SPEC numbers
+- `bb-worktree-init` skill — one-time per repo: inspects the project and renders its bundled templates into the `.worktreeinclude` + `.env-setup.sh` (+ `.bb-env-setup.sh` symlink, optional teardown) contract that BB IDE and `worktree-create` need, then validates it in a throwaway worktree
 - `worktree-handoff` skill — closes the loop: generates a merge-back handoff from inside the worktree, then merges + cleans up (with confirmation) from the main repo
 - `sdd-flow` skill — self-contained orchestration of the full Research → Planning → Implementation lifecycle via subagents (no SDD plugin required)
 - `/regression-eval-capture` command — scaffolds LangSmith regression eval datasets after a feature ships (Observability)

@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+# Worktree provisioning hook for @@PROJECT@@ — the canonical file.
+#
+# `.bb-env-setup.sh` is a symlink to this file. Two callers run it, with the
+# same mechanics on purpose:
+#   * BB IDE              — runs `.bb-env-setup.sh` after `git worktree add`,
+#                           once the `.worktreeinclude` copies have landed.
+#   * worktree-create     — runs this file directly, after performing the
+#     skill                 equivalent `.worktreeinclude` copy step itself.
+#
+# Contract (set by BB; the skill mirrors it):
+#   * cwd is the worktree root, invoked as `env bash <script>`
+#   * untracked files named in `.worktreeinclude` are already COPIED in — they
+#     must be copies, not symlinks, or the rewrite below would edit the main
+#     checkout's real file
+#   * stdin is closed; stdout/stderr stream to the provisioning transcript
+#   * the environment is sanitized: NODE_ENV and every BB_* variable removed
+#   * a non-zero exit FAILS provisioning and BB removes the worktree
+#     (15-minute timeout)
+#
+# Only steps that would leave an unusable or UNSAFE worktree are fatal (die);
+# everything else warns and continues.
+#
+# Steps:
+#   1. Refuse to run in the main checkout (step 5 rewrites env files in place).
+#   2. Create runtime dirs that are git-ignored and therefore absent.
+#   3. Install dependencies — the worktree has none.
+#   4. Snapshot local data the worktree needs.
+#   5. Rewrite the copied env files so every path points INSIDE the worktree,
+#      then verify it.
+#   6. Post-install steps (migrations, codegen).
+#   7. Warn about an inherited virtualenv pointing outside the worktree.
+@@OPT_IN_DOC@@
+
+set -uo pipefail
+
+# Physical path (-P): git reports symlink-resolved paths, so on macOS a logical
+# /var/... cwd would never equal git's /private/var/... and the guard below
+# would let the script rewrite the MAIN checkout's env files.
+WT="$(pwd -P)"
+say()  { printf '[env-setup] %s\n' "$*"; }
+warn() { printf '[env-setup] WARN: %s\n' "$*" >&2; }
+die()  { printf '[env-setup] FATAL: %s\n' "$*" >&2; exit 1; }
+
+# ---------------------------------------------------------------- 1. guard ---
+# git-common-dir is the SHARED .git of the main checkout; its parent is the
+# main working tree. In the main checkout itself that parent is $WT — bail.
+# WT comes from pwd, not $0, so invoking through the .bb-env-setup.sh symlink
+# (or running main's copy with the worktree as cwd) resolves identically.
+# --path-format needs git >= 2.31; older git prints a relative path, which the
+# cd below resolves against cwd — and a failure here would abort EVERY worktree.
+COMMON_GIT="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null \
+  || git rev-parse --git-common-dir 2>/dev/null)" || die "not inside a git repository"
+MAIN="$(cd "$(dirname "$COMMON_GIT")" && pwd -P)" || die "cannot resolve the main checkout"
+if [ "$MAIN" = "$WT" ]; then
+  die "refusing to run in the main checkout ($MAIN) — this script rewrites env files"
+fi
+say "worktree: $WT"
+say "main checkout: $MAIN"
+
+# ------------------------------------------------------------- 2. dirs -------
+# Git-ignored runtime directories the app or tests expect to exist.
+@@RUNTIME_DIRS@@
+
+# ------------------------------------------------------------- 3. deps -------
+@@DEPS@@
+
+# ------------------------------------------------------------- 4. data -------
+@@DATA@@
+
+# -------------------------------------------------------------- 5. env -------
+# The .worktreeinclude step copied main's env files here BEFORE this script
+# ran, so they are real per-worktree files. Every path in them still points at
+# the main checkout or at live sinks; repoint them inside $WT.
+#
+# The marker line below is load-bearing: the worktree-handoff skill greps for
+# it and never reconciles a marked file back into main. Keep it verbatim.
+MARKER='# --- rewritten by .env-setup.sh for this worktree ---'
+
+# set_env FILE KEY VALUE — replace KEY's line if present, append it if not.
+# Values are always double-quoted: worktree roots can contain spaces (BB puts
+# them under its data dir, which on macOS may be "Application Support").
+# awk reads KEY/VALUE via ENVIRON so no character in them is interpreted.
+set_env() {
+  local file="$1" tmp
+  tmp="$(mktemp "${file}.XXXXXX")" || return 1
+  K="$2" V="$3" awk '
+    BEGIN { k = ENVIRON["K"]; line = k "=\"" ENVIRON["V"] "\""; done = 0 }
+    {
+      s = $0; sub(/^[ \t]*/, "", s)
+      pre = ""; if (s ~ /^export[ \t]/) { pre = "export "; sub(/^export[ \t]+/, "", s) }
+      if (index(s, k "=") == 1) { print pre line; done = 1; next }
+      print
+    }
+    END { if (!done) print line }
+  ' "$file" > "$tmp" && mv "$tmp" "$file"
+}
+
+# get_env FILE KEY — print KEY's value with surrounding quotes stripped.
+get_env() {
+  K="$2" awk '
+    BEGIN { k = ENVIRON["K"] }
+    {
+      s = $0; sub(/^[ \t]*(export[ \t]+)?/, "", s)
+      if (index(s, k "=") == 1) {
+        v = substr(s, length(k) + 2); gsub(/^["\047]|["\047]$/, "", v)
+        print v; exit
+      }
+    }
+  ' "$1"
+}
+
+# rewrite_env FILE — apply this project's rewrites to one copied env file.
+# set_env appends keys a file lacks, so every copy ends up carrying every
+# override — which is what makes a loader that layers .env.local over .env safe.
+rewrite_env() {
+  local f="$1"
+  if [ -L "$f" ]; then
+    die "$f is a symlink — refusing to rewrite it in place (it would edit the
+     main checkout's real file). .worktreeinclude must COPY env files."
+  fi
+  grep -qxF "$MARKER" "$f" || printf '\n%s\n' "$MARKER" >> "$f"
+
+@@ENV_REWRITES@@
+
+  # VERIFY, do not assume. A rewrite that silently failed would leave a
+  # worktree pointed at main's real sinks while reporting success.
+  # The value is deliberately NOT printed: if the rewrite failed it is main's
+  # original, which may be a credential-bearing URL.
+  local k
+  for k in @@VERIFY_KEYS@@; do
+    case "$(get_env "$f" "$k")" in
+      "$WT"/*) ;;
+      *) die "$k in $(basename "$f") is not inside $WT — the rewrite did not take effect" ;;
+    esac
+  done
+  say "rewrote and verified $(basename "$f")"
+}
+
+# Rewrite EVERY untracked env-family copy present, not a fixed list: a copy
+# nobody rewrote (a stray .env.local) would still point at main while the run
+# reports success. Tracked files (.env.example) came from the commit — skip.
+# Keep these globs in step with the env patterns in .worktreeinclude.
+for f in "$WT"/.env "$WT"/.env.*; do
+  [ -e "$f" ] || [ -L "$f" ] || continue
+  git -C "$WT" ls-files --error-unmatch -- "$(basename "$f")" >/dev/null 2>&1 && continue
+  rewrite_env "$f"
+done
+
+# A file main has but the worktree lacks means the copy step never delivered
+# it; the worktree would run with no config or fall back to defaults. Fail.
+for req in @@REQUIRED_ENV_FILES@@; do
+  if [ -f "$MAIN/$req" ] && [ ! -e "$WT/$req" ]; then
+    die "$req exists in main but was not copied — check .worktreeinclude"
+  fi
+done
+
+# --------------------------------------------------------- 6. post-install ---
+@@POST@@
+
+# -------------------------------------------------- 7. inherited venv --------
+# Last, so it is the final thing in the provisioning transcript. Advisory only:
+# an activated venv from another checkout stays first on PATH, so bare
+# `python`/`pytest` would silently run THAT environment's packages.
+if [ -n "${VIRTUAL_ENV:-}" ]; then
+  case "$VIRTUAL_ENV" in
+    "$WT"/*) ;;
+    *) warn "inherited VIRTUAL_ENV=$VIRTUAL_ENV points OUTSIDE this worktree —
+       use the project's runner (e.g. 'uv run') or 'deactivate' first." ;;
+  esac
+fi
+
+say "done"

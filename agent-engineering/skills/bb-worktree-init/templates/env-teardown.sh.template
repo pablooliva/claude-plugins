@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Worktree teardown hook for @@PROJECT@@ — `.bb-env-teardown.sh`.
+#
+# Only needed when .bb-env-setup.sh creates resources OUTSIDE the worktree
+# directory (a per-worktree database, container, port reservation, cache
+# entry). Anything inside the worktree is deleted with it; don't clean it here.
+#
+# Contract (set by BB):
+#   * cwd is the worktree root, invoked as `env bash .bb-env-teardown.sh`
+#   * runs only when BB destroys a managed worktree, before removal
+#   * stdin closed; same sanitized environment as the setup hook
+#   * a non-zero exit is REPORTED but the worktree is removed regardless
+#     (15-minute timeout) — so warn and keep going rather than stopping early
+#
+# The worktree-handoff skill does not run this; it removes worktrees with
+# `git worktree remove`. Mention that when a teardown hook exists.
+
+set -uo pipefail
+
+WT="$(pwd -P)"   # physical, to match git's symlink-resolved paths
+say()  { printf '[env-teardown] %s\n' "$*"; }
+warn() { printf '[env-teardown] WARN: %s\n' "$*" >&2; }
+
+COMMON_GIT="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null \
+  || git rev-parse --git-common-dir 2>/dev/null)" || {
+  warn "not inside a git repository — nothing to tear down"; exit 0; }
+MAIN="$(cd "$(dirname "$COMMON_GIT")" && pwd -P)" || { warn "cannot resolve the main checkout"; exit 1; }
+if [ "$MAIN" = "$WT" ]; then
+  warn "refusing to run in the main checkout ($MAIN)"; exit 1
+fi
+
+@@TEARDOWN@@
+
+say "done"
