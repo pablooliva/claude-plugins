@@ -1,6 +1,6 @@
 ---
 name: prompt-doctor
-description: "INVOKE THIS SKILL when the user wants a prompt they are about to send to an AI agent examined, graded, critiqued, or tightened before they send it — e.g. 'check this prompt', 'is this prompt any good', 'review my prompt before I send it', 'what's missing from this prompt', 'prompt doctor', 'tighten this up', 'will the agent misread this'. Diagnoses the prompt against a ten-component anatomy (grounding link, stakes, priorities, ranked priorities, hard constraints, marked-negotiable opinion, knowledge-gap disclosure, the one clear ask, early-exit permission, precise done-condition), marks each Present / Weak / Missing / N-A with the exact quoted text that satisfies it, names the concrete misreading each gap invites, and asks the user for the facts it cannot know. Then, only on request, rewrites the prompt using ONLY the user's own supplied content. It NEVER executes the prompt under review, and NEVER invents stakes, constraints, priorities, or deadlines. NOT for improving CLAUDE.md files (use improve-claude-md), authoring skill/system prompts, or writing a prompt from scratch."
+description: "INVOKE THIS SKILL when the user EXPLICITLY asks for a prompt to be audited before they send it to an AI agent — via `/prompt-doctor`, or an unambiguous request like 'run prompt doctor on this', 'audit this prompt', 'grade this prompt before I send it', 'which components does this draft cover', 'what's missing from this prompt'. It is user-invoked, NOT an ambient watcher: do not activate just because a prompt appears in the conversation, the user is drafting one out loud, or a previous run went badly. Diagnoses the prompt against a ten-component anatomy (grounding link, stakes, priorities, ranked priorities, hard constraints, marked-negotiable opinion, knowledge-gap disclosure, the one clear ask, early-exit permission, precise done-condition), marks each Present / Weak / Missing / N-A with the exact quoted text that satisfies it, names the concrete misreading each gap invites, and asks the user for the facts it cannot know. Then, only on request, rewrites the prompt using ONLY the user's own supplied content. It NEVER executes the prompt under review, and NEVER invents stakes, constraints, priorities, or deadlines. NOT for improving CLAUDE.md files (use improve-claude-md), authoring skill/system prompts, or writing a prompt from scratch."
 ---
 
 # Prompt Doctor
@@ -38,10 +38,14 @@ Check the diagnosis against these before emitting it:
 
 ## When to Activate
 
-- The user pastes or points at a prompt and asks for an opinion, review, grade, or critique of it: "check this prompt", "is this good enough to send", "what's missing here", "will it misread this".
-- The user asks to tighten, harden, or de-risk a prompt before a long or unattended agent run.
-- The user runs `/prompt-doctor` (with or without the prompt inline).
-- The user asks which components a draft prompt covers, or asks for the prompt anatomy applied to their draft.
+**This skill is explicitly invoked.** It is not an ambient watcher over the conversation — the user decides when a prompt gets audited, and does so by asking.
+
+Activate on:
+
+- `/prompt-doctor`, with the prompt inline, as a file path, or bare (meaning the last draft in the conversation).
+- An unambiguous request to audit a prompt *as a prompt*: "run prompt doctor on this", "audit this prompt", "grade this prompt before I send it", "which components does this draft cover", "what's missing from this prompt".
+
+Do **not** activate merely because a prompt is present in the conversation, because the user is drafting one out loud, or because a previous agent run went badly. Absent an explicit request, an offer is the most this skill should prompt — one line, once, and only if the user seems about to launch a long run: *"Want me to run prompt-doctor on that first?"* If they don't take it, drop it.
 
 ## When NOT to Activate
 

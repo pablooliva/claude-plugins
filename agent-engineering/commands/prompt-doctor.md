@@ -2,7 +2,7 @@
 
 Manual entry point for the `prompt-doctor` skill. Diagnoses a task prompt you are about to send to an agent against the ten-component anatomy, before you send it.
 
-Use this when you want an explicit check on a draft, rather than relying on the skill's ambient detection of "is this prompt any good?"
+This is the normal way to reach the skill. It is user-invoked by design — it does not watch the conversation and offer itself whenever a prompt goes by.
 
 ## When to Use This Command
 
