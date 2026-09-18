@@ -41,6 +41,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **`worktree-create`** — Creates an isolated git worktree at a sibling path (`../<project>-WT/<you>/<type>-<desc>`) on its own branch, provisions the untracked runtime config git never checks out per the repo's `.worktreeinclude` + `.env-setup.sh` contract, reserves collision-free SDD ADR/SPEC numbers across every live worktree and branch, and writes a `WORKTREE.md` breadcrumb. Both `.worktreeinclude` and an env-setup script are hard requirements — it stops before creating anything if either is missing.
 - **`bb-worktree-init`** — One-time, per repo: makes a new or existing project ready for BB IDE and `worktree-create` worktrees. Inspects untracked config, env keys (names and value shapes only — never values), lockfiles, and local databases; proposes a plan for approval; renders bundled templates into `.worktreeinclude`, `.env-setup.sh`, a `.bb-env-setup.sh` symlink, and (only when needed) `.bb-env-teardown.sh`; then validates statically and, on approval, in a throwaway worktree. In a repo that already has the files it proposes edits instead. Does not commit.
 - **`worktree-handoff`** — Closes the loop on a `worktree-create` worktree. Context-aware: from inside the worktree it writes `HANDOFF.md` and a paste-ready merge request; from the main repo it merges the branch, settles the worktree's `.env*` files, and removes the worktree and branch with confirmation before each destructive step.
+- **`prompt-doctor`** — Diagnoses a task prompt *before* you send it to an agent, against a ten-component anatomy (grounding link, stakes, priorities, ranked priorities, hard constraints, marked-negotiable opinion, knowledge-gap disclosure, the one clear ask, early-exit permission, precise done-condition). Grades each Present/Weak/Missing/N-A with quoted evidence, names what each gap lets the model decide for itself, and asks you for the facts only you hold. Never executes the prompt under review and never invents stakes or constraints; the rewrite is opt-in and keeps unanswered slots as visible placeholders. Anatomy from Theo (T3.gg) plus Goedecke's ranked priorities and hard constraints.
 - **`todo-tidy`** — Promotes a free-form `scratch.md` working list into a structured `TODO.md` (renaming, or folding both together when both exist) and reorganizes the contents into a consistent, hierarchical checkbox list. Reformats only — it never acts on an item, drops content, or edits `.gitignore` (it checks and warns).
 
 ### Commands
@@ -48,6 +49,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 These are **interactive commands you run yourself** (depth 0, so they may delegate to subagents):
 
 - **`/adr-capture`** — Manual entry point for the `cross-cutting-adr` skill.
+- **`/prompt-doctor`** — Manual entry point for the `prompt-doctor` skill. Takes a pasted prompt, a file path, or the last draft in the conversation.
 - **`/regression-eval-capture`** — After a feature ships, scaffolds a LangSmith regression eval dataset. Operationalizes Principle 7 (Observability). Requires the `langsmith` CLI.
 - **`/research-clarify`** — Structured interview that externalizes your design concept before any codebase research. Satisfies the `sdd-flow` Step 1.5 clarification gate.
 - **`/critical-review`** — Standalone adversarial review of a research doc, spec, or implementation.
@@ -69,7 +71,15 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 2.4.0.
+Version 2.5.0.
+
+### What's new in 2.5.0
+
+- **New skill `prompt-doctor`.** Reviews a task prompt before you send it, grading it against the ten-component anatomy from Theo's (T3.gg) prompt dissection plus Sean Goedecke's ranked priorities and hard constraints. Each component gets Present / Weak / Missing / N-A with the quoted span that earns the verdict, and every gap is paired with what the model is now free to decide on its own — in the prompt's own subject matter, not in the abstract.
+- **It grades against the right bar.** The run shape (autonomous run / scoped task / one-shot transform) is classified first, so a paragraph rewrite isn't docked for missing stakes and hard constraints. An honest N/A is a passing grade. Only the clear ask and the done-condition are never N/A.
+- **It never runs the prompt.** The prompt is a specimen, not an instruction — the skill won't open the issue URL or start the audit the prompt describes. The only files it reads are its own component catalog and, if you point at one, the file holding the draft.
+- **It never invents your context.** A missing component produces a question for you, capped at five; it never guesses stakes, deadlines, budgets, or a priority ranking. The rewrite is opt-in, uses only your own words plus your answers, and leaves anything unanswered as a visible `<placeholder>`.
+- **`/prompt-doctor`** is the manual entry point.
 
 ### What's new in 2.4.0
 

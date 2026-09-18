@@ -35,9 +35,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - Research, planning, and execution phases for any task type
 - Produces deliverables: documents, reports, analysis, plans
 
-### 3. Agent Engineering — v2.4.0
+### 3. Agent Engineering — v2.5.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
+
+**v2.5.0 highlights:** `prompt-doctor` — grades a task prompt against a ten-component anatomy before you send it (grounding link, stakes, ranked priorities, hard constraints, hedged opinion, knowledge gaps, the one clear ask, early-exit permission, precise done-condition), names what each gap lets the model decide on its own, and never executes the prompt or invents your context.
 
 **v2.1.0 highlights:** OWASP AI-agent security review, vendored as one control catalog with two entry points — the standalone `ai-agent-security-review` skill, and three `agent_security:`-gated hook points inside `sdd-flow` (spec panel value, code-review lens, abuse-case evals).
 
@@ -48,6 +50,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `correction-codifier` skill — turns mid-session corrections into durable `CLAUDE.md` rules (Institutional Memory)
 - `cross-cutting-adr` skill — captures binding architectural decisions as numbered ADRs (Living Documentation)
 - `improve-claude-md` skill — audits and trims `CLAUDE.md`/`AGENTS.md` files to focus on preferences and behavioral nudges
+- `prompt-doctor` skill — diagnoses a task prompt before you send it against the ten-component anatomy, with quoted evidence per component and an opt-in rewrite built only from your own words
 - `todo-tidy` skill — promotes a free-form `scratch.md` into a structured, content-preserving `TODO.md`
 - `ai-agent-security-review` skill — adversarial review of agentic systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt injection, memory security, human-in-the-loop, output guardrails, multi-agent trust, adversarial testing); runs standalone, and the same vendored catalog gates three hook points inside `sdd-flow`
 - `worktree-create` skill — spins up an isolated git worktree at a sibling path for a scoped task, on its own `you/type-desc` branch, provisions the untracked runtime config git never checks out per the repo's `.worktreeinclude` + `.env-setup.sh` contract, and reserves collision-free SDD ADR/SPEC numbers
@@ -56,6 +59,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `sdd-flow` skill — self-contained orchestration of the full Research → Planning → Implementation lifecycle via subagents (no SDD plugin required)
 - `/regression-eval-capture` command — scaffolds LangSmith regression eval datasets after a feature ships (Observability)
 - `/adr-capture` command — manual entry point for ADR capture
+- `/prompt-doctor` command — manual entry point for prompt diagnosis
 
 ### 4. LangSmith Skills — v0.1.1
 

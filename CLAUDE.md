@@ -36,7 +36,7 @@ agent-engineering/
 │                                   #   8× sdd-spec-*-specialist (sonnet)
 ├── hooks/log_subagent_call.py      # logs subagent transcripts
 ├── commands/                       # interactive (depth-0) commands the user runs:
-│                                   #   adr-capture, regression-eval-capture, research-clarify,
+│                                   #   adr-capture, prompt-doctor, regression-eval-capture, research-clarify,
 │                                   #   critical-review, continue, adhoc-compact, commit
 ├── skills/
 │   ├── sdd-flow/                   # SLIM SKILL.md orchestrator core +
@@ -45,6 +45,7 @@ agent-engineering/
 │   │   └── bodies/                 #   complete instruction sets for spawned subagents (read by path)
 │   ├── ai-agent-security-review/   # OWASP AI-agent control catalog (vendored) +
 │   │                       #   standalone review; sdd-flow reads the same catalog
+│   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)
 │   ├── correction-codifier/, cross-cutting-adr/, improve-claude-md/, todo-tidy/,
 │   │                       #   worktree-create/, bb-worktree-init/, worktree-handoff/
 └── README.md
