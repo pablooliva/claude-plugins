@@ -42,7 +42,9 @@ agent-engineering/
 │   ├── sdd-flow/                   # SLIM SKILL.md orchestrator core +
 │   │   ├── phases/                 #   per-phase chapters (setup, research, planning,
 │   │   │                           #   implementation-whole-feature, implementation-per-slice, protocols)
-│   │   └── bodies/                 #   complete instruction sets for spawned subagents (read by path)
+│   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path)
+│   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard
+│   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff
 │   ├── ai-agent-security-review/   # OWASP AI-agent control catalog (vendored) +
 │   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)

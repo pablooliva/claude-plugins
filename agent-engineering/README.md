@@ -71,7 +71,33 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 2.5.0.
+Version 2.6.0.
+
+### What's new in 2.6.0
+
+`sdd-flow` no longer takes the implementer's word that a control is closed. Before 2.6.0 the skill had no concept of enforcement sites or mutation evidence at all.
+
+**Why.** A project running `sdd-flow` (SPEC-024, 2026-09-20/21) had to write its own rule into its spec because it kept shipping controls whose tests could not fail: *every control ships with a test that drives the real entry point with the adverse precondition present, plus a per-site mutation check — delete one enforcement site, confirm a test fails, restore.* The rule worked, but only on the sites someone listed, and the list was always the implementer's. Across four slices the implementers under-counted every time:
+
+| Control | Implementer recorded | Actually present | Found by |
+|---|---|---|---|
+| D-10 stdout line-1 rule | 1 → 3 → 17 → 23 (over 3 fix passes) | ≥ 26 | each successive reviewer |
+| REQ-018 unchanged-skip filter | 3 | 4 (missing one: full unit suite stayed green when it was deleted) | reviewer |
+| SEC-003 URL safety check | "proven" via one mutation of a shared loop | 2 (final-URL site deletable with all 1,303 tests green) | reviewer |
+| SEC-002 neutralisation | 2 | 3 | reviewer |
+
+Twice a control was recorded closed while still broken. Every miss was found by a reviewer reading the code fresh; none by the implementer checking its own list. Two slices were rejected for it and one burned the full 3-iteration fix cap. The implementer's list comes from memory of what it just built, so it shares the implementer's blind spots. The fix is structural, not a reminder to count harder.
+
+**What changed.**
+
+- **The standard is in the skill.** New `skills/sdd-flow/references/enforcement-sites.md` defines *control* (any rule the spec says must hold on every path — guards, refusals, write controls, output contracts, invariants, security controls; not only `SEC-xxx`), *enforcement site*, *gap*, the per-site mutation standard, the three site dispositions — (i) proven by its own mutation, (ii) not provable alone with the argument written at the site, (iii) not proven and kept with a named owner — and the inventory table both sides write.
+- **Implementers record sites.** `slice-start.md` and `implementation.md` write a per-feature inventory (`SDD/implementation/sites/SITES-IMPL-*.md`) with a disposition and mutation evidence per site, and must not leak counts into code comments or `progress.md`.
+- **A blind count runs before any control can be Complete.** New step **4a.5** (`bodies/site-count.md`): a fresh `sdd-workhorse` spawn inventories sites from the SPEC and production code only, under a read allowlist that excludes the implementer's inventory, the plan, `progress.md`, tests, and earlier counts. It runs after each slice's implementation and after every fix iteration; in whole-feature mode after implementation. A new always-on **4e.5** recounts feature-wide before completion.
+- **The orchestrator diffs mechanically.** New `scripts/site-diff.py` compares counts per control, file, and function and reports `MATCH`, `MISSED` (HIGH), `EXTRA` (MEDIUM, confirmed or rejected by the reviewer re-running the mutation), `UNCOUNTED`, and blind-found gaps (HIGH). Mismatches become ordinary review findings inside the existing fix loop — the per-slice cap and stall check are unchanged.
+- **Reviews verify the evidence.** `slice-review.md` and `code-review.md` re-run a sample of mutations, check (ii)/(iii) are argued rather than asserted, and require a real-subprocess test per exit-path class for stdout/stderr contracts (`CliRunner` hid a `click.confirm(err=True)` writing to stdout).
+- **Uncounted means Partial.** A new `## Control Site Status` table in the implementation plan; a control with no independent count stays `Partial`, and completion refuses while any control is `Partial`.
+- **Retros learn the pattern.** `slice-retro.md` records count mismatches in a `## Site Count Reconciliation` section and a new ledger section, so the next slice's implementer sees which kinds of site get missed.
+- **Resumable.** New `progress.md` markers (`Implemented`, `Site Count`, `Site Diff`, `Review`, `Fix`, `## Awaiting Site-Count Resolution`) let `/sdd-flow continue` resume inside the new step; a blind count interrupted mid-way is redone fresh or continued from its own compaction only.
 
 ### What's new in 2.5.0
 
