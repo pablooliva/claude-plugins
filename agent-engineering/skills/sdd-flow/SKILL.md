@@ -41,7 +41,7 @@ At Step 0 the orchestrator resolves **SKILL_ROOT** = the absolute path of this s
 
 Every body path in a spawn prompt is the **resolved absolute** `SKILL_ROOT/bodies/<file>.md`. Compact bodies are passed the same way (read only if the Safety-Net trips).
 
-The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), the code-review / slice-review agentic lens (4b), and eval capture (4g). Record both in `progress.md` alongside SKILL_ROOT. If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run and a one-line warning goes to `progress.md` — the flow does not halt.
+The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), the code-review / slice-review agentic lens (4b), and eval capture (4g). It also derives **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md` — the enforcement-site standard (definitions of control and enforcement site, the per-site mutation standard, the three site dispositions, the inventory shape) passed to every implementation, blind-count, review, fix, retro, and completion spawn. Record all three in `progress.md` alongside SKILL_ROOT. STANDARD ships inside this skill, so a missing STANDARD means a broken install: halt and tell the user (unlike CATALOG, there is no degraded mode — without it no control can reach `Complete`). If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run and a one-line warning goes to `progress.md` — the flow does not halt.
 
 ## Canonical Identifiers (resolved at Step 0)
 
@@ -70,6 +70,10 @@ Every subagent MUST use these exact paths; the orchestrator resolves `[###]`/`[f
 | ADRs / ADR index | `SDD/adr/NNNN-slug.md`, `SDD/adr/README.md` | adr-capture subagent | Future runs, humans |
 | Eval scaffolding | `evals/datasets/[feature-slug].json`, `evals/evaluators/...`, `evals/run_functions/...`, `evals/README.md` | eval-capture subagent | Future regression runs |
 | Implementation plan | `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` | Implementation subagent | Code review, Impl review, Completion |
+| Site inventory (implementer's, living) | `SDD/implementation/sites/SITES-IMPL-[feature-name].md` | Implementer; fix subagents | Diff script, reviews, retro, completion — **never the blind counter** |
+| Blind site count | `SDD/reviews/SITE-COUNT-<SLICE-XXX\|FEATURE>-[feature-name]-iter<N>-[YYYY-MM-DD].md` | Blind counter (4a.5 / 4e.5) | Diff script, reviews, retro |
+| Site diff | `SDD/reviews/SITE-DIFF-<SLICE-XXX\|FEATURE>-[feature-name]-iter<N>-[YYYY-MM-DD].md` | Orchestrator via `scripts/site-diff.py` | Reviews, retro, completion |
+| Final site verification review | `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` | 4e.5 verification | 4e.5 fix, completion |
 | Slice file | `SDD/implementation/slices/SLICE-[###]-[NN]-[slice-name]-[YYYY-MM-DD].md` | slice-start subagent | per-slice cycle |
 | Slice review / retro / ledger | `SDD/reviews/REVIEW-SLICE-*`, `SDD/implementation/slices/RETROSPECTIVE-SLICE-*`, `SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md` | per-slice subagents | next slice, end-of-feature |
 | Code review | `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md` | Code review | Impl fix |
@@ -88,17 +92,19 @@ SDD/
 ├── requirements/SPEC-[###]-[feature-name].md
 ├── implementation/
 │   ├── IMPLEMENTATION-PLAN-*.md
+│   ├── sites/SITES-IMPL-*.md
 │   ├── slices/{SLICE-*, RETROSPECTIVE-SLICE-*, LEARNINGS-FEATURE-*}.md   # per-slice mode only
 │   └── summaries/IMPLEMENTATION-SUMMARY-*.md
 ├── orchestration/{progress.md, subagent-calls/, counters/, compacted/}
 └── reviews/{CRITICAL-RESEARCH-*, PANEL-FINDINGS-*, PANEL-SPEC-*, CRITICAL-SPEC-*,
-            CRITICAL-IMPL-*, REVIEW-*, REVIEW-SLICE-*}.md
+            CRITICAL-IMPL-*, REVIEW-*, REVIEW-SLICE-*, REVIEW-SITES-*,
+            SITE-COUNT-*, SITE-DIFF-*}.md
 evals/{README.md, datasets/, evaluators/, run_functions/}   # only when eval_required: true
 ```
 
 ## Orchestrator Discipline (the load-bearing core)
 
-**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step runs inside a spawned subagent — even ones that "look small." The orchestrator's only direct work: spawning subagents, running commits (per `commands/commit.md`), writing user-facing checkpoint messages, and recording state in `progress.md`. The orchestrator has no `/clear`; subagent boundaries are the only context reset.
+**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step runs inside a spawned subagent — even ones that "look small." The orchestrator's only direct work: spawning subagents, running commits (per `commands/commit.md`), running the two deterministic matchers (the retro recommendation matcher and `scripts/site-diff.py`), writing user-facing checkpoint messages, and recording state in `progress.md`. The orchestrator has no `/clear`; subagent boundaries are the only context reset.
 
 - **Bounded returns.** Every subagent returns **≤200 words + artifact paths**. The orchestrator reads artifact files only when a decision genuinely needs them (e.g. spec frontmatter to route Step 4).
 - **progress.md is append-only.** Never overwrite or delete prior content.
@@ -123,7 +129,7 @@ Rotation is **orchestrator-only**, happens only between spawns (never mid-subage
 >
 > **Counter tracking.** You cannot inspect your own tool-call history. The orchestrator gives you a **dedicated counter file** (path in your prompt under "Your counter file"). It holds exactly one line: `Reads: 0/15`. Update it immediately after each Read; check it (cheap Read) before each new Read — that is the trigger evaluation. The counter file is scoped to your run only; never shared, never written to `progress.md`.
 
-**Orchestrator obligation per spawn of a phase-execution / fix / continuation subagent:** (1) embed the Safety-Net Rule verbatim; (2) create the counter file at `SDD/orchestration/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with the single line `Reads: 0/15` (use `/20` for implementation chunks) and pass its path under "Your counter file"; (3) pass the matching compact body path (`SKILL_ROOT/bodies/[phase]-compact.md`) under "Compact instructions — use only if the Safety-Net trips". Counter is **Reads-only** — subagents are contractually barred from spawning (a platform limit on Claude Code ≤2.1.171, a deliberate design rule from 2.1.172 onward), so there is no nested-subagent count. Defaults (15 / 20) are tunable without changing the protocol.
+**Orchestrator obligation per spawn of a phase-execution / fix / continuation subagent:** (1) embed the Safety-Net Rule verbatim; (2) create the counter file at `SDD/orchestration/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with the single line `Reads: 0/15` (use `/20` for implementation chunks) and pass its path under "Your counter file"; (3) pass the matching compact body path (`SKILL_ROOT/bodies/[phase]-compact.md`; `site-count-compact.md` for a blind site count, whose counter is also `/20`) under "Compact instructions — use only if the Safety-Net trips". Counter is **Reads-only** — subagents are contractually barred from spawning (a platform limit on Claude Code ≤2.1.171, a deliberate design rule from 2.1.172 onward), so there is no nested-subagent count. Defaults (15 / 20) are tunable without changing the protocol.
 
 ### Spawn-prompt construction checklist
 
@@ -136,8 +142,11 @@ Routing is carried by **shipped agent frontmatter** — no runtime model switchi
 | Spawn site | Agent type | Model |
 |---|---|---|
 | Research, planning, ADR capture, fixes, impl chunks, code review, completion, eval, slice cycle | `agent-engineering:sdd-workhorse` | sonnet |
+| Blind site count (4a.5, 4e.5) — always a fresh spawn | `agent-engineering:sdd-workhorse` | sonnet |
 | Each panel specialist (Stage 1), including `agent-security` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
 | Research/spec/impl critical review; panel synthesis (Stage 2) | `agent-engineering:sdd-critical-reviewer` | opus |
+
+**Why the blind counter may share the implementer's agent type.** Its independence comes from its context, not its model: a fresh spawn whose prompt carries only the SPEC, production code, and STANDARD, with a read allowlist that excludes the implementer's inventory, the IMPLEMENTATION-PLAN, `progress.md`, tests, and earlier counts. Every historical under-count this step targets was caught by a fresh `sdd-workhorse` reviewer, not by a different model.
 
 The workhorse's escalation protocol stays: if a task needs Opus depth, it surfaces "needed Opus depth" in its bounded return and the orchestrator re-spawns (or per-spawn-overrides) at Opus.
 
@@ -155,6 +164,7 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 | 4 | Implementation — route on spec `delivery_mode:` | read the matching file ↓ |
 | 4 · whole-feature (default) | 4a–4j | `phases/implementation-whole-feature.md` |
 | 4 · per-slice | per-slice cycle + end-of-feature cycle | `phases/implementation-per-slice.md` |
+| 4a.5 / 4e.5 | Blind enforcement-site count + diff (both modes) | the matching Step 4 file + `references/enforcement-sites.md` |
 | done | Final announcement | — |
 | `continue` / resumption / handoffs / errors | Phase detection + protocols | `phases/protocols.md` |
 
@@ -184,5 +194,6 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 6. **Explicit paths always; the orchestrator never does phase/review/fix/capture/completion work itself.**
 7. **Per-slice cycle is strict** — one subagent per slice, mandatory per-slice review, retro + ledger before the atomic per-slice commit. Slice subagents receive ONLY the rolling ledger.
 8. **Re-planning recommendations halt the flow regardless of `--skip-slice-checkpoints` and mode.**
+9. **No control is Complete on the implementer's word.** Every control (any SPEC rule that must hold on every path — guards, refusals, write controls, output contracts, invariants, security controls) is inventoried site by site with per-site mutation evidence, then counted **blind** by a separate spawn and diffed (4a.5 per slice or feature; 4e.5 feature-wide before completion). Mismatches are findings in the existing fix loop; a control with no independent count stays `Partial`. Standard: `references/enforcement-sites.md`.
 
 Session resumption, mid-phase handoff, phase-detection priority, and error handling all live in `phases/protocols.md`.

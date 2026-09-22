@@ -199,6 +199,14 @@ Create the implementation tracking document using this enhanced template. **The 
 2. [Following priority]
 3. [Subsequent priority]
 
+## Control Site Status
+
+> **Required in both delivery modes.** One row per control (any SPEC rule that must hold on every path — see `references/enforcement-sites.md` §1). Scaffold it empty; `slice-retro` (per-slice) or the completion step (whole-feature) fills `Independent sites`, `Latest diff`, and `Status`. `Status` is `Partial` until a blind, independent count matches — **a control with no independent count is never `Complete`**.
+
+| Control | Implementer sites | Independent sites | Latest diff | Status | Open (iii) owners |
+|---------|-------------------|-------------------|-------------|--------|-------------------|
+| [SPEC ID] | [n] | — | — | Partial | — |
+
 ## Slice Progress
 
 > **Required only when `delivery_mode: per-slice`.** Omit this section entirely when `delivery_mode: whole-feature` (the default). When per-slice, the planning phase's `## Delivery Slices` from the SPEC seeds this table; the slice-start phase initializes the row to `In Progress`; the slice-retro phase updates `Status`, `Test result`, and `Notes` only (never `SLICE-ID`, `Name`, or `Acceptance check`). State transitions are forward-only — `Not Started` → `In Progress` → `Acceptance Check Passing` → `Complete`. SLICE-XXX values must be unique within this table.
@@ -220,8 +228,8 @@ Create the implementation tracking document using this enhanced template. **The 
 
 2. **Branch on `delivery_mode:`:**
    - The mode was already resolved in Initial Context Load step 4. Branch behavior here:
-   - **`whole-feature` (default):** Implement the feature in a single tracked pass against the full REQ/EDGE/FAIL list. Update the IMPLEMENTATION-PLAN's `Specification Alignment` checkboxes as you complete each item. Behavior is bit-for-bit identical to the pre-2.0.0 implementation-tracker flow apart from the filename/path change. **Omit the `## Slice Progress` section from the tracker entirely.**
-   - **`per-slice`:** **Scaffold-only mode — you implement nothing.** Populate the `## Slice Progress` table from the SPEC's `## Delivery Slices` section (one row per `SLICE-XXX`, copying `Name` and `Acceptance check` from the SPEC; `Status` initialized to `Not Started`; the table enforces forward-only state transitions). Complete the rest of the tracker scaffold (including the web-facing determination from Implementation Process step 3, if determinable from the SPEC), append your progress.md entry, and **return**. The orchestrator drives the per-slice cycle (implement → review → retro → commit, one subagent per slice) from the table you scaffolded — slice subagents do all implementation. Skip the remaining Implementation Process steps; they are whole-feature-only. If your prompt marks this run as a post-replan re-scaffold, write a FRESH `## Slice Progress` table from the revised SPEC (the orchestrator has already archived the prior table under `## Archived Slice Progress (pre-replan)`).
+   - **`whole-feature` (default):** Implement the feature in a single tracked pass against the full REQ/EDGE/FAIL list. Update the IMPLEMENTATION-PLAN's `Specification Alignment` checkboxes as you complete each item. Behavior is bit-for-bit identical to the pre-2.0.0 implementation-tracker flow apart from the filename/path change. **Omit the `## Slice Progress` section from the tracker entirely.** Record enforcement sites as you go (Implementation Process step 6).
+   - **`per-slice`:** **Scaffold-only mode — you implement nothing.** Populate the `## Slice Progress` table from the SPEC's `## Delivery Slices` section (one row per `SLICE-XXX`, copying `Name` and `Acceptance check` from the SPEC; `Status` initialized to `Not Started`; the table enforces forward-only state transitions). Complete the rest of the tracker scaffold (including an empty `## Control Site Status` table and the web-facing determination from Implementation Process step 3, if determinable from the SPEC), append your progress.md entry, and **return**. The orchestrator drives the per-slice cycle (implement → review → retro → commit, one subagent per slice) from the table you scaffolded — slice subagents do all implementation. Skip the remaining Implementation Process steps; they are whole-feature-only. If your prompt marks this run as a post-replan re-scaffold, write a FRESH `## Slice Progress` table from the revised SPEC (the orchestrator has already archived the prior table under `## Archived Slice Progress (pre-replan)`).
 
 3. **Set Up Development Environment:**
    - Load essential files identified in specification
@@ -245,6 +253,14 @@ Create the implementation tracking document using this enhanced template. **The 
    - Mark requirements as implemented in the tracking document
    - Document any deviations or discoveries immediately
 
+6. **Record Enforcement Sites and Per-Site Mutation Evidence (whole-feature):**
+   - Read the enforcement-site standard at the `STANDARD` path in your prompt (`references/enforcement-sites.md`) — it defines **control**, **enforcement site**, **gap**, the **per-site mutation standard**, and the **three dispositions**.
+   - For every control in the SPEC (any rule that must hold on every path — guards, refusals, write controls, output contracts, invariants, security controls; not only `SEC-xxx`), record every site in `SDD/implementation/sites/SITES-IMPL-[feature-name].md` under `## Site Inventory`, in the exact table shape of the standard §4 (`Slice` = `—`). If you are one implementation chunk of several, add and update rows for your chunk; do not delete earlier chunks' rows unless the site no longer exists in the working tree.
+   - Run one mutation per site: delete exactly that site, run the tests, confirm at least one fails, restore, confirm `git diff -- <file>` is clean. Record `(i)` with the failing test; where the site genuinely cannot be proven alone, record `(ii)` with the argument written as a comment AT the site, or `(iii)` with a named owner and follow-up. Never mutate shared machinery as a stand-in for its call sites.
+   - For output / stream contracts (stdout, stderr, exit codes), write at least one **real-subprocess** test per path class asserting on the actual bytes — `CliRunner` / `capsys` tests do not count toward this.
+   - Fill `Implementer sites` in `## Control Site Status`; leave `Status` at `Partial`.
+   - **Do not leak the list.** Site comments carry no counts, indices, or greppable site tags; your `progress.md` entry names the inventory path only. A blind, independent count (Step 4a.5) runs after you and is diffed against your inventory — every site it finds that you did not list becomes a HIGH finding.
+
 ## Implementation Approach
 
 Do all investigation and research inline using your available tools (Read, Bash, Edit, Write). When you need to find implementation examples, locate test files, or discover utilities, use Read and Bash directly with grep/find. When you need to understand existing patterns or find reusable components, search inline. Document all findings directly in the IMPLEMENTATION-PLAN's Session Notes as you go.
@@ -263,6 +279,8 @@ During implementation, continuously verify:
 - [ ] Failure scenarios (FAIL-XXX) have error handling
 - [ ] Performance requirements (PERF-XXX) are being measured
 - [ ] Security requirements (SEC-XXX) are implemented
+- [ ] Every control's sites are recorded in `SITES-IMPL-[feature-name].md`, each with a disposition and evidence
+- [ ] Output / stream contracts have a real-subprocess test per path class
 - [ ] Code follows existing project patterns (discovered via inline search)
 - [ ] Documentation is updated as needed
 

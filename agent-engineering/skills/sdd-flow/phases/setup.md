@@ -12,7 +12,7 @@ When invoked, the orchestrator first:
 2. Extracts an **issue/ticket number** if provided (`#42`, `PROJ-123`); otherwise determines sequential numbering by checking existing `SDD/` artifacts.
 3. Derives a **kebab-case `[feature-name]`** from the task.
 4. Resolves all canonical identifiers (SKILL → Canonical Identifiers).
-5. **Resolves SKILL_ROOT and CATALOG** (SKILL → SKILL_ROOT resolution) and records both, with the resolved identifiers, in `SDD/orchestration/progress.md` (create the file + parent dirs if absent). Resumed sessions re-derive every body path from this record. A missing CATALOG closes the `agent_security:` gate for the run (warning only, no halt).
+5. **Resolves SKILL_ROOT, CATALOG, and STANDARD** (SKILL → SKILL_ROOT resolution) and records all three, with the resolved identifiers, in `SDD/orchestration/progress.md` (create the file + parent dirs if absent). Resumed sessions re-derive every body path from this record. A missing CATALOG closes the `agent_security:` gate for the run (warning only, no halt). A missing STANDARD (`SKILL_ROOT/references/enforcement-sites.md`) is a broken install: halt and tell the user.
 
 Then spawn ONE **`agent-engineering:sdd-workhorse`** subagent for scope assessment. There is no dedicated body file — embed this brief directly in the prompt:
 

@@ -57,6 +57,11 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
    - Load most recent file to understand any pending items
    - Review "Specification Validation Remaining" section
 
+5. **Final Site Diff and Control Site Status:**
+   - Your prompt provides the final feature-wide diff `SDD/reviews/SITE-DIFF-FEATURE-[feature-name]-iter<N>-[date].md`, the site review(s) that verified it, the implementer inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, and `STANDARD` (`references/enforcement-sites.md` — read §6).
+   - Update the IMPLEMENTATION-PLAN's `## Control Site Status` table from these, one row per control: implementer and independent site counts from the diff, the diff path, and `Status` per standard §6 — `Complete` only if the final diff is `MATCH` for it (or its only differences are `CONFIRMED-EXTRA` in the review), it has no open gap, and every (ii)/(iii) was accepted by the reviewer. **A control with no independent count is `Partial`.** Copy (iii) owners into `Open (iii) owners`.
+   - Never mark a control `Complete` on the implementer's inventory alone.
+
 ### 2. Pre-Completion Verification
 
 **STOP and verify these conditions from the loaded documents:**
@@ -70,6 +75,7 @@ COMPLETION READINESS CHECKLIST
 □ All UX-XXX user experience requirements show "Satisfied"
 □ All EDGE-XXX edge cases show "Complete" implementation
 □ All FAIL-XXX failure scenarios show error handling "Implemented"
+□ Every control in "## Control Site Status" is "Complete" (independently counted, diff matched)
 □ Test coverage meets or exceeds target from specification
 □ No "Blocked/Pending" items remain in IMPLEMENTATION-PLAN document
 □ All delegations have been completed and documented

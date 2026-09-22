@@ -4,6 +4,8 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 
 You are a continuation subagent spawned because a prior phase subagent tripped the safety-net and bailed out. Read the compaction file named in your prompt FIRST, resume the interrupted phase from its 'Current Focus' section, and inherit the same Reads-counter safety-net (you may bail out again, producing another handoff).
 
+> **Blind site-count continuation — read this before anything else.** If your prompt says you are continuing a **blind site count** (the compaction file is `site-count-compacted-*.md`), this body's Process below does NOT apply — it reads `progress.md` and the IMPLEMENTATION-PLAN, both of which are forbidden to a blind counter. Instead: read `bodies/site-count.md` (path in your prompt) and obey its read allowlist; read ONLY the compaction file named in your prompt (not `progress.md`, not any other compaction file); resume from its "Current Focus" and "Remaining" sections; finish by writing that body's OUTPUT (the compaction's "Rows Found So Far" plus your new rows) and its `## Site Count … - Complete` progress entry. If you trip the Safety-Net again, follow `bodies/site-count-compact.md`.
+
 ## Process
 
 ### 1. Load Progress and Compaction Files
@@ -18,6 +20,7 @@ You are a continuation subagent spawned because a prior phase subagent tripped t
      - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
+     - Blind site count: `site-count-compacted-[YYYY-MM-DD_HH-MM-SS].md` — handled ONLY by the blind site-count continuation note above, never by this Process
      - Generic (any phase): `compact-[YYYY-MM-DD_HH-MM-SS].md`
    - Load the most recent file based on timestamp (24-hour format with underscores)
    - Note: Files use format `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-10-01_14-30-45`)

@@ -112,6 +112,22 @@ If none exists, record one line in the review document — "No project review ch
 
 Items outside the slice's file set still apply when the checklist item is about project-level bookkeeping rather than code. Scope the walk to the slice's contribution, not to the slice's diff.
 
+## Step 5.6: Enforcement-Site Verification (mandatory)
+
+Your prompt provides four paths: `STANDARD` (`references/enforcement-sites.md`), the implementer's inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, the latest blind count `SDD/reviews/SITE-COUNT-<SLICE-XXX>-…-iter<N>-….md`, and the orchestrator's diff `SDD/reviews/SITE-DIFF-<SLICE-XXX>-…-iter<N>-….md`. Read the standard first — it defines control, enforcement site, gap, the per-site mutation standard, and the three dispositions. You are **not** blind; the blind count was a separate spawn before you. Your job is to turn the diff into findings and to verify the implementer's evidence.
+
+1. **Carry every diff finding into this review, at its stated severity.** Each `MISSED` and `GAP` is a HIGH finding; each `UNCOUNTED` is MEDIUM; each `EXTRA` is MEDIUM until you resolve it in step 2. A `MISSED+EXTRA` control is both: HIGH per missed key, MEDIUM per extra key (often one site filed under a different symbol — resolve the extra by mutation as usual). Number them as ordinary findings — the per-slice fix loop's progress-stall check counts HIGH from THIS document, so a site-count finding left out of it is a finding the loop never sees.
+1b. **Adjudicate every `UNCOUNTED`.** Decide from the SPEC whether it is really a control whose rule governs this slice's paths. Not a control / out of scope → the finding's fix is "delete its inventory rows". A real control → record it in the review as `ALSO INVENTORY for next recount: <IDs>`, so the orchestrator passes the IDs (and nothing else) to the next blind count.
+2. **Resolve every `EXTRA` in this pass.** For each extra site, re-run its mutation yourself (delete the site, run the tests, restore, confirm `git diff -- <file>` is clean). A test fails → mark it `CONFIRMED-EXTRA` (resolved; the blind counter missed a real site). No test fails → raise it as HIGH (a site recorded as proven is not).
+3. **Re-run a sample of mutations.** Beyond the extras: at least **one site per in-scope control**, and at least **25%** of the slice's disposition-`(i)` sites overall (round up), favouring sites this slice added or changed. For each: delete, run, restore, confirm clean. A recorded `(i)` whose mutation leaves every test green is HIGH — the control is recorded closed while broken.
+4. **Verify dispositions (ii) and (iii) are argued, not asserted.** Open each (ii) site: the comment AT the site must name which other site or test covers this path and why deleting this site alone cannot be observed — a bare "not provable alone" is MEDIUM. Each (iii) must name an owner and a follow-up — missing either is MEDIUM. Confirm no (ii)/(iii) site has been deleted as dead code (compare against the previous inventory rows).
+5. **Output / stream contracts.** For every control that constrains stdout, stderr, or the exit code, confirm at least one **real-subprocess** test per path class present in the blind count (run the program as a separate process, assert on the actual bytes). In-process runners (`CliRunner`, `capsys`) do not count. A path class with no real-subprocess test is HIGH.
+6. **Leak check.** A site comment carrying a count, index, or greppable site tag, or a `progress.md` entry listing per-control site rows, is MEDIUM (it compromises the next blind count).
+
+Write the results into the review document's `## Enforcement-Site Verification` section (template below). Do NOT edit the Control Site Status table — the retro owns it.
+
+When the review document is written, append to `SDD/orchestration/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM)` (`N` = the `ITER` in your prompt). It is a phase-detection marker; do not paraphrase it.
+
 ## Step 6: Write the per-slice review document
 
 Write the review output to:
@@ -154,6 +170,17 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 
 [FAIL rows are also raised as findings above, at their warranted severity.]
 
+## Enforcement-Site Verification
+
+**Site diff:** <SITE-DIFF path> — `Result:` line verbatim
+**Blind count:** <SITE-COUNT path>   **Implementer inventory:** SDD/implementation/sites/SITES-IMPL-[feature-name].md
+
+| Control | Diff outcome | Extras confirmed | Mutations re-run (pass/total) | (ii)/(iii) argued | Subprocess test per path class | Control verdict |
+|---------|--------------|------------------|-------------------------------|-------------------|--------------------------------|-----------------|
+| <ID> | MATCH \| MISSED \| EXTRA \| MISSED+EXTRA \| UNCOUNTED | <n>/<n> or — | <n>/<n> | yes \| no: <site> \| — | yes \| no: <class> \| n/a | Complete-eligible \| Partial |
+
+A control is **Complete-eligible** only if its diff is `MATCH` (or its only differences are `CONFIRMED-EXTRA`), it has no open gap, every re-run mutation failed a test, and every (ii)/(iii) is argued. Every other control is **Partial**. Findings raised here also appear, numbered, under Slice-Specific Findings.
+
 ## Module Review Log (Risk-Tiered Depth Applied)
 
 | Module | Declared Risk | Depth Applied | Notes |
@@ -162,7 +189,7 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 
 ## Decision: [APPROVED / REJECTED]
 
-[Standard review decision rationale.]
+[Standard review decision rationale. Any open HIGH — including a site-count `MISSED`, `GAP`, or failed mutation re-run — rejects the slice.]
 ```
 
 ## Per-Slice Review Iteration Cap (REQ-013, reference — enforced elsewhere)

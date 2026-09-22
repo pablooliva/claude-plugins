@@ -149,16 +149,42 @@ Append an entry to `SDD/orchestration/progress.md` recording the slice start:
 - **Active-slice resolution:** <how the slice was resolved — explicit arg / single Not Started row / --resume / --force>
 ```
 
-## Step 10: Return a bounded result
+## Step 10: Implement the slice
+
+In sdd-flow per-slice mode, **you implement the slice end-to-end in this same run** — the orchestrator spawns no separate implementation subagent. Implement the slice's REQ/EDGE/FAIL coverage (per its `Acceptance check` and `Modules touched`), with tests alongside each component, and run the acceptance check. Follow the rolling ledger's learnings — in particular its `Enforcement-site count mismatches` section, which records the kinds of sites earlier slices missed.
+
+## Step 11: Record enforcement sites and per-site mutation evidence
+
+Read the enforcement-site standard at the `STANDARD` path in your prompt (`references/enforcement-sites.md`). It defines **control**, **enforcement site**, **gap**, the **per-site mutation standard**, and the **three dispositions**. Then:
+
+1. **List the controls this slice touches** — every SPEC rule that must hold on every path through code this slice added or changed, including controls introduced by earlier slices (a new exit path needs an earlier slice's output rule too). Not limited to `SEC-xxx`.
+2. **Record every site** for those controls in the feature's living inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md` under `## Site Inventory`, in the exact table shape of the standard §4. Create the file if absent. Update rows for sites this slice changed; add rows for new sites; **delete rows for sites that no longer exist in the working tree** (a stale row is a phantom `EXTRA` in every later diff); set `Slice` to this SLICE-XXX on each row you add or change. Count sites across the whole working tree, not only in your diff.
+3. **Run one mutation per site** (standard §2): delete exactly that site, run the tests, confirm at least one fails, restore, confirm `git diff -- <file>` is clean. Record disposition `(i)` with `mutation: <what was deleted> → failing test <id>`. Where no test can fail, add one — or, if the site genuinely cannot be proven alone, record `(ii)` with the argument written as a comment AT the site, or `(iii)` with a named owner and follow-up. Never mutate shared machinery as a stand-in for its call sites.
+4. **Output / stream contracts** (stdout, stderr, exit codes): add at least one **real-subprocess** test per path class that asserts on the actual bytes. `CliRunner` / `capsys` tests do not count toward this.
+5. **Do not leak the list into the code or the log.** Site comments carry no counts, indices, or greppable site tags. Your `progress.md` entry names the inventory path only — never its rows or counts per control. An independent counter will count these sites blind; anything that hands it your list defeats the check.
+
+A blind, independent count runs after you return and is diffed against your inventory. Every site it finds that you did not list becomes a HIGH finding.
+
+## Step 12: Append the `Implemented` entry to `progress.md`
+
+```markdown
+## Slice <SLICE-XXX> - Implemented
+
+- **Acceptance check:** <test name> — passing | failing: <reason>
+- **Site inventory:** SDD/implementation/sites/SITES-IMPL-<feature-name>.md
+```
+
+This line is a phase-detection marker: it tells a resumed run that implementation finished and the blind count is next.
+
+## Step 13: Return a bounded result
 
 Return a bounded result (≤200 words + artifact paths) summarizing:
 
-- The active SLICE-XXX, its Name, and its Acceptance check (verbatim from the row).
+- The active SLICE-XXX, its Name, and its Acceptance check (verbatim from the row), and whether it passes.
 - The `Modules touched` field from the SPEC's `### SLICE-XXX:` block (read SPEC's `## Delivery Slices` section).
-- The ledger summary (if loaded): one line per ledger section (`Interface contract clarifications`, `Integration patterns discovered`, `Performance / failure modes observed`, `Open recommendations awaiting user decision`) with entry counts.
-- Next step: `slice-review` for SLICE-XXX (after implementation + tests are written).
-
-Implementation work for the slice begins after this body returns. There is no other slice primitive in this gap between `slice-start` and `slice-review`.
+- The ledger summary (if loaded): one line per ledger section with entry counts.
+- The site-inventory path and the number of controls you inventoried (not per-control counts).
+- Next step: blind site count, then `slice-review` for SLICE-XXX.
 
 ## Flag Inventory (REQ-025 — applies to `slice-start`)
 

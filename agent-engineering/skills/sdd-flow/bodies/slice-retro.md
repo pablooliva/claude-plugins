@@ -64,6 +64,8 @@ If absent, fail with: `No per-slice review found for SLICE-XXX (expected SDD/rev
 
 If present, read it into context. Note its findings (HIGH/MEDIUM/LOW counts and any unresolved items).
 
+Also read the slice's **site-count trail** (paths in your prompt): every `SDD/reviews/SITE-DIFF-<SLICE-XXX>-*-iter<N>-*.md` for this slice (iter0 through the latest), the review's `## Enforcement-Site Verification` section, and `STANDARD` (`references/enforcement-sites.md` §6). Note, per iteration, which sites the implementer missed (`MISSED` / `GAP`), which extras the reviewer confirmed, and which controls ended `Partial`.
+
 ## Step 5: EDGE-014 — re-invocation refusal when retrospective already exists
 
 Check for an existing retrospective at the canonical path:
@@ -138,6 +140,15 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 - **Should change to:** <proposed re-plan direction>
 - **Why:** <observation grounding plan-level invalidation — typically: a foundational assumption broken, an interface contract that ripples through later slices, a discovered constraint that invalidates the slice ordering>
 
+## Site Count Reconciliation
+
+[Structured, REQUIRED. One row per control that was ever not `MATCH` for this slice, across all iterations. If every control matched at iter0, the body is the single line `None.`]
+
+| Control | Iter | Outcome | Sites missed by implementer (file · symbol · path class) | Resolved how |
+|---|---|---|---|---|
+
+**Pattern:** <one or two sentences — what KIND of site the implementer missed (e.g. "interrupt handlers on prompt paths", "the final-URL check after redirects"). This is what the next slice's implementer needs, so name the kind, not just the instance.>
+
 ## Ledger Update Sections (structured)
 
 [The retrospective records the ledger updates this retro will write into LEARNINGS-FEATURE-[feature-name].md. The ledger sections are:]
@@ -154,9 +165,13 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 
 - <entry>
 
+### Enforcement-site count mismatches
+
+- <the Pattern above, as a reusable warning> (Sources: SLICE-XXX)
+
 ### Open recommendations awaiting user decision
 
-- <entry>
+- <entry — include every (iii) site with its owner, and every control left Partial>
 ```
 
 ### CRITICAL: Recommendation header strings (Chunk 4b matcher contract)
@@ -223,6 +238,10 @@ If the ledger does not yet exist, scaffold it with this initial structure:
 
 ## Performance / failure modes observed
 
+## Enforcement-site count mismatches
+
+(Kinds of enforcement site that implementers under-counted, as found by the blind count. Slice implementers read this before recording their inventory.)
+
 ## Open recommendations awaiting user decision
 
 (Iteration-cap exhaustions, deferred SPEC amendments, anything blocked.)
@@ -265,6 +284,8 @@ This body updates `Status`, `Test result`, and `Notes` columns ONLY — never `S
 - **Test result:** free-form text — `passing`, `failing: <test name> + <reason>`, `n/a (manual)`, etc.
 - **Notes:** brief pointer — `see retro at SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md` or `see ledger §Open recommendations` for blocking issues.
 
+**Control Site Status (same step).** For every control in this slice's latest site diff, update its row in the IMPLEMENTATION-PLAN's `## Control Site Status` table (add the row if absent): implementer and independent site counts and the diff path from the latest `SITE-DIFF-<SLICE-XXX>` for this slice, and `Status` per standard §6 — `Complete` only if that diff is `MATCH` for it (or only `CONFIRMED-EXTRA` differences in the review), no gap is open, and the review accepted every (ii)/(iii); otherwise `Partial`. **A control with no independent count is `Partial`.** Never set `Complete` from the implementer's inventory alone. A later slice may flip a `Complete` control back to `Partial` if its recount no longer matches — control status is re-evaluated per count, unlike the forward-only slice Status.
+
 State transitions are forward-only (no backwards transitions encoded in the column; "stuck" surfaces via the ledger's `Open recommendations` section, not the column). SLICE-ID, Name, and Acceptance check are SPEC-derived and immutable from this side.
 
 ## Step 9: Update `progress.md`
@@ -279,6 +300,7 @@ Append an entry to `SDD/orchestration/progress.md` recording the retrospective:
 - **Ledger updated:** SDD/implementation/slices/LEARNINGS-FEATURE-<feature-name>.md
 - **Recommendations raised:** <count of SPEC Amendments> SPEC amendment(s); <count of Re-planning entries> re-planning entr(y/ies)
 - **Slice Progress Status advanced to:** <Acceptance Check Passing | Complete>
+- **Controls Partial after this slice:** <IDs, or "none">
 ```
 
 ### Two-stage matcher contract — what this body does NOT write

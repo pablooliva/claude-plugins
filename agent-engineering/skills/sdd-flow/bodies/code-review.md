@@ -204,6 +204,24 @@ grep -m1 "^agent_security:" SDD/requirements/SPEC-*-[feature-name].md
 
 **Abuse cases.** Close the lens by listing the catalog Section 5 rows this implementation's threat surface makes relevant, each with its expected denial, and whether a test currently covers it. Uncovered rows carry forward to Step 4g's eval capture.
 
+## Enforcement-Site Verification (mandatory)
+
+Your prompt provides `STANDARD` (`references/enforcement-sites.md`), the implementer's inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, the latest blind count `SDD/reviews/SITE-COUNT-FEATURE-…-iter<N>-….md`, and the orchestrator's diff `SDD/reviews/SITE-DIFF-FEATURE-…-iter<N>-….md`. Read the standard first — it defines control, enforcement site, gap, the per-site mutation standard, and the three dispositions. You are not blind; the blind count was a separate spawn before you. Turn the diff into findings and verify the implementer's evidence:
+
+1. **Carry every diff finding into this review at its stated severity** — `MISSED` and `GAP` are HIGH, `UNCOUNTED` is MEDIUM, `EXTRA` is MEDIUM until step 2 resolves it; `MISSED+EXTRA` is HIGH per missed key and MEDIUM per extra key.
+1b. **Adjudicate every `UNCOUNTED`:** not a control / out of scope → fix is "delete its inventory rows"; a real control → record `ALSO INVENTORY for next recount: <IDs>` in the review (IDs only).
+2. **Resolve every `EXTRA`:** re-run its mutation (delete the site, run the tests, restore, confirm `git diff -- <file>` is clean). A test fails → `CONFIRMED-EXTRA` (resolved). None fails → HIGH.
+3. **Re-run a sample of mutations:** at least one site per control and at least 25% (rounded up) of all disposition-`(i)` sites. A recorded `(i)` whose mutation leaves every test green is HIGH.
+4. **Dispositions (ii)/(iii) must be argued, not asserted:** each (ii) comment AT the site names which other site or test covers the path and why deleting this one alone is unobservable; each (iii) names an owner and a follow-up. Missing → MEDIUM. A (ii)/(iii) site deleted as dead code → HIGH.
+5. **Output / stream contracts:** every control on stdout, stderr, or exit code needs at least one real-subprocess test per path class in the blind count, asserting on actual bytes. `CliRunner` / `capsys` do not count. Missing → HIGH.
+6. **Leak check:** site comments carrying counts, indices, or greppable site tags, or a `progress.md` entry listing per-control rows → MEDIUM.
+
+Record results in the review document's `## Enforcement-Site Verification` section. Do not edit the IMPLEMENTATION-PLAN's `## Control Site Status` table — the completion step owns it.
+
+**Site-verification-only mode (Step 4e.5).** When your prompt says `MODE: site-verification-only`, run ONLY this section (steps 1–6) against the `FEATURE` diff your prompt names — skip the 70/20/10 review, the checklist walk, and the agentic lens. Write `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` containing only: the `## Enforcement-Site Verification` table, a numbered `## Findings` list with severities, and `## Decision: [APPROVED/REJECTED]` (any open HIGH or MEDIUM rejects).
+
+**Progress marker (both modes).** When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM)` (`N` = the `ITER` in your prompt). It is a phase-detection marker; do not paraphrase it.
+
 ## Review Process Workflow
 
 ### Step 1: Gather All Artifacts
@@ -250,6 +268,10 @@ ls SDD/orchestration/subagent-calls/
 ### Step 4b: Walk the Project Review Checklist
 
 Run the discovery + walk described in the **Project Review Checklist Walk** section above. Record every item's verdict; route FAIL items into the review's findings at their warranted severity.
+
+### Step 4c: Verify Enforcement Sites
+
+Run the **Enforcement-Site Verification** section above. Every finding it raises goes into the review's findings at its stated severity.
 
 ### Step 5: Review Context Engineering
 
@@ -424,6 +446,17 @@ Include this section only when the lens ran. When it was skipped, replace it wit
 **Abuse-case coverage:** [catalog Section 5 rows relevant here | expected denial | covered by test? (test name or NOT COVERED)]
 
 **Spec-to-code regressions:** [any `agent-security` panel finding the spec resolved but the code does not honor, or "None."]
+
+## Enforcement-Site Verification
+
+**Site diff:** <SITE-DIFF path> — `Result:` line verbatim
+**Blind count:** <SITE-COUNT path>   **Implementer inventory:** SDD/implementation/sites/SITES-IMPL-[feature-name].md
+
+| Control | Diff outcome | Extras confirmed | Mutations re-run (pass/total) | (ii)/(iii) argued | Subprocess test per path class | Control verdict |
+|---------|--------------|------------------|-------------------------------|-------------------|--------------------------------|-----------------|
+| <ID> | MATCH \| MISSED \| EXTRA \| MISSED+EXTRA \| UNCOUNTED | <n>/<n> or — | <n>/<n> | yes \| no: <site> \| — | yes \| no: <class> \| n/a | Complete-eligible \| Partial |
+
+A control is **Complete-eligible** only if its diff is `MATCH` (or only `CONFIRMED-EXTRA` differences), it has no open gap, every re-run mutation failed a test, and every (ii)/(iii) is argued. Any open HIGH here rejects the implementation.
 
 ## Context Engineering (20%)
 [Context management review]
