@@ -71,7 +71,12 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 2.6.0.
+Version 2.6.1.
+
+### What's new in 2.6.1
+
+- **Per-slice review now sees the slice's changes.** `bodies/slice-review.md` computed the slice's changed files with `git diff <slice-start-commit>..HEAD`, but a slice is committed only after its review, fixes, and retro — so during review that range compared two identical commits and was always empty (and `git diff` never lists new, untracked files anyway). The reviewer now diffs the working tree against the slice's base commit (excluding `SDD/`, with renames split into old and new paths), lists untracked files and reviews them in full, and prefers this git list over the SPEC's module list when they disagree.
+- **Each slice records its base commit.** `slice-start` writes a `Base commit:` line into its `In Progress` progress entry. The review and the blind site count read it from there, so a resumed session never guesses the base from HEAD, which may already contain the slice.
 
 ### What's new in 2.6.0
 

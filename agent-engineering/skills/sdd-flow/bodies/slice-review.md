@@ -63,15 +63,24 @@ Apply the **Active-Slice Resolution Convention** above. Expected statuses for th
 The slice's reviewable file set is computed as the **intersection** of:
 
 1. The SPEC's `## Delivery Slices` → `### SLICE-XXX:` → `Modules touched` field — for each MODULE-XXX listed there, expand to the file paths the SPEC's `## Modules` section attributes to that module.
-2. The IMPLEMENTATION-PLAN's per-slice progress entries — the files actually modified for this slice (read git diff between the slice's start commit and HEAD; or read the IMPLEMENTATION-PLAN's per-slice changelog if maintained).
+2. The files actually modified for this slice (the **git list**). **The slice is uncommitted while you review it** (the per-slice commit lands only after review, fixes, and retro), so compare the working tree against the slice's base commit `BASE` — never `BASE..HEAD`, which compares two identical commits and is always empty. SDD artifacts are excluded; they are not slice code:
 
-**Disagreement handling (per REQ-004):** if the two lists agree, use the intersection. If they disagree, **prefer the IMPLEMENTATION-PLAN list** (it reflects what was actually modified) and surface the divergence as a `MEDIUM` finding in the review output:
+   ```bash
+   git diff --name-only --no-renames BASE -- . ':(exclude)SDD'           # tracked files modified, deleted, or renamed (old and new path)
+   git ls-files --others --exclude-standard -- . ':(exclude)SDD'         # new, untracked files (git diff never lists these)
+   ```
+
+   `BASE` comes from your prompt. **Never guess it from HEAD** — after a resume or a re-run HEAD may already include the slice, and the diff would silently come back empty. If your prompt has no `BASE`, take it from the `Base commit:` line of the slice's latest `## Slice <SLICE-XXX> - In Progress` entry in `progress.md`. If neither exists, stop and return "BASE missing for SLICE-XXX" without writing a review. If `BASE` is `none` (the repo had no commits), use the empty tree from `git hash-object -t tree /dev/null` (computed, not hard-coded, so SHA-256 repositories work).
+
+   Untracked files have no diff: review them **in full**.
+
+**Disagreement handling (per REQ-004):** if the two lists agree, use the intersection. If they disagree, **prefer the git list** (it reflects what was actually modified) and surface the divergence as a `MEDIUM` finding in the review output:
 
 ```markdown
-**MEDIUM finding — Slice scope divergence**: SPEC's `Modules touched` for SLICE-XXX lists <X>; IMPLEMENTATION-PLAN's slice-progress entries list <Y>. Reviewing the IMPLEMENTATION-PLAN set; if the SPEC is correct, the IMPLEMENTATION-PLAN must be reconciled (likely a missing or extra file edit during the slice).
+**MEDIUM finding — Slice scope divergence**: SPEC's `Modules touched` for SLICE-XXX lists <X>; the slice's working-tree changes against BASE list <Y>. Reviewing the git list; if the SPEC is correct, the slice touched files outside its declared modules (or missed ones inside them) and must be reconciled — either the code or the SPEC's `Modules touched` changes.
 ```
 
-**Slice-scoped review caveat — shared/foundation files:** if the slice's file set includes a file that was also modified by an EARLIER slice (foundation file shared across slices), the review focuses on THIS slice's diff only — use `git diff <slice-start-commit>..HEAD -- <path>` to scope the diff. The earlier slice's review owns the earlier slice's diff; this slice owns its own.
+**Slice-scoped review caveat — shared/foundation files:** if the slice's file set includes a file that was also modified by an EARLIER slice (foundation file shared across slices), the review focuses on THIS slice's diff only — use `git diff BASE -- <path>` (working tree against the slice's base) to scope the diff. An untracked file has no diff — review it in full. The earlier slice's review owns the earlier slice's diff; this slice owns its own.
 
 ## Step 5: Apply the code review process, scoped to the slice's files
 
@@ -153,8 +162,8 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 - <file 1>
 - <file 2>
 - ...
-**Source of file set:** <"intersection — agreement" / "IMPLEMENTATION-PLAN preferred — divergence">
-**Slice diff range:** `<slice-start-commit>..HEAD`
+**Source of file set:** <"intersection — agreement" / "git list preferred — divergence">
+**Slice changes:** tracked changes in the working tree vs `BASE` = `<commit>`; untracked files reviewed in full: <list or "none">
 
 ## Slice-Specific Findings
 

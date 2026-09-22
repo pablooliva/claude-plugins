@@ -147,7 +147,10 @@ Append an entry to `SDD/orchestration/progress.md` recording the slice start:
 - **Ledger loaded:** Yes / No (first slice)
 - **Flags:** <list of flags used, or "none">
 - **Active-slice resolution:** <how the slice was resolved — explicit arg / single Not Started row / --resume / --force>
+- **Base commit:** <output of `git rev-parse HEAD` now, before any slice work; `none` if the repo has no commits>
 ```
+
+The **Base commit** line is load-bearing: the slice stays uncommitted until its per-slice commit, so the blind site count (4a.5) and the slice review diff the working tree against this commit. It is the only durable record of it — a resumed session reads it from here. On `--resume`, copy the base from the slice's earlier `In Progress` entry rather than re-reading HEAD.
 
 ## Step 10: Implement the slice
 
