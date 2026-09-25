@@ -45,6 +45,7 @@ agent-engineering/
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path)
 │   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard
 │   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff
+│   │                               #   (tests: python3 -m unittest discover -s scripts/tests)
 │   ├── ai-agent-security-review/   # OWASP AI-agent control catalog (vendored) +
 │   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)
