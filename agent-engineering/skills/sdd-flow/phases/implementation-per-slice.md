@@ -35,7 +35,7 @@ After a `--replan`, re-run this step with a post-replan note in the prompt — t
 ### Per-slice 4a — Implement slice
 Spawn ONE **`agent-engineering:sdd-workhorse`** subagent (strict — no bundling):
 - **Body:** `bodies/slice-start.md` (for `SLICE-XXX`).
-- **Inputs:** the active spec, the rolling ledger `SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md`, the IMPLEMENTATION-PLAN path, and **STANDARD**. **The prompt receives ONLY the ledger** (per OQ-6 — individual retrospectives are out of the prompt path).
+- **Inputs:** the active spec, the rolling ledger `SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md`, the IMPLEMENTATION-PLAN path, **STANDARD**, and — if it exists — **CONVENTIONS** (`SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md`, standard §4.2). **The prompt receives ONLY the ledger** (per OQ-6 — individual retrospectives are out of the prompt path).
 - **Outputs:** slice code + tests; the living site inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md` (rows for every site of every control the slice touches, each with a disposition and per-site mutation evidence); a `## Slice SLICE-XXX - Implemented` entry in `progress.md`.
 - **Task:** Implement the slice end-to-end and record its enforcement sites (body Steps 10–12). Bounded return: "Slice X delivered. Acceptance check `<test name>` passes."
 
@@ -45,7 +45,7 @@ Runs after 4a (as `iter0`) and again after every 4c fix iteration k (as `iter<k>
 
 **Spawn** ONE fresh **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/site-count.md`. **Compact body:** `bodies/site-count-compact.md`. **Counter:** `SDD/orchestration/counters/4a5-SLICE-XXX-iter<N>-[timestamp].md` with `Reads: 0/20`. Embed the Safety-Net Rule verbatim.
-- **Inputs — the allowlist, and nothing else:** the SPEC path, `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **STANDARD**, `SCOPE = SLICE-XXX`, `ITER = N`, the slice's `Modules touched`, `BASE` = the `Base commit:` recorded in the slice's latest `## Slice SLICE-XXX - In Progress` entry (HEAD when the slice started — never re-derive it from HEAD, which may already include the slice after a resume) (the slice's work is uncommitted until 4c.6, so the counter diffs the working tree against `BASE` and lists untracked files — never `BASE..HEAD`), and — only on a recount whose previous review recorded one — the `ALSO INVENTORY` SPEC IDs (IDs only).
+- **Inputs — the allowlist, and nothing else:** the SPEC path, `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **STANDARD**, `SCOPE = SLICE-XXX`, `ITER = N`, the slice's `Modules touched`, `BASE` = the `Base commit:` recorded in the slice's latest `## Slice SLICE-XXX - In Progress` entry (HEAD when the slice started — never re-derive it from HEAD, which may already include the slice after a resume) (the slice's work is uncommitted until 4c.6, so the counter diffs the working tree against `BASE` and lists untracked files — never `BASE..HEAD`), the **CONVENTIONS** path if that file exists (filing rules only — it is count-free by the standard §4.2; never paste its content or anything else from a review into the prompt), and — only on a recount whose previous review recorded one — the `ALSO INVENTORY` SPEC IDs (IDs only).
 - **Output:** `SDD/reviews/SITE-COUNT-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md`; appends `## Site Count SLICE-XXX iter <N> - Complete`.
 - **Blindness is enforced by this prompt.** NEVER put in it: the implementer's inventory path or contents, the IMPLEMENTATION-PLAN, `progress.md` excerpts, the implementer's bounded return, earlier `SITE-COUNT-*`/`SITE-DIFF-*`/review paths, or any count. A fresh spawn per iteration — never a continuation of an earlier count. Using `sdd-workhorse` is still independent: the counter shares the implementer's model but not its context or its claims, which is the independence that caught every historical miss (the per-slice reviewers who found them were also `sdd-workhorse`).
 - If the counter appends `## Site Count SLICE-XXX iter <N> - BREACHED` (or the output's first line says `BLINDNESS BREACHED`), discard that output and re-spawn a fresh counter for the same iteration (counts toward Error Handling's two-failure limit).
@@ -57,13 +57,15 @@ python3 "$SKILL_ROOT/scripts/site-diff.py" \
   SDD/implementation/sites/SITES-IMPL-[feature-name].md \
   SDD/reviews/SITE-COUNT-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md \
   SDD/reviews/SITE-DIFF-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md \
-  --scope SLICE-XXX
+  --scope SLICE-XXX --base <BASE>
 ```
 
-Exit 0 = `MATCH`, 1 = `MISMATCH`, 2 = input error (missing/malformed inventory — treat as a failed implement or count step and re-spawn it). The script's first stdout line is the `Result:` line. Append to `progress.md`:
+`<BASE>` is the same slice base commit the counter received (`none` if the repo had no commits). With it, the script classifies disagreements on code the slice did not change as **carried** — LOW, in their own section, owed to the FEATURE recount (standard §6). Always pass it at `SLICE-XXX` scope; without it every disagreement is compared as owned.
+
+Exit 0 = `MATCH`, 1 = `MISMATCH`, 2 = input error (missing/malformed inventory — treat as a failed implement or count step and re-spawn it; a git error on `--base` — re-check the recorded base commit). The script's first stdout line is the `Result:` line. Append to `progress.md`, copying the result verbatim (it may carry a LOW suffix):
 
 ```markdown
-## Site Diff SLICE-XXX iter <N> - <MATCH | MISMATCH (h HIGH, m MEDIUM)>
+## Site Diff SLICE-XXX iter <N> - <MATCH | MISMATCH (h HIGH, m MEDIUM)>[ LOW suffix]
 
 - **Diff:** SDD/reviews/SITE-DIFF-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md
 ```
@@ -71,12 +73,12 @@ Exit 0 = `MATCH`, 1 = `MISMATCH`, 2 = input error (missing/malformed inventory �
 The orchestrator does not interpret the diff further: every outcome goes to 4b, which turns it into findings. A mismatch is a finding inside the existing review/fix loop — never a separate loop.
 
 ### Per-slice 4b — Per-slice code review
-Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/slice-review.md` for `SLICE-XXX`. **Mandatory per slice** — not deferred to end-of-feature. Writes `SDD/reviews/REVIEW-SLICE-*`. Pass `BASE` — the same slice base commit 4a.5 uses; the slice is uncommitted during review, so the reviewer diffs the working tree against it. Pass **STANDARD**, the site inventory, and the latest iteration's `SITE-COUNT` and `SITE-DIFF` paths — the body's Step 5.6 carries every diff finding into the review, resolves `EXTRA` sites by re-running their mutations, re-runs a mutation sample, and verifies dispositions (ii)/(iii) are argued. When the spec's `agent_security:` gate is `true` or `auto`/absent, pass the resolved **CATALOG** path so the body's Agentic-Surface Lens can run over the slice's file set.
+Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/slice-review.md` for `SLICE-XXX`. **Mandatory per slice** — not deferred to end-of-feature. Writes `SDD/reviews/REVIEW-SLICE-*`. Pass `BASE` — the same slice base commit 4a.5 uses; the slice is uncommitted during review, so the reviewer diffs the working tree against it. Pass **STANDARD**, the site inventory, **CONVENTIONS** (the path even if the file does not yet exist — the review may create it), and the latest iteration's `SITE-COUNT` and `SITE-DIFF` paths — the body's Step 5.6 carries every diff finding into the review, resolves `EXTRA` sites by re-running their mutations, re-runs a mutation sample, and verifies dispositions (ii)/(iii) are argued. When the spec's `agent_security:` gate is `true` or `auto`/absent, pass the resolved **CATALOG** path so the body's Agentic-Surface Lens can run over the slice's file set.
 
 ### Per-slice 4c — Address per-slice findings
-If the review found anything HIGH or MEDIUM, spawn an **`agent-engineering:sdd-workhorse`** fix subagent. Standard fix-and-re-review with the **per-slice iteration cap (REQ-012):** max 3 iterations with progress-stall check (HIGH must strictly decrease, OR MEDIUM when HIGH is zero) — mirrors Step 3c's panel cap exactly.
+If the review found anything HIGH or MEDIUM, spawn an **`agent-engineering:sdd-workhorse`** fix subagent. Standard fix-and-re-review with the **per-slice iteration cap (REQ-012):** max 3 iterations with progress-stall check — mirrors Step 3c's panel cap, with one refinement: the stall check counts **needs-code-or-test** HIGH only. Each review marker reports how many of its HIGH are **row-only** (a missed site the reviewer proved already caught by a test — see `bodies/slice-review.md` Step 5.6); needs-code-or-test HIGH = h − r. Progress = needs-code-or-test HIGH strictly decreased, OR — when it was zero in the previous iteration — MEDIUM strictly decreased. Row-only HIGH never trip the stall on their own (a recount that finds more already-tested sites is not a regression), but they still reject the slice until closed, and the 3-iteration cap still applies.
 
-**One iteration k = fix → 4a.5 recount (`iter<k>`) → diff → 4b re-review.** The fix subagent appends `## Fix SLICE-XXX iter <k> - Complete` to `progress.md` when done; each review appends `## Review SLICE-XXX iter <N> - APPROVED | REJECTED (h HIGH, m MEDIUM)` (pass `ITER` in its prompt). These, with the `Site Count` / `Site Diff` lines, are the phase-detection markers for a resumed run. The fix subagent receives **STANDARD**, the review, and the inventory; for every site-count finding it adds the missing site(s) to `SITES-IMPL-[feature-name].md` with a disposition, a fresh per-site mutation, and `Slice` = this SLICE-XXX; deletes rows for sites its fix removed; fixes or implements any `GAP`, and never deletes a (ii)/(iii) site as dead code. The recount is a fresh blind spawn (its prompt carries no earlier count, diff, or review) — fixes add sites, so a stale count would miss them. Site-count findings are ordinary review findings, so the progress-stall check counts them with everything else; the cap is unchanged.
+**One iteration k = fix → 4a.5 recount (`iter<k>`) → diff → 4b re-review.** The fix subagent appends `## Fix SLICE-XXX iter <k> - Complete` to `progress.md` when done; each review appends `## Review SLICE-XXX iter <N> - APPROVED | REJECTED (h HIGH [r row-only], m MEDIUM)` (pass `ITER` in its prompt; a marker without the bracket means r = 0, which is how every pre-2.7.0 marker reads). These, with the `Site Count` / `Site Diff` lines, are the phase-detection markers for a resumed run. The fix subagent receives **STANDARD**, **CONVENTIONS** (if it exists), the review, and the inventory; for every site-count finding it adds the missing site(s) to `SITES-IMPL-[feature-name].md` with a disposition, a fresh per-site mutation, and `Slice` = this SLICE-XXX; deletes rows for sites its fix removed; fixes or implements any `GAP`, and never deletes a (ii)/(iii) site as dead code. The recount is a fresh blind spawn (its prompt carries no earlier count, diff, or review) — fixes add sites, so a stale count would miss them. Site-count findings are ordinary review findings, so the progress-stall check counts them with everything else (row-only HIGH excepted, as above); the cap is unchanged. Carried LOW lines in the diff are not review findings and never enter the loop.
 
 **On halt (cap exhausted or progress stall):**
 - The slice does NOT proceed to 4c.5 or 4c.6.
@@ -120,7 +122,7 @@ Header-match outcomes:
 
 SLICE-XXX retrospective recommends re-planning. Resume options:
 - `/sdd-flow continue --replan` — re-run Step 3 (planning) with the rolling ledger and triggering retro in scope; resumes implementation from SLICE-001.
-- `/sdd-flow continue --replan --from-slice SLICE-XXX` — same, but resume from a user-specified slice (must match `^SLICE-\d{3}$` AND reference an existing SLICE-XXX in the new plan's `## Slice Progress` per REQ-025).
+- `/sdd-flow continue --replan --from-slice SLICE-XXX` — same, but resume from a user-specified slice (must match `^SLICE-\d{3}[a-z]?$` AND reference an existing SLICE-XXX in the new plan's `## Slice Progress` per REQ-025).
 - `/sdd-flow continue --override-replan` — continue with the current plan despite the recommendation. Documented but discouraged.
 
 This halt fires even under `--skip-slice-checkpoints` (mirrors the Step 3c panel-review halt).

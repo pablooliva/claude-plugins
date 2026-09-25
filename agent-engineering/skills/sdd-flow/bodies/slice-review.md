@@ -8,7 +8,7 @@ You are conducting a per-slice code review for a single `SLICE-XXX` within a fea
 
 Per SPEC MODULE-002 active-slice fallback asymmetry:
 
-1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}$` BEFORE interpolating into any path (REQ-024 / SEC-003 path-traversal prevention).
+1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}[a-z]?$` BEFORE interpolating into any path (REQ-024 / SEC-003 path-traversal prevention).
 2. **IMPLEMENTATION-PLAN's `## Slice Progress` row** at `In Progress` or `Acceptance Check Passing` — this review covers implemented code, so it expects a non-`Not Started`, non-`Complete` row.
 3. **Error** — never silently pick. If priority 2 yields multiple candidates, append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` and return.
 
@@ -39,7 +39,7 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 ## Slice-ID Validation (REQ-024 / SEC-003)
 
-Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits).`
+Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}[a-z]?$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits, optionally one lowercase letter).`
 
 > **Canonical regex source (resolves L-4):** see `bodies/slice-start.md` § "Slice-ID Validation" — that section is the canonical home for this regex. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across `bodies/slice-start.md`, `bodies/slice-review.md`, `bodies/slice-retro.md`, and `commands/commit.md` in a single commit.
 
@@ -123,19 +123,21 @@ Items outside the slice's file set still apply when the checklist item is about 
 
 ## Step 5.6: Enforcement-Site Verification (mandatory)
 
-Your prompt provides four paths: `STANDARD` (`references/enforcement-sites.md`), the implementer's inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, the latest blind count `SDD/reviews/SITE-COUNT-<SLICE-XXX>-…-iter<N>-….md`, and the orchestrator's diff `SDD/reviews/SITE-DIFF-<SLICE-XXX>-…-iter<N>-….md`. Read the standard first — it defines control, enforcement site, gap, the per-site mutation standard, and the three dispositions. You are **not** blind; the blind count was a separate spawn before you. Your job is to turn the diff into findings and to verify the implementer's evidence.
+Your prompt provides five paths: `STANDARD` (`references/enforcement-sites.md`), `CONVENTIONS` (`SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` — may not exist yet), the implementer's inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, the latest blind count `SDD/reviews/SITE-COUNT-<SLICE-XXX>-…-iter<N>-….md`, and the orchestrator's diff `SDD/reviews/SITE-DIFF-<SLICE-XXX>-…-iter<N>-….md`. Read the standard first — it defines control, enforcement site, gap, the per-site mutation standard, and the three dispositions. You are **not** blind; the blind count was a separate spawn before you. Your job is to turn the diff into findings and to verify the implementer's evidence.
 
-1. **Carry every diff finding into this review, at its stated severity.** Each `MISSED` and `GAP` is a HIGH finding; each `UNCOUNTED` is MEDIUM; each `EXTRA` is MEDIUM until you resolve it in step 2. A `MISSED+EXTRA` control is both: HIGH per missed key, MEDIUM per extra key (often one site filed under a different symbol — resolve the extra by mutation as usual). Number them as ordinary findings — the per-slice fix loop's progress-stall check counts HIGH from THIS document, so a site-count finding left out of it is a finding the loop never sees.
+1. **Carry every diff finding into this review, at its stated severity.** Each `MISSED` and `GAP` is a HIGH finding; each `UNCOUNTED` is MEDIUM; each `EXTRA` is MEDIUM until you resolve it in step 2. A `MISSED+EXTRA` control is both: HIGH per missed key, MEDIUM per extra key (often one site filed under a different symbol — resolve the extra by mutation as usual). Number them as ordinary findings — the per-slice fix loop's progress-stall check counts HIGH from THIS document, so a site-count finding left out of it is a finding the loop never sees. An `OUT-OF-SCOPE-BY-DECLARED-SCOPE` MEDIUM (the count skipped code this slice changed) is adjudicated like `UNCOUNTED` in step 1b. The diff's `## Carried` section (LOW) is **not** carried into this review's findings — it is owed to the FEATURE recount; list its controls as Partial in the table below and move on.
 1b. **Adjudicate every `UNCOUNTED`.** Decide from the SPEC whether it is really a control whose rule governs this slice's paths. Not a control / out of scope → the finding's fix is "delete its inventory rows". A real control → record it in the review as `ALSO INVENTORY for next recount: <IDs>`, so the orchestrator passes the IDs (and nothing else) to the next blind count.
+1c. **Classify every site-count HIGH as `needs-code-or-test` or `row-only`.** A `MISSED` key is `row-only` only if you ran its mutation in this pass — deleted the site the blind count names, ran the tests, restored, confirmed `git diff -- <file>` is clean — and **a test failed**: the site is real and already proven, so the fix is only an inventory row carrying that mutation as evidence. Every other HIGH (a mutation that left tests green, every `GAP`, a `MISSED` you did not re-run, every non-site HIGH) is `needs-code-or-test`. Tag each HIGH in the findings list `[row-only]` or `[needs-code-or-test]`. The fix loop's stall check ignores row-only HIGH; the slice still cannot be APPROVED while any HIGH of either kind is open.
+1d. **Record filing conventions — count-free.** When a `MISSED`/`EXTRA` pair (or an `UNCOUNTED` you resolved) came from the two sides keying or filing the same real site differently — e.g. one filed it at a registry declaration and the other at the statement reading it, or one keyed an EDGE under its parent REQ — rule on the filing and append the ruling as a new row to `CONVENTIONS` (create it in the `STANDARD` §4.2 shape if absent; the `Added` cell is `<SLICE-XXX> iter <N>`). Before writing, check the row against §4.2's count-free rule: it states a general filing or keying rule; it contains no number of sites, no site row, no file or symbol where a particular site sits, no list of controls to count or skip, nothing about scope. If it cannot be phrased that way, do not write it. The implementer, every fixer, and every later blind count read this file — it is how both sides stop filing the same site differently.
 2. **Resolve every `EXTRA` in this pass.** For each extra site, re-run its mutation yourself (delete the site, run the tests, restore, confirm `git diff -- <file>` is clean). A test fails → mark it `CONFIRMED-EXTRA` (resolved; the blind counter missed a real site). No test fails → raise it as HIGH (a site recorded as proven is not).
 3. **Re-run a sample of mutations.** Beyond the extras: at least **one site per in-scope control**, and at least **25%** of the slice's disposition-`(i)` sites overall (round up), favouring sites this slice added or changed. For each: delete, run, restore, confirm clean. A recorded `(i)` whose mutation leaves every test green is HIGH — the control is recorded closed while broken.
 4. **Verify dispositions (ii) and (iii) are argued, not asserted.** Open each (ii) site: the comment AT the site must name which other site or test covers this path and why deleting this site alone cannot be observed — a bare "not provable alone" is MEDIUM. Each (iii) must name an owner and a follow-up — missing either is MEDIUM. Confirm no (ii)/(iii) site has been deleted as dead code (compare against the previous inventory rows).
 5. **Output / stream contracts.** For every control that constrains stdout, stderr, or the exit code, confirm at least one **real-subprocess** test per path class present in the blind count (run the program as a separate process, assert on the actual bytes). In-process runners (`CliRunner`, `capsys`) do not count. A path class with no real-subprocess test is HIGH.
-6. **Leak check.** A site comment carrying a count, index, or greppable site tag, or a `progress.md` entry listing per-control site rows, is MEDIUM (it compromises the next blind count).
+6. **Leak check.** A site comment carrying a count, index, or greppable site tag, a `progress.md` entry listing per-control site rows or site totals, or a `CONVENTIONS` row that breaks the §4.2 count-free rule, is MEDIUM (it compromises the next blind count). A leaking `CONVENTIONS` row is fixed by appending a row that supersedes it and saying why.
 
 Write the results into the review document's `## Enforcement-Site Verification` section (template below). Do NOT edit the Control Site Status table — the retro owns it.
 
-When the review document is written, append to `SDD/orchestration/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM)` (`N` = the `ITER` in your prompt). It is a phase-detection marker; do not paraphrase it.
+When the review document is written, append to `SDD/orchestration/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM)` (`N` = the `ITER` in your prompt; `<r>` = how many of the `<h>` HIGH you tagged `[row-only]` in step 1c; omit the bracket when `<r>` is 0). It is a phase-detection marker; do not paraphrase it.
 
 ## Step 6: Write the per-slice review document
 
@@ -186,9 +188,9 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 
 | Control | Diff outcome | Extras confirmed | Mutations re-run (pass/total) | (ii)/(iii) argued | Subprocess test per path class | Control verdict |
 |---------|--------------|------------------|-------------------------------|-------------------|--------------------------------|-----------------|
-| <ID> | MATCH \| MISSED \| EXTRA \| MISSED+EXTRA \| UNCOUNTED | <n>/<n> or — | <n>/<n> | yes \| no: <site> \| — | yes \| no: <class> \| n/a | Complete-eligible \| Partial |
+| <ID> | MATCH \| MISSED \| EXTRA \| MISSED+EXTRA \| UNCOUNTED \| CARRIED \| OUT-OF-SCOPE-BY-DECLARED-SCOPE \| GAP | <n>/<n> or — | <n>/<n> | yes \| no: <site> \| — | yes \| no: <class> \| n/a | Complete-eligible \| Partial |
 
-A control is **Complete-eligible** only if its diff is `MATCH` (or its only differences are `CONFIRMED-EXTRA`), it has no open gap, every re-run mutation failed a test, and every (ii)/(iii) is argued. Every other control is **Partial**. Findings raised here also appear, numbered, under Slice-Specific Findings.
+A control is **Complete-eligible** only if its per-control diff outcome is `MATCH` (or its only differences are `CONFIRMED-EXTRA`), it has no open gap, every re-run mutation failed a test, and every (ii)/(iii) is argued. Every other control is **Partial** — including a `CARRIED` or `OUT-OF-SCOPE-BY-DECLARED-SCOPE` control, until the FEATURE recount. Findings raised here also appear, numbered, under Slice-Specific Findings.
 
 ## Module Review Log (Risk-Tiered Depth Applied)
 
@@ -203,7 +205,7 @@ A control is **Complete-eligible** only if its diff is `MATCH` (or its only diff
 
 ## Per-Slice Review Iteration Cap (REQ-013, reference — enforced elsewhere)
 
-This review itself can be re-run any number of times. The **iteration cap of 3 with progress-stall check** (HIGH must strictly decrease across iterations; or MEDIUM when HIGH is zero) is enforced by the sdd-flow Step 4b/4c orchestration loop, NOT by this review. On halt, findings route to the rolling ledger's `Open recommendations awaiting user decision` section. In `--skip-slice-checkpoints` mode, the entire flow halts. See `agent-engineering/skills/sdd-flow/SKILL.md` Step 4b/4c for the loop logic.
+This review itself can be re-run any number of times. The **iteration cap of 3 with progress-stall check** (needs-code-or-test HIGH — HIGH minus row-only — must strictly decrease across iterations; or MEDIUM when that is zero) is enforced by the sdd-flow Step 4b/4c orchestration loop, NOT by this review. On halt, findings route to the rolling ledger's `Open recommendations awaiting user decision` section. In `--skip-slice-checkpoints` mode, the entire flow halts. See `agent-engineering/skills/sdd-flow/SKILL.md` Step 4b/4c for the loop logic.
 
 ## Flag Inventory (REQ-025 — applies to slice review)
 

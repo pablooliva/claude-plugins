@@ -59,15 +59,46 @@ Column rules:
 
 - **Control** — the SPEC ID (or `UNID-<slug>`), exactly as written in the SPEC.
 - **File** — repo-relative path, no leading `./`.
-- **Symbol** — the **innermost named** function/method (`Class.method` for methods); `<module>` for top-level code. Lambdas and comprehensions take their enclosing named symbol. No line numbers — they drift.
+- **Symbol** — the **innermost named** function/method (`Class.method` for methods); `<module>` for top-level code. Lambdas and comprehensions take their enclosing named symbol. No line numbers — they drift. Write File and Symbol plain: `<module>`, not `\<module\>`, and no wrapping backticks. (The diff normalises Markdown backslash-escapes and wrapping backticks in Control, File, and Symbol, so an escaped cell still keys correctly — but write it plain.)
 - **Kind** — `site` or `gap`. Gaps are findings (HIGH) and are excluded from the count.
 - **Path class** — the kind of path: `refusal`, `prompt`, `error-handler`, `interrupt`, `success`, `validation`, or a short project-specific label. Required for output/stream contracts; `—` allowed otherwise.
 - **Disposition / Evidence** — implementer only: `(i)`, `(ii)`, `(iii)` with evidence per §3. The blind count writes `—` in both.
-- **Slice** — `SLICE-XXX` that introduced or last changed the site (per-slice mode) — fix subagents set it to the slice being fixed; `—` in whole-feature mode.
+- **Slice** — `SLICE-XXX` that introduced or last changed the site (per-slice mode; three digits, optionally one lowercase letter, e.g. `SLICE-005a`) — fix subagents set it to the slice being fixed; `—` in whole-feature mode. The diff does **not** use this column to decide whether a site is carried from an earlier slice (see §6); it only decides which controls the implementer claims for the scope.
 
 **The implementer inventory is kept current, not append-only.** Whoever changes code (implementer or fixer) deletes the row of any site that no longer exists in the working tree, and records the removal in its progress entry's key-decision line. A stale row shows up as a phantom `EXTRA` in every later diff.
 
 Cells must not contain a literal `|` (write `\|` if one is unavoidable). One row per site; two sites of the same control in the same symbol are two rows.
+
+The table has exactly these nine columns. There is no owner/carried column: a note like "carried — owner SLICE-001a" in a description cell is harmless but ignored. Whether a site is carried is decided mechanically (§6).
+
+### 4.1 Declared scope (blind count only, optional)
+
+A blind count at `SLICE-XXX` scope that deliberately counted a control over only part of the code declares so in a table under the exact header `## Declared Scope`:
+
+```markdown
+## Declared Scope
+
+| Control | File | Symbol |
+|---|---|---|
+| REQ-019 | src/search/group.py | _group_payload |
+```
+
+One row per place the control **was** counted; `*` in Symbol means the whole file. A control absent from this table was counted in full. Implementer rows for a declared control that fall outside it are set aside rather than reported `EXTRA` (§6). At `FEATURE` scope a declaration is itself a finding — a feature count must be complete.
+
+### 4.2 Filing conventions (per feature, shared by both sides)
+
+`SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` records how this feature's sites are **keyed and filed** — rulings a reviewer made so that the implementer and every later blind count file the same site the same way. Both sides read it; it is the only file under `SDD/implementation/` the blind counter may read.
+
+```markdown
+# Site Filing Conventions — [feature-name]
+
+| # | Convention | Added |
+|---|---|---|
+| 1 | A registry declaration read by a statement is data; file the site at the reading statement, not the declaration. | SLICE-003 iter 1 |
+| 2 | EDGE-009 is enforced as part of REQ-005: key its sites `REQ-005`. | SLICE-003 iter 1 |
+```
+
+**Count-free by rule.** A convention states a filing or keying rule. It never contains: a number of sites, a site row, a file or symbol at which a particular site sits, a list of controls to count or to skip, or anything about scope. A convention that would only make sense to someone who had seen the inventory is a leak (MEDIUM in the reviewers' leak check) — rewrite it as a general rule or drop it. Rows are append-only; a reversed ruling is a new row that names the row it supersedes.
 
 ## 5. Artifacts
 
@@ -76,12 +107,15 @@ Cells must not contain a literal `|` (write `\|` if one is unavoidable). One row
 | Implementer inventory (living, one per feature) | `SDD/implementation/sites/SITES-IMPL-[feature-name].md` | implementer; fix subagents update it |
 | Blind count (immutable) | `SDD/reviews/SITE-COUNT-<SCOPE>-[feature-name]-iter<N>-[YYYY-MM-DD].md` | blind counter (`bodies/site-count.md`) |
 | Site diff (immutable) | `SDD/reviews/SITE-DIFF-<SCOPE>-[feature-name]-iter<N>-[YYYY-MM-DD].md` | orchestrator, via `scripts/site-diff.py` |
+| Filing conventions (living, append-only, one per feature) | `SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` | reviewers (`bodies/slice-review.md`, `bodies/code-review.md`) |
 
 `<SCOPE>` is `SLICE-XXX` for a per-slice count or `FEATURE` for a whole-feature / final count. `iter<N>` is `iter0` for the first count of a scope and `iter<k>` for the recount after fix iteration k.
 
 ## 6. Diff outcomes and Complete
 
 `scripts/site-diff.py` counts `Kind = site` rows per `Control + File + Symbol` on each side and reports, per control:
+
+**Carried sites (`SLICE-XXX` scope, `--base` given).** The orchestrator passes the slice's base commit. A key whose code the slice did not change is *carried*: its file existed at `BASE`, still exists, and either differs in no line from `BASE`, or (Python) the named symbol's lines are untouched. The script decides this from git, identically for both sides — never from either side's labels. Anything it cannot place with certainty (a file new since `BASE` — untracked, git-ignored, or renamed — or a missing file, `<module>` in a changed file, a non-Python changed file, a symbol it cannot find) counts as changed, so uncertainty never hides a finding. A disagreement at a carried key is reported **LOW** in a separate `## Carried` section, never as `MISSED`/`EXTRA`, and is owed to the `FEATURE` recount (4e.5), which always runs and compares every row. Carried keys that agree are ordinary matches.
 
 | Outcome | Meaning | Severity |
 |---|---|---|
@@ -90,10 +124,13 @@ Cells must not contain a literal `|` (write `\|` if one is unavoidable). One row
 | `EXTRA` | The implementer lists more sites at some key than the blind count | MEDIUM — the reviewer re-runs each extra site's mutation in the same pass: a test fails → `CONFIRMED-EXTRA` (resolved); no test fails → HIGH |
 | `UNCOUNTED` | A control in the implementer's inventory for this scope that the blind count did not inventory | control stays `Partial`; MEDIUM — the reviewer adjudicates it: **not a control / out of scope** → the fixer deletes its rows (resolved); **a real control** → its ID goes into the next recount's `ALSO INVENTORY` list (ID only, never sites or counts) |
 | `MISSED+EXTRA` | Both of the above at different keys of one control (often the same site filed under different symbols) | the `MISSED` keys are HIGH and each `EXTRA` key is MEDIUM, handled as above |
+| `CARRIED` | The only differences are at carried keys | LOW, listed under `## Carried`; not a finding for this slice. The control stays `Partial` until the `FEATURE` recount |
+| `OUT-OF-SCOPE-BY-DECLARED-SCOPE` | The blind count declared partial scope (§4.1) and the only differences are implementer rows outside it | carried rows: LOW, under `## Carried`. Rows in code this slice changed: MEDIUM — the count skipped code it was responsible for; the reviewer adjudicates as for `UNCOUNTED`. Control stays `Partial` |
+| `GAP` | The only issue is a blind-count gap | HIGH (below) |
 
-Blind-count `gap` rows are reported separately as HIGH findings.
+Blind-count `gap` rows are reported separately as HIGH findings, carried or not — a gap is broken code, not a filing disagreement. At `FEATURE` scope, each control in a `## Declared Scope` table is a MEDIUM `PARTIAL COUNT` finding and the comparison stays complete.
 
-**A control is `Complete` only when** its latest site diff is `MATCH` (or its only differences are `CONFIRMED-EXTRA` recorded in the review), the blind count has no open gap for it, and the reviewer has accepted every (ii) argument and (iii) owner note. Otherwise it is `Partial`. **A control with no independent count is `Partial` — never `Complete`.** A (iii) site does not by itself block `Complete`; it is carried to the ledger's *Open recommendations awaiting user decision* with its owner.
+**A control is `Complete` only when** the per-control outcome in its latest site diff is `MATCH` (or its only differences are `CONFIRMED-EXTRA` recorded in the review), the blind count has no open gap for it, and the reviewer has accepted every (ii) argument and (iii) owner note. Otherwise it is `Partial`. **A control with no independent count is `Partial` — never `Complete`.** A (iii) site does not by itself block `Complete`; it is carried to the ledger's *Open recommendations awaiting user decision* with its owner.
 
 Control status lives in the IMPLEMENTATION-PLAN's `## Control Site Status` table:
 

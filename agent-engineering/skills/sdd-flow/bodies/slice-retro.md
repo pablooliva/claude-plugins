@@ -8,7 +8,7 @@ You are running the per-slice retrospective for a single `SLICE-XXX` within a fe
 
 Per SPEC MODULE-002 active-slice fallback asymmetry:
 
-1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}$` BEFORE interpolating into any path (REQ-024 / SEC-003 path-traversal prevention).
+1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}[a-z]?$` BEFORE interpolating into any path (REQ-024 / SEC-003 path-traversal prevention).
 2. **IMPLEMENTATION-PLAN's `## Slice Progress` row** at `In Progress` or `Acceptance Check Passing` — the retrospective body retrospects implemented + reviewed code.
 3. **Error** — never silently pick.
 
@@ -39,7 +39,7 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 ## Slice-ID Validation (REQ-024 / SEC-003)
 
-Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits).`
+Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}[a-z]?$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits, optionally one lowercase letter).`
 
 > **Canonical regex source (resolves L-4):** the canonical home for this regex is the slice-start body's "Slice-ID Validation" section. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across slice-start, slice-review, slice-retro, and slice-commit bodies in a single commit.
 
@@ -142,7 +142,7 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 
 ## Site Count Reconciliation
 
-[Structured, REQUIRED. One row per control that was ever not `MATCH` for this slice, across all iterations. If every control matched at iter0, the body is the single line `None.`]
+[Structured, REQUIRED. One row per control that was ever not `MATCH` for this slice, across all iterations (a `CARRIED` outcome gets a row too; its `Resolved how` is `owed to FEATURE recount`). If every control matched at iter0, the body is the single line `None.`]
 
 | Control | Iter | Outcome | Sites missed by implementer (file · symbol · path class) | Resolved how |
 |---|---|---|---|---|
@@ -284,7 +284,7 @@ This body updates `Status`, `Test result`, and `Notes` columns ONLY — never `S
 - **Test result:** free-form text — `passing`, `failing: <test name> + <reason>`, `n/a (manual)`, etc.
 - **Notes:** brief pointer — `see retro at SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md` or `see ledger §Open recommendations` for blocking issues.
 
-**Control Site Status (same step).** For every control in this slice's latest site diff, update its row in the IMPLEMENTATION-PLAN's `## Control Site Status` table (add the row if absent): implementer and independent site counts and the diff path from the latest `SITE-DIFF-<SLICE-XXX>` for this slice, and `Status` per standard §6 — `Complete` only if that diff is `MATCH` for it (or only `CONFIRMED-EXTRA` differences in the review), no gap is open, and the review accepted every (ii)/(iii); otherwise `Partial`. **A control with no independent count is `Partial`.** Never set `Complete` from the implementer's inventory alone. A later slice may flip a `Complete` control back to `Partial` if its recount no longer matches — control status is re-evaluated per count, unlike the forward-only slice Status.
+**Control Site Status (same step).** For every control in this slice's latest site diff, update its row in the IMPLEMENTATION-PLAN's `## Control Site Status` table (add the row if absent): implementer and independent site counts and the diff path from the latest `SITE-DIFF-<SLICE-XXX>` for this slice, and `Status` per standard §6 — `Complete` only if that diff's per-control outcome is `MATCH` (or only `CONFIRMED-EXTRA` differences in the review) — `CARRIED` and `OUT-OF-SCOPE-BY-DECLARED-SCOPE` are `Partial`, settled by the FEATURE recount, no gap is open, and the review accepted every (ii)/(iii); otherwise `Partial`. **A control with no independent count is `Partial`.** Never set `Complete` from the implementer's inventory alone. A later slice may flip a `Complete` control back to `Partial` if its recount no longer matches — control status is re-evaluated per count, unlike the forward-only slice Status.
 
 State transitions are forward-only (no backwards transitions encoded in the column; "stuck" surfaces via the ledger's `Open recommendations` section, not the column). SLICE-ID, Name, and Acceptance check are SPEC-derived and immutable from this side.
 
@@ -338,7 +338,7 @@ When `--reconcile-ledger` is passed, this body does NOT write a new retrospectiv
 
 The classifier MUST use the durable `Sources:` field convention introduced in Step 7 above (resolves M-4) — NOT literal-text matching. The `Sources:` field on each ledger entry lists which retros contributed; the reconcile checks whether each retro is in some ledger entry's Sources list.
 
-1. **Read all retros for the active feature:** `ls SDD/implementation/slices/RETROSPECTIVE-SLICE-*-<feature-name>-*.md`. Sort by SLICE-XXX number (lexicographic on the SLICE-ID is correct given the zero-padded `\d{3}` format).
+1. **Read all retros for the active feature:** `ls SDD/implementation/slices/RETROSPECTIVE-SLICE-*-<feature-name>-*.md`. Sort by SLICE-XXX number (lexicographic on the SLICE-ID is correct given the zero-padded `\d{3}` format; a lettered split such as `SLICE-005a` sorts after `SLICE-005` and before `SLICE-006`).
 2. **Read the current ledger:** `SDD/implementation/slices/LEARNINGS-FEATURE-<feature-name>.md`. If absent, treat as empty (the rebuild will scaffold it).
 3. **For each retrospective (in order),** determine "covered" by reading every ledger entry's `Sources:` field. A retro is COVERED if its `SLICE-XXX` ID appears in at least one ledger entry's `Sources:` list. A retro is NOT covered if its SLICE-XXX is absent from every `Sources:` list — this means its learnings have not yet been incorporated. The classifier does NOT compare retro text to ledger text; consolidation under Step 7 may have rewritten the wording away from the retro's literal text, but the `Sources:` field is the authoritative marker.
 4. **If a retro is NOT covered,** append its ledger-update entries to the appropriate ledger sections — consolidating with existing entries on the same topic, not blind-appending. Use the consolidation rules in Step 7 above. Each newly-appended or newly-consolidated entry MUST carry a `Sources:` field listing the retro's SLICE-XXX (plus any prior contributors if consolidating).
@@ -372,7 +372,7 @@ The flags `--replan`, `--from-slice SLICE-XXX`, and `--override-replan` are **NO
 | Flag | Step | Semantics | Default | Notes |
 |------|------|-----------|---------|-------|
 | `--replan` | orchestrator continue | Re-runs the planning phase with the ledger and triggering retro in scope; resumes implementation from SLICE-001. | Without `--replan`, the orchestrator's continue step proceeds along the existing flow. | Triggered by `## Recommended Re-planning` retro recommendations. |
-| `--from-slice SLICE-XXX` | orchestrator continue (only meaningful with `--replan`) | Resume implementation from the named slice after the re-plan completes. | Without the flag, re-plan resumes from `SLICE-001`. | **Validation:** `--from-slice` value MUST match `^SLICE-\d{3}$` AND MUST reference an existing SLICE-XXX in the IMPLEMENTATION-PLAN's `## Slice Progress` table. Invalid value (regex mismatch or unknown slice) refuses with the REQ-007 message-discipline shape. |
+| `--from-slice SLICE-XXX` | orchestrator continue (only meaningful with `--replan`) | Resume implementation from the named slice after the re-plan completes. | Without the flag, re-plan resumes from `SLICE-001`. | **Validation:** `--from-slice` value MUST match `^SLICE-\d{3}[a-z]?$` AND MUST reference an existing SLICE-XXX in the IMPLEMENTATION-PLAN's `## Slice Progress` table. Invalid value (regex mismatch or unknown slice) refuses with the REQ-007 message-discipline shape. |
 | `--override-replan` | orchestrator continue | Continues with the current plan despite a `## Recommended Re-planning` recommendation. Documented but discouraged. | Without the flag, a non-`None.` `## Recommended Re-planning` halts the flow per REQ-014 (even under `--skip-slice-checkpoints`). | The orchestrator does NOT silently emit `--override-replan`; in autonomous mode the halt fires per REQ-014. |
 
 **Combination semantics for the orchestrator's continue step:**

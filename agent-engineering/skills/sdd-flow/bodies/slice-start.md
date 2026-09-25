@@ -8,7 +8,7 @@ You are initiating implementation work on a single vertical slice (`SLICE-XXX`) 
 
 The four slice primitives resolve the active slice via the SAME priority chain — but the *expected status* differs by primitive intent (per SPEC MODULE-002 active-slice fallback asymmetry):
 
-1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}$` BEFORE interpolating into any path (per REQ-024 path-traversal prevention; see "Slice-ID Validation" below).
+1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}[a-z]?$` BEFORE interpolating into any path (per REQ-024 path-traversal prevention; see "Slice-ID Validation" below).
 2. **IMPLEMENTATION-PLAN's `## Slice Progress` row matching the primitive's expected status:**
    - `slice-start` → first row at `Not Started` (you can't start what's already running).
    - `slice-review` / `slice-retro` / `slice-commit` → row at `In Progress` or `Acceptance Check Passing` (you can't review/retro/commit something not yet implemented).
@@ -47,14 +47,14 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 ## Slice-ID Validation (REQ-024 / SEC-003) — canonical regex shared across slice primitives
 
-> **Canonical regex (single source of truth — resolves L-4):** the slice-ID validation regex `^SLICE-\d{3}$` is duplicated verbatim across `slice-start`, `slice-review`, `slice-retro`, and `slice-commit` bodies. **`slice-start` is the canonical home** for this regex; the other three bodies SHOULD cross-reference this section rather than re-deriving the pattern. Future changes (e.g., allowing 4-digit slice IDs `SLICE-####`) MUST be coordinated across all four bodies in a single commit; a drift between the four would produce inconsistent regex enforcement at primitive boundaries.
+> **Canonical regex (single source of truth — resolves L-4):** the slice-ID validation regex `^SLICE-\d{3}[a-z]?$` is duplicated verbatim across `slice-start`, `slice-review`, `slice-retro`, and `slice-commit` bodies. **`slice-start` is the canonical home** for this regex; the other three bodies SHOULD cross-reference this section rather than re-deriving the pattern. Future changes (e.g., allowing 4-digit slice IDs `SLICE-####`) MUST be coordinated across all four bodies — and `SCOPE_RE` in `scripts/site-diff.py`, `phases/protocols.md`, and `phases/implementation-per-slice.md` — in a single commit; a drift between them would produce inconsistent regex enforcement at primitive boundaries. The optional single lowercase letter (`SLICE-005a`, `SLICE-005b`) exists for slices split during re-planning; it cannot carry `/`, `.`, or any other path character, so the traversal guarantee is unchanged.
 
-Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}$` BEFORE being interpolated into any read or write path. This prevents directory-traversal attacks (a malicious arg like `../../etc/passwd` would otherwise bypass the path templates).
+Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}[a-z]?$` BEFORE being interpolated into any read or write path. This prevents directory-traversal attacks (a malicious arg like `../../etc/passwd` would otherwise bypass the path templates).
 
 On regex mismatch, refuse with the REQ-007 message-discipline shape: name the offending value, name the canonical pattern, name the resolution. Example:
 
 ```
-Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits). Example: slice-start SLICE-002.
+Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits, optionally one lowercase letter). Example: slice-start SLICE-002.
 ```
 
 ## `## Slice Progress` Table — Binding Schema (REQ-022)
@@ -161,7 +161,7 @@ In sdd-flow per-slice mode, **you implement the slice end-to-end in this same ru
 Read the enforcement-site standard at the `STANDARD` path in your prompt (`references/enforcement-sites.md`). It defines **control**, **enforcement site**, **gap**, the **per-site mutation standard**, and the **three dispositions**. Then:
 
 1. **List the controls this slice touches** — every SPEC rule that must hold on every path through code this slice added or changed, including controls introduced by earlier slices (a new exit path needs an earlier slice's output rule too). Not limited to `SEC-xxx`.
-2. **Record every site** for those controls in the feature's living inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md` under `## Site Inventory`, in the exact table shape of the standard §4. Create the file if absent. Update rows for sites this slice changed; add rows for new sites; **delete rows for sites that no longer exist in the working tree** (a stale row is a phantom `EXTRA` in every later diff); set `Slice` to this SLICE-XXX on each row you add or change. Count sites across the whole working tree, not only in your diff.
+2. **Record every site** for those controls in the feature's living inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md` under `## Site Inventory`, in the exact table shape of the standard §4 (File and Symbol written plain, e.g. `<module>`). If `SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` exists, file and key every site by its rules (standard §4.2). Create the inventory if absent. Update rows for sites this slice changed; add rows for new sites; **delete rows for sites that no longer exist in the working tree** (a stale row is a phantom `EXTRA` in every later diff); set `Slice` to this SLICE-XXX on each row you add or change. Count sites across the whole working tree, not only in your diff.
 3. **Run one mutation per site** (standard §2): delete exactly that site, run the tests, confirm at least one fails, restore, confirm `git diff -- <file>` is clean. Record disposition `(i)` with `mutation: <what was deleted> → failing test <id>`. Where no test can fail, add one — or, if the site genuinely cannot be proven alone, record `(ii)` with the argument written as a comment AT the site, or `(iii)` with a named owner and follow-up. Never mutate shared machinery as a stand-in for its call sites.
 4. **Output / stream contracts** (stdout, stderr, exit codes): add at least one **real-subprocess** test per path class that asserts on the actual bytes. `CliRunner` / `capsys` tests do not count toward this.
 5. **Do not leak the list into the code or the log.** Site comments carry no counts, indices, or greppable site tags. Your `progress.md` entry names the inventory path only — never its rows or counts per control. An independent counter will count these sites blind; anything that hands it your list defeats the check.

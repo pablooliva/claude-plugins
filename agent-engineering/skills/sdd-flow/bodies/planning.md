@@ -200,6 +200,8 @@ Each module also carries a **Risk** tier consumed by code review to scale review
 > Slices are **not restricted to user-facing behavior**. A slice could be an internal pipeline trigger, a webhook handler, a batch job's primary path, or a user-facing form submission. The defining property is the **vertical thread**, not the audience.
 >
 > SLICE-001 must be the thinnest possible end-to-end happy path — its only job is to prove the thread exists. Subsequent slices add capability and harden edges.
+>
+> Slice IDs are `SLICE-` plus three digits. When a re-plan splits an existing slice, its parts may keep the number and take one lowercase letter (`SLICE-005a`, `SLICE-005b`) instead of renumbering the slices after it. No other suffix is valid (`^SLICE-\d{3}[a-z]?$`).
 
 ### SLICE-001: [name]
 - **Concentrated function:** [one-line description of the vertical thread this slice delivers]

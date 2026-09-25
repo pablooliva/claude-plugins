@@ -71,6 +71,7 @@ Every subagent MUST use these exact paths; the orchestrator resolves `[###]`/`[f
 | Eval scaffolding | `evals/datasets/[feature-slug].json`, `evals/evaluators/...`, `evals/run_functions/...`, `evals/README.md` | eval-capture subagent | Future regression runs |
 | Implementation plan | `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` | Implementation subagent | Code review, Impl review, Completion |
 | Site inventory (implementer's, living) | `SDD/implementation/sites/SITES-IMPL-[feature-name].md` | Implementer; fix subagents | Diff script, reviews, retro, completion — **never the blind counter** |
+| Site filing conventions (living, append-only, count-free) | `SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` | Reviewers (4b, 4e.5) | Implementer, fixers, reviewers, **and the blind counter** — the one `SDD/implementation/` file it may read |
 | Blind site count | `SDD/reviews/SITE-COUNT-<SLICE-XXX\|FEATURE>-[feature-name]-iter<N>-[YYYY-MM-DD].md` | Blind counter (4a.5 / 4e.5) | Diff script, reviews, retro |
 | Site diff | `SDD/reviews/SITE-DIFF-<SLICE-XXX\|FEATURE>-[feature-name]-iter<N>-[YYYY-MM-DD].md` | Orchestrator via `scripts/site-diff.py` | Reviews, retro, completion |
 | Final site verification review | `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` | 4e.5 verification | 4e.5 fix, completion |
@@ -92,7 +93,7 @@ SDD/
 ├── requirements/SPEC-[###]-[feature-name].md
 ├── implementation/
 │   ├── IMPLEMENTATION-PLAN-*.md
-│   ├── sites/SITES-IMPL-*.md
+│   ├── sites/{SITES-IMPL-*, SITE-CONVENTIONS-*}.md
 │   ├── slices/{SLICE-*, RETROSPECTIVE-SLICE-*, LEARNINGS-FEATURE-*}.md   # per-slice mode only
 │   └── summaries/IMPLEMENTATION-SUMMARY-*.md
 ├── orchestration/{progress.md, subagent-calls/, counters/, compacted/}
