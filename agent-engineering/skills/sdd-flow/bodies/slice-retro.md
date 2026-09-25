@@ -4,7 +4,7 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 
 You are running the per-slice retrospective for a single `SLICE-XXX` within a feature whose SPEC declares `delivery_mode: per-slice`. This body writes TWO artifacts in a strict order (per OQ-E conservative default — FIRST-WRITE-WINS): the immutable `RETROSPECTIVE-SLICE-XXX-...md` audit trail FIRST, then the rolling `LEARNINGS-FEATURE-[feature-name].md` ledger update SECOND.
 
-## Active-Slice Resolution Convention (shared with slice-start, slice-review, slice-commit)
+## Active-Slice Resolution Convention (shared with slice-start, slice-review, and the per-slice commit)
 
 Per SPEC MODULE-002 active-slice fallback asymmetry:
 
@@ -41,7 +41,7 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}[a-z]?$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits, optionally one lowercase letter).`
 
-> **Canonical regex source (resolves L-4):** the canonical home for this regex is the slice-start body's "Slice-ID Validation" section. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across slice-start, slice-review, slice-retro, and slice-commit bodies in a single commit.
+> **Canonical regex source (resolves L-4):** the canonical home for this regex is the slice-start body's "Slice-ID Validation" section. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across `bodies/slice-start.md`, `bodies/slice-review.md`, `bodies/slice-retro.md`, `phases/protocols.md`, `phases/implementation-per-slice.md`, and `SCOPE_RE` in `scripts/site-diff.py` in a single commit.
 
 ## Step 3: Resolve the active SLICE-XXX
 
@@ -279,7 +279,7 @@ User-edited entries that were authored manually (no retro source) carry no `Sour
 
 This body updates `Status`, `Test result`, and `Notes` columns ONLY — never `SLICE-ID`, `Name`, or `Acceptance check`.
 
-- **Status:** advance per the forward-only state machine. Typical transition: `In Progress` → `Acceptance Check Passing` (when the acceptance check has been run and passes; the row will go to `Complete` after the slice-commit body runs).
+- **Status:** advance per the forward-only state machine. Typical transition: `In Progress` → `Acceptance Check Passing` (when the acceptance check has been run and passes; the row will go to `Complete` after the per-slice commit (step 4c.6) lands).
   - In sdd-flow per-slice mode, the orchestrator may set `Status: Complete` directly here if the retro+ledger writes are durable AND the commit will follow as part of the same orchestration step. This body documents both transitions; the orchestrator picks the appropriate one.
 - **Test result:** free-form text — `passing`, `failing: <test name> + <reason>`, `n/a (manual)`, etc.
 - **Notes:** brief pointer — `see retro at SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md` or `see ledger §Open recommendations` for blocking issues.

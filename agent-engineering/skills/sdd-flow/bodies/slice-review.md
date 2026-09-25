@@ -4,7 +4,7 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 
 You are conducting a per-slice code review for a single `SLICE-XXX` within a feature whose SPEC declares `delivery_mode: per-slice`.
 
-## Active-Slice Resolution Convention (shared with slice-start, slice-retro, slice-commit)
+## Active-Slice Resolution Convention (shared with slice-start, slice-retro, and the per-slice commit)
 
 Per SPEC MODULE-002 active-slice fallback asymmetry:
 
@@ -41,7 +41,7 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}[a-z]?$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits, optionally one lowercase letter).`
 
-> **Canonical regex source (resolves L-4):** see `bodies/slice-start.md` § "Slice-ID Validation" — that section is the canonical home for this regex. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across `bodies/slice-start.md`, `bodies/slice-review.md`, `bodies/slice-retro.md`, and `commands/commit.md` in a single commit.
+> **Canonical regex source (resolves L-4):** see `bodies/slice-start.md` § "Slice-ID Validation" — that section is the canonical home for this regex. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across `bodies/slice-start.md`, `bodies/slice-review.md`, `bodies/slice-retro.md`, `phases/protocols.md`, `phases/implementation-per-slice.md`, and `SCOPE_RE` in `scripts/site-diff.py` in a single commit.
 
 ## `## Slice Progress` Table — Binding Schema (REQ-022, reference)
 

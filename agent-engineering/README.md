@@ -71,7 +71,11 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 2.7.0.
+Version 2.7.1.
+
+### What's new in 2.7.1
+
+- **No more references to a `slice-commit` body that never existed.** The slice bodies described a fourth "slice-commit" primitive; the per-slice commit is the orchestrator's step 4c.6 (conventions in `commands/commit.md`), and the bodies now say so. The slice-ID regex coordination notes now list the six places that actually carry the regex. Wording only; the flow's behaviour is unchanged.
 
 ### What's new in 2.7.0
 
