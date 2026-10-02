@@ -173,7 +173,8 @@ Projects often carry their own review checklist — a `CLAUDE.md`/`AGENTS.md` se
 1. An explicit checklist path passed in your spawn prompt.
 2. A section in the repo-root `CLAUDE.md` or `AGENTS.md` whose heading names a review checklist, pre-merge checks, definition of done, or equivalent.
 3. The same in a `CLAUDE.md`/`AGENTS.md` inside a directory the implementation touches (nearest-ancestor wins).
-4. `.github/PULL_REQUEST_TEMPLATE.md`, or a `docs/`-level review checklist the root doc points to by name.
+4. A repo-root `CODING_STANDARDS.md` — a standards file read at review time only (the `retro` skill proposes one for judgement-call rules).
+5. `.github/PULL_REQUEST_TEMPLATE.md`, or a `docs/`-level review checklist the root doc points to by name.
 
 If none exists, record one line — "No project review checklist found — searched: <the locations you checked>" — and move on. Absence is a normal outcome, not a finding.
 

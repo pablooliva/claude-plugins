@@ -171,19 +171,19 @@ agent_security: auto
 
 ## Modules
 
-For each module created or significantly changed by this feature, articulate the public interface and the complexity it hides. Prefer **deep modules** (Ousterhout): a small interface that hides substantial functionality. Reject shallow modules — wide interfaces over thin internals — as a default position; if a module must be shallow, justify it explicitly.
+For each module created or significantly changed by this feature, articulate the public interface and the complexity it hides. Prefer **deep modules**: a lot of behaviour behind an interface that is small for callers to learn. Depth is **leverage** — behaviour a caller gets per fact of interface it must know — not a ratio of interface size to implementation size. Reject shallow modules — ones a caller must learn nearly as much to use as to do the work itself — as a default position; if a module must be shallow, justify it explicitly.
 
 Each module also carries a **Risk** tier consumed by code review to scale review depth proportionally.
 
 ### MODULE-001: [name]
-- **Public Interface:** [exported functions, types, endpoints, or commands. Keep small. List signatures, not implementation hints.]
-- **Hides:** [the substantive complexity protected behind the interface — algorithms, state machines, external integrations, error recovery, caching, etc. If this section is short, the module is shallow; restructure or justify.]
+- **Public Interface:** [everything a caller must know to use the module correctly: exported functions, types, endpoints, or commands (signatures, not implementation hints), plus any invariants the caller must uphold, required call order, error modes it must handle, configuration it must supply, and performance bounds it must respect. Keep it small to learn.]
+- **Hides:** [the behaviour callers are spared — algorithms, state machines, external integrations, error recovery, caching, etc. Apply the deletion test: if deleting this module would leave callers making the same call one level down, with nothing more to own, the module is shallow; restructure or justify.]
 - **Risk:** [low | medium | high]
   - **low** — boundary-only consequences; failure is recoverable and contained. Reviewer attention focuses on interface contract and tests at the boundary.
   - **medium** — default. Standard review depth.
   - **high** — failure has outsized consequences (financial, security, data integrity, irreversible side effects, regulatory exposure). Reviewer attention extends to internals.
 - **Spec refs:** [REQ-XXX, EDGE-XXX, FAIL-XXX implemented by this module]
-- **Justification (if shallow):** [Only required if the interface surface is comparable to or larger than what is hidden. Explain why depth was sacrificed — e.g., framework requires this shape, integration adapter with no logic to add, etc.]
+- **Justification (if shallow):** [Only required if a caller must learn about as much to use the module as to do the work itself. Explain why depth was sacrificed — e.g., framework requires this shape, integration adapter with no logic to add, etc.]
 
 ### MODULE-002: [name]
 [Same structure.]
@@ -268,7 +268,7 @@ Each module also carries a **Risk** tier consumed by code review to scale review
 
 The spec template includes five YAML frontmatter fields consumed by sdd-flow and related phases. Populate them thoughtfully based on the research foundation:
 
-- **`review_panel:`** — List of specialist reviewers to convene during spec-review-panel. Default includes `module-depth` (Ousterhout deep-module check on the `## Modules` section) and covers API/data-backed features. Adjust based on feature characteristics:
+- **`review_panel:`** — List of specialist reviewers to convene during spec-review-panel. Default includes `module-depth` (deep-module check on the `## Modules` section, depth measured as leverage) and covers API/data-backed features. Adjust based on feature characteristics:
   - Add `accessibility` for UI features with user-facing interaction.
   - Add `privacy` for features handling PII, consent, or regulated data.
   - Add `cost` for data-intensive or high-traffic features.
@@ -328,8 +328,10 @@ These fields have sensible defaults; populate them intentionally rather than lea
 
 5. **Articulate Modules — Prefer Deep Over Shallow:**
    - For every module the feature creates or significantly changes, fill in a `MODULE-XXX` entry under the `## Modules` section.
-   - **Deep module** (preferred): small public interface, substantial hidden complexity. Hidden complexity is what callers don't have to know — algorithms, state, retries, caching, integration glue, error recovery.
-   - **Shallow module** (avoid by default): public interface comparable to or larger than what it hides. Examples: pass-through wrapper, getter/setter façade with no logic, public method per private field, module that exists only to call one external service with no added behavior.
+   - **Interface** means everything a caller must know to use the module correctly — signatures, and also invariants, required call order, error modes, configuration, and performance bounds. Write all of it into `Public Interface`; an obligation left unstated is still part of the interface.
+   - **Deep module** (preferred): high leverage — a lot of behaviour per fact of interface a caller must learn. What is hidden is what callers don't have to know — algorithms, state, retries, caching, integration glue, error recovery. Judge by what callers must learn, not by method count or by how long the `Hides` list is.
+   - **Shallow module** (avoid by default): a caller must learn about as much to use it as to do the work itself. Apply the **deletion test** — if deleting the module would leave callers making the same call one level down, it is a pass-through. Examples: pass-through wrapper, getter/setter façade with no logic, public method per private field, module that exists only to call one external service with no added behavior.
+   - **Seams need two adapters.** Do not introduce a port, plugin point, or injected dependency unless at least two things will sit behind it (typically production + a test stand-in); with one, it is only indirection.
    - If a module must be shallow, fill the `Justification (if shallow)` field. Unjustified shallow modules will be flagged by the `module-depth` specialist in spec-review-panel and should be merged, deepened, or removed.
    - Assign each module a **Risk** tier (low/medium/high) — this drives review depth in code review. High-risk = irreversible, financial, security-critical, regulatory. Low-risk = contained, recoverable, boundary-only.
    - Map every REQ-XXX/EDGE-XXX/FAIL-XXX to at least one module via the `Spec refs:` field — every requirement must have a home.

@@ -50,6 +50,12 @@ agent-engineering/
 │   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)
 │   ├── rephrase/               # restates an end-of-work report as Done / Pending / Blocking / Next
+│   ├── improve-codebase-architecture/  # user-invoked survey of existing code for deepening candidates;
+│   │                       #   references/codebase-design.md is the plugin's ONE depth standard
+│   │                       #   (sdd-flow panel-specialist §4.5 + planning.md mirror it — change together)
+│   ├── retro/              # user-invoked development-cycle retrospective (environment, not code);
+│   │                       #   scripts/session-digest.py reads session transcripts across /clear
+│   │                       #   (tests: python3 -m unittest discover -s scripts/tests)
 │   ├── cross-cutting-adr/, improve-claude-md/,
 │   │                       #   bb-worktree-init/, worktree-merge/
 └── README.md

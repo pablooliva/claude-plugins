@@ -62,7 +62,8 @@ Confirm that `SDD/requirements/SPEC-[###]-[feature-name].md` contains all requir
 
 - [ ] `## Modules` section is present
 - [ ] Every module has `Public Interface`, `Hides`, `Risk`, and `Spec refs` filled in
-- [ ] No shallow modules without explicit justification (interface comparable to or larger than what is hidden)
+- [ ] `Public Interface` states everything a caller must know — signatures plus any invariants, call order, error modes, configuration, and performance bounds
+- [ ] No shallow modules without explicit justification (shallow = a caller must learn about as much to use the module as to do the work itself; a module that fails the deletion test — callers would make the same call one level down — is always shallow)
 - [ ] Every REQ-XXX, EDGE-XXX, FAIL-XXX is mapped to at least one module via `Spec refs`
 - [ ] Risk tiers are plausible (high-stakes modules — auth, payment, irreversible writes — are not marked `low`)
 

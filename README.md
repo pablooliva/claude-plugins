@@ -34,9 +34,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v3.1.0
+### 3. Agent Engineering — v3.2.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
+
+**v3.2.0 highlights:** two user-invoked skills adapted from [mattpocock/skills](https://github.com/mattpocock/skills) — `improve-codebase-architecture` surveys existing code for shallow modules that could become deep ones and reports candidates without editing anything; `retro` reads a whole development cycle (every session across `/clear`, plus the `SDD/` records) and proposes changes to the agent's environment. Module depth now has one definition across the plugin: leverage at the interface, judged with the deletion test.
 
 **v3.1.0 highlights:** `rephrase` — restates the report at the end of a solution, phase, or cycle as four short sections (Done, Pending, Blocking, Next) and drops the rest; it adds no facts, re-runs nothing, and never trims a failure or a skipped step.
 
