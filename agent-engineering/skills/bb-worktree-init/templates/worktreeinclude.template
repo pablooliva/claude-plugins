@@ -1,7 +1,7 @@
 # Untracked files copied into each new worktree (gitignore syntax: one pattern
 # per line, # for comments, ! to negate an earlier pattern).
 #
-# Read by BB IDE and by the worktree-create skill. Both copy every UNTRACKED
+# Read by BB IDE, which copies every UNTRACKED
 # file in the source checkout that matches a pattern, BEFORE .bb-env-setup.sh
 # runs — which is what lets that script rewrite the copies for the worktree.
 #

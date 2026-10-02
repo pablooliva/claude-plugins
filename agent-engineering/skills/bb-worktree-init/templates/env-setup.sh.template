@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
 # Worktree provisioning hook for @@PROJECT@@ — the canonical file.
 #
-# `.bb-env-setup.sh` is a symlink to this file. Two callers run it, with the
-# same mechanics on purpose:
-#   * BB IDE              — runs `.bb-env-setup.sh` after `git worktree add`,
-#                           once the `.worktreeinclude` copies have landed.
-#   * worktree-create     — runs this file directly, after performing the
-#     skill                 equivalent `.worktreeinclude` copy step itself.
+# `.bb-env-setup.sh` is a symlink to this file. BB IDE runs that name after
+# `git worktree add`, once the `.worktreeinclude` copies have landed.
 #
-# Contract (set by BB; the skill mirrors it):
+# Contract (set by BB):
 #   * cwd is the worktree root, invoked as `env bash <script>`
 #   * untracked files named in `.worktreeinclude` are already COPIED in — they
 #     must be copies, not symlinks, or the rewrite below would edit the main
@@ -73,8 +69,8 @@ say "main checkout: $MAIN"
 # ran, so they are real per-worktree files. Every path in them still points at
 # the main checkout or at live sinks; repoint them inside $WT.
 #
-# The marker line below is load-bearing: the worktree-handoff skill greps for
-# it and never reconciles a marked file back into main. Keep it verbatim.
+# The marker line below is load-bearing: the worktree-merge skill greps for
+# it and never copies a marked file back into main. Keep it verbatim.
 MARKER='# --- rewritten by .env-setup.sh for this worktree ---'
 
 # set_env FILE KEY VALUE — replace KEY's line if present, append it if not.

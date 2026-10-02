@@ -34,9 +34,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v2.7.1
+### 3. Agent Engineering — v3.0.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
+
+**v3.0.0 highlights:** a cleanup release — `todo-tidy`, `correction-codifier`, `worktree-create`, and LangSmith eval capture (`/regression-eval-capture`, `sdd-flow` Step 4g, `eval_required:`) are removed; `worktree-handoff` is rewritten as `worktree-merge` for BB IDE worktrees; and an abuse case with no test now blocks an agentic feature at review.
 
 **v2.7.0 highlights:** the site diff now separates real misses from noise — disagreements on code a slice did not change are reported LOW and settled by the final feature-wide recount, escaped symbols key correctly, lettered slice IDs (`SLICE-005a`) are accepted, and both sides file sites by one shared, count-free conventions file.
 
@@ -44,37 +46,21 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 
 **v2.5.0 highlights:** `prompt-doctor` — grades a task prompt against a ten-component anatomy before you send it (grounding link, stakes, ranked priorities, hard constraints, hedged opinion, knowledge gaps, the one clear ask, early-exit permission, precise done-condition), names what each gap lets the model decide on its own, and never executes the prompt or invents your context.
 
-**v2.1.0 highlights:** OWASP AI-agent security review, vendored as one control catalog with two entry points — the standalone `ai-agent-security-review` skill, and three `agent_security:`-gated hook points inside `sdd-flow` (spec panel value, code-review lens, abuse-case evals).
+**v2.1.0 highlights:** OWASP AI-agent security review, vendored as one control catalog with two entry points — the standalone `ai-agent-security-review` skill, and two `agent_security:`-gated hook points inside `sdd-flow` (spec panel value, code-review lens).
 
 **v1.0.0 highlights:** `sdd-flow` became a self-contained fork — it no longer depends on the `sdd` plugin at runtime and ships its own forked agents, hooks, and per-phase bodies. It orchestrates both `whole-feature` and `per-slice` delivery modes end-to-end. (Later 1.0.x releases add post-review fixes and progress-log hygiene — rotation, archives, and bounded appends.)
 
 **Key Features:**
 
-- `correction-codifier` skill — turns mid-session corrections into durable `CLAUDE.md` rules (Institutional Memory)
 - `cross-cutting-adr` skill — captures binding architectural decisions as numbered ADRs (Living Documentation)
 - `improve-claude-md` skill — audits and trims `CLAUDE.md`/`AGENTS.md` files to focus on preferences and behavioral nudges
 - `prompt-doctor` skill — diagnoses a task prompt before you send it against the ten-component anatomy, with quoted evidence per component and an opt-in rewrite built only from your own words
-- `todo-tidy` skill — promotes a free-form `scratch.md` into a structured, content-preserving `TODO.md`
-- `ai-agent-security-review` skill — adversarial review of agentic systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt injection, memory security, human-in-the-loop, output guardrails, multi-agent trust, adversarial testing); runs standalone, and the same vendored catalog gates three hook points inside `sdd-flow`
-- `worktree-create` skill — spins up an isolated git worktree at a sibling path for a scoped task, on its own `you/type-desc` branch, provisions the untracked runtime config git never checks out per the repo's `.worktreeinclude` + `.env-setup.sh` contract, and reserves collision-free SDD ADR/SPEC numbers
-- `bb-worktree-init` skill — one-time per repo: inspects the project and renders its bundled templates into the `.worktreeinclude` + `.env-setup.sh` (+ `.bb-env-setup.sh` symlink, optional teardown) contract that BB IDE and `worktree-create` need, then validates it in a throwaway worktree
-- `worktree-handoff` skill — closes the loop: generates a merge-back handoff from inside the worktree, then merges + cleans up (with confirmation) from the main repo
+- `ai-agent-security-review` skill — adversarial review of agentic systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt injection, memory security, human-in-the-loop, output guardrails, multi-agent trust, adversarial testing); runs standalone, and the same vendored catalog gates two hook points inside `sdd-flow`
+- `bb-worktree-init` skill — one-time per repo: inspects the project and renders its bundled templates into the `.worktreeinclude` + `.env-setup.sh` (+ `.bb-env-setup.sh` symlink, optional teardown) contract that BB IDE needs, then validates it in a throwaway worktree
+- `worktree-merge` skill — lands a worktree's committed work on the main line: syncs with the target branch inside the worktree, fast-forwards the target (or opens a PR), renumbers colliding SDD ADR/feature numbers on confirmation, surfaces git-ignored files that would be lost, and cleans up — leaving BB-managed worktrees for BB IDE to retire
 - `sdd-flow` skill — self-contained orchestration of the full Research → Planning → Implementation lifecycle via subagents (no SDD plugin required)
-- `/regression-eval-capture` command — scaffolds LangSmith regression eval datasets after a feature ships (Observability)
 - `/adr-capture` command — manual entry point for ADR capture
 - `/prompt-doctor` command — manual entry point for prompt diagnosis
-
-### 4. LangSmith Skills — v0.1.1
-
-Three skills that drive the [`langsmith` CLI](https://github.com/langchain-ai/langsmith-cli) to trace, build evaluation datasets for, and evaluate **your own** LLM applications. Distinct from the official `langsmith-tracing` plugin (which traces Claude Code sessions themselves) — the two are complementary and can both be installed.
-
-**Key Features:**
-
-- `langsmith-trace` skill — add tracing to an app, or query/export trace and run data
-- `langsmith-dataset` skill — create, upload, and manage evaluation datasets
-- `langsmith-evaluator` skill — build LLM-as-judge or custom-code evaluation pipelines
-
-**Prerequisites:** the `langsmith` CLI binary and a `LANGSMITH_API_KEY`. See the [plugin README](./langsmith-skills/README.md) for setup.
 
 ## Installation
 

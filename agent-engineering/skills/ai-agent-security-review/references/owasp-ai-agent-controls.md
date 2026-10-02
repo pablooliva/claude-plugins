@@ -11,9 +11,8 @@ This file is the **single canonical catalog** for every consumer:
 | Consumer | Reads |
 |---|---|
 | `ai-agent-security-review` skill (standalone) | whichever table matches the detected target |
-| sdd-flow Step 3c, `agent-security` panel value | §3 Spec-Level Checks only |
-| sdd-flow Step 4b / per-slice 4b code review | §4 Code-Level Checks only |
-| sdd-flow Step 4g eval capture | §5 Abuse-Case Test Matrix only |
+| sdd-flow Step 3c, `agent-security` panel value | §3 Spec-Level Checks, plus the §5 rows to cover |
+| sdd-flow Step 4b / per-slice 4b code review | §4 Code-Level Checks, plus §5 test coverage |
 
 The split in §3/§4 is load-bearing. A spec cannot evidence a runtime control, and a diff cannot
 evidence a missing requirement — reviewers that ignore the split produce findings they cannot cite.

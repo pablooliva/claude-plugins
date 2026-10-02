@@ -74,7 +74,7 @@ SDD/reviews/PANEL-SPEC-[feature-name]-YYYYMMDD.md
 [Output from module-depth specialist, verbatim.]
 
 #### AI Agent Security Findings
-[Output from agent-security specialist, verbatim. Render this sub-header ONLY when `agent-security` was in the panel AND its scope gate was open. When the specialist reported a closed gate (no agentic surface, or `agent_security: false`), omit the sub-header entirely — same silent-skip rule as slice-integrity below. Preserve the specialist's trailing **Abuse cases to cover** block: Step 4g's eval capture reads it.]
+[Output from agent-security specialist, verbatim. Render this sub-header ONLY when `agent-security` was in the panel AND its scope gate was open. When the specialist reported a closed gate (no agentic surface, or `agent_security: false`), omit the sub-header entirely — same silent-skip rule as slice-integrity below. Preserve the specialist's trailing **Abuse cases to cover** block: the Step 4b code review checks test coverage against it.]
 
 #### Slice Integrity Findings
 [Output from slice-integrity specialist, verbatim. Render this sub-header ONLY when the spec's frontmatter declares `delivery_mode: per-slice`. Omit the sub-header entirely (do not render an empty section, do not render "n/a") when `delivery_mode: whole-feature` or the field is absent — mirrors the specialist's silent-skip activation gate at section 4.7. This keeps whole-feature panel deliverables bit-for-bit identical to the pre-2.0.0 shape.]

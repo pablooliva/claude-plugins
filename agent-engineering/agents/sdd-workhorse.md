@@ -1,6 +1,6 @@
 ---
 name: sdd-workhorse
-description: Default Sonnet worker for /sdd-flow's non-adversarial spawn sites — research, planning, ADR capture, fix loops, implementation chunks, code review, completion subagents, eval scaffolding, and per-slice cycle workhorses. Distinct from sdd-critical-reviewer (Opus, adversarial) and the sdd-spec-*-specialist agents (panel-domain). Shipped by the agent-engineering plugin for portable, self-contained cost discipline.
+description: Default Sonnet worker for /sdd-flow's non-adversarial spawn sites — research, planning, ADR capture, fix loops, implementation chunks, code review, completion subagents, and per-slice cycle workhorses. Distinct from sdd-critical-reviewer (Opus, adversarial) and the sdd-spec-*-specialist agents (panel-domain). Shipped by the agent-engineering plugin for portable, self-contained cost discipline.
 model: sonnet
 ---
 

@@ -1,17 +1,17 @@
 ---
 name: bb-worktree-init
-description: "INVOKE THIS SKILL when the user wants to make a new or existing repository ready for isolated worktrees — e.g. 'set this project up for BB worktrees', 'add a .worktreeinclude', 'write an env setup script', 'make worktrees work in this repo', 'bootstrap worktree provisioning', or when `worktree-create` stopped because the repo lacks `.worktreeinclude` or `.env-setup.sh`. Inspects the repo (untracked config, env keys that hold paths or point at real external sinks, dependency lockfiles, local databases, git-ignored runtime dirs), proposes a provisioning plan for the user to approve, then renders its bundled templates into `.worktreeinclude`, `.env-setup.sh`, a `.bb-env-setup.sh` symlink, and — only when setup creates resources outside the worktree — `.bb-env-teardown.sh`. Validates the result (syntax check, dry-run of what would be copied, optional throwaway-worktree trial). Also audits and upgrades these files in a repo that already has them. Never prints env values, never commits, never creates a worktree for real work."
+description: "INVOKE THIS SKILL when the user wants to make a new or existing repository ready for isolated worktrees — e.g. 'set this project up for BB worktrees', 'add a .worktreeinclude', 'write an env setup script', 'make worktrees work in this repo', 'bootstrap worktree provisioning'. Inspects the repo (untracked config, env keys that hold paths or point at real external sinks, dependency lockfiles, local databases, git-ignored runtime dirs), proposes a provisioning plan for the user to approve, then renders its bundled templates into `.worktreeinclude`, `.env-setup.sh`, a `.bb-env-setup.sh` symlink, and — only when setup creates resources outside the worktree — `.bb-env-teardown.sh`. Validates the result (syntax check, dry-run of what would be copied, optional throwaway-worktree trial). Also audits and upgrades these files in a repo that already has them. Never prints env values, never commits, never creates a worktree for real work."
 ---
 
 # BB Worktree Init
 
-Authors the **BB IDE worktree provisioning contract** for a repository, so both BB IDE and the `worktree-create` skill can create worktrees that are usable and safe.
+Authors the **BB IDE worktree provisioning contract** for a repository, so the worktrees BB IDE creates are usable and safe.
 
 A worktree checks out from a commit, so it has none of the repo's git-ignored files — no `.env`, no dependencies, no local database. The contract fixes that with files committed at the repo root:
 
 1. **`.worktreeinclude`** — gitignore-syntax list of *untracked* files to **copy** into each new worktree.
-2. **`.env-setup.sh`** — the canonical script, run from the new worktree's root *after* the copies land. Installs dependencies, snapshots data, and **rewrites the copied env files** so every path points inside the worktree. `worktree-create` runs this name.
-3. **`.bb-env-setup.sh` → `.env-setup.sh`** (required symlink) — **the only name BB IDE runs.** BB never looks for `.env-setup.sh`. And when `.bb-env-setup.sh` is absent BB does not fail: it copies `.worktreeinclude` files, skips setup silently, and opens a worktree whose `.env` still points at main. One script, two names, so the two callers can't drift apart.
+2. **`.env-setup.sh`** — the canonical script, run from the new worktree's root *after* the copies land. Installs dependencies, snapshots data, and **rewrites the copied env files** so every path points inside the worktree. A tool-neutral name, for running by hand or from non-BB tooling.
+3. **`.bb-env-setup.sh` → `.env-setup.sh`** (required symlink) — **the only name BB IDE runs.** BB never looks for `.env-setup.sh`. And when `.bb-env-setup.sh` is absent BB does not fail: it copies `.worktreeinclude` files, skips setup silently, and opens a worktree whose `.env` still points at main. One script, two names, so BB and any other caller can't drift apart.
 4. **`.bb-env-teardown.sh`** (optional) — run by BB before it deletes a worktree, for resources setup created *outside* the worktree.
 
 Copying without rewriting is the hazard this skill exists to prevent: a copied `.env` still holds main's absolute paths, so a worktree that looks sandboxed writes into the main checkout's database, output directory, or a live publish target.
@@ -19,8 +19,8 @@ Copying without rewriting is the hazard this skill exists to prevent: a copied `
 Lifecycle position:
 
 1. **`bb-worktree-init`** (this skill) — one-time, per repo: author the contract.
-2. **`worktree-create`** — per task: create a worktree using the contract.
-3. **`worktree-handoff`** — per task: merge back and clean up.
+2. **BB IDE** — per thread: creates a worktree using the contract.
+3. **`worktree-merge`** — per task: land the work on the main line and clean up.
 
 Bundled files (read by path when needed):
 
@@ -36,8 +36,8 @@ Bundled files (read by path when needed):
 - BB copies `.worktreeinclude` matches **before** setup runs. Files only; symlinks in the source are skipped; nothing existing is replaced; unmatched patterns and unreadable files are reported, not fatal.
 - Hooks run as `env bash <script>`, cwd = worktree root, stdin closed, **15-minute timeout**, with a sanitized environment: `NODE_ENV` and every `BB_*` variable removed, and **no source-checkout path provided** — the script finds main via `git rev-parse --git-common-dir`.
 - Setup: non-zero exit, timeout, signal, or cancel **fails provisioning and BB deletes the worktree**. Teardown: failure is reported, worktree deleted anyway.
-- Hooks run only for newly created BB-managed worktrees. `worktree-create` runs main's `.env-setup.sh` itself with the same contract; `worktree-handoff` does **not** run teardown.
-- `worktree-handoff` skips reconciling any env file containing the exact line `# --- rewritten by .env-setup.sh for this worktree ---`. The template emits it; keep it verbatim.
+- Hooks run only for newly created BB-managed worktrees. `worktree-merge` does **not** run teardown; BB does, when it retires the worktree.
+- `worktree-merge` never copies back any env file containing the exact line `# --- rewritten by .env-setup.sh for this worktree ---`. The template emits it; keep it verbatim.
 
 Confirm against `bb guide environments` if the `bb` CLI is available — it is the authoritative source and may have changed since this skill was written.
 
@@ -53,18 +53,17 @@ Confirm against `bb guide environments` if the `bb` CLI is available — it is t
 8. **Overwriting existing files.** Replacing a hand-tuned `.env-setup.sh` with a fresh render. Resolution: existing files switch the skill to audit mode (Step 1); changes are proposed as edits, applied only on approval.
 9. **Teardown for nothing.** Writing `.bb-env-teardown.sh` when setup creates nothing outside the worktree. Resolution: only when `@@DATA@@` or `@@DEPS@@` creates an external resource (server DB, container, global cache entry).
 10. **Trialing in a real worktree location.** Testing the script by creating a worktree alongside real ones and leaving it. Resolution: Step 6's trial uses a temp directory and removes the worktree and branch afterwards, on the user's approval.
-11. **Missing or broken `.bb-env-setup.sh`.** Writing `.env-setup.sh` and stopping there, or leaving the symlink as a duplicate file, an absolute-target link, or a link to a renamed script. BB only runs `.bb-env-setup.sh`, and an absent one is **not** an error — the worktree opens with an un-rewritten `.env`, which is the unsafe outcome. A duplicate file drifts from `.env-setup.sh`, so BB and `worktree-create` provision differently. Resolution: always create it as a *relative* symlink (`ln -s .env-setup.sh .bb-env-setup.sh`), check it in Step 5, run the trial through it in Step 6, and include it in the commit hint.
+11. **Missing or broken `.bb-env-setup.sh`.** Writing `.env-setup.sh` and stopping there, or leaving the symlink as a duplicate file, an absolute-target link, or a link to a renamed script. BB only runs `.bb-env-setup.sh`, and an absent one is **not** an error — the worktree opens with an un-rewritten `.env`, which is the unsafe outcome. A duplicate file drifts from `.env-setup.sh`, so BB and a hand-run of `.env-setup.sh` provision differently. Resolution: always create it as a *relative* symlink (`ln -s .env-setup.sh .bb-env-setup.sh`), check it in Step 5, run the trial through it in Step 6, and include it in the commit hint.
 12. **Leftover placeholders.** Shipping a script with `@@DEPS@@` still in it — a bash syntax trap at best, a silently skipped step at worst. Resolution: Step 5 greps for `@@` and fails validation if any remain.
 
 ## When to Activate
 
 - The user asks to set up, bootstrap, or fix worktree provisioning for a repo — new or existing.
-- `worktree-create` stopped at its precondition gate and the user accepted the offer to author the missing files.
 - The user wants an existing `.worktreeinclude` / `.env-setup.sh` reviewed or brought up to the current contract.
 
 ## When NOT to Activate
 
-- **The user wants a worktree now** and the repo is already provisioned — that is `worktree-create`.
+- **The user wants a worktree now** and the repo is already provisioned — start a BB thread in a Worktree environment.
 - **Not a git repository** — tell the user; stop.
 - **The user only wants BB agent-instruction files** (`AGENTS.md`, `.bb/skills/`) — see `bb guide agent-configuration`; not this skill.
 
@@ -87,7 +86,7 @@ git ls-files .worktreeinclude .env-setup.sh .bb-env-setup.sh .bb-env-teardown.sh
 - **Mode = create** when none of the files exist.
 - **Mode = audit** when any exists. Read them in full, then continue discovery; Step 3's plan becomes a list of proposed edits against the existing files (missing verify loop, missing marker line, `python3` dependency in a non-Python repo, hardcoded paths, symlinked-env guard absent, uncommitted files, `.bb-env-setup.sh` not a symlink to `.env-setup.sh`, and so on). Never overwrite (Anti-Pattern 8).
 - **`.env-setup.sh` present but `.bb-env-setup.sh` missing** is the most common audit finding and the most urgent: BB is skipping setup today. Put the symlink first in the proposed edits, and warn that worktrees BB already created from this repo may hold un-rewritten `.env` copies.
-- **Only `.bb-env-setup.sh` exists, as a real file** (BB's convention alone): propose renaming it to `.env-setup.sh` (`git mv` if tracked) and symlinking the old name back, so `worktree-create` and BB share one script.
+- **Only `.bb-env-setup.sh` exists, as a real file** (BB's convention alone): propose renaming it to `.env-setup.sh` (`git mv` if tracked) and symlinking the old name back, so BB and any other caller share one script.
 
 ### Step 2: Discover
 
@@ -201,7 +200,7 @@ fi; rm -f "$g"
 
 Never run the full script in the main checkout to test the guard: if the guard is wrong, the script rewrites main's real `.env` and replaces main's data.
 
-**Dry-run the copy list** — exactly what BB and `worktree-create` would copy:
+**Dry-run the copy list** — exactly what BB would copy:
 ```bash
 git ls-files -o -i --exclude-from=.worktreeinclude
 ```
@@ -277,7 +276,7 @@ Not committed. BB only runs hooks that are committed:
 
 ### GOOD — existing repo with an older script
 
-`.env-setup.sh` exists and uses `sed -i` to rewrite paths, with no verify loop and no marker line; `.bb-env-setup.sh` is a separate copy rather than a symlink. **Audit mode:** propose (a) adding the marker, so `worktree-handoff` won't reconcile the copied `.env` back into main; (b) a verify loop over the rewritten keys; (c) replacing `sed -i` — BSD and GNU disagree on its syntax, so it breaks on one of the two machines; (d) replacing the duplicate with a symlink. Apply the approved ones as targeted edits.
+`.env-setup.sh` exists and uses `sed -i` to rewrite paths, with no verify loop and no marker line; `.bb-env-setup.sh` is a separate copy rather than a symlink. **Audit mode:** propose (a) adding the marker, so `worktree-merge` won't reconcile the copied `.env` back into main; (b) a verify loop over the rewritten keys; (c) replacing `sed -i` — BSD and GNU disagree on its syntax, so it breaks on one of the two machines; (d) replacing the duplicate with a symlink. Apply the approved ones as targeted edits.
 
 ### BAD — reading the env to classify it
 
@@ -293,4 +292,4 @@ Adding `.venv/` to `.worktreeinclude` because "the install is slow". Wrong: BB c
 
 ## Scope Boundary
 
-This skill **authors and validates** a repo's worktree provisioning files: `.worktreeinclude`, `.env-setup.sh`, the `.bb-env-setup.sh` symlink, and, when justified, `.bb-env-teardown.sh`. It inspects the repo without printing env values, proposes a plan the user approves, renders its templates, and checks the result statically and — on approval — in a throwaway worktree it removes afterwards. It does not commit, does not edit `.gitignore` or any env file, does not create worktrees for real work (`worktree-create`), and does not merge or remove them (`worktree-handoff`). In a repo that already has the files it proposes edits rather than replacing them.
+This skill **authors and validates** a repo's worktree provisioning files: `.worktreeinclude`, `.env-setup.sh`, the `.bb-env-setup.sh` symlink, and, when justified, `.bb-env-teardown.sh`. It inspects the repo without printing env values, proposes a plan the user approves, renders its templates, and checks the result statically and — on approval — in a throwaway worktree it removes afterwards. It does not commit, does not edit `.gitignore` or any env file, does not create worktrees for real work (BB IDE does), and does not merge or remove them (`worktree-merge`). In a repo that already has the files it proposes edits rather than replacing them.

@@ -160,10 +160,9 @@ When checkpoints are `off` (`--skip-slice-checkpoints`), this pause is skipped �
 8. **End-of-feature 4e — Address critical review findings.** Standard `agent-engineering:sdd-workhorse` fix subagent.
    - **End-of-feature 4e.5 — Final blind recount (always runs).** Feature-wide (`SCOPE = FEATURE`) blind count + diff + site-verification loop. *(Shared step — see `implementation-whole-feature.md` §4e.5.)* Catches sites that span slices (a later slice's path needing an earlier slice's control) and sites changed by 4e. 4f does not start until it resolves.
 9. **End-of-feature 4f — Implementation completion subagent.** `bodies/implementation-complete.md` — finalize plan, write IMPLEMENTATION-SUMMARY, capture glossary deltas. *(Shared step — see `implementation-whole-feature.md` §4f.)*
-10. **End-of-feature 4g — Eval scaffolding.** Conditional on `eval_required:` **or** an open `agent_security:` gate (abuse-case-only mode when just the latter). *(Shared — §4g.)* Uncovered abuse cases flagged in the per-slice reviews carry forward here.
-11. **End-of-feature 4h — Supervised checkpoint.** Fires only in supervised phase-boundary mode. *(Shared — §4h.)*
-12. **End-of-feature 4i — End-of-feature commit.** Covers: critical review doc, fix-findings code from 4e, the 4e.5 `SITE-COUNT-FEATURE-*` / `SITE-DIFF-FEATURE-*` / `REVIEW-SITES-FEATURE-*` files and inventory updates, completion artifacts from 4f, eval scaffolding from 4g. Per-slice code is already committed in each 4c.6.
-13. **End-of-feature 4j — Announcement.** *(Shared — §4j.)* Surface eval scaffold result and any ADRs. Then perform the **feature-completion rotation** per §4j (`phases/protocols.md` → Progress Rotation).
+10. **End-of-feature 4h — Supervised checkpoint.** Fires only in supervised phase-boundary mode. *(Shared — §4h.)*
+11. **End-of-feature 4i — End-of-feature commit.** Covers: critical review doc, fix-findings code from 4e, the 4e.5 `SITE-COUNT-FEATURE-*` / `SITE-DIFF-FEATURE-*` / `REVIEW-SITES-FEATURE-*` files and inventory updates, completion artifacts from 4f. Per-slice code is already committed in each 4c.6.
+12. **End-of-feature 4j — Announcement.** *(Shared — §4j.)* Surface any ADRs. Then perform the **feature-completion rotation** per §4j (`phases/protocols.md` → Progress Rotation).
 
 ---
 

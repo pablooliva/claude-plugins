@@ -4,7 +4,7 @@ Reached at Step 4 when the spec's `delivery_mode:` is `whole-feature` (the defau
 
 Phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file + the `implementation-compact.md` compact body path (blind site counts: `site-count-compact.md`). Implementation-chunk and blind-site-count counters use `Reads: 0/20`. Body paths are `SKILL_ROOT/bodies/<file>.md`, resolved absolute. **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md`, resolved absolute, passed to every implementation, site-count, review, fix, and completion spawn.
 
-The post-implementation steps (4e.5 final recount, 4f completion, 4g eval, 4h checkpoint, 4i commit, 4j announcement) are shared with per-slice's end-of-feature cycle.
+The post-implementation steps (4e.5 final recount, 4f completion, 4h checkpoint, 4i commit, 4j announcement — there is no 4g; eval capture was removed in 3.0.0) are shared with per-slice's end-of-feature cycle.
 
 ---
 
@@ -99,18 +99,6 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 
 ---
 
-## 4g. Regression Eval Capture (conditional)  *(shared)*
-
-Read the spec's `eval_required:` and `agent_security:` frontmatter. Run this step if **either** `eval_required: true` **or** the `agent_security:` gate is open (`true`, or `auto`/absent with an agentic surface in the implemented code). When only the security gate is open, the subagent runs in **abuse-case-only mode** (no evaluator/run-function stubs). Spawn an **`agent-engineering:sdd-workhorse`** subagent:
-- **Body:** `bodies/eval-capture.md`
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md` (feature name, success criteria, frontmatter), repo's existing `evals/` (if present). When the `agent_security:` gate is open, also pass `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md` (for its abuse-case coverage table) and the resolved **CATALOG** path.
-- **Outputs:** LangSmith dataset created (empty, awaiting examples) via the `langsmith` CLI, `evals/evaluators/[feature-slug]_evaluator.{py,ts}`, `evals/run_functions/[feature-slug]_run.{py,ts}`, `evals/README.md` updated.
-- **Task:** Scaffold the regression eval infrastructure, and seed the abuse-case rows (body §4b) when the security gate is open. **Non-blocking:** if the `langsmith` CLI / API key is missing, log a warning to `progress.md` and return WITHOUT halting — the feature has shipped; eval is a follow-up. Surface the warning in 4j.
-
-If `eval_required:` is `false`/absent **and** the `agent_security:` gate is closed, skip this step.
-
----
-
 ## 4h. Supervised Checkpoint (supervised mode only)  *(shared)*
 
 In **supervised mode**, pause:
@@ -122,8 +110,6 @@ In **supervised mode**, pause:
 > - Code review: `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
 > - Critical review: `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`
 > - Implementation summary: `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md`
-> - [Eval scaffolding: evals/... (if eval_required and scaffold succeeded)]
-> - [Eval scaffold warnings: progress.md (if scaffold failed)]
 > **Ready to commit all implementation code?** (y/n)
 
 Wait for confirmation before committing. In **autonomous mode**, proceed directly to commit.
@@ -132,7 +118,7 @@ Wait for confirmation before committing. In **autonomous mode**, proceed directl
 
 ## 4i. Commit Implementation  *(shared)*
 
-The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts (including the site inventory and every `SITE-COUNT-*` / `SITE-DIFF-*` / `REVIEW-SITES-*`), and any eval scaffolding from 4g. No co-author attribution.
+The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts (including the site inventory and every `SITE-COUNT-*` / `SITE-DIFF-*` / `REVIEW-SITES-*`). No co-author attribution.
 
 If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
 
@@ -142,8 +128,6 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Pr
 
 > Implementation complete! All requirements from SPEC-[###] have been implemented, reviewed, and tested.
 > All artifacts committed. Feature is ready for deployment.
-> [If eval_required and scaffold succeeded:] Regression eval dataset `regression-[feature-slug]` created on LangSmith (empty). Populate with golden examples after ≥1 week of runtime. See `evals/README.md`.
-> [If eval_required but scaffold failed:] ⚠️ Eval scaffolding failed — see progress.md. Run `/regression-eval-capture` manually once LangSmith is configured.
 > [If ADRs were captured:] ADRs written: [list]. See `SDD/adr/README.md`.
 
 After the announcement, perform the **feature-completion rotation** (`phases/protocols.md` → Progress Rotation): archive this feature's full progress history to `SDD/orchestration/progress-archive/` and leave a one-line summary in the live `progress.md`.

@@ -1,6 +1,6 @@
 ---
 name: sdd-flow
-description: "INVOKE THIS SKILL when the user asks to run end-to-end feature development via the SDD methodology, or runs /sdd-flow with a task description. Takes a task or software requirement and drives it through the complete SDD lifecycle (Research → Planning → Implementation → Done) via subagents with fresh context per phase. Self-contained: ships its own forked phase bodies, agents, and hooks — the SDD plugin is NOT required and need not be installed. Integrates cross-cutting-adr at research/planning boundaries, a two-stage specialist panel during planning, OWASP AI-agent security review for agentic features (spec panel, code-review lens, abuse-case evals), and regression-eval scaffolding at implementation completion; spec frontmatter (review_panel, eval_required, cross_cutting_decisions, delivery_mode, agent_security) gates each."
+description: "INVOKE THIS SKILL when the user asks to run end-to-end feature development via the SDD methodology, or runs /sdd-flow with a task description. Takes a task or software requirement and drives it through the complete SDD lifecycle (Research → Planning → Implementation → Done) via subagents with fresh context per phase. Self-contained: ships its own forked phase bodies, agents, and hooks — the SDD plugin is NOT required and need not be installed. Integrates cross-cutting-adr at research/planning boundaries, a two-stage specialist panel during planning, and OWASP AI-agent security review for agentic features (spec panel, code-review lens); spec frontmatter (review_panel, cross_cutting_decisions, delivery_mode, agent_security) gates each."
 ---
 
 # SDD Flow — End-to-End Feature Development
@@ -41,7 +41,7 @@ At Step 0 the orchestrator resolves **SKILL_ROOT** = the absolute path of this s
 
 Every body path in a spawn prompt is the **resolved absolute** `SKILL_ROOT/bodies/<file>.md`. Compact bodies are passed the same way (read only if the Safety-Net trips).
 
-The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), the code-review / slice-review agentic lens (4b), and eval capture (4g). It also derives **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md` — the enforcement-site standard (definitions of control and enforcement site, the per-site mutation standard, the three site dispositions, the inventory shape) passed to every implementation, blind-count, review, fix, retro, and completion spawn. Record all three in `progress.md` alongside SKILL_ROOT. STANDARD ships inside this skill, so a missing STANDARD means a broken install: halt and tell the user (unlike CATALOG, there is no degraded mode — without it no control can reach `Complete`). If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run and a one-line warning goes to `progress.md` — the flow does not halt.
+The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), and the code-review / slice-review agentic lens (4b). It also derives **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md` — the enforcement-site standard (definitions of control and enforcement site, the per-site mutation standard, the three site dispositions, the inventory shape) passed to every implementation, blind-count, review, fix, retro, and completion spawn. Record all three in `progress.md` alongside SKILL_ROOT. STANDARD ships inside this skill, so a missing STANDARD means a broken install: halt and tell the user (unlike CATALOG, there is no degraded mode — without it no control can reach `Complete`). If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run and a one-line warning goes to `progress.md` — the flow does not halt.
 
 ## Canonical Identifiers (resolved at Step 0)
 
@@ -68,7 +68,6 @@ Every subagent MUST use these exact paths; the orchestrator resolves `[###]`/`[f
 | Spec panel review | `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md` | Panel synthesis (Stage 2) | Planning fix |
 | Spec critical review | `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md` | Planning review | Planning fix |
 | ADRs / ADR index | `SDD/adr/NNNN-slug.md`, `SDD/adr/README.md` | adr-capture subagent | Future runs, humans |
-| Eval scaffolding | `evals/datasets/[feature-slug].json`, `evals/evaluators/...`, `evals/run_functions/...`, `evals/README.md` | eval-capture subagent | Future regression runs |
 | Implementation plan | `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` | Implementation subagent | Code review, Impl review, Completion |
 | Site inventory (implementer's, living) | `SDD/implementation/sites/SITES-IMPL-[feature-name].md` | Implementer; fix subagents | Diff script, reviews, retro, completion — **never the blind counter** |
 | Site filing conventions (living, append-only, count-free) | `SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` | Reviewers (4b, 4e.5) | Implementer, fixers, reviewers, **and the blind counter** — the one `SDD/implementation/` file it may read |
@@ -100,7 +99,6 @@ SDD/
 └── reviews/{CRITICAL-RESEARCH-*, PANEL-FINDINGS-*, PANEL-SPEC-*, CRITICAL-SPEC-*,
             CRITICAL-IMPL-*, REVIEW-*, REVIEW-SLICE-*, REVIEW-SITES-*,
             SITE-COUNT-*, SITE-DIFF-*}.md
-evals/{README.md, datasets/, evaluators/, run_functions/}   # only when eval_required: true
 ```
 
 ## Orchestrator Discipline (the load-bearing core)
@@ -142,7 +140,7 @@ Routing is carried by **shipped agent frontmatter** — no runtime model switchi
 
 | Spawn site | Agent type | Model |
 |---|---|---|
-| Research, planning, ADR capture, fixes, impl chunks, code review, completion, eval, slice cycle | `agent-engineering:sdd-workhorse` | sonnet |
+| Research, planning, ADR capture, fixes, impl chunks, code review, completion, slice cycle | `agent-engineering:sdd-workhorse` | sonnet |
 | Blind site count (4a.5, 4e.5) — always a fresh spawn | `agent-engineering:sdd-workhorse` | sonnet |
 | Each panel specialist (Stage 1), including `agent-security` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
 | Research/spec/impl critical review; panel synthesis (Stage 2) | `agent-engineering:sdd-critical-reviewer` | opus |
@@ -190,7 +188,7 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 1. **Each phase is thorough** — research informs planning; planning constrains implementation.
 2. **Every requirement gets a test.** Reviews are gates, not checkboxes — ALL findings (HIGH/MEDIUM/LOW) resolved before proceeding.
 3. **Panel STOP/REVISE halts the flow, but the fix loop is bounded** — max 3 iterations; any iteration that fails to strictly decrease the gating finding count halts. Unresolvable findings route back to the human.
-4. **ADRs compound across features; evals scaffold (humans populate); the spec is the source of truth; document deviations.**
+4. **ADRs compound across features; the spec is the source of truth; document deviations.**
 5. **Never persist PII or secrets in SDD docs. Commit messages have NO co-author attribution.**
 6. **Explicit paths always; the orchestrator never does phase/review/fix/capture/completion work itself.**
 7. **Per-slice cycle is strict** — one subagent per slice, mandatory per-slice review, retro + ledger before the atomic per-slice commit. Slice subagents receive ONLY the rolling ledger.

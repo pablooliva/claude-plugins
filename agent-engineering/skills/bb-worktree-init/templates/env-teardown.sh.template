@@ -12,8 +12,8 @@
 #   * a non-zero exit is REPORTED but the worktree is removed regardless
 #     (15-minute timeout) — so warn and keep going rather than stopping early
 #
-# The worktree-handoff skill does not run this; it removes worktrees with
-# `git worktree remove`. Mention that when a teardown hook exists.
+# The worktree-merge skill does not run this. It leaves BB-managed worktrees
+# for BB to retire, and removes others with `git worktree remove`.
 
 set -uo pipefail
 

@@ -119,21 +119,15 @@ If any of these are missing from the available context (conversation, research d
 
 ### Step 3: Determine the ADR number
 
-**First, check for a reservation.** If a `WORKTREE.md` at the repo root carries an `SDD numbers reserved:` line (written by the `worktree-create` skill), you are inside an isolated worktree and that number was already reserved against every sibling worktree and branch:
-
-```bash
-grep 'SDD numbers reserved' WORKTREE.md 2>/dev/null   # e.g. "ADR-0011, SPEC-045"
-```
-
-Use the reserved `ADR-NNNN` for the first ADR written here, incrementing locally for any further ones. Do **not** recompute from the local `SDD/adr/` listing — a worktree checks out from a commit, so that listing cannot see numbers already claimed by uncommitted work in sibling worktrees or by unmerged branches, and duplicate numbers merge back with no git conflict.
-
-Otherwise (no reservation — the main repo, or a worktree not created by that skill), look in `SDD/adr/`:
+Look in `SDD/adr/`:
 
 ```bash
 ls SDD/adr/*.md 2>/dev/null | grep -E '^SDD/adr/[0-9]{4}-' | tail -1
 ```
 
 Take the highest existing number and increment by one. Zero-pad to four digits. If the directory doesn't exist, start at `0001`.
+
+In a git worktree this listing cannot see numbers claimed by work that has not landed yet, so two branches can pick the same number. That is settled when the work lands: the `worktree-merge` skill detects the collision and renumbers the later branch.
 
 If `SDD/` doesn't exist at the repo root, create `SDD/adr/` (and `SDD/`) before writing.
 

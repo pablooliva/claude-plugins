@@ -202,7 +202,7 @@ grep -m1 "^agent_security:" SDD/requirements/SPEC-*-[feature-name].md
 
 **Evidence rules.** Every finding cites `file:line` and resolves to a concrete code change. Classical appsec findings belong to the base review, not this lens. If the implementation contradicts an `agent-security` finding the spec panel already resolved, say so explicitly — that is a regression between spec and code, and it is at least MEDIUM.
 
-**Abuse cases.** Close the lens by listing the catalog Section 5 rows this implementation's threat surface makes relevant, each with its expected denial, and whether a test currently covers it. Uncovered rows carry forward to Step 4g's eval capture.
+**Abuse cases.** Close the lens by listing the catalog Section 5 rows this implementation's threat surface makes relevant, each with its expected denial, and whether a test currently covers it. A test covers a row only if it performs the attack and asserts the expected denial — one that merely asserts "no crash" does not. Mark uncovered rows `NOT COVERED` in the abuse-case coverage table **and raise each as a HIGH finding** in this section (Resolution: the test to add, file named). An uncovered relevant abuse case is a rejection criterion, like any other HIGH here.
 
 ## Enforcement-Site Verification (mandatory)
 
@@ -445,7 +445,7 @@ Include this section only when the lens ran. When it was skipped, replace it wit
   - Risk: [threat-catalog vocabulary]
   - Resolution: [concrete code change, file named]
 
-**Abuse-case coverage:** [catalog Section 5 rows relevant here | expected denial | covered by test? (test name or NOT COVERED)]
+**Abuse-case coverage:** [catalog Section 5 rows relevant here | expected denial | covered by test? (test name or NOT COVERED — each NOT COVERED row is also a HIGH finding above)]
 
 **Spec-to-code regressions:** [any `agent-security` panel finding the spec resolved but the code does not honor, or "None."]
 

@@ -60,7 +60,6 @@ Create the specification using this enhanced template:
 ```markdown
 ---
 review_panel: [security, performance, data-modeling, api-contract, module-depth]
-eval_required: false
 cross_cutting_decisions: []
 delivery_mode: per-slice
 agent_security: auto
@@ -277,11 +276,10 @@ The spec template includes five YAML frontmatter fields consumed by sdd-flow and
   - Add `agent-security` for agentic features — see `agent_security:` below, which normally appends this value for you.
   - Remove specialists that clearly don't apply (e.g., `api-contract` for pure internal tooling). Removing `module-depth` is rare — almost every spec creates or changes modules.
 
-- **`eval_required:`** — Boolean. Set to `true` if this feature produces LLM output, probabilistic behavior, classification/extraction/summarization, or any quality dimension that unit tests can't verify. When `true`, regression-eval-capture will scaffold a LangSmith eval dataset at implementation completion. Set to `false` for deterministic features (CRUD, UI, data transforms).
 
 - **`cross_cutting_decisions:`** — List of topic labels (snake_case) for any architectural decisions made during this feature that bind future work across the system. Examples: `orchestration_engine`, `vector_store`, `auth_provider`, `primary_datastore`, `logging_format`. Leave empty `[]` if this feature makes no cross-cutting decisions. During planning-complete, the cross-cutting-adr step will extract details for each label from the research/spec and write ADR files under `SDD/adr/`.
 
-- **`agent_security:`** — `auto` (default), `true`, or `false`. Gates the OWASP AI-agent security controls at three points in the flow: the `agent-security` panel value at Step 3c, the agentic-surface lens in the Step 4b code review, and abuse-case seeding at Step 4g eval capture. The control catalog is `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`.
+- **`agent_security:`** — `auto` (default), `true`, or `false`. Gates the OWASP AI-agent security controls at two points in the flow: the `agent-security` panel value at Step 3c and the agentic-surface lens in the Step 4b code review. The control catalog is `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`.
 
   **Agentic-surface detection (resolving `auto`).** Set `agent_security: true` and append `agent-security` to `review_panel:` when the research or the spec you are writing describes any of:
   - a call to an LLM / foundation model (direct API, SDK, or framework);

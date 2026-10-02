@@ -146,13 +146,12 @@ verdict — never edit the target during the review pass.
 
 ## Relationship to sdd-flow
 
-Same catalog, three automatic entry points inside `/sdd-flow` — all gated on the spec's
+Same catalog, two automatic entry points inside `/sdd-flow` — all gated on the spec's
 `agent_security:` frontmatter field:
 
 - **Step 3c** — the `agent-security` panel value spawns `agent-engineering:sdd-spec-agent-security-specialist`
   over §3 during planning.
 - **Step 4b** — the code-review body applies §4 as an agentic-surface lens over the implementation.
-- **Step 4g** — eval capture seeds the regression dataset from §5's abuse-case matrix.
 
 Running this skill standalone on a spec mid-flow duplicates Step 3c. That is fine for an early
 check, but the flow's own pass is what gates the phase.

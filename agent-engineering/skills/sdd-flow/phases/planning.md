@@ -10,7 +10,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning.md`
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present).
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, append `progress.md`.
-- **Task:** Read the research and create the full specification. The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `eval_required`, `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force.
+- **Task:** Read the research and create the full specification. The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force.
 
 Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning-complete.md`
@@ -41,7 +41,7 @@ Panel composition comes from the spec's `review_panel:` frontmatter. If absent o
 - `false` → never include it; the user has declared the feature non-agentic.
 - `auto` → include it when the spec describes an agentic surface (LLM/model call, tool or MCP definition, agent memory or retrieval store feeding model context, inter-agent messaging, or a model output driving an action on an external system). The planning body (3a) normally resolves `auto` and appends the value to `review_panel:` itself; when it did not, the orchestrator applies the same test. Including it under `auto` is cheap — the specialist short-circuits when its own scope gate is closed.
 
-The `agent_security:` value also gates Step 4b's agentic-surface code-review lens and Step 4g's abuse-case eval seeding, so it must be resolved even when `review_panel:` was authored by hand.
+The `agent_security:` value also gates Step 4b's agentic-surface code-review lens, so it must be resolved even when `review_panel:` was authored by hand.
 
 ### Stage 1 — specialists in parallel
 
