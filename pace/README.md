@@ -1,14 +1,10 @@
 # Personal Agent Context Engineering (PACE) Plugin for Claude Code
 
-A [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins) that provides intelligent context management for Claude Code as a personal agent, with flexible research, planning, and execution workflows.
+A [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins) that provides context management for Claude Code as a personal agent: save your working state before context runs out, then resume in a fresh session.
 
 ## Context Engineering First
 
-The primary purpose of PACE is **context management** - keeping Claude Code operating within optimal context window limits (<40%) for best performance. Secondary to that, it provides structured workflows for:
-
-- Research and information gathering
-- Task planning and breakdown
-- Producing deliverables (documents, reports, analysis)
+The purpose of PACE is **context management** - keeping Claude Code operating within optimal context window limits (<40%) for best performance. It is not tied to a workflow: whatever non-coding work is in progress (research, planning, writing, analysis), `/compact` captures it and `/continue` picks it back up.
 
 This methodology draws from:
 
@@ -33,73 +29,11 @@ This will install the plugin system-wide, making it available in all your projec
 
 Or alternatively, install the plugin at the project level by following the instructions in [plugin-installation-scope.md](../plugin-installation-scope.md).
 
-## Flexible Workflow
-
-PACE commands work **standalone or in sequence**. Use what you need:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  FLEXIBLE USAGE - Use any command standalone or in sequence     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  /research-start ──► /research-complete                         │
-│        │                                                        │
-│        ▼ (optional)                                             │
-│  /planning-start ──► /planning-complete                         │
-│        │                                                        │
-│        ▼ (optional)                                             │
-│  /execution-start ──► /execution-complete                       │
-│                                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│  CONTEXT MANAGEMENT - Use anytime context gets high             │
-│                                                                 │
-│  [Any work] ──► /compact ──► [Clear session] ──► /continue      │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Examples of flexible usage:**
-
-- Research only: `/research-start` → `/research-complete` (done)
-- Skip to execution: `/execution-start` → `/execution-complete`
-- Full workflow: Research → Planning → Execution
-- Just need to compact: `/compact` → clear → `/continue`
-
 ## Commands
-
-### Research Phase
-
-```bash
-/research-start      # Begin research on a topic
-/research-complete   # Finalize research findings
-```
-
-### Planning Phase
-
-```bash
-/planning-start      # Create an action plan
-/planning-complete   # Finalize the plan
-```
-
-### Execution Phase
-
-```bash
-/execution-start     # Start producing deliverables
-/execution-complete  # Finalize deliverables
-```
-
-### Context Management
 
 ```bash
 /compact             # Save context and prepare for session clear (works anytime)
 /continue            # Resume work after clearing session
-/context-check       # Check current context utilization
-/monitor             # View context monitoring tools
-```
-
-### Utility
-
-```bash
 /commit              # Save work to version control
 ```
 
@@ -125,18 +59,10 @@ PACE creates and manages this structure in your project:
 ```text
 project/
 └── PACE/
-    ├── research/                    # Research documents
-    │   └── RESEARCH-XXX-*.md
-    ├── plans/                       # Plan documents
-    │   └── PLAN-XXX-*.md
-    ├── deliverables/                # Execution outputs
-    │   └── [documents, reports, etc.]
     └── prompts/
-        ├── EXECUTION-XXX-*.md       # Execution tracking
         └── context-management/
             ├── progress.md          # Current progress
             ├── compacted-*.md       # Compaction files
-            ├── archive/             # Archived progress files
             └── subagent-calls/      # Subagent logs
 ```
 
@@ -150,55 +76,17 @@ Different work types benefit from different models:
 | Planning | Claude Sonnet | Structured task breakdown |
 | Execution | Claude Sonnet | Efficient deliverable creation |
 
-Commands will suggest (not require) the appropriate model.
-
-## Use Cases
-
-### Research Projects
-
-- Gather information from multiple sources
-- Synthesize findings into comprehensive documents
-- Build reference materials
-
-### Task Planning
-
-- Break down complex tasks into actionable steps
-- Identify resources and risks
-- Define success criteria
-
-### Document Creation
-
-- Produce reports, analysis, and summaries
-- Create structured documentation
-- Develop decision frameworks
-
-### Knowledge Management
-
-- Research and organize information
-- Create structured documentation
-- Build personal knowledge bases
+`/continue` will suggest (not require) the appropriate model.
 
 ## Best Practices
 
-### Manage Context
-
-- Check context regularly with `/context-check`
+- Check context regularly with Claude Code's built-in `/context`
 - Compact proactively before hitting 40%
-- Use `/continue` to resume seamlessly after clearing
-
-### Use Flexibly
-
-- Use only the phases you need
-- Skip directly to `/execution-start` for simple tasks
-- Research can be the entire task (not just a phase)
-
-### Start New Tasks
-
-- When starting unrelated work, archive previous progress
-- Start commands will ask if you want to archive existing progress.md
+- Use `/continue` to resume after clearing
 
 ## Version History
 
+- **3.0.0** - Reduced to context management: removed the research, planning, and execution phase commands plus `/context-check` and `/monitor`; `/continue` now resumes from `progress.md` and the compaction file only
 - **2.0.0** - Refactored for flexibility: standalone commands, generic `/compact`, renamed implementation→execution, removed software-specific terminology
 - **1.0.0** - Initial release adapted from SDD methodology
 

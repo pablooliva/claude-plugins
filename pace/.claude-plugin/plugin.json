@@ -1,7 +1,7 @@
 {
     "name": "pace",
-    "description": "Personal Agent Context Engineer (PACE) - Context management for Claude Code as a personal agent. Supports flexible research, planning, and execution workflows with intelligent context compaction to maintain optimal performance.",
-    "version": "2.0.0",
+    "description": "Personal Agent Context Engineer (PACE) - Context management for Claude Code as a personal agent. Compacts in-progress work to disk and resumes it in a fresh session to keep context utilization low.",
+    "version": "3.0.0",
     "author": {
         "name": "Pablo Oliva",
         "email": "p.o@pablooliva.de"
@@ -9,9 +9,8 @@
     "keywords": [
         "personal-agent",
         "context-engineering",
-        "research",
-        "planning",
-        "task-management",
+        "context-compaction",
+        "session-continuity",
         "knowledge-management",
         "documentation"
     ],

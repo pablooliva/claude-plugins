@@ -24,16 +24,15 @@ A comprehensive plugin that provides a standardized Specification-Driven Develop
 - Automated commit message generation
 - Progress monitoring and tracking
 
-### 2. Personal Agent Context Engineer (PACE) — v2.0.0
+### 2. Personal Agent Context Engineer (PACE) — v3.0.0
 
-Context management for Claude Code as a personal agent. PACE keeps Claude operating within optimal context limits (<40%) while providing flexible research, planning, and execution workflows for non-coding tasks.
+Context management for Claude Code as a personal agent. PACE keeps Claude operating within optimal context limits (<40%) on non-coding tasks by saving in-progress work to disk and resuming it in a fresh session.
 
 **Key Features:**
 
-- Context-first design with intelligent compaction and session continuity
-- Flexible workflows - use commands standalone or in sequence
-- Research, planning, and execution phases for any task type
-- Produces deliverables: documents, reports, analysis, plans
+- `/compact` — writes a compaction file and progress tracker for whatever work is in progress
+- `/continue` — reloads that state in a new session
+- `/commit` — saves work to version control
 
 ### 3. Agent Engineering — v2.7.1
 

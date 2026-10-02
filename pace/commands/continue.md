@@ -45,54 +45,16 @@ Note: [Work type] typically works best with [recommended model].
 You're currently using [current model].
 ```
 
-### 3. Context Loading by Work Type
-
-#### For Research Continuation
+### 3. Load Context
 
 1. **Load Context:**
-   - Research document: `PACE/research/RESEARCH-[###]-[topic-name].md`
-   - Files from "Essential to Reload" section
-   - Outstanding questions from "Open Questions" section
+   - Read the compaction file for the work summary
+   - Load files from its "Essential Context to Reload" section
+   - Note outstanding items from "Open Questions" and "Blockers"
 
 2. **Resume:**
-   - Continue investigation from "Current Focus"
-   - Address remaining questions
-   - Document findings in research document
-
-#### For Planning Continuation
-
-1. **Load Context:**
-   - Plan document: `PACE/plans/PLAN-[###]-[task-name].md`
-   - Research document if referenced
-   - Files from "Essential to Reload" section
-
-2. **Resume:**
-   - Continue with section from "Current Focus"
-   - Address items in "Planning Priorities"
-   - Complete remaining plan sections
-
-#### For Execution Continuation
-
-1. **Load Context:**
-   - Execution document: `PACE/prompts/EXECUTION-[###]-[task-name]-[date].md`
-   - Plan document if referenced
-   - Deliverables in progress
-
-2. **Resume:**
-   - Continue with task from "Current Focus"
-   - Follow execution priorities
-   - Complete remaining deliverables
-
-#### For General Work Continuation
-
-1. **Load Context:**
-   - Read compaction file for work summary
-   - Load any referenced files
-   - Understand what was being worked on
-
-2. **Resume:**
-   - Continue from documented state
-   - Address priorities listed
+   - Continue from "Immediate Focus"
+   - Work through "Remaining Work" in order
 
 ### 4. Verify Before Resuming
 

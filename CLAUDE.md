@@ -7,7 +7,7 @@ Guidance for Claude Code when working in this repository.
 A Claude Code Plugin Marketplace. Three plugins ship from this repo:
 
 - **sdd** — Specification-Driven Development methodology (Research → Planning → Implementation).
-- **pace** — Personal Agent Context Engineering for non-coding work (Research → Planning → Execution).
+- **pace** — Personal Agent Context Engineering for non-coding work (compact → clear session → continue).
 - **agent-engineering** — Cross-cutting skills for disciplined AI-assisted development (correction codification, ADR capture, regression eval scaffolding) plus `sdd-flow`, a **self-contained** SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD plugin's content — it ships its own agents, hooks, and phase bodies and does NOT depend on the `sdd` plugin at runtime. The `sdd` plugin remains a standalone, human-driven methodology for external users (frozen at 2.2.0; do not modify it to serve agent-engineering).
 
 `.claude-plugin/marketplace.json` is the source of truth for what the marketplace exposes; each plugin's own `plugin.json` is the source of truth for its version and hooks.
@@ -16,7 +16,7 @@ A Claude Code Plugin Marketplace. Three plugins ship from this repo:
 
 Two patterns in this repo — don't assume one applies to the other.
 
-### Phase-based plugins (`sdd`, `pace`)
+### Command plugins (`sdd`, `pace`)
 ```
 plugin/
 ├── .claude-plugin/plugin.json     # metadata + SubagentStop hook
@@ -25,7 +25,7 @@ plugin/
 └── README.md
 ```
 - **sdd commands** include the phase trio (`research|planning|implementation`-`{start,compact,complete}`), plus `research-clarify`, `implementation-test`, `critical-review`, `spec-review-panel`, `adhoc-compact`, `code-review`, `commit`, `context-check`, `continue`. No `monitor` command.
-- **pace commands** use `execution-{start,complete}` (not implementation). Only one generic `compact.md`, no per-phase compact. Includes `monitor.md`.
+- **pace commands** are only `compact`, `continue`, `commit` — no phase commands (removed in 3.0.0). One generic `compact.md`.
 
 ### Skill + self-contained-orchestrator plugin (`agent-engineering`)
 ```
@@ -60,7 +60,7 @@ agent-engineering/
 1. Commands are markdown files containing prompts; users invoke them via `/command-name`.
 2. Skills are invoked through the Skill tool when their description matches the task.
 3. SDD, PACE, and agent-engineering each register a `SubagentStop` hook that runs `hooks/log_subagent_call.py` to capture subagent transcripts. (If both `sdd` and `agent-engineering` are installed, subagent stops are logged twice — harmless duplicates.)
-4. Model routing (sdd/pace commands): Research uses Opus; Planning/Implementation/Execution use Sonnet. In `agent-engineering`'s `sdd-flow`, routing is carried by shipped agent frontmatter — `sdd-workhorse` and the `sdd-spec-*-specialist` agents are Sonnet; `sdd-critical-reviewer` is Opus.
+4. Model routing (sdd commands): Research uses Opus; Planning/Implementation use Sonnet. pace's `continue` only recommends a model by work type. In `agent-engineering`'s `sdd-flow`, routing is carried by shipped agent frontmatter — `sdd-workhorse` and the `sdd-spec-*-specialist` agents are Sonnet; `sdd-critical-reviewer` is Opus.
 
 ## Development
 
@@ -71,9 +71,9 @@ agent-engineering/
 
 ## Key Design Principles
 
-- **Context budget**: phase-based plugins target <40% context utilization via compaction commands.
+- **Context budget**: `sdd` and `pace` target <40% context utilization via compaction commands.
 - **Markdown is the program**: command/skill files ARE the functionality.
-- **Phase artifacts**: each phase writes outputs the next phase consumes (under `SDD/` or `PACE/`).
+- **Phase artifacts**: each phase writes outputs the next phase consumes (under `SDD/`).
 - **agent-engineering composes**: its skills slot into other workflows (notably `sdd-flow`) rather than running standalone.
 
 ## Plugin Installation
