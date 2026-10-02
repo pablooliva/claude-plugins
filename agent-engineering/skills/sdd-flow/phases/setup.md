@@ -6,13 +6,13 @@ Read this at the very start of every fresh `/sdd-flow <task>` invocation (not `c
 
 ## Step 0: Scope Assessment
 
-When invoked, the orchestrator first:
+When invoked, the orchestrator first (for `--next-tier`, steps 1–3 are replaced — see *Starting the next tier* at the end of this step):
 
 1. Extracts the **task description** from the user's input.
 2. Extracts an **issue/ticket number** if provided (`#42`, `PROJ-123`); otherwise determines sequential numbering by checking existing `SDD/` artifacts.
 3. Derives a **kebab-case `[feature-name]`** from the task.
 4. Resolves all canonical identifiers (SKILL → Canonical Identifiers).
-5. **Resolves SKILL_ROOT, CATALOG, and STANDARD** (SKILL → SKILL_ROOT resolution) and records all three, with the resolved identifiers, in `SDD/orchestration/progress.md` (create the file + parent dirs if absent). Resumed sessions re-derive every body path from this record. A missing CATALOG closes the `agent_security:` gate for the run (warning only, no halt). A missing STANDARD (`SKILL_ROOT/references/enforcement-sites.md`) is a broken install: halt and tell the user.
+5. **Resolves SKILL_ROOT, CATALOG, STANDARD, and TIERS** (SKILL → SKILL_ROOT resolution) and records all four, with the resolved identifiers and any `--tier N` value, in `SDD/orchestration/progress.md` (create the file + parent dirs if absent). Resumed sessions re-derive every body path from this record. A missing CATALOG closes the `agent_security:` gate for the run (warning only, no halt). A missing STANDARD (`SKILL_ROOT/references/enforcement-sites.md`) or TIERS (`PLUGIN_ROOT/skills/simplicity-challenge/references/tiers.md`) is a broken install: halt and tell the user.
 
 Then spawn ONE **`agent-engineering:sdd-workhorse`** subagent for scope assessment. There is no dedicated body file — embed this brief directly in the prompt:
 
@@ -39,6 +39,17 @@ The orchestrator presents the decomposition to the user:
 
 Then **STOP**. The user manually invokes `/sdd-flow <checklist item>` for each item at their own pace. (This decomposition stop is unconditional — the orchestrator does not auto-start the first item.)
 
+### Starting the next tier (`--next-tier`)
+
+`/sdd-flow --next-tier [feature-name]` starts a new cycle for the next delivery tier of a feature that already shipped one. A tier is one complete cycle with its own number, brief, spec, reviews, and commits; this is how the next one begins. It replaces steps 1–3 at the top of Step 0:
+
+1. **Find the tier plan.** `SDD/flow/TIERS-[feature-name].md`. With no name given, use the only tier plan that has a tier neither `shipped` nor `dropped`; if there are several, list them and stop.
+2. **Pick the tier.** The lowest-numbered tier whose status is neither `shipped` nor `dropped`. Refuse, naming the reason, if the tier below it is not `shipped` (a tier is used before the next is planned), or if no tier is left.
+3. **Resolve identifiers.** `[###]` = the next sequential number. `[feature-name]` = the tier plan's feature name with `-t2` or `-t3` appended. The task description = that tier's sketch plus the Deferred rows aimed at it, quoted from the tier plan.
+4. **Record** in `progress.md`, beside the identifiers: `Next-tier cycle: Tier N`, **TIER_PLAN** = the tier plan's path (it keeps the first tier's feature name — every later spawn is given this path, never one derived from the suffixed name), and the previous tier's research document (from the tier plan's `Built in` column: the same number and name as that spec).
+
+Then continue with steps 4–5 of the list at the top of Step 0 and the scope-assessment spawn, as usual. On any other invocation, **TIER_PLAN** is `SDD/flow/TIERS-[feature-name].md`.
+
 ---
 
 ## Step 1: Parse Input and Select Mode
@@ -46,8 +57,8 @@ Then **STOP**. The user manually invokes `/sdd-flow <checklist item>` for each i
 Reached only after Step 0 says the feature fits one cycle. If the invocation already carried `--auto` or `--supervised`, use it and skip the prompt. Otherwise ask:
 
 > **Choose execution mode:**
-> **Supervised** (default) — runs autonomously but pauses at two checkpoints: after research completes, and before committing implementation.
-> **Autonomous** — no checkpoints; runs research → planning → implementation → done, surfacing the final result only.
+> **Supervised** (default) — runs autonomously but pauses at two checkpoints: after the design brief, and before committing implementation.
+> **Autonomous** — stops for you to approve the design brief, and again only if the spec departs from it, then runs to the end.
 > Reply **s** for supervised or **a** for autonomous. (Default: supervised)
 
 Record the chosen mode in `progress.md`.
@@ -56,7 +67,9 @@ Record the chosen mode in `progress.md`.
 
 ## Step 1.5: Pre-Research Clarification Gate
 
-**Fires in BOTH supervised and autonomous modes.** Externalizing the design concept (Brooks) before any work begins is the highest-leverage artifact, and the cost of skipping propagates through every downstream phase. This is the **only** mandatory autonomous-mode checkpoint.
+**Fires in BOTH supervised and autonomous modes.** Externalizing the design concept (Brooks) before any work begins is the highest-leverage artifact, and the cost of skipping propagates through every downstream phase. This is one of two unconditional autonomous-mode stops (with the Step 2.5 design gate); Step 3g adds a third only when the spec departs from the approved brief.
+
+**On a next-tier cycle the interview is about feedback.** `/research-clarify` has a next-tier branch: it loads the tier plan, walks its `## Feedback` notes, and asks what using the previous tier showed. This is the same gate doing a different job, not an extra pause — say so in the prompt below ("Tell me what using Tier N showed" in place of "Clarify the design concept first?"), and name the tier plan's path along with the resolved identifiers.
 
 **Skip the gate if** `SDD/research/CLARIFICATION-[###]-[feature-name].md` already exists (user pre-clarified) — proceed to Step 2; the research subagent picks it up automatically.
 

@@ -102,6 +102,20 @@ This is not a hard block — research can proceed without clarification — but 
 
 If reviewing specification artifacts (`SPEC-XXX-*.md`):
 
+### Design Brief Fidelity
+
+If `SDD/requirements/DESIGN-[###]-[feature-name].md` exists, load it. The user read and approved this brief (your prompt states the approved revision and tier); the spec is held to it. Verify:
+
+- [ ] **Decisions honoured** — Does the spec implement every Key decision as chosen? A decision reversed or weakened without an entry under `## Deviations from Design Brief` is a HIGH finding.
+- [ ] **Answers honoured** — Is every answer the user gave (the brief's `## Answers and changes`) reflected in the spec?
+- [ ] **Scope respected** — Does any requirement, module, or slice fall inside the brief's "Not doing" list?
+- [ ] **Tier respected** — Does the spec's `tier:` equal the approved tier, and does it specify nothing the brief placed in a later tier?
+- [ ] **Footprint consistent** — Do the spec's modules stay within the brief's "What changes where"? New areas must be recorded as `footprint` deviations.
+- [ ] **Outline recognisable** — Can each brief outline entry be matched to one or more delivery slices? Reordering and splitting are fine when recorded.
+- [ ] **Deviations accurate** — Is every recorded deviation real, and is every real deviation recorded? An unrecorded departure from a binding part (Key decisions, Not doing, answered questions) is a HIGH finding.
+
+If no brief exists (a flow that began before the design gate shipped), note the gate was skipped; this is not a finding.
+
 ### Specification Weaknesses
 
 - [ ] **Ambiguous requirements** - Which REQ-XXX can be interpreted multiple ways?
@@ -148,7 +162,7 @@ If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## De
 
 ### Research Alignment Issues
 
-- [ ] **Dropped findings** - What research insights didn't make it into the spec?
+- [ ] **Dropped findings** - What research insights didn't make it into the spec? (In a tiered spec, a finding recorded under `## Deferred to Later Tiers` is accounted for, not dropped.)
 - [ ] **Unsupported requirements** - Which requirements lack research backing?
 - [ ] **Stakeholder gaps** - Whose validated needs aren't addressed?
 - [ ] **Production issue coverage** - Which historical issues aren't prevented?
@@ -196,6 +210,9 @@ If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## De
 1. **[Category]**: [What's not specified]
    - Why it matters: [Impact on implementation]
    - Suggested addition: [What to add]
+
+### Design Brief Fidelity
+[One line if no brief exists. Otherwise each unrecorded departure, with the brief's text and the spec's, or "Spec matches the approved brief; N recorded deviation(s) verified."]
 
 ### Research Disconnects
 - Research finding "[X]" not addressed in spec
@@ -343,6 +360,15 @@ Rate each finding:
 - **HIGH**: Will cause failures, security issues, or major rework
 - **MEDIUM**: Will cause confusion, technical debt, or minor issues
 - **LOW**: Best practice deviation, style issue, or minor improvement
+
+### Respect the Tier
+
+Applies to planning and implementation reviews when the spec's frontmatter carries `tier:` (1, 2, or 3). Read the tier standard at the **TIERS** path in your prompt and the spec's `## Deferred to Later Tiers` first. An untiered spec is reviewed as before.
+
+- **Left out on purpose is not a finding.** Do not raise a finding — a missing edge case, an unhandled scenario, a scale concern — for an item listed under `## Deferred to Later Tiers`, or for the absence of anything the tier standard places in a later tier.
+- **Unsafe to defer is a HIGH finding.** Raise one when a deferred item breaches the standard's floor (TIERS → The floor) — including a deferred case this tier can reach that fails quietly: no `FAIL-XXX` in the spec, or no visible failure in the code. Title it `Unsafe to defer`, and name the `DEFER-XXX` row and the floor rule.
+- **Built ahead is a finding.** Raise one for any part that exists only for a later tier — in the spec, a module, interface member, parameter, or option no requirement of this tier uses; in the code, an unused abstraction, option, hook, or dependency. MEDIUM by default; HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal; "a later tier will need it" is not a justification.
+- **Scope, never rigour.** What this tier does build is reviewed in full. A tier never excuses a defect in behaviour it includes.
 
 ### Don't Stop at Surface Level
 

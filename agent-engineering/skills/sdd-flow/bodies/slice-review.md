@@ -100,6 +100,8 @@ Apply the following review process to the computed slice file set. The full revi
 
 **Agentic-Surface Lens (conditional).** Read the SPEC's `agent_security:` frontmatter. `true` → run the lens over this slice's file set. `false` → skip. `auto`/absent → run it only if this slice's files contain an agentic surface (model call, tool/MCP definition, agent memory or retrieval store, inter-agent messaging, or a model output driving an external action). When it runs, read the control catalog at the path your prompt provides (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) and apply **Section 4 (Code-Level Checks)** only — Section 3 is spec-level and was covered at Step 3c. Report findings under a `## AI Agent Security` heading in the slice review document, with `file:line` evidence and concrete code resolutions; a HIGH finding rejects the slice. When the lens is skipped, record the one-line reason instead. Close the lens with the catalog Section 5 abuse cases this slice's files make relevant, each with its expected denial and the test that covers it. A test covers a case only if it performs the attack and asserts the expected denial. Raise every uncovered case as a HIGH finding (Resolution: the test to add) — it rejects the slice like any other HIGH.
 
+**Respect the tier (tiered specs only).** When the SPEC's frontmatter carries `tier:` (the delivery tier — not a module's `Risk:` tier), read the tier standard at the **TIERS** path in your prompt and the SPEC's `## Deferred to Later Tiers` before raising findings. Do not raise a finding for behaviour that section lists as deferred — it was left out on purpose. Do raise one, at HIGH and titled `Unsafe to defer`, when the code breaches the standard's floor for a deferred item: most often a deferred case the code can reach that fails quietly instead of visibly. And raise one for anything **built ahead** — an abstraction, parameter, option, hook, flag, or dependency that no requirement of this tier uses: MEDIUM by default, HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal; "a later tier will need it" is not a justification. Everything this tier does build is reviewed in full.
+
 ## Step 5.5: Project Review Checklist Walk (conditional)
 
 Projects often carry their own review checklist — a `CLAUDE.md`/`AGENTS.md` section listing pre-merge checks, a conventions doc, a PR template. **A checklist only fires if the reviewer is told to walk it**, so walking it is a required step here, not a nicety: the review process in Step 5 covers SPEC alignment and code quality, and knows nothing about project-local obligations (register the feature in an index, update a status table, bump a compatibility matrix).
@@ -139,6 +141,12 @@ Your prompt provides five paths: `STANDARD` (`references/enforcement-sites.md`),
 Write the results into the review document's `## Enforcement-Site Verification` section (template below). Do NOT edit the Control Site Status table — the retro owns it.
 
 When the review document is written, append to `SDD/orchestration/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM)` (`N` = the `ITER` in your prompt; `<r>` = how many of the `<h>` HIGH you tagged `[row-only]` in step 1c; omit the bracket when `<r>` is 0). It is a phase-detection marker; do not paraphrase it.
+
+## Step 5.7: Design Brief Check (informational)
+
+Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]-[feature-name].md`; your prompt states its approved revision and tier). The user approved it before the spec was written; this step tells them whether the slice stayed inside it. Compare the git list from Step 4 against the areas in the brief's "What changes where" table and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
+
+**Informational only.** Do not raise a finding for an out-of-footprint file on that ground alone, and do not let this section affect the APPROVED / REJECTED decision. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body.
 
 ## Step 6: Write the per-slice review document
 
@@ -198,6 +206,13 @@ A control is **Complete-eligible** only if its per-control diff outcome is `MATC
 | Module | Declared Risk | Depth Applied | Notes |
 |--------|---------------|---------------|-------|
 | MODULE-XXX | high \| medium \| low | full \| default \| boundary | [escalations, deviations, justifications] |
+
+## Design Brief Check
+
+- **Delivers:** [the brief's delivery-outline entry or entries this slice corresponds to, quoted — or "no matching outline entry", with what it is instead]
+- **Outside the approved footprint:** [`None.` — or one line per changed file that falls under no row of the brief's "What changes where" table: the file, and why it was touched]
+
+[Informational — not a finding, and no part of the decision below. `No design brief — check skipped.` when the feature has none.]
 
 ## Decision: [APPROVED / REJECTED]
 

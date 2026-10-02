@@ -8,6 +8,8 @@ This is **input clarification, not codebase research**. `/research-start` invest
 
 If the feature is already crisply specified (e.g., a clear ticket with explicit acceptance criteria, or a small well-understood change), skip this command and go straight to `/research-start`.
 
+**Next-tier cycles interview for feedback instead.** When an earlier tier of the feature is already built and `/sdd-flow --next-tier` sent you here, follow §4a in place of §4.
+
 ## 1. Load Existing Glossary (If Present)
 
 If `SDD/UBIQUITOUS_LANGUAGE.md` exists, load it before interviewing. Use the project's canonical domain terms in your questions and in the resulting CLARIFICATION document — do not introduce synonyms that fragment vocabulary already established in prior cycles. If the user's words conflict with the glossary, surface that mismatch as a topic to resolve during the interview (either rename the glossary entry or have the user adopt the canonical term).
@@ -55,6 +57,18 @@ For every feature, walk these branches at minimum. Skip a branch only when it is
 - **Existing systems and constraints from the codebase.** What the user already knows about the relevant code (does not replace `/research-start`, but captures the user's prior knowledge).
 
 If the user knows of more branches relevant to this specific feature (e.g., legal review, third-party integrations, cost), add them.
+
+## 4a. Next-Tier Cycles — the Feedback Interview
+
+Applies when `/sdd-flow --next-tier` started this cycle: an earlier delivery tier of the feature is built and has been used, and this cycle adds the next one. The design concept was externalized in the earlier cycle. What is not yet written down is what using that tier showed — and that, not the plan made before it was used, is what the next tier starts from.
+
+1. **Load the tier plan** at the path `/sdd-flow` gave you (`SDD/flow/TIERS-[feature-name].md` — the first tier's feature name, without the `-t2` / `-t3` suffix this cycle's artifacts carry). This is the one exception to §8's "do not read project files": it is the record of the earlier cycle, not the codebase.
+2. **Walk the `## Feedback` notes** one at a time. For each: is it still true, how often did it come up, and what should change because of it?
+3. **Ask what using the shipped tier showed**, one question at a time, in the posture of §3: what was used and what was not; what was missing on first real use; what failed, and whether the failure was visible; what was done by hand that should not have to be; what turned out not to matter.
+4. **Walk the Deferred rows aimed at this tier and its sketch.** For each: still wanted, wanted differently, or no longer wanted? Do not assume a sketched item is still needed — a tier that turns out smaller than its sketch, or is dropped, is a good outcome.
+5. **Skip the §4 branches** except the ones the feedback reopens (typically Success, Failure, Constraints, Out of scope).
+
+Write the `CLARIFICATION-[###]-[feature-name].md` document as in §5, with a `## Feedback on Tier N` section placed first (each point, in the user's words, and what it changes) and the other sections covering only what differs from the earlier cycle. Then append the new feedback points to the tier plan's `## Feedback`, dated, so the record that carries over between tiers has them too. Change nothing else in the tier plan.
 
 ## 5. Output Document Structure
 

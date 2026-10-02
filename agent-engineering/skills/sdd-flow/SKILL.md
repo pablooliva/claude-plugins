@@ -1,11 +1,11 @@
 ---
 name: sdd-flow
-description: "INVOKE THIS SKILL when the user asks to run end-to-end feature development via the SDD methodology, or runs /sdd-flow with a task description. Takes a task or software requirement and drives it through the complete SDD lifecycle (Research → Planning → Implementation → Done) via subagents with fresh context per phase. Self-contained: ships its own forked phase bodies, agents, and hooks — the SDD plugin is NOT required and need not be installed. Integrates cross-cutting-adr at research/planning boundaries, a two-stage specialist panel during planning, and OWASP AI-agent security review for agentic features (spec panel, code-review lens); spec frontmatter (review_panel, cross_cutting_decisions, delivery_mode, agent_security) gates each."
+description: "INVOKE THIS SKILL when the user asks to run end-to-end feature development via the SDD methodology, or runs /sdd-flow with a task description. Takes a task or software requirement and drives it through the complete SDD lifecycle (Research → Planning → Implementation → Done) via subagents with fresh context per phase. Self-contained: ships its own forked phase bodies, agents, and hooks — the SDD plugin is NOT required and need not be installed. Stops after research at a design gate: a short design brief the user must approve before any spec is written, which proposes three delivery tiers and builds Tier 1 unless told otherwise. Integrates cross-cutting-adr at research/planning boundaries, a two-stage specialist panel during planning, and OWASP AI-agent security review for agentic features (spec panel, code-review lens); spec frontmatter (review_panel, cross_cutting_decisions, delivery_mode, agent_security, tier) gates each."
 ---
 
 # SDD Flow — End-to-End Feature Development
 
-Takes a task or software requirement and drives it through the complete SDD (Specification-Driven Development) lifecycle: **Research → Planning → Implementation → Done**.
+Takes a task or software requirement and drives it through the complete SDD (Specification-Driven Development) lifecycle: **Research → Design gate → Planning → Implementation → Done**.
 
 This skill is the **single source of truth** for the flow. It is **self-contained**: every per-phase instruction set ("body") lives under `skills/sdd-flow/bodies/`, every spawned agent ships in `agent-engineering/agents/`, and the transcript hook ships in `agent-engineering/hooks/`. The SDD plugin does **not** need to be installed — nothing here reads from it at runtime.
 
@@ -17,6 +17,8 @@ The main conversation is a lightweight **orchestrator**: it spawns one subagent 
 /sdd-flow <task or requirement description>
 /sdd-flow #42 Add CSV export to the reports page
 /sdd-flow --auto #15 Implement allow-list management UI
+/sdd-flow --tier 2 #42 Add CSV export to the reports page
+/sdd-flow --next-tier csv-export
 /sdd-flow continue
 ```
 
@@ -41,7 +43,7 @@ At Step 0 the orchestrator resolves **SKILL_ROOT** = the absolute path of this s
 
 Every body path in a spawn prompt is the **resolved absolute** `SKILL_ROOT/bodies/<file>.md`. Compact bodies are passed the same way (read only if the Safety-Net trips).
 
-The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), and the code-review / slice-review agentic lens (4b). It also derives **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md` — the enforcement-site standard (definitions of control and enforcement site, the per-site mutation standard, the three site dispositions, the inventory shape) passed to every implementation, blind-count, review, fix, retro, and completion spawn. Record all three in `progress.md` alongside SKILL_ROOT. STANDARD ships inside this skill, so a missing STANDARD means a broken install: halt and tell the user (unlike CATALOG, there is no degraded mode — without it no control can reach `Complete`). If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run and a one-line warning goes to `progress.md` — the flow does not halt.
+The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), and the code-review / slice-review agentic lens (4b). It also derives **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md` — the enforcement-site standard (definitions of control and enforcement site, the per-site mutation standard, the three site dispositions, the inventory shape) passed to every implementation, blind-count, review, fix, retro, and completion spawn. It also derives **TIERS** = `PLUGIN_ROOT/skills/simplicity-challenge/references/tiers.md` — the plugin's one tier standard (the three delivery tiers, the floor that is never deferred, the cut tests, the tier-plan shape), owned by the `simplicity-challenge` skill and read here, never restated; it is passed to the design-brief, planning, spec-review, spec-fix, code-review, and completion spawns. Record all four in `progress.md` alongside SKILL_ROOT. STANDARD ships inside this skill, so a missing STANDARD means a broken install: halt and tell the user (unlike CATALOG, there is no degraded mode — without it no control can reach `Complete`). TIERS ships in the same plugin; a missing TIERS is likewise a broken install. If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run and a one-line warning goes to `progress.md` — the flow does not halt.
 
 ## Canonical Identifiers (resolved at Step 0)
 
@@ -63,6 +65,8 @@ Every subagent MUST use these exact paths; the orchestrator resolves `[###]`/`[f
 | Ubiquitous glossary | `SDD/UBIQUITOUS_LANGUAGE.md` | research-complete + planning-complete (incremental) | All phase subagents |
 | Research doc | `SDD/research/RESEARCH-[###]-[feature-name].md` | Research subagent | Research review, Planning |
 | Research critical review | `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md` | Research review | Research fix |
+| Design brief | `SDD/requirements/DESIGN-[###]-[feature-name].md` | Design-brief subagent (2.5a, 2.5c) | **The user**; Planning, Spec review, Spec fixes, Code review, Slice review |
+| Tier plan | `SDD/flow/TIERS-[feature-name].md` (one per feature across all its tiers — a next-tier cycle keeps the first tier's name) | Design-brief subagent; Completion (4f) | Planning, the next tier's cycle |
 | Specification | `SDD/requirements/SPEC-[###]-[feature-name].md` | Planning subagent | Panel, Planning review, Implementation |
 | **Panel findings (per specialist)** | `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md` | Each specialist (Stage 1) | Panel synthesis (Stage 2) |
 | Spec panel review | `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md` | Panel synthesis (Stage 2) | Planning fix |
@@ -87,9 +91,9 @@ Every subagent MUST use these exact paths; the orchestrator resolves `[###]`/`[f
 SDD/
 ├── UBIQUITOUS_LANGUAGE.md
 ├── adr/{NNNN-slug.md, README.md}
-├── flow/DECOMPOSITION-[###]-[feature-name].md
+├── flow/{DECOMPOSITION-[###]-[feature-name], TIERS-[feature-name]}.md
 ├── research/{CLARIFICATION-*, RESEARCH-*}.md
-├── requirements/SPEC-[###]-[feature-name].md
+├── requirements/{DESIGN-[###]-[feature-name], SPEC-[###]-[feature-name]}.md
 ├── implementation/
 │   ├── IMPLEMENTATION-PLAN-*.md
 │   ├── sites/{SITES-IMPL-*, SITE-CONVENTIONS-*}.md
@@ -144,6 +148,7 @@ Routing is carried by **shipped agent frontmatter** — no runtime model switchi
 | Blind site count (4a.5, 4e.5) — always a fresh spawn | `agent-engineering:sdd-workhorse` | sonnet |
 | Each panel specialist (Stage 1), including `agent-security` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
 | Research/spec/impl critical review; panel synthesis (Stage 2) | `agent-engineering:sdd-critical-reviewer` | opus |
+| Design brief — first draft and every revision (2.5a, 2.5c) | `agent-engineering:sdd-workhorse` | **opus**, by per-spawn override — the one planning document a person reads |
 
 **Why the blind counter may share the implementer's agent type.** Its independence comes from its context, not its model: a fresh spawn whose prompt carries only the SPEC, production code, and STANDARD, with a read allowlist that excludes the implementer's inventory, the IMPLEMENTATION-PLAN, `progress.md`, tests, and earlier counts. Every historical under-count this step targets was caught by a fresh `sdd-workhorse` reviewer, not by a different model.
 
@@ -158,8 +163,9 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 | 0 | Scope assessment → resolve identifiers + SKILL_ROOT | `phases/setup.md` |
 | 1 | Parse input, select mode (supervised default / `--auto`) | `phases/setup.md` |
 | 1.5 | Pre-research clarification gate (fires in BOTH modes) | `phases/setup.md` |
-| 2 | Research (2a–2f) | `phases/research.md` |
-| 3 | Planning (3a–3g; two-stage panel + bounded fix loop) | `phases/planning.md` |
+| 2 | Research (2a–2e) | `phases/research.md` |
+| 2.5 | Design gate — brief written, then a stop for approval (fires in BOTH modes, every time the brief is written or rewritten) | `phases/planning.md` |
+| 3 | Planning (3a–3g; two-stage panel + bounded fix loop; 3g stops in BOTH modes if the spec departs from the approved brief) | `phases/planning.md` |
 | 4 | Implementation — route on spec `delivery_mode:` | read the matching file ↓ |
 | 4 · whole-feature (default) | 4a–4j | `phases/implementation-whole-feature.md` |
 | 4 · per-slice | per-slice cycle + end-of-feature cycle | `phases/implementation-per-slice.md` |
@@ -172,13 +178,15 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 | Argument | Description |
 |---|---|
 | `<task>` | The task, requirement, or feature description |
-| `--auto` | Fully autonomous (no checkpoints except the mandatory Step 1.5 clarification gate) |
+| `--auto` | Autonomous: stops only at the mandatory Step 1.5 clarification gate, the Step 2.5 design gate, and — if the spec departs from the approved brief — Step 3g |
 | `--supervised` | Supervised mode with checkpoints (default) |
 | `--skip-clarify` | Suppress the Step 1.5 clarification gate; gate-skip recorded in the Step 2c review |
+| `--tier N` | Have the design brief recommend Tier N (1, 2, or 3) instead of Tier 1. The tier can still be changed at the design gate |
+| `--next-tier [feature-name]` | Start a new cycle for the next unshipped tier in `SDD/flow/TIERS-[feature-name].md` (`phases/setup.md` → Step 0) |
 | `--skip-slice-checkpoints` | Suppress per-slice pauses (default ON in per-slice mode). The re-planning halt fires regardless |
 | `--fall-back-to-whole-feature` | With `continue` after a practicality-gate halt: flip `delivery_mode` to whole-feature |
 | `--retry-slicing "<hint>"` | With `continue` after a practicality-gate halt: re-run slice extraction with a hint |
-| `--replan` | With `continue` after a re-planning halt: re-run Step 3 with ledger + triggering retro |
+| `--replan` | With `continue` after a re-planning halt: revise the design brief (the gate fires), then re-run Step 3 with ledger + triggering retro |
 | `--from-slice SLICE-XXX` | With `--replan`: resume from a named slice in the NEW plan (validated post-replan) |
 | `--override-replan` | With `continue` after a re-planning halt: continue on the current plan. Cannot combine with `--replan` |
 | `continue` | Resume from the last interruption point (see `phases/protocols.md`) |
@@ -186,7 +194,7 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 ## Key Principles
 
 1. **Each phase is thorough** — research informs planning; planning constrains implementation.
-2. **Every requirement gets a test.** Reviews are gates, not checkboxes — ALL findings (HIGH/MEDIUM/LOW) resolved before proceeding.
+2. **Every requirement gets a test.** Reviews are gates, not checkboxes — ALL findings (HIGH/MEDIUM/LOW) resolved before proceeding. In a tiered spec, a finding that something is *absent* may be resolved by recording it under `## Deferred to Later Tiers`; a finding about behaviour the tier does build is always fixed.
 3. **Panel STOP/REVISE halts the flow, but the fix loop is bounded** — max 3 iterations; any iteration that fails to strictly decrease the gating finding count halts. Unresolvable findings route back to the human.
 4. **ADRs compound across features; the spec is the source of truth; document deviations.**
 5. **Never persist PII or secrets in SDD docs. Commit messages have NO co-author attribution.**
@@ -194,5 +202,7 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 7. **Per-slice cycle is strict** — one subagent per slice, mandatory per-slice review, retro + ledger before the atomic per-slice commit. Slice subagents receive ONLY the rolling ledger.
 8. **Re-planning recommendations halt the flow regardless of `--skip-slice-checkpoints` and mode.**
 9. **No control is Complete on the implementer's word.** Every control (any SPEC rule that must hold on every path — guards, refusals, write controls, output contracts, invariants, security controls) is inventoried site by site with per-site mutation evidence, then counted **blind** by a separate spawn and diffed (4a.5 per slice or feature; 4e.5 feature-wide before completion). Mismatches are findings in the existing fix loop; a control with no independent count stays `Partial`. Standard: `references/enforcement-sites.md`.
+10. **The user approves a design, not a spec.** The design brief is the one planning document written for a person; nothing is specified until it is approved, with every question in it answered. The spec is held to it, and a spec that departs from it is shown to the user before any code is written.
+11. **Tiers limit scope, never rigour, and nothing is built ahead.** Each tier is its own cycle with the same reviews, tests, and site counts. A tier holds the simplest code and structure that serves that tier; a later tier reshaping it is expected. Standard: TIERS.
 
 Session resumption, mid-phase handoff, phase-detection priority, and error handling all live in `phases/protocols.md`.

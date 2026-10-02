@@ -1,6 +1,6 @@
 # Design Brief Gate for sdd-flow
 
-**Status:** Draft proposal — not yet implemented. No skill file has been changed.
+**Status:** Implemented in agent-engineering 3.4.0, together with the companion proposal. The shipped skill files supersede the appendices below, which are kept as the original drafts.
 **Date:** 2026-10-02
 **Affects:** `agent-engineering/` plugin (`sdd-flow` skill: one new body, edits to six phase files, `SKILL.md`, five existing bodies, README, version). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.

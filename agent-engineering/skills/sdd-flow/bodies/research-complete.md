@@ -55,6 +55,15 @@ Confirm that `SDD/research/RESEARCH-[###]-[feature-name].md` contains all requir
 - [ ] Developer documentation needs specified
 - [ ] Configuration documentation requirements noted
 
+### Next-tier cycle (delta research)
+
+When your prompt says `NEXT-TIER CYCLE: Tier N`, the document is a delta on the previous tier's research, and the checklist above is scoped to it. Your prompt gives the paths of the previous research document and of the tier plan:
+
+- [ ] A section may be the single line `Unchanged — see RESEARCH-… → [section]`. Accept it only after checking that the previous document's section exists and still describes the code as the previous tier left it; otherwise fill the section in.
+- [ ] Every Deferred row in the tier plan aimed at this tier is investigated
+- [ ] Every note under the tier plan's `## Feedback` is addressed, or explicitly set aside with a reason
+- [ ] What the previous tier's code changed is traced with file:line references
+
 ## 2. Finalize Research Document
 
 Ensure all investigation questions are answered and the research document provides sufficient foundation for specification creation without requiring additional system investigation.

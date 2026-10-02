@@ -12,10 +12,12 @@ A **separate axis** from the supervised/autonomous (phase-boundary) axis. Defaul
 
 | Phase-boundary | Slice-boundary | Behavior |
 |---|---|---|
-| supervised | on | Pauses at research-end + each completed slice + impl-end |
-| supervised | off | Pauses at research-end + impl-end; slices run continuously inside |
-| **autonomous** | **on** (default) | Research + planning autonomous; pause between each fully-completed slice; end-of-feature autonomous through commit |
-| autonomous | off (via `--skip-slice-checkpoints`) | Fully autonomous start-to-finish |
+| supervised | on | Pauses at the design gate + each completed slice + impl-end |
+| supervised | off | Pauses at the design gate + impl-end; slices run continuously inside |
+| **autonomous** | **on** (default) | Pauses at the design gate; then planning autonomous; pause between each fully-completed slice; end-of-feature autonomous through commit |
+| autonomous | off (via `--skip-slice-checkpoints`) | Pauses at the design gate; autonomous from there to the finish |
+
+The design gate (Step 2.5) stops in every row, and so does the Step 3g deviation check when the spec departs from the approved brief — neither is a slice-boundary or mode setting.
 
 ---
 
@@ -73,7 +75,7 @@ Exit 0 = `MATCH`, 1 = `MISMATCH`, 2 = input error (missing/malformed inventory �
 The orchestrator does not interpret the diff further: every outcome goes to 4b, which turns it into findings. A mismatch is a finding inside the existing review/fix loop — never a separate loop.
 
 ### Per-slice 4b — Per-slice code review
-Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/slice-review.md` for `SLICE-XXX`. **Mandatory per slice** — not deferred to end-of-feature. Writes `SDD/reviews/REVIEW-SLICE-*`. Pass `BASE` — the same slice base commit 4a.5 uses; the slice is uncommitted during review, so the reviewer diffs the working tree against it. Pass **STANDARD**, the site inventory, **CONVENTIONS** (the path even if the file does not yet exist — the review may create it), and the latest iteration's `SITE-COUNT` and `SITE-DIFF` paths — the body's Step 5.6 carries every diff finding into the review, resolves `EXTRA` sites by re-running their mutations, re-runs a mutation sample, and verifies dispositions (ii)/(iii) are argued. When the spec's `agent_security:` gate is `true` or `auto`/absent, pass the resolved **CATALOG** path so the body's Agentic-Surface Lens can run over the slice's file set.
+Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/slice-review.md` for `SLICE-XXX`. **Mandatory per slice** — not deferred to end-of-feature. Writes `SDD/reviews/REVIEW-SLICE-*`. Pass **BRIEF** (`SDD/requirements/DESIGN-[###]-[feature-name].md`, with its approved revision and tier) for the review's `## Design Brief Check`, and **TIERS** when the spec carries `tier:` (the body's *Respect the tier* rule). Pass `BASE` — the same slice base commit 4a.5 uses; the slice is uncommitted during review, so the reviewer diffs the working tree against it. Pass **STANDARD**, the site inventory, **CONVENTIONS** (the path even if the file does not yet exist — the review may create it), and the latest iteration's `SITE-COUNT` and `SITE-DIFF` paths — the body's Step 5.6 carries every diff finding into the review, resolves `EXTRA` sites by re-running their mutations, re-runs a mutation sample, and verifies dispositions (ii)/(iii) are argued. When the spec's `agent_security:` gate is `true` or `auto`/absent, pass the resolved **CATALOG** path so the body's Agentic-Surface Lens can run over the slice's file set.
 
 ### Per-slice 4c — Address per-slice findings
 If the review found anything HIGH or MEDIUM, spawn an **`agent-engineering:sdd-workhorse`** fix subagent. Standard fix-and-re-review with the **per-slice iteration cap (REQ-012):** max 3 iterations with progress-stall check — mirrors Step 3c's panel cap, with one refinement: the stall check counts **needs-code-or-test** HIGH only. Each review marker reports how many of its HIGH are **row-only** (a missed site the reviewer proved already caught by a test — see `bodies/slice-review.md` Step 5.6); needs-code-or-test HIGH = h − r. Progress = needs-code-or-test HIGH strictly decreased, OR — when it was zero in the previous iteration — MEDIUM strictly decreased. Row-only HIGH never trip the stall on their own (a recount that finds more already-tested sites is not a regression), but they still reject the slice until closed, and the 3-iteration cap still applies.
@@ -121,7 +123,7 @@ Header-match outcomes:
 ## Awaiting Re-planning Decision
 
 SLICE-XXX retrospective recommends re-planning. Resume options:
-- `/sdd-flow continue --replan` — re-run Step 3 (planning) with the rolling ledger and triggering retro in scope; resumes implementation from SLICE-001.
+- `/sdd-flow continue --replan` — revise the design brief (Step 2.5; the design gate stops for your approval), then re-run Step 3 (planning) with the rolling ledger and triggering retro in scope; resumes implementation from SLICE-001.
 - `/sdd-flow continue --replan --from-slice SLICE-XXX` — same, but resume from a user-specified slice (must match `^SLICE-\d{3}[a-z]?$` AND reference an existing SLICE-XXX in the new plan's `## Slice Progress` per REQ-025).
 - `/sdd-flow continue --override-replan` — continue with the current plan despite the recommendation. Documented but discouraged.
 
@@ -133,7 +135,7 @@ Triggering retrospective: <retro-path>
 The pause message uses the re-planning-specific shape:
 > **Re-planning recommended.** The slice retrospective has determined the original plan is no longer fit. The flow is halted to await your direction.
 > Resume options:
->   1. `/sdd-flow continue --replan` — re-run Step 3 with the ledger + triggering retro; produces a revised SPEC; resumes implementation from `SLICE-001` (or a user-specified slice).
+>   1. `/sdd-flow continue --replan` — revise the design brief for your approval, then re-run Step 3 with the ledger + triggering retro; produces a revised SPEC; resumes implementation from `SLICE-001` (or a user-specified slice).
 >   2. Edit the SPEC manually, then `/sdd-flow continue`.
 >   3. `/sdd-flow continue --override-replan` — explicit override; continue on the current plan.
 > See `<retro-path>` for the full rationale.
@@ -148,7 +150,9 @@ The **orchestrator** runs the atomic per-slice commit (commit conventions in `co
 If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
 
 ### PAUSE (slice-boundary)
-Fires when slice-boundary checkpoints are `on`. The pause message includes: slice X completed + brief summary of what landed; acceptance-check status; any matched recommendations (SPEC amendments and/or re-planning) per the matcher; the next slice in queue. Resume via `/sdd-flow continue` (advances to next slice), or a re-planning resume option if re-planning was matched.
+Fires when slice-boundary checkpoints are `on`. The pause message includes: slice X completed + brief summary of what landed; acceptance-check status; the brief-check line (below); any matched recommendations (SPEC amendments and/or re-planning) per the matcher; the next slice in queue.
+
+**Brief-check line.** Read the `## Design Brief Check` section of the slice's review document — the file, not the review subagent's return — and quote it as one line: `Brief check: delivers [outline entry]. Outside the approved footprint: [none | N file(s) — list]`. It tells the user whether the slice stayed inside what they approved at the design gate. It is information only: it never blocks a slice and never enters the fix loop. Resume via `/sdd-flow continue` (advances to next slice), or a re-planning resume option if re-planning was matched.
 
 When checkpoints are `off` (`--skip-slice-checkpoints`), this pause is skipped — **except** the re-planning halt above, which fires regardless.
 
@@ -156,11 +160,11 @@ When checkpoints are `off` (`--skip-slice-checkpoints`), this pause is skipped �
 
 ## End-of-feature cycle (runs once after the last slice's 4c.6 lands)
 
-7. **End-of-feature 4d — Critical review across the assembled feature.** Spawn an `agent-engineering:sdd-critical-reviewer` subagent with `bodies/critical-review.md` (Implementation Phase section); reviews the whole assembled feature, not individual slices.
+7. **End-of-feature 4d — Critical review across the assembled feature.** Spawn an `agent-engineering:sdd-critical-reviewer` subagent with `bodies/critical-review.md` (Implementation Phase section); reviews the whole assembled feature, not individual slices. Pass **TIERS** when the spec carries `tier:`.
 8. **End-of-feature 4e — Address critical review findings.** Standard `agent-engineering:sdd-workhorse` fix subagent.
    - **End-of-feature 4e.5 — Final blind recount (always runs).** Feature-wide (`SCOPE = FEATURE`) blind count + diff + site-verification loop. *(Shared step — see `implementation-whole-feature.md` §4e.5.)* Catches sites that span slices (a later slice's path needing an earlier slice's control) and sites changed by 4e. 4f does not start until it resolves.
 9. **End-of-feature 4f — Implementation completion subagent.** `bodies/implementation-complete.md` — finalize plan, write IMPLEMENTATION-SUMMARY, capture glossary deltas. *(Shared step — see `implementation-whole-feature.md` §4f.)*
-10. **End-of-feature 4h — Supervised checkpoint.** Fires only in supervised phase-boundary mode. *(Shared — §4h.)*
+10. **End-of-feature 4h — Supervised checkpoint.** Fires only in supervised phase-boundary mode. *(Shared — §4h.)* Its brief-check line, and 4j's, is the per-slice form: collect each slice review's `## Design Brief Check` (`grep -A3 '^## Design Brief Check' SDD/reviews/REVIEW-SLICE-*-[feature-name]-*.md`) and report how many slices stayed inside the approved footprint, listing the exceptions.
 11. **End-of-feature 4i — End-of-feature commit.** Covers: critical review doc, fix-findings code from 4e, the 4e.5 `SITE-COUNT-FEATURE-*` / `SITE-DIFF-FEATURE-*` / `REVIEW-SITES-FEATURE-*` files and inventory updates, completion artifacts from 4f. Per-slice code is already committed in each 4c.6.
 12. **End-of-feature 4j — Announcement.** *(Shared — §4j.)* Surface any ADRs. Then perform the **feature-completion rotation** per §4j (`phases/protocols.md` → Progress Rotation).
 

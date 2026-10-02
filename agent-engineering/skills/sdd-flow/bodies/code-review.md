@@ -221,9 +221,33 @@ Your prompt provides `STANDARD` (`references/enforcement-sites.md`), `CONVENTION
 
 Record results in the review document's `## Enforcement-Site Verification` section. Do not edit the IMPLEMENTATION-PLAN's `## Control Site Status` table — the completion step owns it.
 
-**Site-verification-only mode (Step 4e.5).** When your prompt says `MODE: site-verification-only`, run ONLY this section (steps 1–6, including 1b–1d) against the `FEATURE` diff your prompt names — skip the 70/20/10 review, the checklist walk, and the agentic lens. Write `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` containing only: the `## Enforcement-Site Verification` table, a numbered `## Findings` list with severities, and `## Decision: [APPROVED/REJECTED]` (any open HIGH or MEDIUM rejects).
+**Site-verification-only mode (Step 4e.5).** When your prompt says `MODE: site-verification-only`, run ONLY this section (steps 1–6, including 1b–1d) against the `FEATURE` diff your prompt names — skip the 70/20/10 review, the checklist walk, the agentic lens, the delivery-tier rules, and the design brief check. Write `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` containing only: the `## Enforcement-Site Verification` table, a numbered `## Findings` list with severities, and `## Decision: [APPROVED/REJECTED]` (any open HIGH or MEDIUM rejects).
 
 **Progress marker (both modes).** When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM)` (`N` = the `ITER` in your prompt; `<r>` = HIGH tagged `[row-only]` in step 1c; omit the bracket when it is 0). It is a phase-detection marker; do not paraphrase it.
+
+## Delivery Tier (tiered specs only)
+
+When the spec's frontmatter carries `tier:` (the delivery tier — not a module's `Risk:` tier above), read the tier standard at the **TIERS** path in your prompt and the spec's `## Deferred to Later Tiers` before raising findings. A spec with no `tier:` is reviewed as before.
+
+- **Left out on purpose is not a finding.** Do not raise a finding for behaviour that section lists as deferred.
+- **Unsafe to defer is a HIGH finding.** Raise one, titled `Unsafe to defer`, when the code breaches the standard's floor for a deferred item — most often a deferred case the code can reach that fails quietly instead of visibly. Name the `DEFER-XXX` row and the floor rule.
+- **Built ahead is a finding.** Raise one for an abstraction, parameter, option, hook, flag, or dependency that no requirement of this tier uses. MEDIUM by default; HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal; "a later tier will need it" is not a justification.
+- **Scope, never rigour.** Everything this tier does build is reviewed in full.
+
+## Design Brief Check (informational)
+
+Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]-[feature-name].md`; your prompt states its approved revision and tier). The user approved it before the spec was written; this section tells them whether the implementation stayed inside it.
+
+Compute the feature's changed files — the work is uncommitted, so compare the working tree against the `BASE` commit in your prompt and add untracked files, leaving out SDD artifacts:
+
+```bash
+git diff --name-only --no-renames BASE -- . ':(exclude)SDD'
+git ls-files --others --exclude-standard -- . ':(exclude)SDD'
+```
+
+If your prompt has no `BASE`, use the file paths the IMPLEMENTATION-PLAN lists. Compare that file set against the areas in the brief's "What changes where" table and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
+
+**Informational only.** Do not raise a finding for an out-of-footprint file on that ground alone, and do not let this section affect the APPROVED / REJECTED decision. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body. In `MODE: site-verification-only`, skip this section entirely.
 
 ## Review Process Workflow
 
@@ -275,6 +299,10 @@ Run the discovery + walk described in the **Project Review Checklist Walk** sect
 ### Step 4c: Verify Enforcement Sites
 
 Run the **Enforcement-Site Verification** section above. Every finding it raises goes into the review's findings at its stated severity.
+
+### Step 4d: Check Against the Design Brief
+
+Run the **Design Brief Check** section above. It produces no findings.
 
 ### Step 5: Review Context Engineering
 
@@ -424,6 +452,13 @@ For each module in the spec's `## Modules` section, record the depth applied:
 | MODULE-002 [name] | ... | ... | ... |
 
 If the spec had no `## Modules` section, note: "Risk tiering not available — full medium-depth review applied uniformly."
+
+## Design Brief Check
+
+- **Delivers:** [the brief's delivery-outline entries this implementation corresponds to, quoted — or "no matching outline entry", with what it is instead]
+- **Outside the approved footprint:** [`None.` — or one line per changed file that falls under no row of the brief's "What changes where" table: the file, and why it was touched]
+
+[Informational — not a finding, and no part of the decision. `No design brief — check skipped.` when the feature has none.]
 
 ## Project Review Checklist Walk
 

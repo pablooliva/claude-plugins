@@ -1,4 +1,4 @@
-# Phase: Research — Steps 2a–2f
+# Phase: Research — Steps 2a–2e
 
 Read at the Step 2 boundary. All spawns follow the SKILL's spawn-prompt checklist; phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file (`Reads: 0/15`) + the `research-compact.md` compact body path. Body paths below are `SKILL_ROOT/bodies/<file>.md`, resolved absolute.
 
@@ -11,10 +11,11 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Inputs:** task description, codebase access, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present), `SDD/UBIQUITOUS_LANGUAGE.md` (if present — load before any research writing for vocabulary alignment).
 - **Outputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, append `progress.md`.
 - **Task:** Create the research document and perform the full systematic investigation. If a CLARIFICATION artifact exists, treat its branches and open questions as required research targets — every branch addressed; every open question resolved or explicitly deferred with rationale.
+- **Next-tier cycle** (the flow was started with `--next-tier`; `phases/setup.md` Step 0): add to the inputs the previous tier's research document and **TIER_PLAN**, and state in the prompt `NEXT-TIER CYCLE: Tier N`. The body's next-tier branch makes this a delta investigation — the deferred items this tier takes up, the feedback, and what the shipped code changed — not a second full pass.
 
 Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/research-complete.md`
-- **Inputs:** the RESEARCH document at its exact path, `SDD/UBIQUITOUS_LANGUAGE.md` (if present, for incremental update).
+- **Inputs:** the RESEARCH document at its exact path, `SDD/UBIQUITOUS_LANGUAGE.md` (if present, for incremental update). On a next-tier cycle, also the previous tier's research document, **TIER_PLAN**, and the `NEXT-TIER CYCLE: Tier N` line, so the completeness check is scoped to the delta.
 - **Outputs:** updated RESEARCH document (if gaps found), updated/created `SDD/UBIQUITOUS_LANGUAGE.md` (incremental — preserve stable terms, do not regenerate), append `progress.md`.
 - **Task:** Validate completeness against the checklist, fill remaining gaps, and propose+apply incremental glossary updates for terms introduced or refined during research (execute the glossary brief inline).
 
@@ -61,15 +62,6 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Pr
 
 ---
 
-## 2f. Supervised Checkpoint (supervised mode only)
+## After 2e
 
-In **supervised mode**, pause:
-
-> **Research phase complete.** Here's what was found:
-> [Brief summary of key findings and critical-review results]
-> Research document: `SDD/research/RESEARCH-[###]-[feature-name].md`
-> Critical review: `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`
-> ADRs captured: [list of ADR numbers, or "none"]
-> **Proceed to planning?** (y/n)
-
-Wait for confirmation before Step 3. In **autonomous mode**, proceed directly to Step 3 → read `phases/planning.md`.
+There is no pause here in either mode. The stop that follows research is the **design gate** — Step 2.5, in `phases/planning.md` — where the user sees what will be built, not only what was found. Proceed directly to Step 2.5 → read `phases/planning.md`.

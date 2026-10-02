@@ -42,7 +42,8 @@ agent-engineering/
 │   ├── sdd-flow/                   # SLIM SKILL.md orchestrator core +
 │   │   ├── phases/                 #   per-phase chapters (setup, research, planning,
 │   │   │                           #   implementation-whole-feature, implementation-per-slice, protocols)
-│   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path)
+│   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
+│   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
 │   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard
 │   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff
 │   │                               #   (tests: python3 -m unittest discover -s scripts/tests)
@@ -70,7 +71,7 @@ agent-engineering/
 1. Commands are markdown files containing prompts; users invoke them via `/command-name`.
 2. Skills are invoked through the Skill tool when their description matches the task.
 3. SDD, PACE, and agent-engineering each register a `SubagentStop` hook that runs `hooks/log_subagent_call.py` to capture subagent transcripts. (If both `sdd` and `agent-engineering` are installed, subagent stops are logged twice — harmless duplicates.)
-4. Model routing (sdd commands): Research uses Opus; Planning/Implementation use Sonnet. pace's `continue` only recommends a model by work type. In `agent-engineering`'s `sdd-flow`, routing is carried by shipped agent frontmatter — `sdd-workhorse` and the `sdd-spec-*-specialist` agents are Sonnet; `sdd-critical-reviewer` is Opus.
+4. Model routing (sdd commands): Research uses Opus; Planning/Implementation use Sonnet. pace's `continue` only recommends a model by work type. In `agent-engineering`'s `sdd-flow`, routing is carried by shipped agent frontmatter — `sdd-workhorse` and the `sdd-spec-*-specialist` agents are Sonnet; `sdd-critical-reviewer` is Opus. One exception: the design brief (Step 2.5) is written by `sdd-workhorse` with a per-spawn `opus` override.
 
 ## Development
 

@@ -1,6 +1,6 @@
 # Tiered Delivery and a Simplicity Challenge
 
-**Status:** Build-order step 1 (the `simplicity-challenge` skill and `references/tiers.md`) is implemented as agent-engineering 3.3.0; the shipped files supersede Appendices A and B below, which are kept as the original drafts. Steps 2–4 (the `sdd-flow` changes) are not implemented.
+**Status:** Build-order step 1 (the `simplicity-challenge` skill and `references/tiers.md`) is implemented as agent-engineering 3.3.0; the shipped files supersede Appendices A and B below, which are kept as the original drafts. Step 2 (the design gate with tiers in `sdd-flow`, §2–3) is implemented as 3.4.0. Steps 3–4 (the BB task mirror of §4, and the re-review of the flow) are not implemented.
 **Date:** 2026-10-02
 **Affects:** `agent-engineering/` plugin — one new skill (`simplicity-challenge`), and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `commands/research-clarify.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.

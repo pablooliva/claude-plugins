@@ -32,7 +32,7 @@ Identical to per-slice 4a.5 (`phases/implementation-per-slice.md` — read its s
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/code-review.md`
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from IMPLEMENTATION-PLAN).
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from IMPLEMENTATION-PLAN), **BRIEF** (`SDD/requirements/DESIGN-[###]-[feature-name].md`, with its approved revision and tier) for the review's `## Design Brief Check`, `BASE` = the commit before 4a (the same one 4a.5 uses — the check compares the files changed since it against the brief's footprint), and **TIERS** (the tier standard resolved at Step 0) when the spec carries `tier:`.
 - **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`.
 - **Task:** Specification-driven review (70% spec alignment, 20% context engineering, 10% test alignment). The body's **Agentic-Surface Lens** fires when the spec's `agent_security:` gate is open — pass the resolved **CATALOG** path in the prompt whenever `agent_security:` is `true` or `auto`/absent. A HIGH lens finding is a rejection criterion. Pass `SCOPE = FEATURE`, `ITER = 0`, **STANDARD**, **CONVENTIONS** (the path even if absent — the review may create it), the site inventory, and the iter0 `SITE-COUNT` / `SITE-DIFF` paths; the review appends `## Review FEATURE iter 0 - APPROVED | REJECTED (h HIGH, m MEDIUM)` to `progress.md` — the body's **Enforcement-Site Verification** section (mandatory) carries every diff finding into the review, resolves `EXTRA` sites by re-running their mutations, re-runs a mutation sample, and verifies dispositions (ii)/(iii). Apply **Risk-Tiered Review Depth** — read each `MODULE-XXX`'s `Risk:` field and scale internal-review depth: `high` → full internals; `medium` → default; `low` → tested-boundary only. Escalate any tier that looks misclassified (e.g., a `low`-tagged module touching irreversible state) and flag it in the Module Review Log.
 
@@ -51,7 +51,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 
 Spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus):
 - **Body:** `bodies/critical-review.md` — apply its **Implementation Phase** section.
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files, test files.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files, test files, and **TIERS** when the spec carries `tier:` (the body's *Respect the tier* principle).
 - **Outputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`.
 - **Task:** Adversarial review of the implementation.
 
@@ -93,8 +93,8 @@ Controls left `Partial` never reach `Complete`: 4f refuses to finish while any c
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/implementation-complete.md`
-- **Inputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, **STANDARD**, the site inventory, the final `SITE-DIFF-FEATURE-*` from 4e.5 and its `REVIEW-SITES-FEATURE-*` (if one was written).
-- **Outputs:** updated IMPLEMENTATION-PLAN (including `## Control Site Status`), updated SPEC, `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`, append `progress.md`.
+- **Inputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, **STANDARD**, the site inventory, the final `SITE-DIFF-FEATURE-*` from 4e.5 and its `REVIEW-SITES-FEATURE-*` (if one was written), and — when the spec carries `tier:` — **TIERS** and **TIER_PLAN** (`SDD/flow/TIERS-[feature-name].md`; on a next-tier cycle the path recorded at Step 0).
+- **Outputs:** updated IMPLEMENTATION-PLAN (including `## Control Site Status`), updated SPEC, updated tier plan (this tier marked shipped; deferrals added during reviews or implementation copied in), `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md`, append `progress.md`.
 - **Task:** Finalize all documentation, fill `## Control Site Status` from the final diff (a control with no independent count stays `Partial`, and any `Partial` blocks completion), validate all requirements are met, create the implementation summary, capture glossary deltas (execute inline).
 
 ---
@@ -105,6 +105,7 @@ In **supervised mode**, pause:
 
 > **Implementation complete.** Here's a summary:
 > [What was built, test results, review outcomes]
+> Brief check: [whole-feature: outside the approved footprint: none | list] [per-slice: N of M slices stayed inside the approved footprint; exceptions: …]
 > Key artifacts:
 > - Spec: `SDD/requirements/SPEC-[###]-[feature-name].md`
 > - Code review: `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
@@ -114,11 +115,13 @@ In **supervised mode**, pause:
 
 Wait for confirmation before committing. In **autonomous mode**, proceed directly to commit.
 
+**Brief-check line.** Whole-feature: quote the `## Design Brief Check` section of the 4b review document (the file, not a subagent's return). Per-slice: the count across slice reviews (`phases/implementation-per-slice.md` → end-of-feature 4h). Omit the line when the feature has no design brief.
+
 ---
 
 ## 4i. Commit Implementation  *(shared)*
 
-The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts (including the site inventory and every `SITE-COUNT-*` / `SITE-DIFF-*` / `REVIEW-SITES-*`). No co-author attribution.
+The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts (including the site inventory, every `SITE-COUNT-*` / `SITE-DIFF-*` / `REVIEW-SITES-*`, and the updated tier plan). No co-author attribution.
 
 If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
 
@@ -128,6 +131,8 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Pr
 
 > Implementation complete! All requirements from SPEC-[###] have been implemented, reviewed, and tested.
 > All artifacts committed. Feature is ready for deployment.
+> [If the spec carries `tier:`:] Shipped: **Tier [N]**. Left for later: [one line per tier still sketched in the tier plan, or "nothing"]. Tier plan: `SDD/flow/TIERS-[feature-name].md`. Use it, note what you find under its `## Feedback`, then run `/sdd-flow --next-tier [feature-name]` when you want more.
+> Brief check: [the same line as 4h — shown here too, because an autonomous run has no 4h]
 > [If ADRs were captured:] ADRs written: [list]. See `SDD/adr/README.md`.
 
 After the announcement, perform the **feature-completion rotation** (`phases/protocols.md` → Progress Rotation): archive this feature's full progress history to `SDD/orchestration/progress-archive/` and leave a one-line summary in the live `progress.md`.

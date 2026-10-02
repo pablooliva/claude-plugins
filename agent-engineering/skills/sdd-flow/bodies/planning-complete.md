@@ -13,6 +13,7 @@ Confirm that `SDD/requirements/SPEC-[###]-[feature-name].md` contains all requir
 ### Executive Summary
 
 - [ ] Research foundation reference included `SDD/research/RESEARCH-[###]-[feature-name].md`
+- [ ] Design brief reference included (`Based on Design:` with the approved revision and tier from your prompt), when the feature has a brief
 - [ ] Creation date and author documented
 - [ ] Status marked as "In Review" or "Approved"
 
@@ -28,6 +29,17 @@ Confirm that `SDD/requirements/SPEC-[###]-[feature-name].md` contains all requir
 - [ ] Solution approach defined with rationale
 - [ ] Expected outcomes specified and measurable
 
+### Design Brief and Tier
+
+Read the design brief at the path in your prompt (skip this block if your prompt names none).
+
+- [ ] `## Deviations from Design Brief` is present and accurate: it is `None.` only if the spec matches the brief's Key decisions, Not doing list, and answered questions; every real departure has an entry, and every entry is a real departure. If the section is missing, add it — the orchestrator's Step 3g check reads it and treats an absent section as a malformed spec
+- [ ] Tiered spec (`tier:` present): `tier:` equals the approved tier in your prompt, and `## Deferred to Later Tiers` is present (`None.` or a table)
+- [ ] Every Deferred row is behaviour — no module, interface, or other structure is scheduled for a later tier
+- [ ] Every deferred case this tier can reach names a `FAIL-XXX` in its `If reached now` column, and that entry exists under `## Failure Scenarios`; a row says `not reachable` only when that is true
+- [ ] Nothing protected by the tier standard's floor (TIERS, at the path in your prompt) is deferred
+- [ ] Untiered spec (no `tier:`): no `## Deferred to Later Tiers` section
+
 ### Success Criteria
 
 - [ ] Functional requirements (REQ-XXX) specific and testable
@@ -41,7 +53,7 @@ Confirm that `SDD/requirements/SPEC-[###]-[feature-name].md` contains all requir
 - [ ] Current behavior clearly described
 - [ ] Desired behavior specified
 - [ ] Test approach defined for each edge case
-- [ ] Production scenarios from research all covered
+- [ ] Production scenarios from research all covered — as an EDGE-XXX entry, or (tiered spec) as a row under `## Deferred to Later Tiers`
 
 ### Failure Scenarios
 
@@ -153,9 +165,9 @@ Final quality check before completion:
 
 ### Specification Quality
 
-- [ ] All research findings incorporated into specification
+- [ ] All research findings incorporated into specification, or (tiered spec) recorded under `## Deferred to Later Tiers`
 - [ ] Requirements are specific, measurable, achievable, relevant, time-bound (SMART)
-- [ ] Edge cases cover all production scenarios from research
+- [ ] Edge cases cover all production scenarios from research that this tier includes
 - [ ] Failure modes include graceful degradation strategies
 - [ ] Testing strategy comprehensive and executable
 

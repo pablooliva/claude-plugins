@@ -17,7 +17,15 @@ Starting planning phase based on completed research.
    - If `SDD/UBIQUITOUS_LANGUAGE.md` exists, load it. This is the project-wide glossary of domain terms — use these names exactly when writing the spec, in preference to any synonyms or near-synonyms. Aligning vocabulary with the glossary is non-negotiable; if the spec needs a term not in the glossary, propose it as an addition (captured during the planning-complete phase's glossary-delta step).
    - If the glossary does not exist, proceed without it.
 
-3. **Update Progress for Planning Phase:**
+3. **Read the Design Brief:**
+   - Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]-[feature-name].md`). Your prompt states its approved revision and tier. The user read and approved this document; the spec you write is held to it.
+   - If your prompt names no brief (a flow that began before the design gate existed), proceed without one and write the single line `None.` under `## Deviations from Design Brief`.
+
+4. **Read the Tier Standard and Tier Plan (tiered features only):**
+   - When your prompt gives an approved tier of `1`, `2`, or `3`, read **TIERS** (the tier standard — tiers, the floor, the cut tests) and **TIER_PLAN** (what this feature's tiers contain, with its Deferred table) at the paths in your prompt.
+   - When the approved tier is `none`, the feature is untiered: skip this, omit `tier:` from the frontmatter, and omit `## Deferred to Later Tiers`.
+
+5. **Update Progress for Planning Phase:**
    - Add a new planning section to `SDD/orchestration/progress.md`
    - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
    - Add reference to the SPEC document being created
@@ -63,6 +71,7 @@ review_panel: [security, performance, data-modeling, api-contract, module-depth]
 cross_cutting_decisions: []
 delivery_mode: per-slice
 agent_security: auto
+tier: 1
 ---
 
 # SPEC-[###]-[feature-name]
@@ -70,6 +79,7 @@ agent_security: auto
 ## Executive Summary
 
 - **Based on Research:** RESEARCH-[###]-[feature-name].md
+- **Based on Design:** DESIGN-[###]-[feature-name].md (revision N, Tier T)
 - **Creation Date:** [YYYY-MM-DD]
 - **Author:** Claude (with [user's name if known])
 - **Status:** Draft/In Review/Approved
@@ -98,6 +108,22 @@ agent_security: auto
 
 ### Expected Outcomes
 [What will be different after implementation]
+
+## Deviations from Design Brief
+
+[`None.` — or one entry per departure:]
+
+- **[decision | scope | footprint | slice-outline]:** the brief said [X]; this spec says [Y]. **Why:** [research finding, arithmetic, or review finding that required it].
+
+## Deferred to Later Tiers
+
+> **Tiered specs only** (`tier:` present). Omit this section entirely when the spec has no `tier:`.
+>
+> What this tier deliberately leaves out. Reviewers treat every row as left out on purpose. Deferred items carry **no** `REQ-` / `EDGE-` / `FAIL-` ID — they are not requirements of this tier — so every "each REQ / each EDGE" rule in the flow covers this tier's items and nothing else. Write `None.` when nothing is deferred (always the case for `tier: 3`).
+
+| ID | Item | To tier | Why it was safe to leave out | If reached now | Cost to add later | Came from |
+|---|---|---|---|---|---|---|
+| DEFER-001 | [behaviour left out — never a module or interface] | 2 | [reason, naming the cut test] | [FAIL-XXX — the loud failure this tier implements — or "not reachable"] | cheap / moderate / expensive | [proposal / review / implementation] |
 
 ## Success Criteria
 
@@ -183,7 +209,7 @@ Each module also carries a **Risk** tier consumed by code review to scale review
   - **medium** — default. Standard review depth.
   - **high** — failure has outsized consequences (financial, security, data integrity, irreversible side effects, regulatory exposure). Reviewer attention extends to internals.
 - **Spec refs:** [REQ-XXX, EDGE-XXX, FAIL-XXX implemented by this module]
-- **Justification (if shallow):** [Only required if a caller must learn about as much to use the module as to do the work itself. Explain why depth was sacrificed — e.g., framework requires this shape, integration adapter with no logic to add, etc.]
+- **Justification (if shallow):** [Only required if a caller must learn about as much to use the module as to do the work itself. Explain why depth was sacrificed — e.g., framework requires this shape, integration adapter with no logic to add, etc. A later tier's needs are never a justification.]
 
 ### MODULE-002: [name]
 [Same structure.]
@@ -266,7 +292,7 @@ Each module also carries a **Risk** tier consumed by code review to scale review
 
 ## Specification Frontmatter Fields
 
-The spec template includes five YAML frontmatter fields consumed by sdd-flow and related phases. Populate them thoughtfully based on the research foundation:
+The spec template includes these YAML frontmatter fields, consumed by sdd-flow and related phases. Populate them thoughtfully based on the research foundation:
 
 - **`review_panel:`** — List of specialist reviewers to convene during spec-review-panel. Default includes `module-depth` (deep-module check on the `## Modules` section, depth measured as leverage) and covers API/data-backed features. Adjust based on feature characteristics:
   - Add `accessibility` for UI features with user-facing interaction.
@@ -292,6 +318,8 @@ The spec template includes five YAML frontmatter fields consumed by sdd-flow and
 
   This field is about **agentic** risk — prompt injection, tool over-scoping, memory poisoning, excessive autonomy, Denial of Wallet. Classical appsec stays with the `security` panel value; do not drop `security` because you added `agent-security`.
 
+- **`tier:`** — `1`, `2`, or `3`: the delivery tier this spec covers, copied from the approved tier in your prompt. A tier says how much of the feature to build; slices say in what order to build it. Omit the field when the approved tier is `none` (the brief said tiers are not applicable). **Absent means untiered:** every rule applies as it did before tiers existed, so specs written before this field behave unchanged. A `tier:` value is never a reason to lower rigour — the same panel, reviews, tests, and site counts apply to whatever the tier builds.
+
 - **`delivery_mode:`** — `whole-feature` (default) or `per-slice`. Controls whether the spec must include a `## Delivery Slices` section and whether downstream phases route through per-slice behavior.
 
   **Authoring default (new specs):** Set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices — in which case set `delivery_mode: whole-feature` and record a one-line justification inline in the spec (e.g., as a comment in the `## Delivery Slices` section placeholder, or at the top of `## Implementation Notes`). The template above starts from `per-slice` to reflect this recommendation.
@@ -307,26 +335,38 @@ These fields have sensible defaults; populate them intentionally rather than lea
 ## Planning Process
 
 1. **Load Research Foundation:**
-   - Read the complete RESEARCH-XXX document
+   - Read the complete RESEARCH-XXX document. On a next-tier cycle it is a delta: where it says a section is unchanged from the previous tier's research, read that section in the previous document (path in your prompt)
    - Extract all findings, edge cases, and stakeholder inputs
    - Note specific file:line references for implementation
 
-2. **Transform Research into Requirements:**
+2. **Conform to the Brief:**
+   - Its Key decisions, Not doing list, and answered questions are binding; its delivery outline is your starting slice order (you may refine it — you run the slice-practicality gate, which the brief did not).
+   - Where research or the feasibility arithmetic forces a departure, make it and record it under `## Deviations from Design Brief`. Never depart silently, and never reopen a question the user has answered.
+   - A module or file area the brief's "What changes where" table does not cover is a `footprint` deviation — record it.
+
+3. **Scope to the Tier (tiered specs only):**
+   - Specify the approved tier and nothing beyond it. Start `## Deferred to Later Tiers` from the tier plan's Deferred rows, keeping their `DEFER-XXX` IDs; a deferral you add takes the next free ID with `Came from` = `proposal`. Apply the cut tests in TIERS to anything the research suggests that the brief did not place.
+   - **The floor is never deferred** (TIERS → The floor). Whatever it protects is specified in this tier, whichever tier is being built.
+   - **A deferred case this tier can reach becomes a real requirement of this tier: its loud failure.** Give it a `FAIL-XXX` entry ("input of kind X is rejected with message Y"), name that ID in the row's `If reached now` column, and implement and test it like any other. In per-slice mode these entries stay out of SLICE-001 (which must be the bare happy path) and are delivered by a later slice of this tier — all of them by its last slice.
+   - **Build nothing ahead** (TIERS → Tenet 2). No module, interface member, parameter, option, or dependency may exist because a later tier is expected to need it. Apply the later-tier test to every `MODULE-XXX` entry: with the later tiers deleted from the plan, would this part still be here? If not, remove it. Take the simplest structure this tier's behaviour needs, even when a later tier will have to reshape it.
+   - Only behaviour is deferred. Never write a module, interface, or other structure into the Deferred table.
+
+4. **Transform Research into Requirements:**
    - Convert research findings into specific, testable requirements
-   - Ensure every edge case from research has a corresponding specification
+   - Ensure every edge case from research has a corresponding specification, or — in a tiered spec — a row under `## Deferred to Later Tiers`
    - Map stakeholder needs to success criteria
 
-3. **Define Clear Validation:**
+5. **Define Clear Validation:**
    - Create specific test scenarios for each requirement
    - Include performance benchmarks where applicable
    - Define acceptance criteria for stakeholder sign-off
 
-4. **Plan for Implementation:**
+6. **Plan for Implementation:**
    - Identify which files need to be loaded during implementation
    - Note areas that will require multi-pass inline analysis during the implementation phase
    - Ensure context requirements stay under 40%
 
-5. **Articulate Modules — Prefer Deep Over Shallow:**
+7. **Articulate Modules — Prefer Deep Over Shallow:**
    - For every module the feature creates or significantly changes, fill in a `MODULE-XXX` entry under the `## Modules` section.
    - **Interface** means everything a caller must know to use the module correctly — signatures, and also invariants, required call order, error modes, configuration, and performance bounds. Write all of it into `Public Interface`; an obligation left unstated is still part of the interface.
    - **Deep module** (preferred): high leverage — a lot of behaviour per fact of interface a caller must learn. What is hidden is what callers don't have to know — algorithms, state, retries, caching, integration glue, error recovery. Judge by what callers must learn, not by method count or by how long the `Hides` list is.
@@ -336,7 +376,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - Assign each module a **Risk** tier (low/medium/high) — this drives review depth in code review. High-risk = irreversible, financial, security-critical, regulatory. Low-risk = contained, recoverable, boundary-only.
    - Map every REQ-XXX/EDGE-XXX/FAIL-XXX to at least one module via the `Spec refs:` field — every requirement must have a home.
 
-6. **Define Delivery Slices (per-slice mode only):**
+8. **Define Delivery Slices (per-slice mode only):**
    - Applies only when `delivery_mode: per-slice` is set in the spec frontmatter. In `whole-feature` mode (the default), omit the `## Delivery Slices` section entirely and skip this step.
    - Decompose the feature into ordered `SLICE-XXX` entries, each describing a concentrated function threaded end-to-end through every relevant layer. Use each MODULE-XXX entry's `Spec refs:` as raw material — REQs that span multiple modules are candidate slices.
    - **SLICE-001 must be the thinnest possible end-to-end happy path.** Its only job is to prove the thread exists; resist the urge to put depth or edge cases here.
@@ -345,15 +385,15 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - REQs may be split across slices; mark partial coverage explicitly (e.g., `REQ-003 (partial: happy path only)`) so later slices can complete them.
    - Every REQ-XXX / EDGE-XXX / FAIL-XXX should be reachable through some slice in the sequence by the time the last slice lands.
 
-7. **Validate `delivery_mode:` value (spec ingestion gate):**
+9. **Validate `delivery_mode:` value (spec ingestion gate):**
    - Read the `delivery_mode:` field from the spec frontmatter being created (or, when this body runs against an existing spec, the field already on disk).
    - Apply the value-validation rule from the frontmatter prose above: exact match against `{whole-feature, per-slice}`; absent → silent default `whole-feature`; any other value → fail fast.
    - On invalid value, emit the error: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-invoke the planning body.` In autonomous mode, append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` mirroring the `## Awaiting Clarification` shape so the orchestrator halts; in supervised mode, surface inline and stop processing.
    - Do NOT silently fall through to the `whole-feature` branch when the value is malformed — that masks user typos and produces silent misbehavior downstream.
 
-8. **Practicality Check (per-slice mode only — the practicality gate):**
+10. **Practicality Check (per-slice mode only — the practicality gate):**
    - Applies only when `delivery_mode: per-slice` is set. Skip otherwise.
-   - After Step 6 has populated `## Delivery Slices`, evaluate whether the slicing produced is meaningful. Run these four boolean heuristics against the spec's `## Modules` section and the candidate slice set:
+   - After Step 8 has populated `## Delivery Slices`, evaluate whether the slicing produced is meaningful. Run these four boolean heuristics against the spec's `## Modules` section and the candidate slice set:
      1. **Single-MODULE touch-set.** Only one `MODULE-XXX` entry exists for the feature, OR every candidate slice's `Modules touched` field lists the same single module.
      2. **No thinner happy path.** The only honest decomposition producible is "build all of it, then test it" — i.e., SLICE-001 cannot be made thinner than the whole feature without losing end-to-end reachability.
      3. **Universal-slice REQ touch.** Every `REQ-XXX` in the spec is touched by every plausible slice — i.e., the slices are not actually decomposable, they all carry the same REQ load. **Disable this heuristic when the spec has exactly one REQ (resolves L-1):** with a single-REQ spec, every slice trivially touches that REQ, and heuristic 3 would fire spuriously regardless of whether slicing is meaningful. The single-REQ case is already covered by heuristic 4 (single concentrated function) and, if applicable, heuristic 1 (single-MODULE touch-set). Skip heuristic 3 for single-REQ specs to avoid the vacuous-trigger.
@@ -367,7 +407,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
      - **Autonomous mode** — halt and return a bounded completion message (≤200 words) describing the two options: (a) fall back to `whole-feature` for this feature only, or (b) provide a hint about a slice boundary to retry slicing. Include the SPEC file path and `SDD/orchestration/progress.md` as artifact paths. This mirrors the autonomous halt pattern, with different option labels.
    - When none of the heuristics fire and qualitative judgment is that slicing is meaningful, proceed with the populated `## Delivery Slices` section — no halt, no annotation.
 
-9. **Run the Feasibility Arithmetic Self-Check:**
+11. **Run the Feasibility Arithmetic Self-Check:**
    - Applies only when the `### Quantitative Ledger` table has at least one row of kind `goal`. If the ledger says `No quantitative goals or constraints.`, skip this step — do not manufacture a check.
    - For each `goal` row, take every constraint named in its `Bears on` column and do the arithmetic: does the headroom the constraint permits cover the movement the goal requires? Convert to a common unit first; a unit mismatch is itself a finding.
    - If any goal needs more headroom than its constraints permit, the spec is internally contradictory — effective and compliant are mutually exclusive. Do NOT write the spec around it. Resolve it now: relax the constraint, lower the goal, or specify a different mechanism, and record which you chose in `## Implementation Notes`.
@@ -378,7 +418,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
 A complete specification must have:
 
 - ✓ All template sections filled with specific, actionable content
-- ✓ Every research finding reflected in requirements or edge cases
+- ✓ Every research finding reflected in requirements or edge cases — or, in a tiered spec, recorded under `## Deferred to Later Tiers`
 - ✓ Clear, measurable success criteria
 - ✓ Specific test scenarios for validation
 - ✓ Implementation guidance with context management plan
@@ -388,7 +428,9 @@ A complete specification must have:
 
 Before considering the specification complete:
 
-- [ ] All research findings are incorporated
+- [ ] All research findings are incorporated, or recorded under `## Deferred to Later Tiers` (tiered specs)
+- [ ] `## Deviations from Design Brief` is present, and is `None.` only if the spec matches every binding part of the brief
+- [ ] Tiered spec: `tier:` matches the approved tier; every Deferred row is behaviour, not structure; every deferred case this tier can reach has a `FAIL-XXX` named in its row; nothing the floor protects is deferred; no module or interface member exists only for a later tier
 - [ ] Requirements are specific and testable
 - [ ] Edge cases have clear expected behaviors
 - [ ] Failure scenarios include recovery approaches

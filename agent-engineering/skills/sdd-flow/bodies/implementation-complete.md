@@ -62,6 +62,9 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
    - Update the IMPLEMENTATION-PLAN's `## Control Site Status` table from these, one row per control: implementer and independent site counts from the diff, the diff path, and `Status` per standard §6 — `Complete` only if the final diff is `MATCH` for it (or its only differences are `CONFIRMED-EXTRA` in the review), it has no open gap, and every (ii)/(iii) was accepted by the reviewer. **A control with no independent count is `Partial`.** Copy (iii) owners into `Open (iii) owners`.
    - Never mark a control `Complete` on the implementer's inventory alone.
 
+6. **Tier Standard and Tier Plan (tiered specs only):**
+   - When the SPEC's frontmatter carries `tier:`, your prompt provides **TIERS** (the tier standard — read its "Recording a deferral" and "Tier plan" sections) and **TIER_PLAN** (`SDD/flow/TIERS-[feature-name].md`). Load both. With no `tier:` in the SPEC, skip everything this body says about the tier plan.
+
 ### 2. Pre-Completion Verification
 
 **STOP and verify these conditions from the loaded documents:**
@@ -294,6 +297,17 @@ Based on IMPLEMENTATION-PLAN document verification:
 - [Any approved changes with rationale]
 - [Trade-offs made and why]
 ```
+
+### 2b. Update the Tier Plan (tiered specs only)
+
+The tier plan is what the next tier's cycle starts from. Update TIER_PLAN in place, in the shape TIERS gives:
+
+- **Status table:** this tier's row becomes `shipped [YYYY-MM-DD]`, with `Built in` = this SPEC's file name. Leave the `Task` column and every other tier's row as they are.
+- **This tier's section:** what it does, what it deliberately does not, and what to look at when using it — five lines at most.
+- **Deferred table:** copy in every row of the SPEC's `## Deferred to Later Tiers` that the tier plan does not already have (they were added during planning or its reviews), keeping the SPEC's IDs. Add a row, `Came from` = `implementation`, for any behaviour the implementation left for later — the IMPLEMENTATION-PLAN's Implementation Deviations section is where to look. Behaviour only: never a module, interface, or other structure.
+- **Leave alone:** the later tiers' sketches and every Feedback note. Their own cycle re-decides them.
+
+A row moves to a later tier here only if it was absent scope. Behaviour this tier specified and did not deliver is an incomplete requirement — it fails the completion gate above and is never recorded as a deferral.
 
 ### 3. Create Implementation Summary Document
 
@@ -533,6 +547,7 @@ Implementation phase COMPLETE for [Feature Name]. Return a bounded result (≤20
 - `SDD/requirements/SPEC-[###]-[feature-name].md` (updated with implementation summary)
 - `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md` (finalized)
 - `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md` (created)
+- `SDD/flow/TIERS-[feature-name].md` (tiered specs only — updated: tier shipped, deferrals reconciled). For a tiered spec, also state in your return which tier shipped and, in one line each, what the tier plan leaves for the later tiers.
 - `SDD/orchestration/progress.md` (updated)
 - `SDD/UBIQUITOUS_LANGUAGE.md` (updated if glossary deltas were captured, or note "no glossary changes")
 

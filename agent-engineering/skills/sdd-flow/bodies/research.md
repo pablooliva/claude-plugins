@@ -6,7 +6,7 @@ RESEARCH PHASE INITIALIZATION
 
 Starting research phase for new feature/issue.
 
-IMPORTANT: Before starting this phase, check if `SDD/orchestration/progress.md` contains any important information about an existing task. If it does and this appears to be a different task, append an `## Awaiting Archive Decision` block (stating the conflict and asking whether to archive the existing content) to `SDD/orchestration/progress.md`, then return to the orchestrator. Otherwise, reset the file to only contain a heading: `# Research Progress`. We are starting on a new task and want to ensure that the progress file is clean.
+IMPORTANT: Before starting this phase, check if `SDD/orchestration/progress.md` contains any important information about an existing task. If it does and this appears to be a different task, append an `## Awaiting Archive Decision` block (stating the conflict and asking whether to archive the existing content) to `SDD/orchestration/progress.md`, then return to the orchestrator. Otherwise, reset the file to only contain a heading: `# Research Progress` — followed, unchanged, by the orchestrator's Step 0 record for this task if one is there (resolved identifiers, SKILL_ROOT and the other resolved paths, mode and flags, and any `Next-tier cycle` lines); later steps and resumed sessions read it. We are starting on a new task and want to ensure that the progress file is clean.
 
 ## Pre-Research Clarification (if available)
 
@@ -21,6 +21,19 @@ If a `CLARIFICATION-[###]-[feature-name].md` document exists matching the featur
 If no clarification exists, the design concept lives only in the prompt. If that prompt is fuzzy, append an `## Awaiting Clarification` block (listing the ambiguities and options) to `SDD/orchestration/progress.md`, then return to the orchestrator. If the prompt is crisp, proceed directly.
 
 Also check for `SDD/UBIQUITOUS_LANGUAGE.md` and load it if present — use the project's canonical domain vocabulary throughout the research document.
+
+## Next-Tier Cycle (delta research)
+
+Applies only when your prompt says `NEXT-TIER CYCLE: Tier N`. An earlier tier of this feature is already built and in use; this cycle adds the next one. Your prompt names two extra inputs — the previous tier's research document, and the tier plan (`SDD/flow/TIERS-[feature-name].md`: what shipped, what was deferred, sketches of the later tiers, and feedback from using the shipped tier). Read both before investigating.
+
+Research the **delta**, not the feature again:
+
+- **The deferred items aimed at this tier** — each `DEFER-XXX` row whose `To tier` is N. What does adding it now involve, given the code that exists?
+- **The feedback** — every note under the tier plan's `## Feedback`, and the clarification document for this cycle. What do they change about what this tier should do?
+- **What the shipped tier changed** — the code the previous tier added or reshaped. Re-trace the data flow where it differs from the previous research; that document describes the system before the previous tier was built.
+- **Whether the sketch still holds** — the tier plan's sketch of this tier was written before the previous tier was used. Say what in it the feedback and the code now support, contradict, or make unnecessary.
+
+Use the same document structure below. A section the previous research still describes correctly is one line — `Unchanged — see RESEARCH-[previous ###]-[previous feature-name].md → [section]` — not a copy. Record no structure for later tiers: this document serves Tier N only.
 
 Set up systematic investigation:
 

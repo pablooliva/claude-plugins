@@ -12,6 +12,7 @@ Your prompt provides:
 - **Panel value:** exactly one of `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity`, `accessibility`, `cost`, or `privacy`.
 - **PANEL-FINDINGS path:** absolute path where you must write your output file.
 - **Control-catalog path** (only when your panel value is `agent-security`): absolute path of `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — read it before reviewing.
+- **TIERS path** (only when the spec's frontmatter carries `tier:`): absolute path of the tier standard, `skills/simplicity-challenge/references/tiers.md` — read it before reviewing; see *Respect the Tier* below.
 
 Read both artifacts before writing any findings. Do all work inline in your own context.
 
@@ -38,6 +39,15 @@ Every finding must include a direct quote or section reference from the spec. Ge
 ### Spec-Level Recommendations Only
 
 All resolutions must specify changes to make **in the spec** — not implementation code. Frame every resolution as a spec edit: add a requirement, clarify a constraint, introduce an explicit REQ-XXX, or specify a decision the spec currently omits.
+
+### Respect the Tier
+
+Applies only when the spec's frontmatter carries `tier:` (1, 2, or 3). Read the tier standard at the **TIERS** path in your prompt and the spec's `## Deferred to Later Tiers` before raising findings. An untiered spec (no `tier:`) is reviewed as before.
+
+- **Left out on purpose is not a finding.** Do not raise a finding for an item listed under `## Deferred to Later Tiers`, or for the absence of anything the tier standard places in a later tier. A tiered spec is small by design.
+- **Unsafe to defer is a HIGH finding.** Raise one when a deferred item breaches the standard's floor (TIERS → The floor) — including a deferred case this tier can reach that has no `FAIL-XXX` giving it a loud failure. Title it `Unsafe to defer`, and name the `DEFER-XXX` row and the floor rule.
+- **Built ahead is a finding.** Raise one for any part that exists only for a later tier: a module, interface member, parameter, option, or dependency that no requirement of this tier uses, or a justification that rests on a later tier's needs. MEDIUM by default; HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal — "a later tier will need it" is not a justification.
+- **Scope, never rigour.** Everything this tier does specify is held to the full standard of your section. A tier never excuses a defect in what it builds.
 
 ## 4. Specialist Prompts
 

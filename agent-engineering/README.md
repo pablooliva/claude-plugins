@@ -27,6 +27,8 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **Reads-only safety net.** Spawned subagents do not spawn in this flow, so there is no nested-subagent counter — the only safety-net signal is file Reads (default trigger >15; >20 for implementation chunks). On trip, the subagent compacts and hands off.
 - **Per-slice authoring default.** The planning body sets `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices (then `whole-feature` with a one-line justification). The PARSE default (frontmatter absent → whole-feature) is unchanged for backward compatibility.
 - **Gated AI-agent security review (2.1.0).** Spec frontmatter `agent_security: auto|true|false` gates two hook points: the `agent-security` panel value at Step 3c (spec-level checks) and the Agentic-Surface Lens in the Step 4b / per-slice code review (code-level checks). `auto` resolves by detecting an agentic surface — a model call, a tool/MCP definition, agent memory or a retrieval store, inter-agent messaging, or a model output driving an external action.
+- **Design gate (3.4.0).** After research, one Opus subagent writes a **design brief** — at most 150 lines, in plain language: what will be built, how it will work, the decisions made and what was rejected, where the changes land, and what you must decide. The flow stops and shows it, in supervised and autonomous mode alike; nothing is specified until you approve it, and `approve` is refused while any of its questions is unanswered. The spec is then held to the brief: every departure is recorded, checked by the spec critical review, and shown to you before implementation starts. Each code review reports which changed files fall outside the footprint you approved.
+- **Tiered delivery (3.4.0).** The brief proposes three delivery tiers — POC-plus, Standard, Full — and builds Tier 1 unless you choose otherwise. The spec covers the chosen tier only and lists what it deferred; reviewers treat that list as deliberate, and flag anything unsafe to defer or built ahead for a later tier. Each tier is its own cycle: `/sdd-flow --next-tier <feature>` starts the next one from feedback on the last. The rules are the `simplicity-challenge` skill's `references/tiers.md`, read by the flow and not restated.
 - **Progressive disclosure.** `SKILL.md` is a slim orchestrator core; per-phase detail lives in `skills/sdd-flow/phases/` (`setup`, `research`, `planning`, `implementation-whole-feature`, `implementation-per-slice`, `protocols`), read at each phase boundary.
 
 ## Contents
@@ -51,7 +53,7 @@ These are **interactive commands you run yourself** (depth 0, so they may delega
 
 - **`/adr-capture`** — Manual entry point for the `cross-cutting-adr` skill.
 - **`/prompt-doctor`** — Manual entry point for the `prompt-doctor` skill. Takes a pasted prompt, a file path, or the last draft in the conversation.
-- **`/research-clarify`** — Structured interview that externalizes your design concept before any codebase research. Satisfies the `sdd-flow` Step 1.5 clarification gate.
+- **`/research-clarify`** — Structured interview that externalizes your design concept before any codebase research. Satisfies the `sdd-flow` Step 1.5 clarification gate. On a next-tier cycle it interviews for feedback on the tier already shipped instead.
 - **`/critical-review`** — Standalone adversarial review of a research doc, spec, or implementation.
 - **`/continue`** — Resume an interrupted SDD session from `progress.md`.
 - **`/adhoc-compact`** — Generic mid-phase compaction, for ad-hoc or follow-up work. Detects an active SDD phase and redirects to the phase-specific command below.
@@ -67,13 +69,26 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.3.0.
+Version 3.4.0.
+
+### What's new in 3.4.0
+
+Two linked changes to `sdd-flow`, aimed at one problem: the volume of what an agent proposes outruns the human's ability to review it, and approval becomes a reflex. Design and rationale: `proposals/design-brief-gate-2026-10-02.md` and `proposals/tiered-delivery-2026-10-02.md`.
+
+- **Design gate (new Step 2.5).** The flow used to pause after research with a summary of findings and "Proceed to planning? (y/n)" — a decision without the material to make it — and then had no human pause anywhere in planning. That pause (Step 2f) is removed. In its place a subagent on Opus writes a design brief (`SDD/requirements/DESIGN-[###]-[feature-name].md`, new body `bodies/design-brief.md`) and the flow stops. The stop fires in both modes, every time the brief is written or rewritten, and no flag skips it. You answer its questions, ask for changes (a revision round, as many as you want), or approve; `approve` is refused while a question is open.
+- **The spec is held to the brief.** The spec gains `## Deviations from Design Brief`. Planning, the panel fix loop, and the combined fix must record every departure from the brief's decisions, exclusions, and answered questions; the spec critical review has a Design Brief Fidelity block (an unrecorded departure is HIGH); and Step 3g stops in both modes when any deviation is recorded, before a line of code is written.
+- **Brief check on every code review.** The slice review and the whole-feature code review write a `## Design Brief Check` section: which outline entry was delivered, and which changed files fall outside the approved footprint. It is quoted at each slice pause, at the pre-commit checkpoint, and in the completion announcement. Information only — it never blocks a slice.
+- **Tiered delivery.** The brief carries a `## Tiers` section and the gate a tiers line; reply `tier 2` or `tier 3` to build more, or pass `--tier N`. The spec gains `tier:` frontmatter and `## Deferred to Later Tiers` (`DEFER-XXX` rows, behaviour only). Deferred items are not requirements, so every existing "each REQ / each EDGE" rule keeps working; a deferred case the tier can reach gets a `FAIL-XXX` for its loud failure. A spec with no `tier:` behaves exactly as before.
+- **Reviews respect the tier.** Panel specialists, the critical review, the code review, and the slice review do not flag what is on the deferred list; they do flag, at HIGH, a deferral that breaches the tier standard's floor, and they flag anything built ahead for a later tier. Spec fix subagents may resolve a finding about *absent* scope by deferring it; a finding about behaviour the tier builds is always fixed.
+- **Tier plan and next tier.** `SDD/flow/TIERS-[feature-name].md` records what shipped, what was deferred, sketches of the later tiers, and feedback. The brief subagent writes it; the completion subagent updates it. `/sdd-flow --next-tier <feature>` starts the next tier as a new cycle: `/research-clarify` becomes a feedback interview, research is a delta on the previous tier's, and the brief opens with what was learned.
+- **Autonomous mode has more stops.** `--auto` now stops at the clarification gate, at the design gate, and — only if the spec departs from the approved brief — at Step 3g. It is unattended from there, apart from slice pauses.
+- **Not in this release.** Mirroring tiers to BB tasks (the tier plan's `Task` column stays `—`) and the re-review of the flow with current models — steps 3 and 4 of the build order in the tiered-delivery proposal.
 
 ### What's new in 3.3.0
 
 - **New skill: `simplicity-challenge`.** Everything else in the plugin that reviews a proposal asks what is missing; nothing asked what is unnecessary. This skill argues that a proposal is too much. It states the need the proposal serves, runs each thing it does through four functional cut tests (evidence, by hand, hard-code, add-later cost) and each part it adds through four structural ones (existing code, moving parts, two adapters, later tier), and reports the smallest useful version with a table of cuts and their costs.
 - **One tier standard.** `skills/simplicity-challenge/references/tiers.md` defines three delivery tiers — **Tier 1 POC-plus** (the main scenario end to end, kept, not thrown away), **Tier 2 Standard**, **Tier 3 Full** — and two tenets: *scope, never rigour* (a tier is small, not sloppy) and *nothing is built ahead* (no part exists because a later tier is expected to need it; a later tier reshaping earlier code is the expected cost). Three things are never deferred: data-loss protection, security on an exposed surface, and visible failure for unhandled cases. Costly-to-reverse decisions are deliberately *not* protected — simplicity wins, and the reversal cost is stated so you can overrule it.
-- **Standalone for now.** `sdd-flow` does not read the tier standard yet. The proposals to add a design-brief gate and tiered delivery to the flow are in `proposals/design-brief-gate-2026-10-02.md` and `proposals/tiered-delivery-2026-10-02.md`.
+- **Standalone in 3.3.0.** `sdd-flow` did not read the tier standard yet; 3.4.0 added the design-brief gate and tiered delivery to the flow.
 
 ### What's new in 3.2.0
 
