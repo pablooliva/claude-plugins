@@ -40,6 +40,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **`bb-worktree-init`** — One-time, per repo: makes a new or existing project ready for BB IDE worktrees. Inspects untracked config, env keys (names and value shapes only — never values), lockfiles, and local databases; proposes a plan for approval; renders bundled templates into `.worktreeinclude`, `.env-setup.sh`, a `.bb-env-setup.sh` symlink, and (only when needed) `.bb-env-teardown.sh`; then validates statically and, on approval, in a throwaway worktree. In a repo that already has the files it proposes edits instead. Does not commit.
 - **`worktree-merge`** — Lands the committed work of a git worktree on the main line. Works on any linked worktree and is adapted to BB IDE: it resolves the target branch (BB's recorded default branch, else the remote's), syncs the work branch with it *inside the worktree* so conflicts never reach the main checkout, verifies, then fast-forwards the target — or opens a pull request when asked. In a repo with an `SDD/` folder it detects ADR and feature numbers that both this branch and the target claimed, and renumbers this branch's side after you approve the old → new mapping. Before the worktree goes away it surfaces git-ignored files that exist only there, and never copies a script-rewritten env back into main. BB-managed worktrees are left for BB to remove when the thread is archived (with an offer to sweep already-merged `bb/*` branches); other worktrees are removed with their branch, on confirmation.
 - **`prompt-doctor`** — Diagnoses a task prompt *before* you send it to an agent, against a ten-component anatomy (grounding link, stakes, priorities, ranked priorities, hard constraints, marked-negotiable opinion, knowledge-gap disclosure, the one clear ask, early-exit permission, precise done-condition). Grades each Present/Weak/Missing/N-A with quoted evidence, names what each gap lets the model decide for itself, and asks you for the facts only you hold. Never executes the prompt under review and never invents stakes or constraints; the rewrite is opt-in and keeps unanswered slots as visible placeholders. Anatomy from Theo (T3.gg) plus Goedecke's ranked priorities and hard constraints.
+- **`rephrase`** — Restates the report at the end of a piece of work (a delivered solution, a finished phase, a whole cycle) as four short sections in a fixed order: Done, Pending, Blocking, Next. Drops process narration, restated requests, settled reasoning, and file-by-file tours. Adds no facts and does no new work — it never re-runs tests or re-reads code, unverified work is reported as unverified, and failures and skipped steps always survive. An empty section reads `None`. Invoke with `/rephrase` (bare, a file path, or pasted text) or by asking "rephrase that".
 
 ### Commands
 
@@ -63,7 +64,14 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.0.0.
+Version 3.1.0.
+
+### What's new in 3.1.0
+
+- **New skill `rephrase`.** Restates the report you get at the end of a solution, a development phase, or a full cycle as four sections — **Done**, **Pending**, **Blocking**, **Next** — and removes everything else. `/rephrase` with no argument takes the most recent report in the conversation; it also accepts a file path or pasted text, and activates on "rephrase that", "restate that", or "tl;dr".
+- **It shortens, it does not improve.** No tests are re-run and no code is re-read. A claim keeps the certainty the original gave it: work that was written but not verified is listed as written, with the verification under Pending. Failures and skipped steps are never dropped for length.
+- **Fixed shape.** All four headings appear every time, and an empty one reads `None`, so "nothing is blocking" is distinguishable from a section that was left out. Next steps are numbered, each owned by **You** or **Claude**, and are derived only from what the report already says is unfinished, blocked, or proposed.
+- **Not for rewording prose or for handoffs.** "Rephrase this paragraph" stays an ordinary edit, and a handoff to a fresh session still goes through `/adhoc-compact`, which keeps the context this skill removes.
 
 ### What's new in 3.0.0
 

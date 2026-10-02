@@ -49,6 +49,7 @@ agent-engineering/
 │   ├── ai-agent-security-review/   # OWASP AI-agent control catalog (vendored) +
 │   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)
+│   ├── rephrase/               # restates an end-of-work report as Done / Pending / Blocking / Next
 │   ├── cross-cutting-adr/, improve-claude-md/,
 │   │                       #   bb-worktree-init/, worktree-merge/
 └── README.md

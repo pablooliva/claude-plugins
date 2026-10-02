@@ -34,9 +34,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v3.0.0
+### 3. Agent Engineering — v3.1.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
+
+**v3.1.0 highlights:** `rephrase` — restates the report at the end of a solution, phase, or cycle as four short sections (Done, Pending, Blocking, Next) and drops the rest; it adds no facts, re-runs nothing, and never trims a failure or a skipped step.
 
 **v3.0.0 highlights:** a cleanup release — `todo-tidy`, `correction-codifier`, `worktree-create`, and LangSmith eval capture (`/regression-eval-capture`, `sdd-flow` Step 4g, `eval_required:`) are removed; `worktree-handoff` is rewritten as `worktree-merge` for BB IDE worktrees; and an abuse case with no test now blocks an agentic feature at review.
 
@@ -55,6 +57,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `cross-cutting-adr` skill — captures binding architectural decisions as numbered ADRs (Living Documentation)
 - `improve-claude-md` skill — audits and trims `CLAUDE.md`/`AGENTS.md` files to focus on preferences and behavioral nudges
 - `prompt-doctor` skill — diagnoses a task prompt before you send it against the ten-component anatomy, with quoted evidence per component and an opt-in rewrite built only from your own words
+- `rephrase` skill — restates an end-of-work report as Done / Pending / Blocking / Next, without adding facts or doing new work
 - `ai-agent-security-review` skill — adversarial review of agentic systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt injection, memory security, human-in-the-loop, output guardrails, multi-agent trust, adversarial testing); runs standalone, and the same vendored catalog gates two hook points inside `sdd-flow`
 - `bb-worktree-init` skill — one-time per repo: inspects the project and renders its bundled templates into the `.worktreeinclude` + `.env-setup.sh` (+ `.bb-env-setup.sh` symlink, optional teardown) contract that BB IDE needs, then validates it in a throwaway worktree
 - `worktree-merge` skill — lands a worktree's committed work on the main line: syncs with the target branch inside the worktree, fast-forwards the target (or opens a PR), renumbers colliding SDD ADR/feature numbers on confirmation, surfaces git-ignored files that would be lost, and cleans up — leaving BB-managed worktrees for BB IDE to retire
