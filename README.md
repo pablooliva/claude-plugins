@@ -34,9 +34,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v3.2.0
+### 3. Agent Engineering — v3.3.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
+
+**v3.3.0 highlights:** `simplicity-challenge` — challenges a proposal for doing or building too much before it is implemented, on two axes (what it does, how it is built), and reports the smallest version still worth using plus a table of cuts and what each would cost to add later. It applies one tier standard (Tier 1 POC-plus, Tier 2 Standard, Tier 3 Full; nothing is built ahead for a later tier) and only removes or defers — it never adds requirements, edits the target, or implements.
 
 **v3.2.0 highlights:** two user-invoked skills adapted from [mattpocock/skills](https://github.com/mattpocock/skills) — `improve-codebase-architecture` surveys existing code for shallow modules that could become deep ones and reports candidates without editing anything; `retro` reads a whole development cycle (every session across `/clear`, plus the `SDD/` records) and proposes changes to the agent's environment. Module depth now has one definition across the plugin: leverage at the interface, judged with the deletion test.
 
@@ -60,6 +62,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `improve-claude-md` skill — audits and trims `CLAUDE.md`/`AGENTS.md` files to focus on preferences and behavioral nudges
 - `prompt-doctor` skill — diagnoses a task prompt before you send it against the ten-component anatomy, with quoted evidence per component and an opt-in rewrite built only from your own words
 - `rephrase` skill — restates an end-of-work report as Done / Pending / Blocking / Next, without adding facts or doing new work
+- `simplicity-challenge` skill — cuts a proposal down before it is built: smallest useful version, cuts and deferrals by tier (POC-plus / Standard / Full) with their costs, and what was kept for safety; removes or defers only
 - `ai-agent-security-review` skill — adversarial review of agentic systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt injection, memory security, human-in-the-loop, output guardrails, multi-agent trust, adversarial testing); runs standalone, and the same vendored catalog gates two hook points inside `sdd-flow`
 - `bb-worktree-init` skill — one-time per repo: inspects the project and renders its bundled templates into the `.worktreeinclude` + `.env-setup.sh` (+ `.bb-env-setup.sh` symlink, optional teardown) contract that BB IDE needs, then validates it in a throwaway worktree
 - `worktree-merge` skill — lands a worktree's committed work on the main line: syncs with the target branch inside the worktree, fast-forwards the target (or opens a PR), renumbers colliding SDD ADR/feature numbers on confirmation, surfaces git-ignored files that would be lost, and cleans up — leaving BB-managed worktrees for BB IDE to retire

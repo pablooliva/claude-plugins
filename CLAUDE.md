@@ -50,6 +50,9 @@ agent-engineering/
 │   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)
 │   ├── rephrase/               # restates an end-of-work report as Done / Pending / Blocking / Next
+│   ├── simplicity-challenge/   # user-invoked: cuts a proposal down before it is built (function + structure);
+│   │                       #   references/tiers.md is the plugin's ONE tier standard (tiers, floor, cut tests,
+│   │                       #   tier-plan template) — anything that works in tiers reads it, never restates it
 │   ├── improve-codebase-architecture/  # user-invoked survey of existing code for deepening candidates;
 │   │                       #   references/codebase-design.md is the plugin's ONE depth standard
 │   │                       #   (sdd-flow panel-specialist §4.5 + planning.md mirror it — change together)
