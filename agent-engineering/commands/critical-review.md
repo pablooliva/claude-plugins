@@ -33,7 +33,7 @@ If no SDD artifacts exist or the user is asking about a specific proposed soluti
 
 Agentic-system security — prompt injection, tool over-scoping, memory poisoning, excessive autonomy over irreversible actions, multi-agent trust, Denial of Wallet — belongs to the `ai-agent-security-review` skill, which applies the vendored OWASP AI Agent Security control catalog. If the target has an agentic surface, note it in one line and point the user there rather than improvising those findings here.
 
-Doing or building too much — scope that outruns the need, parts added for a future that is not committed — belongs to the `simplicity-challenge` skill. This review argues that a proposal is *not enough*; that one argues it is *too much*, and says what each cut would cost. If the target looks over-built, say so in one line of the summary and point to `/simplicity-challenge`; do not produce the list of cuts here.
+Doing or building too much — scope that outruns the need, parts added for a future that is not committed — belongs to the `simplicity-challenge` skill. This review argues that a proposal is *not enough*; that one argues it is *too much*, and says what each cut would cost. If a proposal, plan, or spec looks over-built, say so in one line of the summary and point to `/simplicity-challenge`; do not produce the list of cuts here. That skill works on proposals before they are built — when the target is code already written, note the over-building as an ordinary finding and do not refer to it.
 
 ## 2. Research Phase Critical Review
 
@@ -246,7 +246,7 @@ When reviewing a proposed solution outside the SDD lifecycle:
 - [ ] **Problem fit** - Does this actually solve the stated problem?
 - [ ] **Unstated assumptions** - What must be true for this to work?
 - [ ] **Alternative solutions** - What other approaches weren't considered?
-- [ ] **Scope creep** - Does this do more than necessary? (Note it in one line and point to `/simplicity-challenge`.)
+- [ ] **Scope creep** - Does this do more than necessary? (For a proposal not yet built, note it in one line and point to `/simplicity-challenge`.)
 - [ ] **Under-engineering** - Does this do less than necessary?
 - [ ] **Numbers permit the goals** - Run the Feasibility Arithmetic check (Section 6) on every quantity the proposal states.
 
@@ -318,17 +318,22 @@ Rate each finding:
 
 Applies to every kind of review. Do the target's own numbers permit its own goals? This is arithmetic, not a judgment call — run it mechanically.
 
-**Gate.** If the target states no quantities at all — no targets, thresholds, caps, budgets, limits, or rates — write the single line `Feasibility arithmetic: skipped — no quantitative goals stated.` and move on. Do not invent numbers to check.
+**Gate.** First run the *Goals stated in words* check below — it applies even when the target contains no numbers. Then, if the target states no quantities at all — no targets, thresholds, caps, budgets, limits, or rates — write the single line `Feasibility arithmetic: skipped — no quantitative goals stated.` and skip the procedure. Do not invent numbers to check.
 
-**Procedure.** List every **goal** (a value to reach, a threshold to cross, a change to produce) and every **constraint** (a cap, bound, budget, or rate/size/latency ceiling). A specification's `### Quantitative Ledger`, when it has one, is that list; anywhere else, collect them from the text. Then, for each goal:
+**Procedure.** List every **goal** (a value to reach, a threshold to cross, a change to produce) and every **constraint** (a cap, bound, budget, or rate/size/latency ceiling). A specification's `### Quantitative Ledger`, when it has one, is the starting list — but check it against the text: a number the spec asserts that the ledger leaves out is added to your list, and the omission is a MEDIUM finding. Anywhere else, collect them from the text. Then, for each goal:
 
 1. **Normalize units.** Restate the goal and each constraint that acts on the same quantity — or on the mechanism that moves it — in one common unit. A mismatch that cannot be reconciled is a HIGH finding on its own: the two statements are not about the same quantity.
 2. **Compare.** Required headroom (target minus current, or the change the goal demands) against permitted headroom (the tightest constraint). **Required greater than permitted is a HIGH finding**: the proposal cannot be both effective and compliant, and every other check will pass it because each statement is sound on its own.
 3. **Look for constraints the goal ignores.** A cap or budget stated elsewhere in the target that bears on the goal but is never related to it is a MEDIUM finding — HIGH if it also fails the comparison.
 
-**Goals stated in words.** Flag every success criterion stated qualitatively where the thing it measures is a quantity — "improves meaningfully", "significantly reduces", "performs well under load". Each is a MEDIUM finding, and HIGH when a constraint elsewhere bounds the same quantity: a goal with no number cannot be checked against a cap that has one. The resolution is always to state the number and its unit, then re-run step 2.
+**Goals stated in words.** Flag every success criterion stated qualitatively where the thing it measures is a quantity — "improves meaningfully", "significantly reduces", "performs well under load". Each is a MEDIUM finding. It is HIGH when a constraint elsewhere bounds the same quantity: a goal with no number cannot be checked against a cap that has one, so a contradiction between them stays hidden until the work is built — the major rework the HIGH rating is for. The resolution is always to state the number and its unit, then re-run step 2.
 
-Report the results under a `### Feasibility Arithmetic` heading in the review: the one skipped line, or per infeasible goal — the quantity in a common unit, what the goal requires, what the constraints permit, and which of three resolutions to take (relax the named constraint, lower the goal, or use a different mechanism).
+**Reporting.** Add a `### Feasibility Arithmetic` heading to the output format of whichever review you are doing, directly after its first findings section — the templates in Sections 2–5 do not show it, and it belongs in all of them. Under it, write:
+
+- the one skipped line, when the gate short-circuited;
+- per infeasible goal: the quantity in a common unit, what the goal requires, what the constraints permit, and which of three resolutions to take (relax the named constraint, lower the goal, or use a different mechanism);
+- per goal stated in words: the quoted phrase, the quantity it measures, any constraint that bounds it, and a restatement with a number and unit;
+- per constraint a goal ignores, or number missing from a ledger: what it is and which goal it bears on.
 
 ### Don't Stop at Surface Level
 
