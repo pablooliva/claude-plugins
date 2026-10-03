@@ -302,7 +302,7 @@ Based on IMPLEMENTATION-PLAN document verification:
 
 The tier plan is what the next tier's cycle starts from. Update TIER_PLAN in place, in the shape TIERS gives:
 
-- **Status table:** this tier's row becomes `shipped [YYYY-MM-DD]`, with `Built in` = this SPEC's file name. Leave the `Task` column and every other tier's row as they are.
+- **Status table:** this tier's row becomes `shipped [YYYY-MM-DD]`, with `Built in` = this SPEC's file name — and so does the row of any lower tier this same cycle built (a first cycle approved at Tier 2 builds Tiers 1 and 2 together). Leave the `Task` column and every other tier's row as they are.
 - **This tier's section:** what it does, what it deliberately does not, and what to look at when using it — five lines at most.
 - **Deferred table:** copy in every row of the SPEC's `## Deferred to Later Tiers` that the tier plan does not already have (they were added during planning or its reviews), keeping the SPEC's IDs. Add a row, `Came from` = `implementation`, for any behaviour the implementation left for later — the IMPLEMENTATION-PLAN's Implementation Deviations section is where to look. Behaviour only: never a module, interface, or other structure.
 - **Leave alone:** the later tiers' sketches and every Feedback note. Their own cycle re-decides them.

@@ -35,6 +35,7 @@ agent-engineering/
 │                                   #   sdd-workhorse (sonnet), sdd-critical-reviewer (opus),
 │                                   #   8× sdd-spec-*-specialist (sonnet)
 ├── hooks/log_subagent_call.py      # logs subagent transcripts
+├── docs/sdd-flow-diagram.md        # human-facing picture of the sdd-flow cycle — update it when a step or a stop changes
 ├── commands/                       # interactive (depth-0) commands the user runs:
 │                                   #   adr-capture, prompt-doctor, research-clarify,
 │                                   #   critical-review, continue, adhoc-compact, commit
@@ -45,7 +46,8 @@ agent-engineering/
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
 │   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
 │   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard
-│   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff
+│   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff;
+│   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI
 │   │                               #   (tests: python3 -m unittest discover -s scripts/tests)
 │   ├── ai-agent-security-review/   # OWASP AI-agent control catalog (vendored) +
 │   │                       #   standalone review; sdd-flow reads the same catalog

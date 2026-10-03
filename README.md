@@ -34,9 +34,13 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v3.3.0
+### 3. Agent Engineering — v3.5.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
+
+**v3.5.0 highlights:** `sdd-flow` mirrors a feature's delivery tiers to BB tasks — one parent task per feature and one sub-task per tier, moved through in progress, in review, and done as the flow runs, with feedback left on the next tier's task copied back into the tier plan. A tracker project is created when the BB project has none, and the flow tells you whenever the mirror could not run.
+
+**v3.4.0 highlights:** `sdd-flow` gains a design gate and tiered delivery. After research it writes a short design brief and stops — in supervised and autonomous mode alike — until you approve it with every question answered; the spec is then held to the brief, and departures are shown to you before any code is written. The brief proposes three tiers and builds Tier 1 unless you choose otherwise; each tier is its own cycle, started with `/sdd-flow --next-tier`.
 
 **v3.3.0 highlights:** `simplicity-challenge` — challenges a proposal for doing or building too much before it is implemented, on two axes (what it does, how it is built), and reports the smallest version still worth using plus a table of cuts and what each would cost to add later. It applies one tier standard (Tier 1 POC-plus, Tier 2 Standard, Tier 3 Full; nothing is built ahead for a later tier) and only removes or defers — it never adds requirements, edits the target, or implements.
 
@@ -66,7 +70,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `ai-agent-security-review` skill — adversarial review of agentic systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt injection, memory security, human-in-the-loop, output guardrails, multi-agent trust, adversarial testing); runs standalone, and the same vendored catalog gates two hook points inside `sdd-flow`
 - `bb-worktree-init` skill — one-time per repo: inspects the project and renders its bundled templates into the `.worktreeinclude` + `.env-setup.sh` (+ `.bb-env-setup.sh` symlink, optional teardown) contract that BB IDE needs, then validates it in a throwaway worktree
 - `worktree-merge` skill — lands a worktree's committed work on the main line: syncs with the target branch inside the worktree, fast-forwards the target (or opens a PR), renumbers colliding SDD ADR/feature numbers on confirmation, surfaces git-ignored files that would be lost, and cleans up — leaving BB-managed worktrees for BB IDE to retire
-- `sdd-flow` skill — self-contained orchestration of the full Research → Planning → Implementation lifecycle via subagents (no SDD plugin required)
+- `sdd-flow` skill — self-contained orchestration of the full Research → Design gate → Planning → Implementation lifecycle via subagents (no SDD plugin required): you approve a short design brief before anything is specified, and features are delivered in tiers, smallest useful version first ([workflow diagram](agent-engineering/docs/sdd-flow-diagram.md))
 - `/adr-capture` command — manual entry point for ADR capture
 - `/prompt-doctor` command — manual entry point for prompt diagnosis
 

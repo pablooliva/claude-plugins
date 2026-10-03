@@ -107,12 +107,25 @@ SDD/
 
 ## Orchestrator Discipline (the load-bearing core)
 
-**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step runs inside a spawned subagent — even ones that "look small." The orchestrator's only direct work: spawning subagents, running commits (per `commands/commit.md`), running the two deterministic matchers (the retro recommendation matcher and `scripts/site-diff.py`), writing user-facing checkpoint messages, and recording state in `progress.md`. The orchestrator has no `/clear`; subagent boundaries are the only context reset.
+**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step runs inside a spawned subagent — even ones that "look small." The orchestrator's only direct work: spawning subagents, running commits (per `commands/commit.md`), running the two deterministic matchers (the retro recommendation matcher and `scripts/site-diff.py`), running the tier task mirror (`scripts/tier-mirror.py` — see Tier Task Mirror below), writing user-facing checkpoint messages, and recording state in `progress.md`. The orchestrator has no `/clear`; subagent boundaries are the only context reset.
 
 - **Bounded returns.** Every subagent returns **≤200 words + artifact paths**. The orchestrator reads artifact files only when a decision genuinely needs them (e.g. spec frontmatter to route Step 4).
 - **progress.md is append-only.** Never overwrite or delete prior content.
 - **Explicit resolved paths in every spawn prompt** — never let a subagent guess artifact locations.
 - **Per-phase sizing:** Research — single subagent (scope unknown until investigated); pre-split per-layer only if the task obviously cuts across >2 architectural layers. Planning — single subagent; pre-split only if RESEARCH >1000 lines or >3 disjoint subsystems. Implementation (whole-feature) — count SPEC items `REQ-XXX`+`EDGE-XXX`+`FAIL-XXX`; if >8, pre-split into ⌈total/5⌉ sequential chunks, each appending to IMPLEMENTATION-PLAN. **Per-slice mode: one subagent per slice, strict, no bundling** — REQ-count chunking does NOT apply.
+
+### Tier Task Mirror (record-keeping, never silent)
+
+The tier plan file is the record of a feature's tiers; BB tasks mirror it — one parent task for the feature, one sub-task per tier — so a waiting tier shows on the board and feedback can be left on it between cycles. The orchestrator keeps the two in step by running `python3 "$SKILL_ROOT/scripts/tier-mirror.py"` at the four points the phase files name: design-gate approval (`phases/planning.md` → 2.5b), before the final commit and at the completion announcement (`phases/implementation-whole-feature.md` → 4h–4j), and the start of a next-tier cycle (`phases/setup.md` → Step 0). It runs only for tiered features (approved tier `1`, `2`, or `3`). When no tracker project is linked to the BB project, the script **creates one** — a missing project is never a reason to skip.
+
+The script's first stdout line is `Result: …`. After every run, append `## Task Mirror - <that line, verbatim>` to `progress.md`, then act on the exit status:
+
+- **0** — done. If the line says a tracker project or tasks were created, tell the user in the next user-facing message, with the keys.
+- **3 (`OFF`)** — there is no `bb` CLI, or the checkout is not inside a BB project, so there is nothing to mirror to. **Tell the user in the next user-facing message**, quoting the line. Do not run the mirror again in this cycle.
+- **1 (`ERROR`)** — a `bb` command failed. Run it once more (it is safe to repeat: it creates only what is missing). If it fails again, **tell the user in the next user-facing message**, quoting the line, and carry on — the tier plan is unaffected, and the next mirror point tries again.
+- **2** — the tier plan is missing or malformed: treat as a failed design-brief (or completion) step and re-spawn it.
+
+The mirror never halts the flow and is never skipped without the user being told. The orchestrator never edits the tier plan itself; the script writes task keys into its `Task` column and copies task comments into its `## Feedback`, and nothing else.
 
 ### Progress Hygiene (rotation + bounded appends)
 
@@ -204,5 +217,6 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 9. **No control is Complete on the implementer's word.** Every control (any SPEC rule that must hold on every path — guards, refusals, write controls, output contracts, invariants, security controls) is inventoried site by site with per-site mutation evidence, then counted **blind** by a separate spawn and diffed (4a.5 per slice or feature; 4e.5 feature-wide before completion). Mismatches are findings in the existing fix loop; a control with no independent count stays `Partial`. Standard: `references/enforcement-sites.md`.
 10. **The user approves a design, not a spec.** The design brief is the one planning document written for a person; nothing is specified until it is approved, with every question in it answered. The spec is held to it, and a spec that departs from it is shown to the user before any code is written.
 11. **Tiers limit scope, never rigour, and nothing is built ahead.** Each tier is its own cycle with the same reviews, tests, and site counts. A tier holds the simplest code and structure that serves that tier; a later tier reshaping it is expected. Standard: TIERS.
+12. **The tier plan is the record; BB tasks mirror it.** The flow keeps them in step itself, creates the tracker project when there is none, and tells the user whenever the mirror could not run.
 
 Session resumption, mid-phase handoff, phase-detection priority, and error handling all live in `phases/protocols.md`.

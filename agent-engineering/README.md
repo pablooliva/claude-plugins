@@ -4,7 +4,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 
 ## Philosophy
 
-This plugin provides the *agent-engineering discipline* that operates across any methodology — feedback loops, institutional memory, specialist review, token economy, and observability. Its flagship is `sdd-flow`: a self-contained, end-to-end Specification-Driven Development orchestrator that drives a feature from Research → Planning → Implementation → Done through subagents with a fresh context window per phase.
+This plugin provides the *agent-engineering discipline* that operates across any methodology — feedback loops, institutional memory, specialist review, token economy, and observability. Its flagship is `sdd-flow`: a self-contained, end-to-end Specification-Driven Development orchestrator that drives a feature from Research → Design gate → Planning → Implementation → Done through subagents with a fresh context window per phase, stopping after research for you to approve a short design brief.
 
 ## Self-contained as of 1.0.0
 
@@ -29,6 +29,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **Gated AI-agent security review (2.1.0).** Spec frontmatter `agent_security: auto|true|false` gates two hook points: the `agent-security` panel value at Step 3c (spec-level checks) and the Agentic-Surface Lens in the Step 4b / per-slice code review (code-level checks). `auto` resolves by detecting an agentic surface — a model call, a tool/MCP definition, agent memory or a retrieval store, inter-agent messaging, or a model output driving an external action.
 - **Design gate (3.4.0).** After research, one Opus subagent writes a **design brief** — at most 150 lines, in plain language: what will be built, how it will work, the decisions made and what was rejected, where the changes land, and what you must decide. The flow stops and shows it, in supervised and autonomous mode alike; nothing is specified until you approve it, and `approve` is refused while any of its questions is unanswered. The spec is then held to the brief: every departure is recorded, checked by the spec critical review, and shown to you before implementation starts. Each code review reports which changed files fall outside the footprint you approved.
 - **Tiered delivery (3.4.0).** The brief proposes three delivery tiers — POC-plus, Standard, Full — and builds Tier 1 unless you choose otherwise. The spec covers the chosen tier only and lists what it deferred; reviewers treat that list as deliberate, and flag anything unsafe to defer or built ahead for a later tier. Each tier is its own cycle: `/sdd-flow --next-tier <feature>` starts the next one from feedback on the last. The rules are the `simplicity-challenge` skill's `references/tiers.md`, read by the flow and not restated.
+- **A picture of the cycle.** [`docs/sdd-flow-diagram.md`](docs/sdd-flow-diagram.md) draws the stages, what each one does and writes, and every place the flow stops for you.
 - **Progressive disclosure.** `SKILL.md` is a slim orchestrator core; per-phase detail lives in `skills/sdd-flow/phases/` (`setup`, `research`, `planning`, `implementation-whole-feature`, `implementation-per-slice`, `protocols`), read at each phase boundary.
 
 ## Contents
@@ -69,7 +70,17 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.4.0.
+Version 3.5.0.
+
+### What's new in 3.5.0
+
+- **Tiers are mirrored to BB tasks.** The tier plan file stays the record; `sdd-flow` now keeps a parent task for the feature and one sub-task per tier in step with it, so a waiting tier shows on the board and you can leave feedback on it between cycles. On design-gate approval the approved tier (with any lower tier not yet shipped) goes to in progress and the rest to backlog, with the brief attached and, inside a BB thread, the thread too; before the final commit it goes to in review; at completion it goes to done with one comment saying what shipped and what to look at. `/sdd-flow --next-tier` copies the comments left on the next tier's sub-task into the tier plan's `## Feedback` before the feedback interview.
+- **The tracker project is created when there is none.** A BB project with no linked tracker project gets one, named after it and linked to it — a missing project is not a reason to skip.
+- **Never skipped silently.** Outside BB (no `bb` CLI, or a checkout that is not a BB project) there is nothing to mirror to: the flow says so in its next message and carries on. A failed `bb` command is retried once, then reported the same way; the tier plan is unaffected and the next mirror point tries again. The mirror never halts the flow.
+- **A script, with tests.** `skills/sdd-flow/scripts/tier-mirror.py` (stdlib only; talks to BB through the `bb` CLI) does the work, so the orchestrator runs one command per mirror point. It only creates what is missing, so it is safe to repeat. 23 cases in `scripts/tests/test_tier_mirror.py` against a stub `bb`.
+- **`/critical-review` checks the numbers.** The interactive command gains the feasibility-arithmetic check the flow has had since 2.3.0, in a general form: for any target that states quantities, it tests whether the stated goals fit inside the stated limits, and a failure is an automatic hold. It also points to `/simplicity-challenge` when a proposal looks over-built, rather than listing cuts itself. It stays independent of `sdd-flow`: it does not compare a spec against a design brief.
+- **Workflow diagram.** New `docs/sdd-flow-diagram.md`: the whole cycle, the per-slice loop, and tiers across cycles as diagrams, with a table of what each stage does and where it can stop.
+- This is step 3 of the build order in `proposals/tiered-delivery-2026-10-02.md` (§4). Step 4, the re-review of the flow, is not done.
 
 ### What's new in 3.4.0
 
@@ -82,7 +93,7 @@ Two linked changes to `sdd-flow`, aimed at one problem: the volume of what an ag
 - **Reviews respect the tier.** Panel specialists, the critical review, the code review, and the slice review do not flag what is on the deferred list; they do flag, at HIGH, a deferral that breaches the tier standard's floor, and they flag anything built ahead for a later tier. Spec fix subagents may resolve a finding about *absent* scope by deferring it; a finding about behaviour the tier builds is always fixed.
 - **Tier plan and next tier.** `SDD/flow/TIERS-[feature-name].md` records what shipped, what was deferred, sketches of the later tiers, and feedback. The brief subagent writes it; the completion subagent updates it. `/sdd-flow --next-tier <feature>` starts the next tier as a new cycle: `/research-clarify` becomes a feedback interview, research is a delta on the previous tier's, and the brief opens with what was learned.
 - **Autonomous mode has more stops.** `--auto` now stops at the clarification gate, at the design gate, and — only if the spec departs from the approved brief — at Step 3g. It is unattended from there, apart from slice pauses.
-- **Not in this release.** Mirroring tiers to BB tasks (the tier plan's `Task` column stays `—`) and the re-review of the flow with current models — steps 3 and 4 of the build order in the tiered-delivery proposal.
+- **Not in 3.4.0.** Mirroring tiers to BB tasks (added in 3.5.0) and the re-review of the flow with current models — steps 3 and 4 of the build order in the tiered-delivery proposal.
 
 ### What's new in 3.3.0
 

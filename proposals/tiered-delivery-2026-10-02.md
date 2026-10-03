@@ -1,6 +1,6 @@
 # Tiered Delivery and a Simplicity Challenge
 
-**Status:** Build-order step 1 (the `simplicity-challenge` skill and `references/tiers.md`) is implemented as agent-engineering 3.3.0; the shipped files supersede Appendices A and B below, which are kept as the original drafts. Step 2 (the design gate with tiers in `sdd-flow`, §2–3) is implemented as 3.4.0. Steps 3–4 (the BB task mirror of §4, and the re-review of the flow) are not implemented.
+**Status:** Build-order step 1 (the `simplicity-challenge` skill and `references/tiers.md`) is implemented as agent-engineering 3.3.0; the shipped files supersede Appendices A and B below, which are kept as the original drafts. Step 2 (the design gate with tiers in `sdd-flow`, §2–3) is implemented as 3.4.0. Step 3 (the BB task mirror of §4) is implemented as 3.5.0, with the two changes recorded under "Decided (2026-10-03)". Step 4 (the re-review of the flow) is not implemented.
 **Date:** 2026-10-02
 **Affects:** `agent-engineering/` plugin — one new skill (`simplicity-challenge`), and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `commands/research-clarify.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.
@@ -160,7 +160,7 @@ The mapping fits BB's limit of one level of sub-tasks exactly:
 | While using the tier | The human comments on the next tier's sub-task |
 | `--next-tier` starts | Comments on that sub-task are copied into the tier plan's `## Feedback`, so the cycle reads them from the file |
 
-The mirror is **optional and never halts the flow**: it runs only when the `bb` CLI is present and a tracker project exists for the repository; otherwise, and on any error, it is skipped with one line in `progress.md`.
+The mirror **never halts the flow and is never skipped silently** (as amended 2026-10-03 — the original text had it skip quietly when no tracker project existed). When the BB project has no tracker project, the flow creates one. Outside BB — no `bb` CLI, or a checkout that is not a BB project — there is nothing to mirror to: the flow tells the user so and carries on. A failed `bb` command is retried once and then reported to the user the same way. Every outcome is also recorded in `progress.md`.
 
 ## 5. The `/simplicity-challenge` skill
 
@@ -205,6 +205,13 @@ Step 1 is also the trial for the idea: use the skill by hand on two or three rea
 - **A next-tier cycle runs the full specialist panel**, like any other cycle. Whether that can be trimmed is a question for the later re-review of the flow.
 
 No decisions remain open.
+
+## Decided (2026-10-03) — the task mirror
+
+- **A missing tracker project is created, not skipped.** When the BB project has no linked tracker project, the flow creates one named after the BB project and linked to it.
+- **Nothing is skipped silently.** Where the mirror cannot run (outside BB) or fails, the user is told in the flow's next message; a line in `progress.md` alone is not enough.
+- **Built before the trial of the design gate**, not after it as the build order had it. Accepted cost: rework if the trial changes how tiers work.
+- **Done by a script** — `skills/sdd-flow/scripts/tier-mirror.py`, with tests — rather than by `bb` commands written into the phase files, so the mirror is one command per point and can be repeated safely.
 
 ---
 
