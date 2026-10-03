@@ -56,7 +56,7 @@ These are **interactive commands you run yourself** (depth 0, so they may delega
 - **`/prompt-doctor`** — Manual entry point for the `prompt-doctor` skill. Takes a pasted prompt, a file path, or the last draft in the conversation.
 - **`/research-clarify`** — Structured interview that externalizes your design concept before any codebase research. Satisfies the `sdd-flow` Step 1.5 clarification gate. On a next-tier cycle it interviews for feedback on the tier already shipped instead.
 - **`/critical-review`** — Standalone adversarial review of a research doc, spec, or implementation.
-- **`/continue`** — Resume an interrupted SDD session from `progress.md`.
+- **`/continue`** — Resume a session after any of the four compact commands below: loads the compaction file that `progress.md` names (under `SDD/orchestration/compacted/`), or the one whose path you pass, and continues from its `## Continuation Priorities`.
 - **`/adhoc-compact`** — Generic mid-phase compaction, for ad-hoc or follow-up work. Detects an active SDD phase and redirects to the phase-specific command below.
 - **`/research-compact`**, **`/planning-compact`**, **`/implementation-compact`** — Phase-specific compaction. Thin wrappers that read `sdd-flow`'s own compaction bodies (`skills/sdd-flow/bodies/<phase>-compact.md`) and run them interactively, so a manual compaction produces the same artifact an orchestrated run would — no second copy of the templates to drift.
 - **`/commit`** — Commit conventions (no co-author attribution), including atomic per-slice commits.
@@ -70,7 +70,26 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.5.0.
+Version 3.5.1.
+
+### What's new in 3.5.1
+
+A review of `sdd-flow` as a whole (`proposals/sdd-flow-review-findings-2026-10-03.md`; fix plan beside it) found that the main path held together and the gaps clustered in three places: resuming after a stop, the per-slice path, and instruction files forked from hand-run commands that still behaved like them. No flow was run end to end for the review — every finding is a contradiction between two pieces of text. `SKILL.md` now states one rule per cause, and later edits are checked against them.
+
+- **Bodies take their inputs from the prompt and nothing else.** A body no longer lists a folder to find its spec, research document, plan, or compaction file, so a second feature or tier in the repo no longer stops the slice path or the second implementation chunk. A body never commits and never resets `progress.md`; one that cannot proceed returns a failure instead of writing a stop note.
+- **Only the orchestrator declares a phase done.** New markers `## Research - Accepted`, `## Implementation - Committed`, and `## Feature - Done` join `## Planning - Accepted`. A session that ended at the "ready to commit?" checkpoint no longer resumes as finished with nothing committed.
+- **Resume reads the current feature only.** Step 0 opens each feature's record with `## Flow Started - …`; a finished feature is rotated to one `Finished:` line that no rule matches.
+- **Every stop that waits for an answer is recorded and resumable.** A stop writes its block to `progress.md` before it asks, has a resume rule, and has a row in the diagram. A stop record the current version does not recognise is shown as written, never guessed past.
+- **Research-stage ADRs in supervised mode are proposed, then written on approval.** Candidates are listed at the design gate and can be dropped by title; the separate confirmation step, which never completed, is gone.
+- **Every slice state change, stop, and commit has a named owner.** The orchestrator marks a slice `Complete` and commits it, in that order, then writes `## Slice SLICE-XXX - Committed`. A slice whose fix loop reaches its cap stops with `## Awaiting Slice Resolution`, and `continue` re-counts and re-reviews it from a fresh round. Both answers to a re-planning halt commit the triggering slice first.
+- **Slice reviews resolve LOW findings too.** A slice with only LOW findings takes one extra fix round.
+- **A re-plan no longer collides with the plan it replaces.** The old plan's slice retrospectives, reviews, counts, and diffs move to `SDD/implementation/slices/superseded/<timestamp>/` — kept, not deleted — and resume, fix-round caps, and the learnings ledger read only the new plan's.
+- **Falling back from slices goes back through planning.** `--fall-back-to-whole-feature` and `--retry-slicing` return to the spec check, so the panel and reviews still run.
+- **Removed: re-starting a finished slice.** The `--force` flag on slice start, `--confirm-restart`, and `## Awaiting Re-start Decision` were half-built and had no user-facing entry point. Change a finished slice in a later slice, or re-plan.
+- **Panel values without a shipped specialist** (`accessibility`, `privacy`, `cost`) run on the general worker with the panel body instead of naming an agent that does not exist.
+- **The compact commands and `/continue` follow one contract.** All four compact commands write under `SDD/orchestration/compacted/`, record the file's full path in `progress.md` (or, with `/adhoc-compact`'s Skip option, hand you the path to pass to `/continue`), carry the same `## Continuation Priorities` section, and leave a pending `## Awaiting …` block as the latest block so a stopped flow is still found (unless you tell `/adhoc-compact` to set the whole file aside). `/continue` loads the file `progress.md` names (it used to look in the wrong folder) or a path you give it, stops rather than substituting when that file is missing, asks when several unrecorded files exist, gains a branch for generic compactions, and points at `/sdd-flow continue` when a flow is stopped waiting for an answer. Run it as `/agent-engineering:continue` when the `sdd` plugin is also installed. `/adhoc-compact` no longer offers to overwrite `progress.md` — it can set the whole file aside in `progress-archive/` instead, and asks first when that file holds an unfinished feature — and `/implementation-compact` no longer commits during a flow.
+- **Runs started on 3.5.0 keep resuming.** Each new marker has a stated reading for a run that never wrote it.
+- **Legacy-layout message corrected.** It named a `/sdd-migrate-layout` command this plugin does not ship; it now points at the `sdd` plugin's.
 
 ### What's new in 3.5.0
 

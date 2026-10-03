@@ -118,7 +118,7 @@ This preserves complete implementation journey while enabling fresh context cont
 
 ## Leave the Working Tree Uncommitted
 
-Do not stage or commit anything. The blind site count and the reviews compare the uncommitted working tree against the base commit taken before implementation began; a commit here moves `HEAD` off that base and puts unreviewed code into history ahead of the review and commit steps the orchestrator owns. Your work is safe as it is: the files stay in the working tree, and the compaction file tells your successor where they are.
+Do not stage or commit anything. Every commit in the flow is the orchestrator's and comes after the review of what it contains: a commit here puts unreviewed code into history, skips the supervised "ready to commit?" checkpoint, and splits the single commit a slice or feature is meant to be — the one a `git revert` undoes. (The blind site count and the reviews measure the working tree against the recorded base commit, so they would still see your changes; the harm is to the history, not to the count.) Your work is safe as it is: the files stay in the working tree, and the compaction file tells your successor where they are.
 
 ## Handoff
 

@@ -1,6 +1,6 @@
 # sdd-flow Review — Fix Plan
 
-**Status:** Plan agreed — not started. All five decisions were made on 2026-10-03 (see Decisions).
+**Status:** Done — shipped as 3.5.1. Batch 1 `58b559b`, Batch 2 `d1b85e8`, Batch 3 `2e7c0fb`, then the wrap-up commit. Two further calls made during Batch 3 and confirmed by Pablo: the re-start of a finished slice was removed (M9), and the slice-boundary pause writes no halt block. L4, listed below as out of scope, was fixed in the wrap-up at Pablo's request. All five decisions were made on 2026-10-03 (see Decisions).
 **Date:** 2026-10-03
 **Affects:** `agent-engineering/` plugin, `sdd-flow` skill (currently 3.5.0).
 **Findings:** `proposals/sdd-flow-review-findings-2026-10-03.md` — finding IDs (K1, H3, M7 …) refer to that file.

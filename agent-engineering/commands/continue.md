@@ -17,40 +17,28 @@ This is the REQUIRED next step after any compaction.
 ## Workflow Overview
 
 ```text
-PHASE START          CONTEXT ~40%           SAVE WORK          CLEAR SESSION
-    │                     │                     │                   │
-    ▼                     ▼                     ▼                   ▼
-[/start] ──────────► [/compact*] ─────────► [/commit] ──────────► [/clear]
-                          │                                         │
-                          └── Creates ────────┐                     │
-                              progress.md &   │                     │
-                              compaction file │                     │
-                                              │                     │
-                                              ▼                     ▼
-                                                               FRESH START
-                                                                    │
-                                                                    ▼
-                                                              [/continue]
-                                                                    │
-                                              ┌─────────────────────────┘
-                                              │ Reads both files
-                                              │ (progress.md &
-                                              │  compaction file)
-                                              ▼
-                                         [/complete]
-                                              │
-                                              ▼
-                                          [/commit]
+WORK IN PROGRESS        CONTEXT ~40%             CLEAR SESSION         FRESH START
+       │                     │                        │                     │
+       ▼                     ▼                        ▼                     ▼
+  [working] ──────────► [compact command] ───────► [/clear] ───────────► [/continue]
+                             │                                              │
+                             └─ writes one file under                       │
+                                SDD/orchestration/compacted/                │
+                                and records its path in progress.md ◄─ reads both
 ```
 
-This workflow represents the complete development cycle:
+- **Compact**: when context approaches 40%, run one of the four compact commands. Each writes exactly one file under `SDD/orchestration/compacted/` and records that file's path in `SDD/orchestration/progress.md` (the one exception: `/adhoc-compact`'s Skip option, which hands you the path to pass to this command instead).
+- **Commit (optional)**: `/commit` saves work before the session is cleared. Do **not** commit implementation work while an `sdd-flow` run is implementing a feature — the flow commits each slice or feature once, after its review, and a commit made earlier puts unreviewed code into history and splits that one commit in two.
+- **Clear**, then **Continue**: `/agent-engineering:continue` in a fresh session reads `progress.md` and the compaction file it names. Use the prefix — the `sdd` plugin ships an older `/continue` that looks in a different place.
 
-- **Start**: Begin with `/start` for any phase (research/planning/implementation)
-- **Compact**: When context approaches 40%, use the appropriate compact command to compress session
-- **Commit**: Save your work with `/commit` before clearing the session
-- **Continue**: Resume work with `/continue` in a fresh session
-- **Complete**: Finalize the current phase with `/complete`
-- **Commit**: Create final commits with `/commit`
+| Compact command | File it writes (under `SDD/orchestration/compacted/`) |
+|---|---|
+| `/adhoc-compact` | `compact-[YYYY-MM-DD_HH-MM-SS].md` |
+| `/agent-engineering:research-compact` | `research-compacted-[YYYY-MM-DD_HH-MM-SS].md` |
+| `/agent-engineering:planning-compact` | `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md` |
+| `/agent-engineering:implementation-compact` | `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md` |
+
+All four templates carry the same `## Continuation Priorities` section — **Essential Files to Reload**, **Current Focus**, and a numbered priority list — and that section is what this command resumes from.
 
 ## Process
 
@@ -62,15 +50,22 @@ This workflow represents the complete development cycle:
    - Note completion status and next priorities
    - Check for any subagent delegations that need follow-up
 
-2. **Locate Most Recent Compaction File:**
-   - Check `SDD/orchestration/` for latest compaction file:
-     - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
-     - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
-     - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
-     - Generic (any phase): `compact-[YYYY-MM-DD_HH-MM-SS].md`
-   - Load the most recent file based on timestamp (24-hour format with underscores)
-   - Note: Files use format `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-10-01_14-30-45`)
-   - Generic compaction files work for smaller tasks, follow-ups, or ad-hoc work
+2. **Locate the Compaction File** — one rule, in this order; stop at the first that applies:
+   1. **A path given with the command** (`/agent-engineering:continue <path>`) → load that file.
+   2. **The path `progress.md` names.** Every compact command records it there: the latest `## PARTIAL: needs continuation` block (phase-specific commands) or the `Last compaction:` line under `## Current State` (`/adhoc-compact`). Whichever is later in the file wins. Load exactly that file. **If the named file is missing, stop and tell the user** — do not substitute another file; a different file is different work.
+   3. **`progress.md` names none** → list `SDD/orchestration/compacted/` (and, only if that is empty or absent, `SDD/orchestration/` itself, where older versions wrote) for these names, newest first by the timestamp in the name (`YYYY-MM-DD_HH-MM-SS`, 24-hour):
+      - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
+      - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
+      - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
+      - Generic (any work): `compact-[YYYY-MM-DD_HH-MM-SS].md`
+
+      Exactly one candidate → load it and say that it was the only one. Several → show the newest few with their first heading line and ask the user which to resume; never pick silently — the newest file may belong to different work.
+   - Tell the user which file you loaded and which of the three steps found it.
+   - Never load `site-count-compacted-*.md`: that is a blind site count's handoff inside an `sdd-flow` run, and only the flow may continue it.
+
+3. **Check for a Pending `sdd-flow` Stop:**
+   - An `## Awaiting …` block is pending when it is the latest block in `progress.md` — or when the only things after it are compaction records (`## Current State`, `## PARTIAL: needs continuation`), which older compact commands appended below it. No `## Halt Resolved - ` line or later flow entry follows a pending block.
+   - If one is pending, an `sdd-flow` run is stopped waiting for an answer. Show the block to the user and tell them `/sdd-flow continue` is what resumes it. Do not do that feature's work past the stop from here. Work the compaction file describes that is separate from the stopped flow can go on.
 
 **If `progress.md` exceeds ~500 lines**, rotate it before resuming — same procedure as `/adhoc-compact` step 4: archive completed-feature history and resolved blocks (including completed-phase history of the still-active feature) to `SDD/orchestration/progress-archive/`, keep a bounded `## Current State` carrying canonical phase-state lines verbatim, and carry any pending `## Awaiting *` / `## PARTIAL*` blocks (prefix match, not a fixed list) forward verbatim as the latest blocks. Everything kept in the live file must stay byte-identical — never retype or summarize it.
 
@@ -78,23 +73,42 @@ This workflow represents the complete development cycle:
 
 Before resuming work, verify from compaction file:
 
-- [ ] All essential files are listed with specific line ranges
-- [ ] Current focus section clearly identifies the exact task to resume
-- [ ] Any blocking items or unresolved questions are documented
-- [ ] Subagent delegations (if any) have been noted for follow-up
-- [ ] Priority list provides clear next steps
+- [ ] `## Continuation Priorities` → **Essential Files to Reload** lists the files, with line ranges where they matter
+- [ ] `## Continuation Priorities` → **Current Focus** identifies the exact task to resume
+- [ ] Blocking items and open questions are documented
+- [ ] The numbered priority list gives clear next steps
+- [ ] `## Critical Review Status` says whether review findings are still open
+
+A generic file written by `/adhoc-compact` before 3.5.1 uses older names for the same things: `## Critical References` for the files, and `## Next Session` → **Resume From** / **Immediate Priorities** for the focus and the priority list. Read them as equivalents.
 
 If any critical information is missing, ask user for clarification before proceeding.
 
-### 3. Phase-Specific Context Loading
+### 3. Context Loading by Compaction Type
+
+The file's name says which branch applies.
+
+#### For Generic Continuation (`compact-*.md`)
+
+1. **Load Context:**
+   - Files from **Essential Files to Reload** — only the ranges named
+   - `## Key Discoveries` and `## Notes`: findings and working agreements to carry over
+   - `## Critical Review Status`: any finding still open
+
+2. **Verify State:**
+   - `## Work Summary`: what is completed, in progress, remaining
+   - `git status` and `git log` against what the file says was committed
+   - **Open Questions**: anything the user still has to decide
+
+3. **Resume:**
+   - Continue from **Current Focus**, then the numbered priorities in order
+   - If the first priority is waiting on the user's go-ahead, say so and wait for it
 
 #### For Research Phase Continuation
 
 1. **Load Research Context:**
    - Research document: `SDD/research/RESEARCH-[###]-[feature-name].md`
    - Files from "Essential Files to Reload" section in compaction
-   - Recent investigation areas from "Next Session Priorities"
-   - Any pending subagent research tasks from "Subagent Delegations Performed"
+   - Recent investigation areas from "Recent Investigations" and "Research Priorities"
 
 2. **Verify Research State:**
    - Review "Research Progress" section (completed/in-progress/planned)
@@ -114,7 +128,7 @@ If any critical information is missing, ask user for clarification before procee
    - Specification document: `SDD/requirements/SPEC-[###]-[feature-name].md:[lines]`
    - Research document: `SDD/research/RESEARCH-[###]-[feature-name].md:[sections]`
    - Files from "Essential Files to Reload" with specific line ranges
-   - Review "Subagent Delegations Performed" for any pending follow-ups
+   - Review "Inline Investigation Performed" so the same searches are not repeated
 
 2. **Verify Specification State:**
    - Review "Specification Progress" (completed sections vs remaining)
@@ -134,7 +148,7 @@ If any critical information is missing, ask user for clarification before procee
    - Implementation prompt: `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md`
    - Specification: `SDD/requirements/SPEC-[###]-[feature-name].md`
    - Files from "Essential Files to Reload"
-   - Review any "Technical Decisions" or "Critical Learnings" from compaction
+   - Review "Critical Learnings" and "Recent Changes" from compaction
 
 2. **Verify Implementation State:**
    - Review completed vs remaining implementation tasks
@@ -144,9 +158,10 @@ If any critical information is missing, ask user for clarification before procee
 
 3. **Resume Implementation:**
    - Continue with task from "Current Focus"
-   - Follow implementation priorities list
-   - Address any "Edge case handling" or "Performance considerations" noted
+   - Follow the "Implementation Priorities" list
+   - Work through "Specification Validation Remaining"
    - Maintain <40% context utilization
+   - If an `sdd-flow` run is implementing this feature, leave the work uncommitted — the flow owns the commit
 
 ### 4. Quality Verification Before Resuming
 
@@ -185,10 +200,11 @@ If any verification fails, ask user for clarification before proceeding.
 
 3. **Update Progress File:**
    - Add new accomplishments to progress.md
-   - Update "Next Session Priorities" section
+   - Keep its next-step line current
    - Note any new blocking items discovered
    - Document any new subagent delegations
    - **IMPORTANT: DO NOT reset or delete previous phase information - append to it**
+   - **A pending halt stays latest.** If `progress.md` has a pending `## Awaiting …` block (Process step 1), write every update directly **above** that block, never below it — `sdd-flow` finds its stop by that block being the latest, and an entry under it would let the flow resume past a question nobody answered. This holds for work unrelated to the stopped flow too.
 
 ### 6. Subagent Delegation Strategy
 
@@ -222,7 +238,7 @@ Example: "Analyze how error handling works across the authentication flow"
 To ensure smooth continuation:
 
 1. **Preserve Context Learnings:**
-   - Reread "Critical Learnings" section carefully
+   - Reread "Critical Learnings" carefully (a generic `compact-*.md` file calls it "Key Discoveries")
    - Apply previous discoveries to current work
    - Avoid re-researching already discovered information
 
@@ -234,22 +250,21 @@ To ensure smooth continuation:
 3. **Document Incremental Progress:**
    - Update progress.md after each significant milestone
    - Note any new discoveries or blockers immediately
-   - Keep "Next Session Priorities" current
+   - Keep the next step in progress.md current
 
 ## Important Notes
 
 - The progress.md file is the primary continuation point across all phases
 - Compaction files provide detailed context from previous sessions
 - Each phase builds upon previous phases - maintain continuity
-- If multiple compaction files exist, use the most recent one based on timestamp
+- If multiple compaction files exist, use the one `progress.md` names; when it names none, ask the user which (Process step 1)
 - Never reset or overwrite previous phase information in progress.md
 
 ## Error Recovery
 
 If continuation fails or context is unclear:
 
-1. Check for most recent compaction file in `SDD/orchestration/`
-   - Look for: `compact-*.md`, `research-compacted-*.md`, `planning-compacted-*.md`, `implementation-compacted-*.md`
+1. Re-run the file lookup in Process step 1, in its order — a path the user gives, then the path `progress.md` names, then the candidates in `SDD/orchestration/compacted/` (`compact-*.md`, `research-compacted-*.md`, `planning-compacted-*.md`, `implementation-compacted-*.md`) shown to the user to choose from. Never substitute a file for one that is named and missing.
 2. Verify progress.md exists and contains phase information
 3. Ask user which phase to continue if ambiguous
 4. Request specific guidance on next task if priorities are unclear

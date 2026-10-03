@@ -120,7 +120,7 @@ SDD/
 The bodies were forked from commands a person runs by hand. Inside the flow every body is held to these rules, and an edit to a body is checked against them:
 
 - **Inputs come from the prompt.** A body never lists a directory to find or choose its spec, research document, or plan — a repository holds several of each as soon as a second feature or tier exists, and only the orchestrator knows which is active.
-- **A body never commits.** Every commit is the orchestrator's (2e, 3f, 4i, per-slice 4c.6). The implementation work stays uncommitted until then, because the blind site count and the reviews compare the working tree against the commit taken before implementation began.
+- **A body never commits.** Every commit is the orchestrator's (2e, 3f, 4i, per-slice 4c.6). The implementation work stays uncommitted until then: a commit comes after the review of what it contains, never before, and a slice or feature is one commit. (The blind site count and the reviews measure the working tree against the recorded base commit, so an early commit would not hide changes from them — it would put unreviewed code into history and bypass the commit checkpoint.)
 - **A body never resets, rewrites, or archives `progress.md`.** It appends. Rotation is the orchestrator's (Progress Hygiene below).
 - **A body that cannot proceed returns a failure** — an input missing or unreadable, a precondition not met, a choice it has no authority to make — in its bounded return, and writes no stop note. The orchestrator handles it under Error Handling (`phases/protocols.md`).
 - **A body writes only these stop notes;** every other `## Awaiting …` block is written by the orchestrator:

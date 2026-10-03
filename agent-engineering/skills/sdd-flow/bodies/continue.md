@@ -79,7 +79,7 @@ If any critical information is missing, note the gap in `SDD/orchestration/progr
    - Implementation prompt: `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md`
    - Specification: `SDD/requirements/SPEC-[###]-[feature-name].md`
    - Files from "Essential Files to Reload"
-   - Review any "Technical Decisions" or "Critical Learnings" from compaction
+   - Review "Critical Learnings" and "Recent Changes" from compaction
 
 2. **Verify Implementation State:**
    - Review completed vs remaining implementation tasks
@@ -89,8 +89,9 @@ If any critical information is missing, note the gap in `SDD/orchestration/progr
 
 3. **Resume Implementation:**
    - Continue with task from "Current Focus"
-   - Follow implementation priorities list
-   - Address any "Edge case handling" or "Performance considerations" noted
+   - Follow the "Implementation Priorities" list
+   - Work through "Specification Validation Remaining"
+   - Leave the working tree uncommitted, as the prior subagent did — the orchestrator owns the commit
 
 ### 4. Quality Verification Before Resuming
 
@@ -162,4 +163,4 @@ If continuation context is unclear:
 1. Re-read the compaction file named in your prompt — never a different one. If it is missing or unreadable, return a failure to the orchestrator (Process step 1)
 2. Verify `SDD/orchestration/progress.md` exists and contains phase information
 3. If phase is ambiguous, examine the compaction file header and progress.md together to determine it
-4. If next task is unclear, derive it from the compaction file's "Priority" and "Current Focus" sections
+4. If next task is unclear, derive it from the compaction file's "Continuation Priorities" section — its "Current Focus" and numbered priority list

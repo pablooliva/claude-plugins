@@ -16,9 +16,10 @@ The body is `SKILL_ROOT/bodies/planning-compact.md`. If it cannot be found, say 
 
 Read the body in full, then follow it — **with these substitutions**, because you are the main conversation, not a spawned subagent:
 
-- **Ignore the spawned-subagent preamble.** There is no orchestrator, no prompt-supplied artifact paths (resolve them yourself from `SDD/`), no Reads-counter safety-net, and no flat-orchestration ban — you may use whatever tools the task needs.
+- **Ignore the spawned-subagent preamble.** There is no orchestrator, no prompt-supplied artifact paths (resolve them yourself: from `SDD/orchestration/progress.md`'s record of the feature in progress first, and by looking in `SDD/` only when it names none), no Reads-counter safety-net, and no flat-orchestration ban — you may use whatever tools the task needs.
 - **Ignore the ≤100-word return contract** and the closing "the orchestrator will spawn a continuation agent" line. Report to the user instead (step 4 below).
-- **Keep everything else verbatim**: the compaction file path and naming, the document template, and the `progress.md` append rules.
+- **Keep everything else verbatim**: the compaction file path and naming (`SDD/orchestration/compacted/planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`), the document template, and the `progress.md` append rules — including the `## PARTIAL: needs continuation` block that records the compaction file's full path. `/agent-engineering:continue` finds the file from that block.
+- **A pending halt stays latest.** If the latest block in `progress.md` is an `## Awaiting …` block, an `sdd-flow` run is stopped waiting for an answer, and the flow finds that stop by its being the latest block. Write your progress entry and the `## PARTIAL` block directly **above** it, never below it.
 
 ## 3. Rotate `progress.md` if oversized
 
@@ -26,4 +27,4 @@ Apply the same ~500-line rotation as `/adhoc-compact` step 4: archive completed-
 
 ## 4. Hand back to the user
 
-Report the compaction file path and where the specification work stopped, then tell the user to `/clear` (or start a fresh session) and run `/continue`, which will find the compaction record and resume.
+Report the compaction file path and where the specification work stopped, then tell the user to `/clear` (or start a fresh session) and run `/agent-engineering:continue` (with the prefix — the `sdd` plugin ships an older `/continue`), which loads the file named in that `## PARTIAL: needs continuation` block and resumes from its `## Continuation Priorities`.

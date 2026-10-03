@@ -178,3 +178,9 @@ Before compacting, ensure:
 - [ ] Critical learnings are captured
 - [ ] Next priorities are clearly defined
 - [ ] Research foundation tracking is complete
+
+## Handoff
+
+After writing the compaction file and updating `SDD/orchestration/progress.md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` recording the compaction file path and where you left off. Then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
+
+Planning phase is incomplete — the orchestrator will spawn a continuation agent to resume from the compaction record.

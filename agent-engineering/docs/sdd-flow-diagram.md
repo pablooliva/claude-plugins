@@ -1,6 +1,6 @@
 # sdd-flow — the development cycle at a glance
 
-A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.5.0. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
+A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.5.1. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
 
 **How to read it.** Rounded boxes are work done by a spawned subagent. Red boxes are places the flow **stops and waits for you**. Grey boxes are things the orchestrator (the main conversation) does itself: commits, running a script, recording state.
 
@@ -139,7 +139,12 @@ flowchart TD
 | Slice pause | stops | stops | Review each slice while it is small. Off with `--skip-slice-checkpoints` |
 | Re-planning halt (4c.5) | stops | stops | A slice showed the plan is wrong. `--replan` or `--override-replan`; either one commits the slice first |
 | Final recount halt (4e.5) | stops | stops | The two counts of enforcement sites still disagree after 3 fix rounds |
-| Before the final commit (4h) | stops; until you say yes nothing is committed, and `continue` asks again | does not stop | Last look before everything is committed |
+| Before the final commit (4h) | stops; until you say yes the final commit is not made, and `continue` asks again. In per-slice mode the slices are already committed, one commit each | does not stop | Last look before the final commit |
+| A stop record `continue` does not recognise | stops | stops | A stop left by another version. It is shown to you as written; the flow never guesses what it was waiting for |
+| A subagent failed twice | stops | stops | The same step failed, was retried with more context, and failed again |
+| Broken install or old folder layout | stops | stops | A file the flow ships is missing, or the repo still uses the 1.x `SDD/` layout. Not resumable until fixed |
+
+Every stop above that waits for your answer is written to `SDD/orchestration/progress.md` before the flow asks, and `/sdd-flow continue` resumes from that record. The rest write no such record: the slice pause needs no answer (`continue` starts the next slice), and after a decomposition, a broken or old-layout install, or a twice-failed subagent you deal with the cause and run the flow again.
 
 ## Tiers across cycles
 

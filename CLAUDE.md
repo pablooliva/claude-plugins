@@ -38,7 +38,12 @@ agent-engineering/
 ├── docs/sdd-flow-diagram.md        # human-facing picture of the sdd-flow cycle — update it when a step or a stop changes
 ├── commands/                       # interactive (depth-0) commands the user runs:
 │                                   #   adr-capture, prompt-doctor, research-clarify,
-│                                   #   critical-review, continue, adhoc-compact, commit
+│                                   #   critical-review, continue, commit, and four compact commands
+│                                   #   (adhoc-compact + research/planning/implementation-compact) that
+│                                   #   share ONE contract with continue: file under SDD/orchestration/compacted/,
+│                                   #   its path recorded in progress.md (adhoc Skip: handed to the user instead),
+│                                   #   a `## Continuation Priorities` section,
+│                                   #   a pending `## Awaiting` block kept latest — change one, check all five
 ├── skills/
 │   ├── sdd-flow/                   # SLIM SKILL.md orchestrator core +
 │   │   ├── phases/                 #   per-phase chapters (setup, research, planning,
@@ -66,7 +71,7 @@ agent-engineering/
 │   │                       #   bb-worktree-init/, worktree-merge/
 └── README.md
 ```
-`sdd-flow` is the flow's single source of truth: the orchestrator (main conversation) spawns one subagent per step, passing each its body file BY PATH (never embedding content). Spawned subagents must not themselves spawn or invoke slash commands/skills (one-level nesting) — every body is pre-adapted for inline execution. NOTE: this was a platform limit on Claude Code ≤2.1.171; since 2.1.172 (2026-06-09) the platform allows nesting to depth 5, but the flat design is retained deliberately — do not refactor toward nesting without reading `proposals/nested-subagents-analysis-2026-06-12.md`. The other skills are invoked by the user (or `sdd-flow`) at decision points. `ai-agent-security-review` is dual-use: a standalone review, and the canonical control catalog that `sdd-flow` reads at two `agent_security:`-gated hook points (Step 3c panel value, Step 4b code-review lens).
+`sdd-flow` is the flow's single source of truth: the orchestrator (main conversation) spawns one subagent per step, passing each its body file BY PATH (never embedding content). `SKILL.md` states three rules that every edit to a body or phase file is checked against: a body's only inputs are the paths in its prompt (it never lists a folder to find them, never commits, never writes a stop note beyond the two it is allowed); only the orchestrator declares a phase done, and every stop that waits for an answer has a halt block, a resume rule in `phases/protocols.md`, and a row in the diagram; and every slice state change, stop, and commit has an owner in `phases/implementation-per-slice.md`'s owner table. Spawned subagents must not themselves spawn or invoke slash commands/skills (one-level nesting) — every body is pre-adapted for inline execution. NOTE: this was a platform limit on Claude Code ≤2.1.171; since 2.1.172 (2026-06-09) the platform allows nesting to depth 5, but the flat design is retained deliberately — do not refactor toward nesting without reading `proposals/nested-subagents-analysis-2026-06-12.md`. The other skills are invoked by the user (or `sdd-flow`) at decision points. `ai-agent-security-review` is dual-use: a standalone review, and the canonical control catalog that `sdd-flow` reads at two `agent_security:`-gated hook points (Step 3c panel value, Step 4b code-review lens).
 
 ## How It Works
 

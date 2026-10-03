@@ -16,10 +16,11 @@ The body is `SKILL_ROOT/bodies/implementation-compact.md`. If it cannot be found
 
 Read the body in full, then follow it — **with these substitutions**, because you are the main conversation, not a spawned subagent:
 
-- **Ignore the spawned-subagent preamble.** There is no orchestrator, no prompt-supplied artifact paths (resolve them yourself from `SDD/`), no Reads-counter safety-net, and no flat-orchestration ban — you may use whatever tools the task needs.
+- **Ignore the spawned-subagent preamble.** There is no orchestrator, no prompt-supplied artifact paths (resolve them yourself: from `SDD/orchestration/progress.md`'s record of the feature in progress first, and by looking in `SDD/` only when it names none), no Reads-counter safety-net, and no flat-orchestration ban — you may use whatever tools the task needs.
 - **Ignore the ≤100-word return contract** and the closing "the orchestrator will spawn a continuation agent" line. Report to the user instead (step 4 below).
-- **Keep everything else verbatim**: the compaction file path and naming, the document template, and the `progress.md` append rules.
-- **Confirm before committing.** The body's "Commit Your Code Changes" section still applies, but in an interactive session show the user what you intend to stage and get their go-ahead before running `git commit`.
+- **Keep everything else verbatim**: the compaction file path and naming (`SDD/orchestration/compacted/implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`), the document template, and the `progress.md` append rules — including the `## PARTIAL: needs continuation` block that records the compaction file's full path. `/agent-engineering:continue` finds the file from that block.
+- **A pending halt stays latest.** If the latest block in `progress.md` is an `## Awaiting …` block, an `sdd-flow` run is stopped waiting for an answer, and the flow finds that stop by its being the latest block. Write your progress entry and the `## PARTIAL` block directly **above** it, never below it.
+- **Do not commit.** The body's "Leave the Working Tree Uncommitted" section applies here as written whenever an `sdd-flow` run is implementing this feature (`progress.md` has `## Feature - Implementing` with no later `## Implementation - Committed`): the flow makes one commit per slice or feature, after its review, and a commit made here would put unreviewed code into history ahead of that. Outside a flow, committing before clearing the session is the user's call — mention `/commit`, and never commit unasked.
 
 ## 3. Rotate `progress.md` if oversized
 
@@ -27,4 +28,4 @@ Apply the same ~500-line rotation as `/adhoc-compact` step 4: archive completed-
 
 ## 4. Hand back to the user
 
-Report the compaction file path and where implementation stopped, then tell the user to `/clear` (or start a fresh session) and run `/continue`, which will find the compaction record and resume.
+Report the compaction file path and where implementation stopped, then tell the user to `/clear` (or start a fresh session) and run `/agent-engineering:continue` (with the prefix — the `sdd` plugin ships an older `/continue`), which loads the file named in that `## PARTIAL: needs continuation` block and resumes from its `## Continuation Priorities`.

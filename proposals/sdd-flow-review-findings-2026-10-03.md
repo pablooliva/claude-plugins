@@ -1,6 +1,6 @@
 # sdd-flow Review — Findings
 
-**Status:** Review complete — nothing fixed yet. Fix plan: `proposals/sdd-flow-review-fix-plan-2026-10-03.md`.
+**Status:** Fixed in 3.5.1 (commits `58b559b`, `d1b85e8`, `2e7c0fb`, and the 3.5.1 wrap-up). Fix plan: `proposals/sdd-flow-review-fix-plan-2026-10-03.md`. Struck: the second half of M12 (see its row). Not fixed, by decision: the second half of M7 — the single-pass fixes at 2d, 3e, 4c, and 4e still get no second review. L4 (outside `sdd-flow`) was fixed in the wrap-up. Line numbers below are as of the reviewed commit and no longer match.
 **Date:** 2026-10-03
 **Affects:** `agent-engineering/` plugin, `sdd-flow` skill (reviewed at 3.5.0, commit `6a8b912`).
 **Author of intent:** Pablo Oliva. Reviewed with Claude; independent second read by Codex.

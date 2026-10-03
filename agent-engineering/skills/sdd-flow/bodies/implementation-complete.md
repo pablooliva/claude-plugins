@@ -53,9 +53,8 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
    - Verify all REQ-XXX, PERF-XXX, SEC-XXX, UX-XXX items
 
 4. **Recent Compaction (if exists):**
-   - Check for `SDD/orchestration/compacted/implementation-compacted-*.md`
-   - Load most recent file to understand any pending items
-   - Review "Specification Validation Remaining" section
+   - Only the one `progress.md` names for this feature: the compaction file path in its latest `## PARTIAL: needs continuation` block for the implementation phase. Do not list `SDD/orchestration/compacted/` and pick "the most recent" — files there belong to other phases, earlier handoffs, and other features.
+   - If one is named, load it to understand any pending items, and review its "Specification Validation Remaining" section. If none is named, skip this step.
 
 5. **Final Site Diff and Control Site Status:**
    - Your prompt provides the final feature-wide diff `SDD/reviews/SITE-DIFF-FEATURE-[feature-name]-iter<N>-[date].md`, the site review(s) that verified it, the implementer inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, and `STANDARD` (`references/enforcement-sites.md` — read §6).
