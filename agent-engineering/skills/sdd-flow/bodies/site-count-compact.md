@@ -15,6 +15,9 @@ Write `SDD/orchestration/compacted/site-count-compacted-[YYYY-MM-DD_HH-MM-SS].md
 - **Scope:** <SCOPE>   **Iteration:** <N>   **Code range:** <range>
 - **OUTPUT (not yet written):** <OUTPUT path>
 - **SPEC / glossary / standard paths:** <paths>
+- **CONVENTIONS path:** <the path from your prompt, or `none given`>
+- **ALSO INVENTORY:** <the SPEC IDs from your prompt, or `none given`>
+- **Modules touched:** <from your prompt — `SLICE-XXX` scope only; `n/a` at `FEATURE` scope>
 
 ## Controls in Scope
 <ID — one-line rule — status: done | in progress | not started>

@@ -12,6 +12,7 @@ Your prompt provides:
 - **Panel value:** exactly one of `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity`, `accessibility`, `cost`, or `privacy`.
 - **PANEL-FINDINGS path:** absolute path where you must write your output file.
 - **Control-catalog path** (only when your panel value is `agent-security`): absolute path of `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — read it before reviewing.
+- **Gate value** (only when your panel value is `agent-security`): the line `agent_security: true` or `agent_security: auto` — the orchestrator's resolved reading of the spec's frontmatter. It decides whether Section 4.8's scope gate runs.
 - **TIERS path** (only when the spec's frontmatter carries `tier:`): absolute path of the tier standard, `skills/simplicity-challenge/references/tiers.md` — read it before reviewing; see *Respect the Tier* below.
 
 Read both artifacts before writing any findings. Do all work inline in your own context.
@@ -176,7 +177,7 @@ Deep module vs shallow module (depth as leverage). Interface in the wide sense (
 
 ### 4.6 Optional Specialists
 
-If your assigned panel value is any of the following, use these specialist definitions (abbreviated; expand inline following the same structure as 4.1–4.4):
+If your assigned panel value is any of the following, use these specialist definitions (abbreviated; expand inline following the same structure as 4.1–4.4). `accessibility`, `cost`, and `privacy` have no dedicated agent: the orchestrator runs them on the general worker agent with this body, so this section is the whole of their definition.
 
 - **accessibility** — WCAG 2.1/2.2 AA conformance, semantic HTML, keyboard navigation, focus management, ARIA usage, screen-reader compatibility, color contrast, motion preferences.
 - **cost** — cloud cost drivers (egress, API calls, storage class), unit economics per request, cost alerts, cold-vs-hot storage tradeoffs, reserved vs on-demand capacity.
@@ -207,7 +208,12 @@ Vertical slice. Horizontal layer. Concentrated function. Thread line. End-to-end
 
 ### 4.8 AI Agent Security Specialist (agentic surfaces only)
 
-**Activation gate:** Fires when the spec's frontmatter declares `agent_security: true`, or `agent_security: auto` (or the field is absent) *and* the spec describes an agentic surface. Run the scope gate in the catalog's Section 1 as your first action: an LLM/model call, a tool or MCP definition, agent memory or a retrieval store feeding model context, inter-agent messaging, or a model output that drives an action on an external system. If none is present, short-circuit — write a one-line "gate closed" note naming what you checked for to your PANEL-FINDINGS path, emit no findings, and return.
+**Activation gate:** decided by the gate value in your prompt.
+
+- **`agent_security: true`** — the user forced the review on. **Do not run the scope gate, and never return "gate closed".** Review the spec in full. If you find no agentic surface, say so on the **Agentic surface** line and report what you checked; that is a finding-free review, not a closed gate.
+- **`agent_security: auto`** (or your prompt gives no gate value) — run the scope gate in the catalog's Section 1 as your first action: an LLM/model call, a tool or MCP definition, agent memory or a retrieval store feeding model context, inter-agent messaging, or a model output that drives an action on an external system. If none is present, short-circuit — write a one-line "gate closed" note naming what you checked for to your PANEL-FINDINGS path, emit no findings, and return.
+
+You are never spawned when the value is `false`, or when the catalog is missing (the orchestrator closes the gate for the run and drops this panel value).
 
 **Identity:** Senior AI-agent security engineer reviewing the specification for agentic-system security weaknesses before implementation.
 

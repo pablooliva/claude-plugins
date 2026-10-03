@@ -10,6 +10,16 @@ The post-implementation steps (4e.5 final recount, 4f completion, 4h checkpoint,
 
 ## 4a. Implementation Subagent
 
+**Before the first spawn, record where implementation starts.** The orchestrator appends to `progress.md`:
+
+```markdown
+## Feature - Implementing
+
+- **Base commit:** <output of `git rev-parse HEAD` now; `none` if the repo has no commits>
+```
+
+This is the only durable record of the commit implementation began from. 4a.5, 4b, and 4e.5 take `BASE` from this line — never from `HEAD`, which a resumed session cannot trust. Write it once per feature; when resuming with the line already present, leave it alone.
+
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/implementation.md`
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present — use canonical names in code, comments, commits, tests), **STANDARD**, and **CONVENTIONS** (`SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md`, standard §4.2) if it exists.
@@ -24,7 +34,7 @@ When the last implementation subagent (or chunk) returns, the **orchestrator** a
 
 ## 4a.5. Blind Site Count + Diff
 
-Identical to per-slice 4a.5 (`phases/implementation-per-slice.md` — read its spawn brief, blindness rules, and diff command) with `SCOPE = FEATURE`, `ITER = 0`, counter `SDD/orchestration/counters/4a5-FEATURE-iter0-[timestamp].md`, `BASE` = the commit before 4a (the work is uncommitted until 4i, so the counter diffs the working tree against it and lists untracked files) or "whole repo", output `SDD/reviews/SITE-COUNT-FEATURE-[feature-name]-iter0-[YYYY-MM-DD].md`, diff `SDD/reviews/SITE-DIFF-FEATURE-[feature-name]-iter0-[YYYY-MM-DD].md` with `--scope FEATURE` and **no** `--base` (a FEATURE diff compares every row; the script rejects `--base` there). Progress lines: `## Site Count FEATURE iter 0 - Complete` (counter) and `## Site Diff FEATURE iter 0 - <result>` (orchestrator). Every outcome goes to 4b, which turns it into findings.
+Identical to per-slice 4a.5 (`phases/implementation-per-slice.md` — read its spawn brief, blindness rules, and diff command) with `SCOPE = FEATURE`, `ITER = 0`, counter `SDD/orchestration/counters/4a5-FEATURE-iter0-[timestamp].md`, `BASE` = the `Base commit:` recorded under `## Feature - Implementing` (the work is uncommitted until 4i, so the counter diffs the working tree against it and lists untracked files) or "whole repo", output `SDD/reviews/SITE-COUNT-FEATURE-[feature-name]-iter0-[YYYY-MM-DD].md`, diff `SDD/reviews/SITE-DIFF-FEATURE-[feature-name]-iter0-[YYYY-MM-DD].md` with `--scope FEATURE` and **no** `--base` (a FEATURE diff compares every row; the script rejects `--base` there). Progress lines: `## Site Count FEATURE iter 0 - Complete` (counter) and `## Site Diff FEATURE iter 0 - <result>` (orchestrator). Every outcome goes to 4b, which turns it into findings.
 
 ---
 
@@ -32,17 +42,17 @@ Identical to per-slice 4a.5 (`phases/implementation-per-slice.md` — read its s
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/code-review.md`
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from IMPLEMENTATION-PLAN), **BRIEF** (`SDD/requirements/DESIGN-[###]-[feature-name].md`, with its approved revision and tier) for the review's `## Design Brief Check`, `BASE` = the commit before 4a (the same one 4a.5 uses — the check compares the files changed since it against the brief's footprint), and **TIERS** (the tier standard resolved at Step 0) when the spec carries `tier:`.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from IMPLEMENTATION-PLAN), **BRIEF** (`SDD/requirements/DESIGN-[###]-[feature-name].md`, with its approved revision and tier) for the review's `## Design Brief Check`, `BASE` = the `Base commit:` recorded under `## Feature - Implementing` (the same one 4a.5 uses — the check compares the files changed since it against the brief's footprint), **TIERS** (the tier standard resolved at Step 0) when the spec carries `tier:`, and — whenever the catalog is passed (below) — the panel review `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, whose `AI Agent Security Findings` and `Abuse cases to cover` blocks the lens checks the code against.
 - **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`.
-- **Task:** Specification-driven review (70% spec alignment, 20% context engineering, 10% test alignment). The body's **Agentic-Surface Lens** fires when the spec's `agent_security:` gate is open — pass the resolved **CATALOG** path in the prompt whenever `agent_security:` is `true` or `auto`/absent. A HIGH lens finding is a rejection criterion. Pass `SCOPE = FEATURE`, `ITER = 0`, **STANDARD**, **CONVENTIONS** (the path even if absent — the review may create it), the site inventory, and the iter0 `SITE-COUNT` / `SITE-DIFF` paths; the review appends `## Review FEATURE iter 0 - APPROVED | REJECTED (h HIGH, m MEDIUM)` to `progress.md` — the body's **Enforcement-Site Verification** section (mandatory) carries every diff finding into the review, resolves `EXTRA` sites by re-running their mutations, re-runs a mutation sample, and verifies dispositions (ii)/(iii). Apply **Risk-Tiered Review Depth** — read each `MODULE-XXX`'s `Risk:` field and scale internal-review depth: `high` → full internals; `medium` → default; `low` → tested-boundary only. Escalate any tier that looks misclassified (e.g., a `low`-tagged module touching irreversible state) and flag it in the Module Review Log.
+- **Task:** Specification-driven review (70% spec alignment, 20% context engineering, 10% test alignment). The body's **Agentic-Surface Lens** fires when the spec's `agent_security:` gate is open — pass the resolved **CATALOG** path and the resolved gate value (`agent_security: true` or `agent_security: auto`) in the prompt whenever `agent_security:` is `true` or `auto`/absent **and CATALOG exists**. A missing catalog closed the gate for the whole run at Step 0, `true` included: pass no catalog path and no panel review, and the body records that the lens was skipped. A HIGH lens finding is a rejection criterion. Pass `SCOPE = FEATURE`, `ITER = 0`, **STANDARD**, **CONVENTIONS** (the path even if absent — the review may create it), the site inventory, and the iter0 `SITE-COUNT` / `SITE-DIFF` paths; the review appends `## Review FEATURE iter 0 - APPROVED | REJECTED (h HIGH, m MEDIUM)` to `progress.md` — the body's **Enforcement-Site Verification** section (mandatory) carries every diff finding into the review, resolves `EXTRA` sites by re-running their mutations, re-runs a mutation sample, and verifies dispositions (ii)/(iii). Apply **Risk-Tiered Review Depth** — read each `MODULE-XXX`'s `Risk:` field and scale internal-review depth: `high` → full internals; `medium` → default; `low` → tested-boundary only. Escalate any tier that looks misclassified (e.g., a `low`-tagged module touching irreversible state) and flag it in the Module Review Log.
 
 ---
 
 ## 4c. Address Code Review Findings
 
 Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
-- **Inputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the implemented code files.
-- **Outputs:** updated code and tests, updated IMPLEMENTATION-PLAN, "Findings Addressed" appended to the review.
+- **Inputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the IMPLEMENTATION-PLAN path, the implemented code files, **STANDARD**, **CONVENTIONS** (if it exists), and the site inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md` — the fix edits the inventory, so it must be handed it and the standard that defines its shape.
+- **Outputs:** updated code and tests, updated site inventory, updated IMPLEMENTATION-PLAN, "Findings Addressed" appended to the review.
 - **Task:** Fix ALL findings until the implementation reaches APPROVED status — spec misalignment, missing edge/failure handling, test gaps, and everything else. For site-count findings: add each missing site to `SITES-IMPL-[feature-name].md` with a disposition and a fresh per-site mutation (`Slice` = `—` in whole-feature mode; in per-slice 4e.5, the slice that owns the code), delete rows for sites the fix removed, fix or implement each `GAP`, and never delete a (ii)/(iii) site as dead code. (No recount and no `## Fix FEATURE` marker here — 4e.5 recounts after all fixes, before completion.)
 
 ---
@@ -60,19 +70,19 @@ Spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus):
 ## 4e. Address Implementation Review Findings
 
 Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
-- **Inputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files.
-- **Outputs:** updated code and tests, updated IMPLEMENTATION-PLAN, "Findings Addressed" appended to the review.
-- **Task:** Resolve ALL findings regardless of severity — spec deviations, security vulnerabilities, silent failures, missing test coverage, and every other issue.
+- **Inputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the IMPLEMENTATION-PLAN path, implemented code files, **STANDARD**, **CONVENTIONS** (if it exists), and the site inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`.
+- **Outputs:** updated code and tests, updated site inventory, updated IMPLEMENTATION-PLAN, "Findings Addressed" appended to the review.
+- **Task:** Resolve ALL findings regardless of severity — spec deviations, security vulnerabilities, silent failures, missing test coverage, and every other issue. **Site duties, the same as 4c:** a fix that adds, moves, or removes an enforcement site updates the inventory in the same pass — add each new site with a disposition and a fresh per-site mutation, delete rows for sites the fix removed, fix or implement each `GAP`, and never delete a (ii)/(iii) site as dead code. (No recount and no `## Fix FEATURE` marker here — 4e.5 recounts next.)
 
 ---
 
 ## 4e.5. Final Blind Recount  *(shared with per-slice end-of-feature; always runs)*
 
-A feature-wide blind recount after every fix has landed, so completion never rests on a count taken before the code last changed. In per-slice mode it also catches sites that span slices. On entry the orchestrator appends `## Final Recount - Started` (the phase-detection anchor for this step); on exit to 4f it appends `## Final Recount - Complete`. Every spawn below carries the Safety-Net Rule, a fresh counter file (`Reads: 0/20` for the count, `0/15` for the verification review and the fix), and its compact body path (`site-count-compact.md` for the count, `implementation-compact.md` otherwise). `BASE` for the count is the commit before implementation began (per-slice: before SLICE-001), or "whole repo". Loop, starting at `k = 1` (whole-feature — iter0 was 4a.5) or `k = 0` (per-slice — no FEATURE count exists yet):
+A feature-wide blind recount after every fix has landed, so completion never rests on a count taken before the code last changed. In per-slice mode it also catches sites that span slices. On first entry — coming from 4e — the orchestrator appends `## Final Recount - Started` (the phase-detection anchor for this step); on exit to 4f it appends `## Final Recount - Complete`. A run resumed from `## Awaiting Site-Count Resolution` re-enters at step 1 **without** writing the anchor again: that halt block is its boundary (`phases/protocols.md`). Every spawn below carries the Safety-Net Rule, a fresh counter file (`Reads: 0/20` for the count, `0/15` for the verification review and the fix), and its compact body path (`site-count-compact.md` for the count, `implementation-compact.md` otherwise). `BASE` for the count is the `Base commit:` recorded under `## Feature - Implementing` (the commit before implementation began; per-slice: before SLICE-001), or "whole repo". Loop, starting at `k = 1` (whole-feature — iter0 was 4a.5) or `k = 0` (per-slice — no FEATURE count exists yet):
 
 1. **Recount.** Spawn a fresh blind counter exactly as 4a.5 with `SCOPE = FEATURE`, `ITER = k`, counter `4e5-FEATURE-iter<k>-[timestamp].md`. Its prompt carries no earlier count, diff, or review — only the **CONVENTIONS** path if the file exists, and the `ALSO INVENTORY` IDs if the previous verification review recorded any.
-2. **Diff.** Run `scripts/site-diff.py … --scope FEATURE` into `SITE-DIFF-FEATURE-[feature-name]-iter<k>-[YYYY-MM-DD].md`; append `## Site Diff FEATURE iter <k> - <result>`. If `MATCH` → go to 4f.
-3. **Verify.** Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/code-review.md` and `MODE: site-verification-only`, passing **STANDARD**, **CONVENTIONS**, the inventory, and this iteration's count and diff. It writes `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<k>-[YYYYMMDD].md` and appends `## Review FEATURE iter <k> - APPROVED | REJECTED (h HIGH [r row-only], m MEDIUM)`. If it is APPROVED (e.g. every difference was a `CONFIRMED-EXTRA`) → go to 4f.
+2. **Diff.** Run `scripts/site-diff.py … --scope FEATURE` into `SITE-DIFF-FEATURE-[feature-name]-iter<k>-[YYYY-MM-DD].md`; append `## Site Diff FEATURE iter <k> - <result>`. A `MATCH` goes to 4f **only if no disposition-(ii)/(iii) row is left unaccepted** — completion requires a reviewer to have accepted every (ii) argument and (iii) owner note (standard §6), and a matching count says nothing about them. That holds when either (a) the inventory has no (ii) or (iii) row at all (check its `Disposition` column), or (b) the last review that covered those rows ended APPROVED — the 4b or a verification review here; every slice review in per-slice mode — and no fix subagent (4c, 4e, or step 4 below) has run since. Otherwise run step 3 on a `MATCH` too; with nothing to carry from the diff, it checks the dispositions. When in doubt, run it: it is one spawn.
+3. **Verify.** Spawn an **`agent-engineering:sdd-workhorse`** subagent with `bodies/code-review.md` and `MODE: site-verification-only`, passing `SCOPE = FEATURE`, `ITER = k`, the SPEC path (the mode judges uncounted rules against it), **STANDARD**, **CONVENTIONS**, the inventory, and this iteration's count and diff. It writes `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<k>-[YYYYMMDD].md` and appends `## Review FEATURE iter <k> - APPROVED | REJECTED (h HIGH [r row-only], m MEDIUM)`. If it is APPROVED (e.g. every difference was a `CONFIRMED-EXTRA`) → go to 4f.
 4. **Fix.** Spawn an **`agent-engineering:sdd-workhorse`** fix subagent with that review, **STANDARD**, **CONVENTIONS** (if it exists), and the inventory (same site-finding duties as 4c); it appends `## Fix FEATURE iter <k+1> - Complete`. Then `k = k + 1` and repeat from 1.
 
 **Cap:** at most **3** fix rounds (counted as the `## Fix FEATURE iter <k>` lines after the latest `## Awaiting Site-Count Resolution` block, or all of them if there is none), with the same progress-stall check as the per-slice cap (the verification review's needs-code-or-test HIGH — HIGH minus row-only — must strictly decrease, or MEDIUM when that is zero; row-only HIGH still block APPROVED). On cap or stall, the orchestrator appends this halt block and stops, in every mode:
@@ -101,7 +111,14 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 
 ## 4h. Supervised Checkpoint (supervised mode only)  *(shared)*
 
-In **supervised mode**, pause:
+In **supervised mode**, append this block to `progress.md`, then pause with the message below:
+
+```markdown
+## Awaiting Commit Approval
+
+Implementation of SPEC-[###] is complete and uncommitted, waiting for the go-ahead to commit (4h).
+Summary: <IMPLEMENTATION-SUMMARY path>
+```
 
 > **Implementation complete.** Here's a summary:
 > [What was built, test results, review outcomes]
@@ -115,6 +132,12 @@ In **supervised mode**, pause:
 
 Wait for confirmation before committing. In **autonomous mode**, proceed directly to commit.
 
+- **y** → 4i. Its `## Implementation - Committed` line answers the block.
+- **n** → nothing is committed; stop with the block pending. The user may change the code or the artifacts by hand first; a change that touches an enforcement site is theirs to raise — the flow does not re-review after 4h.
+- **Session ends with no answer** → the block is still the latest one.
+
+In the last two cases `/sdd-flow continue` re-shows this checkpoint (`phases/protocols.md` → `## Awaiting Commit Approval`).
+
 **Brief-check line.** Whole-feature: quote the `## Design Brief Check` section of the 4b review document (the file, not a subagent's return). Per-slice: the count across slice reviews (`phases/implementation-per-slice.md` → end-of-feature 4h). Omit the line when the feature has no design brief.
 
 ---
@@ -123,7 +146,9 @@ Wait for confirmation before committing. In **autonomous mode**, proceed directl
 
 **Task mirror — in review (both modes, both delivery modes).** For a tiered spec, as soon as 4f returns — before the 4h pause when there is one, and always before this commit — run `python3 "$SKILL_ROOT/scripts/tier-mirror.py" sync <TIER_PLAN> --in-review <tier>`; record and report the result per `SKILL.md` → Tier Task Mirror. It belongs to this step, not to 4h, so that autonomous runs (which have no 4h) still make it. Running it before the commit means any task key it writes into the tier plan is committed here.
 
-The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts (including the site inventory, every `SITE-COUNT-*` / `SITE-DIFF-*` / `REVIEW-SITES-*`, and the updated tier plan). No co-author attribution.
+The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts (including the site inventory, every `SITE-COUNT-*` / `SITE-DIFF-*` / `REVIEW-SITES-*`, and the updated tier plan). No co-author attribution. If nothing is uncommitted — a resumed run whose commit had already landed — make no commit.
+
+**Then append `## Implementation - Committed` to `progress.md`** — one line, the commit's SHA (or `already committed`). It is the phase-detection marker that the code is in history. `Implementation Phase - COMPLETE`, written by the completion subagent at 4f, does not say so.
 
 If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
 
@@ -139,4 +164,6 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Pr
 
 **Task mirror — done.** For a tiered spec, before the announcement run `python3 "$SKILL_ROOT/scripts/tier-mirror.py" sync <TIER_PLAN> --shipped <tier>`: the tier's sub-task becomes done and gets one comment — what shipped and what to look at, taken from the tier plan. Add to the announcement: `Tasks: [tier sub-task key] done; leave feedback as comments on [next tier's key] — the next cycle copies them into the tier plan.` (or the mirror's `OFF` / `ERROR` line, when that is what it returned). Normally this run writes nothing to the tier plan — the keys were saved at the design gate. If an earlier mirror point failed and this one had to create tasks, the tier plan now has new keys in it: when `git status --porcelain -- <TIER_PLAN>` shows a change, commit that one file (per `commands/commit.md`, message naming the tier plan and SPEC) **before** the announcement, so "all artifacts committed" is true.
 
-After the announcement, perform the **feature-completion rotation** (`phases/protocols.md` → Progress Rotation): archive this feature's full progress history to `SDD/orchestration/progress-archive/` and leave a one-line summary in the live `progress.md`.
+After the announcement, append `## Feature - Done` to `progress.md` — one line, the spec path. It is the marker that the flow has nothing left to do for this feature.
+
+Then perform the **feature-completion rotation** (`phases/protocols.md` → Progress Rotation): archive this feature's full progress history — its `## Flow Started - ` record and everything after it — to `SDD/orchestration/progress-archive/` and leave the one-line `Finished:` summary in the live `progress.md`.

@@ -26,12 +26,14 @@ Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 After research is complete, capture cross-cutting architectural decisions expressed as comparison-with-selection patterns.
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
-- **Body:** `bodies/adr-capture.md` — run in **CONFIRM mode** when supervised (ambient detection), **AUTO mode** when autonomous.
+- **Body:** `bodies/adr-capture.md` — run in **PROPOSE mode** when supervised, **AUTO mode** when autonomous. State the mode in the prompt.
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, existing `SDD/adr/` (if present).
-- **Outputs:** zero or more `SDD/adr/NNNN-slug.md`, updated `SDD/adr/README.md`, append `progress.md`.
-- **Task:** Scan research for cross-cutting decisions with explicit comparison+selection. For each match, apply the scope test and render an ADR. In CONFIRM mode the subagent appends an `## Awaiting ADR Confirmation` block to `progress.md` and returns without writing (the orchestrator surfaces it to the user); in AUTO mode it writes every ADR that passes the scope test.
+- **Outputs:** PROPOSE — one `## ADR Candidates` entry appended to `progress.md`, and nothing else. AUTO — zero or more `SDD/adr/NNNN-slug.md`, updated `SDD/adr/README.md`, append `progress.md`.
+- **Task:** Scan research for cross-cutting decisions with explicit comparison+selection and apply the scope test to each. In PROPOSE mode the subagent writes no ADR and no stop note: it appends one `## ADR Candidates` entry (title and chosen option per candidate, or `none`) and returns. In AUTO mode it writes every ADR that passes the scope test.
 
-If no cross-cutting decisions are detected this is a no-op — skip to 2c without writing anything.
+**There is no confirmation stop here.** In supervised mode the candidates are shown at the design gate (`phases/planning.md` → 2.5b), where `approve` accepts them and a reply may drop any by title; the accepted ones are written right after approval, before 3a. In autonomous mode the ADRs are already written, and the gate shows which.
+
+If no cross-cutting decisions are detected, AUTO mode writes nothing and PROPOSE mode appends the entry with `none` — either way, continue to 2c.
 
 ---
 
@@ -57,6 +59,8 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent (fix subagent — no bod
 ## 2e. Commit Research Artifacts
 
 The **orchestrator** runs the commit directly (not a subagent), per `commands/commit.md` conventions — **no co-author attribution**. Include any ADRs written in 2b.
+
+**Then append `## Research - Accepted` to `progress.md`** — one line, the research document's path. It is the phase-detection marker that research is done: review, fixes, and commit included. The orchestrator writes it, here and nowhere earlier; the note the completion subagent leaves in 2a ("Research phase complete…") is not a marker and nothing matches it.
 
 If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation) — a phase-boundary commit is a quiet point.
 

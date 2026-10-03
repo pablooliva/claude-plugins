@@ -54,13 +54,13 @@ flowchart TD
     s0 -- "too large" --> decomp["STOP — decomposition written<br/>you run /sdd-flow per item"]:::stop
     s0 -- "fits" --> s1["Step 1 — Mode<br/>supervised or autonomous"]:::orch
     s1 --> s15["Step 1.5 — Clarification gate<br/>STOP in both modes<br/>you run /research-clarify"]:::stop
-    s15 --> s2("Step 2 — Research<br/>2a research and completeness check<br/>2b capture ADRs<br/>2c critical review, 2d fix findings")
+    s15 --> s2("Step 2 — Research<br/>2a research and completeness check<br/>2b ADRs: written, or proposed for the design gate<br/>2c critical review, 2d fix findings")
     s2 --> c2["2e commit research"]:::orch
     c2 --> s25a("Step 2.5a — Design brief<br/>at most 150 lines, plain language<br/>proposes three tiers, writes the tier plan")
-    s25a --> gate["Step 2.5b — Design gate<br/>STOP in both modes<br/>answer questions, pick a tier, approve"]:::stop
+    s25a --> gate["Step 2.5b — Design gate<br/>STOP in both modes<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve"]:::stop
     gate -- "answers or changes" --> s25c("2.5c — Revise the brief")
     s25c --> gate
-    gate -- "approve" --> m1["Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
+    gate -- "approve" --> m1["Write the accepted ADRs<br/>Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
     m1 --> s3a("Step 3a — Specification<br/>covers the approved tier only<br/>lists what is deferred")
     s3a --> s3c("3b capture ADRs<br/>3c specialist panel, in parallel<br/>then one synthesis")
     s3c -- "findings" --> fix3("fix the spec, re-run the panel<br/>at most 3 rounds")
@@ -77,7 +77,7 @@ flowchart TD
     slices --> eof
     wf --> eof("4d critical review of the code, 4e fix<br/>4e.5 final blind recount<br/>4f completion: summary, tier plan updated")
     eof --> m2["Mirror: tier in review"]:::orch
-    m2 --> s4h["4h — STOP, supervised mode only<br/>ready to commit?"]:::stop
+    m2 --> s4h["4h — STOP, supervised mode only<br/>ready to commit?<br/>waits until you say yes"]:::stop
     s4h --> c4["4i commit implementation"]:::orch
     c4 --> done["4j — Mirror: tier done<br/>announcement, progress file rotated"]:::orch
     done --> next(["later: /sdd-flow --next-tier<br/>a new cycle for the next tier"])
@@ -117,8 +117,8 @@ flowchart TD
 | 0 Scope | Decides whether the request fits one cycle. `--next-tier` instead reads the tier plan and copies task comments into its Feedback | Sonnet subagent | `flow/DECOMPOSITION-*` (only when too large) | Always, when the feature is too large |
 | 1 Mode | Supervised or autonomous | Orchestrator | — | — |
 | 1.5 Clarification | An interview that gets your design concept written down. On a next-tier cycle it is a feedback interview instead | You, with `/research-clarify` | `research/CLARIFICATION-*` | Both modes, unless `--skip-clarify` or the file exists |
-| 2 Research | Investigates the codebase; captures cross-cutting decisions as ADRs; adversarial review; fixes | Sonnet subagents; Opus for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*`, `adr/*` | — |
-| 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*` | **Both modes, every time the brief is written or rewritten.** `approve` is refused while a question is open |
+| 2 Research | Investigates the codebase; finds cross-cutting decisions (written as ADRs in autonomous mode, proposed for the design gate in supervised mode); adversarial review; fixes | Sonnet subagents; Opus for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*`, `adr/*` | — |
+| 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. In supervised mode it also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*` | **Both modes, every time the brief is written or rewritten.** `approve` is refused while a question is open |
 | 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief | Sonnet subagents; Opus for synthesis and review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, both modes, when the spec departs from the brief** |
 | 4 Implementation | Builds the feature (whole, or slice by slice). Every control is counted twice — by the implementer and by a blind subagent — and the lists are diffed. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; Opus for the adversarial review | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Re-planning halt (every mode). Recount halt. 4h before the final commit (supervised only) |
 | Done | Tier marked shipped in the tier plan; task set to done; announcement names what shipped and what is left | Orchestrator | updated `flow/TIERS-*` | — |
@@ -130,10 +130,13 @@ flowchart TD
 | Decomposition (Step 0) | stops | stops | The request is too large for one cycle |
 | Clarification (1.5) | stops | stops | Your intent has to be written down before research |
 | Design gate (2.5) | stops | stops | You approve *what will be built* before anything is specified |
+| Slicing not practical (3a) | asks | stops | The spec asked for slices, and no meaningful ones exist |
+| Panel halt (3c) | stops | stops | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
 | Deviation check (3g) | stops if deviations | stops if deviations | The spec is no longer what you approved |
 | Slice pause | stops | stops | Review each slice while it is small. Off with `--skip-slice-checkpoints` |
 | Re-planning halt | stops | stops | A slice showed the plan is wrong |
-| Before the final commit (4h) | stops | does not stop | Last look before everything is committed |
+| Final recount halt (4e.5) | stops | stops | The two counts of enforcement sites still disagree after 3 fix rounds |
+| Before the final commit (4h) | stops; until you say yes nothing is committed, and `continue` asks again | does not stop | Last look before everything is committed |
 
 ## Tiers across cycles
 

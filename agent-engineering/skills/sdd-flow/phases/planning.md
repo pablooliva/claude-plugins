@@ -40,6 +40,7 @@ Re-plan: <no | yes — triggering retrospective: <retro-path>; from-slice: <SLIC
 > **Decisions made:** [D1 title — chosen option] · [D2 …]
 > **Questions for you:** [Q1 — options — recommended (a)] · [Q2 …] [Or: "None."]
 > **Research review:** [one line: critical-review severity and whether findings were resolved] · ADRs captured: [numbers or "none"]
+> **ADR candidates:** [title — chosen option] · [title — chosen option] — written as decision records when you approve; name any you want dropped. [Supervised mode only, and only when the latest `## ADR Candidates` entry lists any and no `## ADR Capture - Done` line follows it. Otherwise omit this line.]
 > Brief ([N] lines): `SDD/requirements/DESIGN-[###]-[feature-name].md`
 > Research: `SDD/research/RESEARCH-[###]-[feature-name].md`
 > Reply with your answers and any changes — including `tier 2` or `tier 3` to build more now. `approve` accepts the brief as written, and is available once every question above has an answer. `stop` halts here.
@@ -51,6 +52,13 @@ Act on the reply:
 - **Answers or changes** (including a different tier) → 2.5c.
 - **`approve`** → accepted only when the brief's `## Questions for you` is `None.`. Append `## Design Brief - APPROVED (revision N, tier T)` to `progress.md` — `T` is the brief's recommended tier (`1`, `2`, `3`), or `none` when the brief says tiers are not applicable — and proceed to 3a. If any question is still open, **refuse**: reply with the open questions, say that each needs an answer ("use your recommendation" counts as one, given per question), and stay at the gate. Nothing is rewritten and nothing is assumed.
 - **`stop`** → leave `## Awaiting Design Approval` as the latest block and halt. `/sdd-flow continue` re-shows this gate.
+
+**ADR candidates (supervised mode).** Research's ADR step (2b) proposed candidates instead of writing them; this gate is where the user accepts them. The `ADR candidates:` line is built from the latest `## ADR Candidates` entry in `progress.md`, minus any candidate already dropped.
+
+- **A reply that drops a candidate** — at approval or in an earlier round — is recorded at once: append `## ADR Candidate Dropped - <title>` to `progress.md`, one line per candidate, so the choice survives a stop.
+- **On `approve`**, after the `## Design Brief - APPROVED` line and before 3a: if the entry lists any candidate not dropped, spawn ONE **`agent-engineering:sdd-workhorse`** subagent with `bodies/adr-capture.md` in **AUTO mode**, passing the research document, the existing `SDD/adr/`, and the accepted candidate titles ("write exactly these"). Then append `## ADR Capture - Done (<ADR numbers | none>)` — `none` when every candidate was dropped or the entry said `none`. The records are committed at 3f.
+- A re-plan's gate does not repeat this: a `## ADR Capture - Done` line already follows the candidates.
+- In autonomous mode none of this applies — 2b wrote the ADRs, and the `ADRs captured:` part of the gate message names them.
 
 **Mirror the tiers to BB tasks** on approval, when `T` is not `none` — before spawning 3a, so the task keys the script writes into the tier plan are part of the 3f commit:
 
@@ -95,7 +103,7 @@ Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 
 ## 3b. ADR Capture from Spec Frontmatter
 
-Read the spec's `cross_cutting_decisions:` frontmatter. If non-empty, for each topic label spawn an **`agent-engineering:sdd-workhorse`** subagent:
+Read the spec's `cross_cutting_decisions:` frontmatter. If non-empty, for each topic label spawn an **`agent-engineering:sdd-workhorse`** subagent — **one at a time, each after the previous has returned**. Never in parallel: each takes the highest existing ADR number plus one and regenerates the index, so two at once collide on both.
 - **Body:** `bodies/adr-capture.md` — **AUTO mode** (frontmatter-declared decisions are pre-approved; no user confirmation).
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, existing `SDD/adr/`.
 - **Outputs:** new `SDD/adr/NNNN-slug.md`, updated `SDD/adr/README.md`, append `progress.md`.
@@ -110,17 +118,24 @@ If `cross_cutting_decisions:` is empty/absent, skip this step.
 Panel composition comes from the spec's `review_panel:` frontmatter. If absent or empty, apply the **default panel**: `security`, `performance`, `data-modeling`, `api-contract`, `module-depth` — plus `slice-integrity` when the spec declares `delivery_mode: per-slice`, plus `agent-security` when the spec's `agent_security:` gate is open (see below). (Other available values: `reliability`, `accessibility`, `cost`, `privacy`.)
 
 **`agent-security` gate.** Read the spec's `agent_security:` frontmatter — `auto` (default when absent), `true`, or `false`:
-- `true` → include `agent-security` in the panel, and the specialist skips its own scope gate.
+- `true` → include `agent-security` in the panel, and the specialist skips its own scope gate. It can only skip it if it is told: pass the line `agent_security: true` in its prompt.
 - `false` → never include it; the user has declared the feature non-agentic.
-- `auto` → include it when the spec describes an agentic surface (LLM/model call, tool or MCP definition, agent memory or retrieval store feeding model context, inter-agent messaging, or a model output driving an action on an external system). The planning body (3a) normally resolves `auto` and appends the value to `review_panel:` itself; when it did not, the orchestrator applies the same test. Including it under `auto` is cheap — the specialist short-circuits when its own scope gate is closed.
+- `auto` → include it when the spec describes an agentic surface (LLM/model call, tool or MCP definition, agent memory or retrieval store feeding model context, inter-agent messaging, or a model output driving an action on an external system). The planning body (3a) normally resolves `auto` and appends the value to `review_panel:` itself; when it did not, the orchestrator applies the same test. Pass `agent_security: auto` in the specialist's prompt. Including it under `auto` is cheap — the specialist short-circuits when its own scope gate is closed.
+- **CATALOG missing** (recorded at Step 0 — `SKILL.md` → SKILL_ROOT resolution) → the gate is closed for the whole run, whatever the spec says, `true` included: drop `agent-security` from the panel and pass no catalog path to any spawn. The warning in `progress.md` already says so. The specialist cannot review without its catalog, and a spawn that fails on a missing file is worse than a review that is visibly absent.
 
 The `agent_security:` value also gates Step 4b's agentic-surface code-review lens, so it must be resolved even when `review_panel:` was authored by hand.
 
 ### Stage 1 — specialists in parallel
 
-Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, multiple spawns). Each uses its matching shipped agent type `agent-engineering:sdd-spec-<panel-value>-specialist`:
+Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, multiple spawns). The agent type depends on the value:
+
+- **Values with a shipped specialist agent** — `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity` → `agent-engineering:sdd-spec-<panel-value>-specialist`.
+- **Every other allowed value** — today `accessibility`, `privacy`, `cost` → `agent-engineering:sdd-workhorse`, with the same body and the panel value in its prompt. No specialist agent ships for these; the body's Section 4.6 defines them. Never spawn an agent type that is not in the list above.
+- A value that is in neither list is not a panel value: drop it and note that in `progress.md`.
+
+Each spawn gets:
 - **Body:** `bodies/panel-specialist.md` ("apply ONLY the Section your panel value names").
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, the panel value, and the resolved PANEL-FINDINGS output path. For the `agent-security` value, also pass the resolved **CATALOG** path (`SKILL.md` → SKILL_ROOT resolution). When the spec's frontmatter carries `tier:`, also pass **TIERS** — the body's *Respect the Tier* principle needs it.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, the panel value, and the resolved PANEL-FINDINGS output path. For the `agent-security` value, also pass the resolved **CATALOG** path (`SKILL.md` → SKILL_ROOT resolution) and the resolved gate value as the line `agent_security: true` or `agent_security: auto` (above). When the spec's frontmatter carries `tier:`, also pass **TIERS** — the body's *Respect the Tier* principle needs it.
 - **Output:** `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md`.
 - Each specialist writes exactly one findings file and spawns nothing. (The `slice-integrity` specialist short-circuits unless `delivery_mode: per-slice`.)
 
@@ -134,7 +149,7 @@ After all Stage 1 specialists return, spawn ONE **`agent-engineering:sdd-critica
 
 ### Act on the verdict
 
-- **`PROCEED`** → continue to 3d.
+- **`PROCEED`** (no HIGH; at most two MEDIUM, none of them cross-domain) → continue to 3d. Any MEDIUM and LOW findings it carries are resolved at 3e with the critical review's.
 - **`STOP AND RECONSIDER`** (any HIGH) or **`REVISE BEFORE PROCEEDING`** (3+ MEDIUM or cross-domain MEDIUM) → enter the bounded **fix-and-re-review loop** below (both supervised and autonomous; the cap protects either).
 
 ### Fix-and-re-review loop (bounded — max 3 iterations)
@@ -147,11 +162,11 @@ Each iteration:
    - **Outputs:** updated spec (in place), "Findings Addressed" appended to the panel review.
    - **Task:** Resolve every HIGH and MEDIUM finding; each resolution cites the specific spec change made. Do NOT claim resolution without an actual edit. Embed the **Brief and tier rules for spec fixes** (below) verbatim.
 3. **Re-run Step 3c** (both stages — fresh PANEL-FINDINGS + a fresh synthesis) over the updated spec, producing a new/overwritten `PANEL-SPEC-*`.
-4. **Compare finding counts to the previous iteration:**
-   - **Progress-stall check:** if HIGH did not strictly decrease (when HIGH was non-zero), OR (in REVISE case) MEDIUM did not strictly decrease → **halt immediately**. The fix subagent is making no real progress; further iterations waste tokens or degrade review quality (placating edits).
-   - **If the panel now returns `PROCEED`** → exit loop; continue to 3d.
-   - **If still STOP/REVISE and iteration < 3** → next iteration.
-5. **After iteration 3, regardless of verdict** → halt (cap exhausted).
+4. **Act on the new verdict, in this order:**
+   - **The panel now returns `PROCEED`** → exit the loop and continue to 3d — at any iteration, the third included. A passing verdict is never a halt.
+   - **Progress-stall check** (verdict still STOP/REVISE): if HIGH did not strictly decrease (when HIGH was non-zero), OR (in REVISE case) MEDIUM did not strictly decrease → **halt immediately**. The fix subagent is making no real progress; further iterations waste tokens or degrade review quality (placating edits).
+   - **Still STOP/REVISE and iteration < 3** → next iteration.
+   - **Still STOP/REVISE after iteration 3** → halt (cap exhausted).
 
 ### Brief and tier rules for spec fixes (embed verbatim in the 3c and 3e fix prompts)
 

@@ -147,7 +147,7 @@ The spec's `## Modules` section assigns each module a `Risk:` tier. Use it to **
 
 ```bash
 # Extract module risks from the spec
-grep -A 1 "MODULE-" SDD/requirements/SPEC-*-[feature-name].md | grep "Risk:"
+grep -A 1 "MODULE-" <the SPEC path in your prompt> | grep "Risk:"
 ```
 
 If the spec has no `## Modules` section (legacy or config-only changes), treat the entire feature as **medium** by default and note in the review summary that risk tiering was not available.
@@ -186,12 +186,13 @@ Like the Agentic-Surface Lens, this walk is an overlay on the 70/20/10 budget, n
 
 ## Agentic-Surface Lens (conditional)
 
-**Gate:** read the spec's `agent_security:` frontmatter. `true` → run this lens. `false` → skip it entirely. `auto` or absent → run the scope test below and run the lens only if it passes. Your spawn prompt provides the absolute path of the control catalog, `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`, whenever the gate may be open.
+**Gate:** your spawn prompt carries the resolved gate value and, whenever the gate may be open, the absolute path of the control catalog (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) and of the spec's panel review (`SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`).
 
-```bash
-# Gate
-grep -m1 "^agent_security:" SDD/requirements/SPEC-*-[feature-name].md
-```
+- `agent_security: true` → run this lens.
+- `agent_security: auto` → run the scope test below and run the lens only if it passes.
+- **No catalog path in your prompt** → the gate is closed for this run (the spec says `false`, or the catalog is missing from the install). Skip the lens and record one line in the review document saying so.
+
+If your prompt gives a catalog path but no gate value, read `agent_security:` from the frontmatter of the spec at the path in your prompt (absent means `auto`).
 
 **Scope test (resolving `auto`).** The lens applies when the implemented code contains at least one of: an LLM/model call; a tool or function definition exposed to a model, or MCP server/client wiring; agent memory, conversation persistence, or a retrieval store feeding model context; message passing between agents or a model-driven subagent spawn; a model output that drives an action on an external system. If none is present, skip the lens and record one line in the review document saying so.
 
@@ -199,9 +200,9 @@ grep -m1 "^agent_security:" SDD/requirements/SPEC-*-[feature-name].md
 
 **How it interacts with the review budget.** The 70/20/10 split describes the base review. This lens is an overlay, not a fourth slice of that budget: it runs after Step 4 of the workflow below, over the agentic files only, and its findings are reported in their own section. Treat any HIGH here as a rejection criterion on the same footing as a spec-alignment failure.
 
-**Evidence rules.** Every finding cites `file:line` and resolves to a concrete code change. Classical appsec findings belong to the base review, not this lens. If the implementation contradicts an `agent-security` finding the spec panel already resolved, say so explicitly — that is a regression between spec and code, and it is at least MEDIUM.
+**Evidence rules.** Every finding cites `file:line` and resolves to a concrete code change. Classical appsec findings belong to the base review, not this lens. **Read the panel review named in your prompt** — its `#### AI Agent Security Findings` block and that block's trailing **Abuse cases to cover**. If the implementation contradicts an `agent-security` finding the spec panel already resolved, say so explicitly — that is a regression between spec and code, and it is at least MEDIUM. If your prompt names no panel review, or the review has no such block (the specialist's gate was closed), write `No agent-security panel findings to check against.` on the review document's "Spec-to-code regressions" line instead of `None.`
 
-**Abuse cases.** Close the lens by listing the catalog Section 5 rows this implementation's threat surface makes relevant, each with its expected denial, and whether a test currently covers it. A test covers a row only if it performs the attack and asserts the expected denial — one that merely asserts "no crash" does not. Mark uncovered rows `NOT COVERED` in the abuse-case coverage table **and raise each as a HIGH finding** in this section (Resolution: the test to add, file named). An uncovered relevant abuse case is a rejection criterion, like any other HIGH here.
+**Abuse cases.** Close the lens by listing the catalog Section 5 rows this implementation's threat surface makes relevant, each with its expected denial, and whether a test currently covers it. Start from the panel review's **Abuse cases to cover** block when there is one — every row it names is relevant by the spec panel's ruling — and add any further row the code itself makes relevant. A test covers a row only if it performs the attack and asserts the expected denial — one that merely asserts "no crash" does not. Mark uncovered rows `NOT COVERED` in the abuse-case coverage table **and raise each as a HIGH finding** in this section (Resolution: the test to add, file named). An uncovered relevant abuse case is a rejection criterion, like any other HIGH here.
 
 ## Enforcement-Site Verification (mandatory)
 
@@ -219,9 +220,9 @@ Your prompt provides `STANDARD` (`references/enforcement-sites.md`), `CONVENTION
 
 Record results in the review document's `## Enforcement-Site Verification` section. Do not edit the IMPLEMENTATION-PLAN's `## Control Site Status` table — the completion step owns it.
 
-**Site-verification-only mode (Step 4e.5).** When your prompt says `MODE: site-verification-only`, run ONLY this section (steps 1–6, including 1b–1d) against the `FEATURE` diff your prompt names — skip the Pre-Review Artifact Verification, the 70/20/10 review, the checklist walk, the agentic lens, the delivery-tier rules, and the design brief check. Write `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` containing only: the `## Enforcement-Site Verification` table, a numbered `## Findings` list with severities, and `## Decision: [APPROVED/REJECTED]` (any open HIGH or MEDIUM rejects).
+**Site-verification-only mode (Step 4e.5).** When your prompt says `MODE: site-verification-only`, run ONLY this section (steps 1–6, including 1b–1d) against the `FEATURE` diff your prompt names — skip the Pre-Review Artifact Verification, the 70/20/10 review, the checklist walk, the agentic lens, the delivery-tier rules, and the design brief check. Your prompt names the SPEC for this mode: step 1b judges each `UNCOUNTED` rule against it. When the diff is a `MATCH`, steps 1–2 have nothing to carry — run steps 3–6, which is what this pass is for: the dispositions. Write `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` containing only: the `## Enforcement-Site Verification` table, a numbered `## Findings` list with severities, and `## Decision: [APPROVED/REJECTED]` (any open HIGH or MEDIUM rejects).
 
-**Progress marker (both modes).** When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM)` (`N` = the `ITER` in your prompt; `<r>` = HIGH tagged `[row-only]` in step 1c; omit the bracket when it is 0). It is a phase-detection marker; do not paraphrase it.
+**Progress marker (both modes).** When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one; `<r>` = HIGH tagged `[row-only]` in step 1c; omit the bracket when it is 0). It is a phase-detection marker; do not paraphrase it.
 
 ## Delivery Tier (tiered specs only)
 

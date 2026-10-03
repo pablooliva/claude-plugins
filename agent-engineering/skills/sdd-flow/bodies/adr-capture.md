@@ -2,7 +2,10 @@
 
 You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
-Your prompt names the input doc (research doc or spec), the existing `SDD/adr/` directory, and whether you are in CONFIRM mode (supervised ambient detection at research) or AUTO mode (autonomous, or frontmatter-declared decisions which are pre-approved). In CONFIRM mode: for each candidate ADR, instead of asking the user, append an `## Awaiting ADR Confirmation` block (the proposed ADR title + summary + options) to `SDD/orchestration/progress.md` and return to the orchestrator WITHOUT writing the ADR. In AUTO mode: write every ADR that passes the scope test directly, then regenerate `SDD/adr/README.md`. If no cross-cutting decision is detected, do nothing and return a no-op note.
+Your prompt names the input doc (research doc or spec), the existing `SDD/adr/` directory, and your mode:
+
+- **PROPOSE mode** (supervised detection at research, Step 2b): write no ADR and no stop note. Append ONE `## ADR Candidates` entry to `SDD/orchestration/progress.md` listing each candidate's title and chosen option — or `none` — and return. The user sees the candidates at the design gate; the accepted ones are written later by an AUTO-mode run.
+- **AUTO mode** (autonomous detection at research; candidates the user accepted at the design gate; frontmatter-declared decisions, which are pre-approved): write every ADR that passes the scope test directly, then regenerate `SDD/adr/README.md`. **When your prompt lists accepted candidate titles, write exactly those** — derive each from the input doc as usual, and do not scan for others. If no cross-cutting decision is detected, write nothing and return a no-op note.
 
 ---
 
@@ -50,7 +53,7 @@ Check against these before writing any ADR:
 
 ## Behavioral Instructions
 
-Execute these steps in order for each candidate decision found in the input document.
+Execute these steps in order for each candidate decision found in the input document. In PROPOSE mode run Steps 1, 2, and 4 only (scope test, inputs, duplicate check — enough to name the candidate and its chosen option honestly), then go to Step 7.
 
 ### Step 1: Apply the scope test
 
@@ -171,21 +174,18 @@ Chosen as the team's default tool because [reason]. Future ADR should revisit if
 
 **In AUTO mode:** write the file directly to `SDD/adr/NNNN-slug.md`. Use the Write tool; do not overwrite existing files (if by some race the number is taken, re-run Step 3).
 
-**In CONFIRM mode:** do NOT write the ADR file. Instead, append the following block to `SDD/orchestration/progress.md` (append-only — never overwrite existing content):
+**In PROPOSE mode:** do NOT write any ADR file, and do not number or render one. After every candidate has been through Steps 1, 2, and 4, append ONE entry to `SDD/orchestration/progress.md` (append-only — never overwrite existing content) covering all of them:
 
 ```markdown
-## Awaiting ADR Confirmation
+## ADR Candidates
 
-**Proposed ADR:** NNNN — [Title]
-**File:** SDD/adr/NNNN-slug.md
-**Summary:** [One sentence describing the decision and the chosen option]
-**Options captured:** [Chosen option] (vs [alternatives listed])
-
-Rendered ADR:
-[paste the full rendered ADR text here]
+- [Title] — [chosen option]
+- [Title] — [chosen option]
 ```
 
-Return to the orchestrator after appending. Do not proceed to Steps 8–10 in CONFIRM mode.
+When there are no candidates, the entry's body is the single line `- none`. The entry is a record, not a stop: it has no `## Awaiting` header and asks nothing. One line per candidate, title and chosen option only — never the context, the alternatives, or a rendered record. **List every candidate.** This entry is the only record the design gate and a resumed session read, so a candidate left out of it is lost; it is the one progress entry allowed past the 10-line cap, and only by its candidate lines.
+
+Return to the orchestrator after appending (Step 10). Do not proceed to Steps 8–9 in PROPOSE mode.
 
 ### Step 8: Update the ADR index (AUTO mode only)
 
@@ -218,11 +218,11 @@ If this ADR supersedes an existing one, update the old ADR in place per the Supe
 
 ### Step 10: Return a completion summary
 
-Report what was written (AUTO) or proposed (CONFIRM):
+Report what was written (AUTO) or proposed (PROPOSE):
 
 ```
 ADR NNNN: [Title]
-  File: SDD/adr/NNNN-slug.md        [AUTO: written | CONFIRM: proposed in progress.md]
+  File: SDD/adr/NNNN-slug.md        [AUTO: written | PROPOSE: no file — listed under "## ADR Candidates" in progress.md]
   Index updated: SDD/adr/README.md  [AUTO only]
 ```
 
@@ -273,9 +273,10 @@ A decision can be *deprecated* without supersession — the old convention is no
 
 ## Progress File Rules
 
-When writing to `SDD/orchestration/progress.md` (CONFIRM mode only):
+When writing to `SDD/orchestration/progress.md`:
 
 - **Append only.** Never overwrite or truncate existing content.
-- Write the `## Awaiting ADR Confirmation` block at the end of the file.
+- **PROPOSE mode:** write the single `## ADR Candidates` entry at the end of the file — one entry for the whole scan, however many candidates it found. Never write an `## Awaiting …` block: this body writes no stop note in either mode.
+- **AUTO mode:** append one short entry naming the ADR files written (or "no ADR written" and why).
+- Every entry stays within the 10-line cap, except that an `## ADR Candidates` entry lists every candidate.
 - If `SDD/orchestration/` does not exist, create it before writing.
-- One block per candidate ADR, even if multiple candidates were found in the same scan.

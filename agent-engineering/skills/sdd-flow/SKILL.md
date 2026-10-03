@@ -43,7 +43,7 @@ At Step 0 the orchestrator resolves **SKILL_ROOT** = the absolute path of this s
 
 Every body path in a spawn prompt is the **resolved absolute** `SKILL_ROOT/bodies/<file>.md`. Compact bodies are passed the same way (read only if the Safety-Net trips).
 
-The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), and the code-review / slice-review agentic lens (4b). It also derives **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md` — the enforcement-site standard (definitions of control and enforcement site, the per-site mutation standard, the three site dispositions, the inventory shape) passed to every implementation, blind-count, review, fix, retro, and completion spawn. It also derives **TIERS** = `PLUGIN_ROOT/skills/simplicity-challenge/references/tiers.md` — the plugin's one tier standard (the three delivery tiers, the floor that is never deferred, the cut tests, the tier-plan shape), owned by the `simplicity-challenge` skill and read here, never restated; it is passed to the design-brief, planning, spec-review, spec-fix, code-review, and completion spawns. Record all four in `progress.md` alongside SKILL_ROOT. STANDARD ships inside this skill, so a missing STANDARD means a broken install: halt and tell the user (unlike CATALOG, there is no degraded mode — without it no control can reach `Complete`). TIERS ships in the same plugin; a missing TIERS is likewise a broken install. If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run and a one-line warning goes to `progress.md` — the flow does not halt.
+The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), and the code-review / slice-review agentic lens (4b). It also derives **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md` — the enforcement-site standard (definitions of control and enforcement site, the per-site mutation standard, the three site dispositions, the inventory shape) passed to every implementation, blind-count, review, fix, retro, and completion spawn. It also derives **TIERS** = `PLUGIN_ROOT/skills/simplicity-challenge/references/tiers.md` — the plugin's one tier standard (the three delivery tiers, the floor that is never deferred, the cut tests, the tier-plan shape), owned by the `simplicity-challenge` skill and read here, never restated; it is passed to the design-brief, planning, spec-review, spec-fix, code-review, and completion spawns. Record all four in `progress.md` alongside SKILL_ROOT. STANDARD ships inside this skill, so a missing STANDARD means a broken install: halt and tell the user (unlike CATALOG, there is no degraded mode — without it no control can reach `Complete`). TIERS ships in the same plugin; a missing TIERS is likewise a broken install. If CATALOG does not exist, the `agent_security:` gate is treated as closed for the whole run — **including for a spec that says `agent_security: true`**: the `agent-security` panel value is dropped and no review spawn is passed a catalog path — and a one-line warning goes to `progress.md`. The flow does not halt.
 
 ## Canonical Identifiers (resolved at Step 0)
 
@@ -124,8 +124,25 @@ The bodies were forked from commands a person runs by hand. Inside the flow ever
 - **A body that cannot proceed returns a failure** — an input missing or unreadable, a precondition not met, a choice it has no authority to make — in its bounded return, and writes no stop note. The orchestrator handles it under Error Handling (`phases/protocols.md`).
 - **A body writes only these stop notes;** every other `## Awaiting …` block is written by the orchestrator:
   - `## Awaiting Slicing Decision` — the planning body's practicality gate, and nothing else.
-  - `## Awaiting ADR Confirmation` — the ADR-capture body in CONFIRM mode.
   - `## PARTIAL: needs continuation` — the compact bodies on a Safety-Net trip, in two forms: the phase form (research, planning, implementation) and the blind site-count form (`bodies/site-count-compact.md`).
+
+### Who declares a phase done (markers, stops, resume)
+
+**Only the orchestrator declares a phase done, and only after the phase's last step.** A completion subagent's banner (`Planning Phase - COMPLETE`, `Implementation Phase - COMPLETE`) says that subagent's work is finished; the reviews, fixes, and commit that follow are still to come, and a resumed session that read the banner as "done" would skip them. Each phase therefore ends with a marker the orchestrator writes itself:
+
+| Phase | Done when the orchestrator has written | Written at |
+|---|---|---|
+| Research | `## Research - Accepted` | after the 2e commit |
+| Planning | `## Planning - Accepted` | 3g, after the deviation check |
+| Implementation | `## Implementation - Committed`, then `## Feature - Done` | after the 4i commit; after the 4j announcement |
+
+Three rules go with it, and an edit to a phase file is checked against them:
+
+- **Resume reads the current feature only.** Step 0 opens each feature's record with `## Flow Started - [###]-[feature-name]`; Phase Detection reads only what follows the latest one, so an earlier feature's markers never answer for this one.
+- **Every stop that waits for an answer has a halt block, a resume rule, and a diagram row.** The stop writes a block to `progress.md` before it asks; `phases/protocols.md` has the rule that resumes it; `docs/sdd-flow-diagram.md` lists it. A latest halt block always wins over a phase rule, and one with no rule of its own falls to the catch-all there: it is shown to the user verbatim, never guessed past. (Stops that need no answer — the slice-boundary pause, and terminal stops such as decomposition — write none; `phases/protocols.md` lists them.)
+- **A handoff passes what a fresh spawn would.** A continuation, a recount, or a re-review is given the same inputs — paths, `SCOPE`, `ITER`, the base commit, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer.
+
+The full marker table and the rules are in `phases/protocols.md` → Phase Detection Priority.
 
 ### Tier Task Mirror (record-keeping, never silent)
 
@@ -144,9 +161,9 @@ The mirror never halts the flow and is never skipped without the user being told
 
 `progress.md` sits in the read path of nearly every spawn and of phase detection — its size is paid on every read. Three rules keep it bounded:
 
-1. **Rotate at feature completion (Step 4j).** Move the finished feature's full history to `SDD/orchestration/progress-archive/progress-SPEC-[###]-[YYYY-MM-DD_HH-MM-SS].md`; leave a one-line summary (feature, outcome, artifact pointers). The live file carries full history ONLY for the active feature.
-2. **Checkpoint on size.** If the live file exceeds **~500 lines**, rotate at the next quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6): archive resolved verbose blocks (including completed-phase history of the still-active feature), rewrite the head as a bounded `## Current State` (phase status with canonical phase-state lines verbatim, artifact pointers, archive path). **Pending halt blocks (`## Awaiting *`, `## PARTIAL*` — prefix match, not a fixed list) are carried forward verbatim as the latest blocks** — phase detection matches the latest block in the live file and never scans archives. Everything kept in the live file stays byte-identical; only the new head and rotation stamp are newly written text.
-3. **Bounded appends.** Subagent progress entries are **≤10 lines**: status, artifact paths, one-line key decision, anything pending. Narrative belongs in the artifact the subagent wrote, referenced by path.
+1. **Rotate at feature completion (Step 4j).** Move the finished feature's full history — its `## Flow Started - ` record and everything after it — to `SDD/orchestration/progress-archive/progress-SPEC-[###]-[YYYY-MM-DD_HH-MM-SS].md`; leave one line, `Finished: SPEC-[###] [feature-name] — <outcome>; history: <archive path>`. That line carries no `## ` header and no phase marker, so no resume rule can match a finished feature. The live file carries full history ONLY for the active feature.
+2. **Checkpoint on size.** If the live file exceeds **~500 lines**, rotate at the next quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6): archive resolved verbose blocks (including completed-phase history of the still-active feature), rewrite the head as a bounded `## Current State` (artifact pointers, archive path), then keep the active feature's `## Flow Started - ` record and, after it, its canonical phase-state lines verbatim and in order. **Pending halt blocks (`## Awaiting *`, `## PARTIAL*` — prefix match, not a fixed list) are carried forward verbatim as the latest blocks** — phase detection matches the latest block in the live file and never scans archives. Everything kept in the live file stays byte-identical; only the new head and rotation stamp are newly written text.
+3. **Bounded appends.** Subagent progress entries are **≤10 lines**: status, artifact paths, one-line key decision, anything pending. Narrative belongs in the artifact the subagent wrote, referenced by path. (One exception: an `## ADR Candidates` entry lists every candidate, one line each, however many — it is the only record the design gate reads.)
 
 Rotation is **orchestrator-only**, happens only between spawns (never mid-subagent), and is recorded in the fresh head. Append-only applies *within* a generation; rotation starts a new one. Full procedure: `phases/protocols.md` → Progress Rotation.
 
@@ -172,7 +189,8 @@ Routing is carried by **shipped agent frontmatter** — no runtime model switchi
 |---|---|---|
 | Research, planning, ADR capture, fixes, impl chunks, code review, completion, slice cycle | `agent-engineering:sdd-workhorse` | sonnet |
 | Blind site count (4a.5, 4e.5) — always a fresh spawn | `agent-engineering:sdd-workhorse` | sonnet |
-| Each panel specialist (Stage 1), including `agent-security` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
+| Each panel specialist (Stage 1) with a shipped agent — `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
+| Any other panel value — today `accessibility`, `privacy`, `cost` | `agent-engineering:sdd-workhorse`, with `bodies/panel-specialist.md` and the panel value | sonnet |
 | Research/spec/impl critical review; panel synthesis (Stage 2) | `agent-engineering:sdd-critical-reviewer` | opus |
 | Design brief — first draft and every revision (2.5a, 2.5c) | `agent-engineering:sdd-workhorse` | **opus**, by per-spawn override — the one planning document a person reads |
 
