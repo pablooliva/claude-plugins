@@ -114,6 +114,19 @@ SDD/
 - **Explicit resolved paths in every spawn prompt** — never let a subagent guess artifact locations.
 - **Per-phase sizing:** Research — single subagent (scope unknown until investigated); pre-split per-layer only if the task obviously cuts across >2 architectural layers. Planning — single subagent; pre-split only if RESEARCH >1000 lines or >3 disjoint subsystems. Implementation (whole-feature) — count SPEC items `REQ-XXX`+`EDGE-XXX`+`FAIL-XXX`; if >8, pre-split into ⌈total/5⌉ sequential chunks, each appending to IMPLEMENTATION-PLAN. **Per-slice mode: one subagent per slice, strict, no bundling** — REQ-count chunking does NOT apply.
 
+### What a body may do (the prompt's paths are the only inputs)
+
+The bodies were forked from commands a person runs by hand. Inside the flow every body is held to these rules, and an edit to a body is checked against them:
+
+- **Inputs come from the prompt.** A body never lists a directory to find or choose its spec, research document, or plan — a repository holds several of each as soon as a second feature or tier exists, and only the orchestrator knows which is active.
+- **A body never commits.** Every commit is the orchestrator's (2e, 3f, 4i, per-slice 4c.6). The implementation work stays uncommitted until then, because the blind site count and the reviews compare the working tree against the commit taken before implementation began.
+- **A body never resets, rewrites, or archives `progress.md`.** It appends. Rotation is the orchestrator's (Progress Hygiene below).
+- **A body that cannot proceed returns a failure** — an input missing or unreadable, a precondition not met, a choice it has no authority to make — in its bounded return, and writes no stop note. The orchestrator handles it under Error Handling (`phases/protocols.md`).
+- **A body writes only these stop notes;** every other `## Awaiting …` block is written by the orchestrator:
+  - `## Awaiting Slicing Decision` — the planning body's practicality gate, and nothing else.
+  - `## Awaiting ADR Confirmation` — the ADR-capture body in CONFIRM mode.
+  - `## PARTIAL: needs continuation` — the compact bodies on a Safety-Net trip, in two forms: the phase form (research, planning, implementation) and the blind site-count form (`bodies/site-count-compact.md`).
+
 ### Tier Task Mirror (record-keeping, never silent)
 
 The tier plan file is the record of a feature's tiers; BB tasks mirror it — one parent task for the feature, one sub-task per tier — so a waiting tier shows on the board and feedback can be left on it between cycles. The orchestrator keeps the two in step by running `python3 "$SKILL_ROOT/scripts/tier-mirror.py"` at the four points the phase files name: design-gate approval (`phases/planning.md` → 2.5b), before the final commit and at the completion announcement (`phases/implementation-whole-feature.md` → 4h–4j), and the start of a next-tier cycle (`phases/setup.md` → Step 0). It runs only for tiered features (approved tier `1`, `2`, or `3`). When no tracker project is linked to the BB project, the script **creates one** — a missing project is never a reason to skip.

@@ -324,7 +324,6 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 - **Research Foundation:** SDD/research/RESEARCH-[###]-[feature-name].md
 - **Implementation Tracking:** SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md
 - **Completion Date:** [YYYY-MM-DD HH:MM:SS]
-- **Context Management:** Maintained <40% throughout implementation
 
 ## Requirements Completion Matrix
 
@@ -491,45 +490,19 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 
 ### 4. Update Progress File
 
-Update `SDD/orchestration/progress.md`:
+Append to `SDD/orchestration/progress.md` — this entry and nothing more, written after step 5 so its Glossary line is final. Progress entries are capped at 10 lines; the final status, metrics, and deployment detail live in the IMPLEMENTATION-SUMMARY you just wrote, referenced here by path. Keep the header line exactly as shown — it is a phase-detection marker.
 
 ```markdown
 ## Implementation Phase - COMPLETE ✓
 
-### Feature: [Feature Name]
+- **Feature:** [Feature Name] — completed [YYYY-MM-DD HH:MM:SS]
 - **Specification:** SDD/requirements/SPEC-[###]-[feature-name].md
 - **Implementation:** SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md
 - **Summary:** SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[timestamp].md
-- **Completion:** [YYYY-MM-DD HH:MM:SS]
-
-### Final Status
-- All requirements: ✓ Implemented
-- All tests: ✓ Passing
-- Performance targets: ✓ Met
-- Security requirements: ✓ Validated
-- Documentation: ✓ Complete
-
-### Inline Investigation Summary
-- Key investigations performed inline: [brief list]
-- Safety-Net handoffs required: [none | N]
-
-### Implementation Metrics
-- Duration: [X] days
-- Context management: Maintained <40% throughout
-- Test coverage achieved: [X]%
-- Files modified: [X]
-- New files created: [Y]
-
-### Deployment Readiness
-✓ Feature is specification-validated and production-ready
-✓ All acceptance criteria met
-✓ Rollback plan documented
-✓ Monitoring configured
-
-### Next Steps
-- Ready for staging deployment
-- Production deployment checklist available
-- Post-deployment validation plan ready
+- **Tests:** [X/Y] passing, coverage [X]%
+- **Safety-Net handoffs:** [none | N]
+- **Glossary:** [updated | no glossary changes]
+- **Pending:** [none | one line]
 ```
 
 ### 5. Capture Glossary Deltas Introduced by the Implementation
@@ -620,7 +593,6 @@ Final verification before marking complete:
 - The IMPLEMENTATION-PLAN document is the source of truth for completion status
 - Implementation summary uses timestamped format (YYYY-MM-DD_HH-MM-SS)
 - All delegations should be reviewed and documented
-- Context should be managed throughout (<40% utilization)
 
 ---
 

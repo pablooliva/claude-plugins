@@ -15,16 +15,14 @@ You are a continuation subagent spawned because a prior phase subagent tripped t
    - Identify current phase (research/planning/implementation)
    - Note completion status and next priorities
 
-2. **Locate Most Recent Compaction File:**
-   - Check `SDD/orchestration/` for latest compaction file:
+2. **Read the Compaction File Named in Your Prompt:**
+   - Load that one file, at the exact path given. It lives under `SDD/orchestration/compacted/`; do not list that directory, and do not pick "the most recent" file yourself — other compaction files there belong to earlier handoffs, other phases, or other features.
+   - Its name tells you the phase being continued:
      - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Blind site count: `site-count-compacted-[YYYY-MM-DD_HH-MM-SS].md` — handled ONLY by the blind site-count continuation note above, never by this Process
-     - Generic (any phase): `compact-[YYYY-MM-DD_HH-MM-SS].md`
-   - Load the most recent file based on timestamp (24-hour format with underscores)
-   - Note: Files use format `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-10-01_14-30-45`)
-   - Generic compaction files work for smaller tasks, follow-ups, or ad-hoc work
+   - If the path is missing from your prompt, or the file is missing or unreadable, return a failure to the orchestrator naming it. Do not substitute another compaction file, and write no stop note.
 
 ### 2. Pre-Continuation Quality Check
 
@@ -104,7 +102,7 @@ Complete this checklist before starting work:
 - [ ] Previous session's critical learnings are understood
 - [ ] Blocking items or questions are noted
 
-If any verification fails, document the issue in `SDD/orchestration/progress.md` and proceed with the best available information.
+If an essential file cannot be loaded — a phase artifact named in your prompt, or a file the compaction file lists under "Essential Files to Reload" that is missing or unreadable — return a failure to the orchestrator naming it. Do not resume on partial context, and write no stop note. If any other check fails (a thin priority list, an unclear learning), document the issue in `SDD/orchestration/progress.md` and proceed with the best available information.
 
 ### 5. Resume Work
 
@@ -122,11 +120,13 @@ If any verification fails, document the issue in `SDD/orchestration/progress.md`
 
 ### 6. Safety-Net and Bounded Return
 
-The Reads counter inherited from the prior subagent applies here. If you trip it again:
+The Safety-Net Rule in your prompt applies here as it did to the prior subagent, with the fresh counter file you were given. If it trips again, stop and follow the compact body named in your prompt (under "Compact instructions — use only if the Safety-Net trips") — that file, not this section, says what to do. In short, it has you:
 
-1. Write a new compaction file to `SDD/orchestration/` using the appropriate naming convention for the current phase (e.g., `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`)
-2. Update `SDD/orchestration/progress.md` with current state (append only)
-3. Return a bounded result (≤200 words + artifact paths): summarize what was accomplished, the new compaction file path, and the next task from "Current Focus"
+1. Write a new compaction file under `SDD/orchestration/compacted/`, named for the current phase (e.g., `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`)
+2. Append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` with the compaction file path and where you left off
+3. Return ≤100 words stating a Mid-Phase Handoff is required
+
+Where this summary and the compact body differ, the compact body wins.
 
 If the phase completes fully, return a bounded result (≤200 words + artifact paths): summarize what was accomplished, list all artifact paths written, and note the phase as complete.
 
@@ -152,15 +152,14 @@ If the phase completes fully, return a bounded result (≤200 words + artifact p
 - `SDD/orchestration/progress.md` is the primary continuation point across all phases
 - Compaction files provide detailed context from the prior subagent's run
 - Each phase builds upon previous phases — maintain continuity
-- If multiple compaction files exist, use the most recent one based on timestamp
+- Read only the compaction file named in your prompt, even when others exist beside it
 - Never reset or overwrite previous phase information in `SDD/orchestration/progress.md`
 
 ## Error Recovery
 
 If continuation context is unclear:
 
-1. Check for most recent compaction file in `SDD/orchestration/`
-   - Look for: `compact-*.md`, `research-compacted-*.md`, `planning-compacted-*.md`, `implementation-compacted-*.md`
+1. Re-read the compaction file named in your prompt — never a different one. If it is missing or unreadable, return a failure to the orchestrator (Process step 1)
 2. Verify `SDD/orchestration/progress.md` exists and contains phase information
 3. If phase is ambiguous, examine the compaction file header and progress.md together to determine it
 4. If next task is unclear, derive it from the compaction file's "Priority" and "Current Focus" sections

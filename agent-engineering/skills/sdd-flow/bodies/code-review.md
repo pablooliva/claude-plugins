@@ -10,7 +10,9 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 
 ## Pre-Review Artifact Verification ⚠️
 
-**STOP - Before reviewing ANY code, locate and verify these artifacts exist:**
+**STOP - Before reviewing ANY code, verify the artifacts named in your prompt exist.** Use the paths in your prompt; do not list `SDD/` directories to find or choose them — other research documents, specs, and plans there belong to earlier features and tiers.
+
+**In `MODE: site-verification-only`, skip this whole section** — that mode's inputs are the ones the Enforcement-Site Verification section names.
 
 ### Required Documents
 
@@ -31,13 +33,9 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
    - Context management approach documented
    - Subagent usage logged (check `SDD/orchestration/subagent-calls/`)
    - Progress summaries for each implementation phase
+   - Context engineering decisions and handoff points between phases recorded
 
-4. **Context Utilization**
-   - Verify <40% context usage was maintained during implementation
-   - Check for context engineering decisions in prompt files
-   - Review handoff points between phases
-
-**If ANY artifacts are missing or incomplete, append an `## Awaiting Artifacts` block to `SDD/orchestration/progress.md` documenting which artifacts are missing and what is needed, then return.**
+**If a required artifact is missing or unreadable, return a failure to the orchestrator naming it and what is needed. Write no review document and no stop note.** An artifact that exists but is incomplete is not a failure — review what is there and raise the gap as a finding (see Rejection Criteria).
 
 ## Review Priority Order
 
@@ -221,7 +219,7 @@ Your prompt provides `STANDARD` (`references/enforcement-sites.md`), `CONVENTION
 
 Record results in the review document's `## Enforcement-Site Verification` section. Do not edit the IMPLEMENTATION-PLAN's `## Control Site Status` table — the completion step owns it.
 
-**Site-verification-only mode (Step 4e.5).** When your prompt says `MODE: site-verification-only`, run ONLY this section (steps 1–6, including 1b–1d) against the `FEATURE` diff your prompt names — skip the 70/20/10 review, the checklist walk, the agentic lens, the delivery-tier rules, and the design brief check. Write `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` containing only: the `## Enforcement-Site Verification` table, a numbered `## Findings` list with severities, and `## Decision: [APPROVED/REJECTED]` (any open HIGH or MEDIUM rejects).
+**Site-verification-only mode (Step 4e.5).** When your prompt says `MODE: site-verification-only`, run ONLY this section (steps 1–6, including 1b–1d) against the `FEATURE` diff your prompt names — skip the Pre-Review Artifact Verification, the 70/20/10 review, the checklist walk, the agentic lens, the delivery-tier rules, and the design brief check. Write `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` containing only: the `## Enforcement-Site Verification` table, a numbered `## Findings` list with severities, and `## Decision: [APPROVED/REJECTED]` (any open HIGH or MEDIUM rejects).
 
 **Progress marker (both modes).** When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM)` (`N` = the `ITER` in your prompt; `<r>` = HIGH tagged `[row-only]` in step 1c; omit the bracket when it is 0). It is a phase-detection marker; do not paraphrase it.
 
@@ -253,16 +251,9 @@ If your prompt has no `BASE`, use the file paths the IMPLEMENTATION-PLAN lists. 
 
 ### Step 1: Gather All Artifacts
 
+Use the research document, specification, and IMPLEMENTATION-PLAN paths in your prompt — the ones the Pre-Review Artifact Verification checked. Do not list `SDD/` directories to find them.
+
 ```bash
-# Locate research document
-ls SDD/research/RESEARCH-*-[feature-name].md
-
-# Locate specification
-ls SDD/requirements/SPEC-*-[feature-name].md
-
-# Locate prompt files
-ls SDD/implementation/IMPLEMENTATION-PLAN-*-[feature-name]-*.md
-
 # Check subagent logs
 ls SDD/orchestration/subagent-calls/
 ```
@@ -384,16 +375,17 @@ Run the **Design Brief Check** section above. It produces no findings.
 
 **IMMEDIATELY REJECT if:**
 
-1. No specification document exists
-2. No research foundation provided
+1. The specification is empty or does not cover this feature
+2. The research document provides no foundation for the specification
 3. Core specification intent not met
-4. IMPLEMENTATION-PLAN files missing for AI-generated code
-5. Context utilization exceeded without justification
-6. Critical edge/failure scenarios unhandled
-7. Success criteria cannot be achieved
-8. Test suite was not run or has failing tests
-9. E2E/Playwright tests are missing for a web-facing feature (N/A requires explicit justification)
-10. The Agentic-Surface Lens ran and produced a HIGH finding
+4. The IMPLEMENTATION-PLAN does not cover the AI-generated code in this change
+5. Critical edge/failure scenarios unhandled
+6. Success criteria cannot be achieved
+7. Test suite was not run or has failing tests
+8. E2E/Playwright tests are missing for a web-facing feature (N/A requires explicit justification)
+9. The Agentic-Surface Lens ran and produced a HIGH finding
+
+(An input artifact that is missing altogether never reaches this list — it is a returned failure, per Pre-Review Artifact Verification.)
 
 ## Approval Criteria ✅
 

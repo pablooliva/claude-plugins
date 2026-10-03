@@ -116,12 +116,12 @@ Also update `SDD/orchestration/progress.md` with:
 
 This preserves complete implementation journey while enabling fresh context continuation.
 
-## Commit Your Code Changes
+## Leave the Working Tree Uncommitted
 
-Before writing the handoff message, commit any code changes you have made inline using git. Stage and commit all modified files with a descriptive commit message following project conventions. This ensures your implementation work is safely saved in version control.
+Do not stage or commit anything. The blind site count and the reviews compare the uncommitted working tree against the base commit taken before implementation began; a commit here moves `HEAD` off that base and puts unreviewed code into history ahead of the review and commit steps the orchestrator owns. Your work is safe as it is: the files stay in the working tree, and the compaction file tells your successor where they are.
 
 ## Handoff
 
-After writing the compaction file, committing changes, and updating `SDD/orchestration/progress.md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` recording the compaction file path and where you left off. Then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
+After writing the compaction file and updating `SDD/orchestration/progress.md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` recording the compaction file path and where you left off. Then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
 
 Implementation phase continues — use the implementation-complete body when the feature is finished.

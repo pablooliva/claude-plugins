@@ -174,6 +174,17 @@ Deep module vs shallow module (depth as leverage). Interface in the wide sense (
 
 **Graceful degradation:** If the spec has no `## Modules` section at all, do not fail the panel. Emit one MEDIUM finding requesting the section be added, list what should be there based on the rest of the spec (which REQ-XXX items imply which module boundaries), and proceed. The aggregate verdict still applies.
 
+### 4.6 Optional Specialists
+
+If your assigned panel value is any of the following, use these specialist definitions (abbreviated; expand inline following the same structure as 4.1–4.4):
+
+- **accessibility** — WCAG 2.1/2.2 AA conformance, semantic HTML, keyboard navigation, focus management, ARIA usage, screen-reader compatibility, color contrast, motion preferences.
+- **cost** — cloud cost drivers (egress, API calls, storage class), unit economics per request, cost alerts, cold-vs-hot storage tradeoffs, reserved vs on-demand capacity.
+- **reliability** — fault isolation boundaries, timeout/retry/circuit-breaker patterns, graceful degradation, disaster recovery RPO/RTO, idempotency under replay, poison message handling.
+- **privacy** — PII classification, consent capture and revocation, data retention/deletion, purpose limitation, cross-border transfer, differential privacy considerations, DSR (data subject rights) support.
+
+For each optional specialist not yet fully defined above, generate your findings inline using the same pattern as 4.1 (<50 tok identity, 15-30 vocab terms, 5-10 named anti-patterns, same output schema). If unsure about vocabulary, err toward well-known standards (WCAG, GDPR, NIST 800-53, etc.).
+
 ### 4.7 Slice Integrity Specialist (per-slice mode only)
 
 **Activation gate:** Only fires when the spec's frontmatter declares `delivery_mode: per-slice`. In whole-feature mode (or when the field is absent), this specialist is skipped silently — no findings, no "checked nothing" report, and no `#### Slice Integrity Findings` sub-header is rendered in the deliverable. The specialist's prompt MUST self-check the activation gate at first action and short-circuit when the gate is closed; it must not produce an "N/A" finding (that would dilute the verdict and contradict the bit-for-bit-preserved deliverable shape for whole-feature reviews).
@@ -193,17 +204,6 @@ Vertical slice. Horizontal layer. Concentrated function. Thread line. End-to-end
 7. **Practicality-gate skipped** — Detection: spec's `## Delivery Slices` is empty or contains a `Slicing not applicable: <reason>` note in `per-slice` mode. Resolution: this is acceptable IF the planning subagent's practicality gate fired and the user explicitly chose per-slice anyway. Flag MEDIUM with "verify user intent" if no audit trail of the gate decision exists.
 
 **Output schema:** Same as security specialist, with `#### Slice Integrity Findings` header.
-
-### 4.6 Optional Specialists
-
-If your assigned panel value is any of the following, use these specialist definitions (abbreviated; expand inline following the same structure as 4.1–4.4):
-
-- **accessibility** — WCAG 2.1/2.2 AA conformance, semantic HTML, keyboard navigation, focus management, ARIA usage, screen-reader compatibility, color contrast, motion preferences.
-- **cost** — cloud cost drivers (egress, API calls, storage class), unit economics per request, cost alerts, cold-vs-hot storage tradeoffs, reserved vs on-demand capacity.
-- **reliability** — fault isolation boundaries, timeout/retry/circuit-breaker patterns, graceful degradation, disaster recovery RPO/RTO, idempotency under replay, poison message handling.
-- **privacy** — PII classification, consent capture and revocation, data retention/deletion, purpose limitation, cross-border transfer, differential privacy considerations, DSR (data subject rights) support.
-
-For each optional specialist not yet fully defined above, generate your findings inline using the same pattern as 4.1 (<50 tok identity, 15-30 vocab terms, 5-10 named anti-patterns, same output schema). If unsure about vocabulary, err toward well-known standards (WCAG, GDPR, NIST 800-53, etc.).
 
 ### 4.8 AI Agent Security Specialist (agentic surfaces only)
 

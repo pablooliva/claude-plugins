@@ -10,7 +10,7 @@ Starting implementation phase based on completed specification.
 
 1. **Read Progress File:**
    - Load `SDD/orchestration/progress.md` to understand planning completion status
-   - Identify the specification document referenced
+   - The specification is the path in your prompt — do not take it from this file, which may also reference earlier features' specs
    - Note any important context from the planning phase
 
 2. **Read Ubiquitous Language Glossary:**
@@ -35,24 +35,10 @@ Starting implementation phase based on completed specification.
 
 ## Implementation Setup
 
-1. **Check for Existing IMPLEMENTATION-PLAN Documents:**
-   - Search for any existing `SDD/implementation/IMPLEMENTATION-PLAN-[###]-*.md` files
-   - If an IMPLEMENTATION-PLAN document with the same number already exists:
-
-     ```text
-     ⚠️ WARNING: IMPLEMENTATION-PLAN document already exists!
-
-     Found: SDD/implementation/IMPLEMENTATION-PLAN-[###]-[existing-name].md
-
-     Options:
-     1. Continue with existing IMPLEMENTATION-PLAN document
-     2. Create new IMPLEMENTATION-PLAN with different number
-     3. Archive existing and create new (if previous implementation was abandoned)
-     ```
-
-     Append an `## Awaiting ExistingImplementationPlan` block to `SDD/orchestration/progress.md` listing the options above, then return.
-
-   - Only proceed to create a new IMPLEMENTATION-PLAN if no duplicate exists.
+1. **Use the IMPLEMENTATION-PLAN Path in Your Prompt:**
+   - **The file already exists → continue with it.** This is the normal case, not a conflict: the second and later chunks of a large feature append to the plan the first chunk created, and a re-scaffold after a re-plan rewrites parts of the existing plan as your prompt's post-replan note says. Read it, keep what earlier chunks recorded, and add to it. Never recreate it, renumber it, or archive it. Skip step 2.
+   - **No file at that path → create it** (step 2).
+   - **Your prompt names no plan path → return a failure to the orchestrator:** `IMPLEMENTATION-PLAN path missing from the prompt. Implementation cannot proceed.` Do not derive a path yourself and do not list `SDD/implementation/` to find a plan — a plan there may belong to another feature or an earlier tier. Create nothing and write no stop note.
 
 2. Create `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` document where:
    - `[###]` matches the specification and research document numbers (e.g., if using SPEC-042, create IMPLEMENTATION-PLAN-042)
@@ -64,9 +50,9 @@ Starting implementation phase based on completed specification.
 
 Before starting implementation:
 
-1. **Locate Specification Document:**
-   - Find the corresponding `SDD/requirements/SPEC-[###]-[feature-name].md` file
-   - If multiple specs exist, append an `## Awaiting SpecSelection` block to `SDD/orchestration/progress.md`, then return
+1. **Use the Specification Named in Your Prompt:**
+   - The specification is the `SDD/requirements/SPEC-[###]-[feature-name].md` path in your prompt. Do not list `SDD/requirements/` to find or choose one — other specs there belong to earlier features and tiers
+   - If the path is missing from your prompt, or the file is missing or unreadable, return a failure to the orchestrator naming it; write no stop note
    - Verify the specification is complete (has all sections filled)
 
 2. **Confirm Specification Completeness:**

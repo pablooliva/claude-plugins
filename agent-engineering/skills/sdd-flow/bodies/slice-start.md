@@ -12,21 +12,18 @@ The four slice primitives resolve the active slice via the SAME priority chain �
 2. **IMPLEMENTATION-PLAN's `## Slice Progress` row matching the primitive's expected status:**
    - `slice-start` → first row at `Not Started` (you can't start what's already running).
    - `slice-review` / `slice-retro` / the per-slice commit (4c.6) → row at `In Progress` or `Acceptance Check Passing` (you can't review/retro/commit something not yet implemented).
-3. **Error** — never silently pick. If priority 2 yields multiple candidates, append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` listing all candidates, then return.
+3. **Error** — never silently pick. If priority 2 yields multiple candidates, return a failure to the orchestrator listing all candidates. Write no stop note to `SDD/orchestration/progress.md` — the orchestrator names the slice and re-spawns.
 
 ## Inert-Mode Gate
 
 This body requires `delivery_mode: per-slice`. **Slice primitives are inert in whole-feature mode** (per REQ-007 + EDGE-002). The first action of this body is to read `delivery_mode:` from the active SPEC's frontmatter and short-circuit when not `per-slice`.
 
-### Step 1: Locate the active SPEC
+### Step 1: Use the active SPEC named in your prompt
 
-```bash
-ls SDD/requirements/SPEC-*.md
-```
+The active SPEC is the path in your prompt. Do not list `SDD/requirements/` to find or choose one — a repository holds several specs as soon as a second feature or tier exists, and only the orchestrator knows which is active.
 
-- Zero matches → fail with: `No SPEC found in SDD/requirements/. Run the planning phase to create one before invoking slice-start.`
-- One match → use it.
-- Multiple matches → append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` listing all candidates, then return.
+- Path present and readable → use it.
+- Path missing from your prompt, or the file is missing or unreadable → return a failure to the orchestrator: `Active SPEC path missing or unreadable: <path or "not given">. slice-start cannot proceed.` No partial state writes; no stop note.
 
 ### Step 2: Read `delivery_mode:` from the SPEC frontmatter
 
@@ -71,13 +68,9 @@ The IMPLEMENTATION-PLAN's `## Slice Progress` table is the source of truth for s
 - **FIRST-WRITE-WINS rule:** at most ONE slice may be at `Status: In Progress` at any time. Enforced by the EDGE-012 conflict check below.
 - **SLICE-XXX uniqueness invariant:** SLICE-XXX values within a single IMPLEMENTATION-PLAN's `## Slice Progress` table MUST be unique; duplicate detection is the human reviewer's responsibility (tooling does not enforce).
 
-## Step 3: Locate the IMPLEMENTATION-PLAN and verify the `## Slice Progress` table
+## Step 3: Read the IMPLEMENTATION-PLAN named in your prompt and verify the `## Slice Progress` table
 
-```bash
-ls SDD/implementation/IMPLEMENTATION-PLAN-*.md
-```
-
-Read the matching IMPLEMENTATION-PLAN. Verify it contains a `## Slice Progress` section. If MISSING, halt per FAIL-007 with:
+Read the IMPLEMENTATION-PLAN at the path in your prompt — do not list `SDD/implementation/` to find one. If the path is missing from your prompt, or the file is missing or unreadable, return a failure to the orchestrator naming it (no partial state writes; no stop note). Verify the plan contains a `## Slice Progress` section. If MISSING, halt per FAIL-007 with:
 
 ```
 No '## Slice Progress' table found in <IMPLEMENTATION-PLAN-XXX-...md>. Either run the implementation scaffolding step to scaffold the table, or restore the table from a previous git commit. slice-start cannot proceed without the table.
@@ -91,7 +84,7 @@ Apply the **Active-Slice Resolution Convention** above. For `slice-start`, the e
 
 - **`[SLICE-ID]` provided:** use it (after regex validation). Verify the SLICE-XXX row exists in `## Slice Progress`; if missing, fail with: `SLICE-XXX not found in <IMPLEMENTATION-PLAN-XXX-...md>'s ## Slice Progress table. Available slice IDs: <list>. Either correct the argument or update the SPEC's ## Delivery Slices section and re-run the implementation scaffolding step.`
 - **No argument, single `Not Started` row:** use it.
-- **No argument, multiple `Not Started` rows (EDGE-010):** append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` listing all `Not Started` SLICE-IDs and Names, then return. Do NOT silently pick the first.
+- **No argument, multiple `Not Started` rows (EDGE-010):** return a failure to the orchestrator listing all `Not Started` SLICE-IDs and Names; write no stop note. Do NOT silently pick the first.
 - **No argument, zero `Not Started` rows:** if all slices are `Complete`, fail with: `All slices in <IMPLEMENTATION-PLAN-XXX-...md> are already Complete. Nothing to start. To re-start a Complete slice, pass --force SLICE-XXX explicitly.` If any are `In Progress` / `Acceptance Check Passing`, fall through to the EDGE-012 conflict check.
 
 ## Step 5: EDGE-012 conflict — another slice is `In Progress` (or `Acceptance Check Passing`)

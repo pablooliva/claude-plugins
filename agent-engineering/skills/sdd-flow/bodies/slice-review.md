@@ -10,19 +10,17 @@ Per SPEC MODULE-002 active-slice fallback asymmetry:
 
 1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}[a-z]?$` BEFORE interpolating into any path (REQ-024 / SEC-003 path-traversal prevention).
 2. **IMPLEMENTATION-PLAN's `## Slice Progress` row** at `In Progress` or `Acceptance Check Passing` — this review covers implemented code, so it expects a non-`Not Started`, non-`Complete` row.
-3. **Error** — never silently pick. If priority 2 yields multiple candidates, append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` and return.
+3. **Error** — never silently pick. If priority 2 yields multiple candidates, return a failure to the orchestrator listing them. Write no stop note to `SDD/orchestration/progress.md`.
 
 ## Inert-Mode Gate
 
 This review requires `delivery_mode: per-slice`. **Slice commands are inert in whole-feature mode** (per REQ-007 + EDGE-002).
 
-### Step 1: Locate the active SPEC
+### Step 1: Use the active SPEC and IMPLEMENTATION-PLAN named in your prompt
 
-```bash
-ls SDD/requirements/SPEC-*.md
-```
+The active SPEC and the IMPLEMENTATION-PLAN are the paths in your prompt. Do not list `SDD/requirements/` or `SDD/implementation/` to find or choose one — a repository holds several specs as soon as a second feature or tier exists, and only the orchestrator knows which is active.
 
-Single match → use it. Multiple → append an `## Awaiting SPEC Selection` block to `SDD/orchestration/progress.md` and return. Zero → emit: `No SPEC found in SDD/requirements/. Complete the planning phase to create one before invoking slice review.`
+If either path is missing from your prompt, or the file is missing or unreadable, return a failure to the orchestrator: `Active SPEC or IMPLEMENTATION-PLAN path missing or unreadable: <path or "not given">. Slice review cannot proceed.` Write no review and no stop note.
 
 ### Step 2: Read `delivery_mode:` from the SPEC frontmatter
 
@@ -55,7 +53,7 @@ Apply the **Active-Slice Resolution Convention** above. Expected statuses for th
 
 - **`[SLICE-ID]` provided:** verify the row exists in `## Slice Progress` and is at `In Progress`/`Acceptance Check Passing`. If at `Not Started`, fail per EDGE-003: `No implementation found for SLICE-XXX. Run slice-start SLICE-XXX and implement the slice before review.`
 - **No argument, single matching row:** use it.
-- **No argument, multiple matching rows:** append an `## Awaiting Active Slice Selection` block to `SDD/orchestration/progress.md` and return.
+- **No argument, multiple matching rows:** return a failure to the orchestrator listing the candidate rows; write no review and no stop note.
 - **No argument, zero matching rows:** fail with: `No slice currently In Progress or Acceptance Check Passing in <IMPLEMENTATION-PLAN-XXX-...md>. Run slice-start <SLICE-XXX> first.`
 
 ## Step 4: Compute the slice's file set (REQ-004)

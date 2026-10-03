@@ -10,7 +10,7 @@ Starting planning phase based on completed research.
 
 1. **Read Progress File:**
    - Load `SDD/orchestration/progress.md` to understand research completion status
-   - Identify the research document referenced
+   - The research document is the path in your prompt — do not take it from this file, which may also reference earlier features' research
    - Note any important context from the research phase
 
 2. **Read Ubiquitous Language Glossary:**
@@ -42,9 +42,9 @@ Starting planning phase based on completed research.
 
 Before creating specification:
 
-1. **Locate Research Document:**
-   - Find the corresponding `SDD/research/RESEARCH-[###]-[feature-name].md` file
-   - If multiple research documents exist, append an `## Awaiting Research Document Selection` block to `SDD/orchestration/progress.md` (following the `## Awaiting Clarification` shape) naming the candidate files, then return immediately.
+1. **Use the Research Document Named in Your Prompt:**
+   - The research document is the `SDD/research/RESEARCH-[###]-[feature-name].md` path in your prompt. Do not list `SDD/research/` to find or choose one — other research documents there belong to earlier features and tiers.
+   - If the path is missing from your prompt, or the file is missing or unreadable, return a failure to the orchestrator naming it; write no stop note.
    - Verify the research document is complete (has all sections filled)
 
 2. **Confirm Research Completeness:**
@@ -59,7 +59,7 @@ Before creating specification:
 3. **Validate Research Quality:**
    - If any research sections are missing or incomplete, note this in the progress file
    - Check if the research-complete step was run (look for completion marker in progress.md)
-   - If research is not complete, append an `## Awaiting Research Completion` block to `SDD/orchestration/progress.md` naming the missing or incomplete sections, then return immediately.
+   - If research is not complete, return a failure to the orchestrator naming the missing or incomplete sections. Write no spec and no stop note.
 
 ## Specification Document Structure
 
@@ -328,7 +328,7 @@ The spec template includes these YAML frontmatter fields, consumed by sdd-flow a
 
   `whole-feature` preserves the existing flow exactly; the `## Delivery Slices` section is omitted entirely. `per-slice` opts into vertical-slicing decomposition — a concentrated function threaded end-to-end through every relevant layer per slice; in that mode this body must populate `## Delivery Slices`. If the field is absent from a spec written before this change, treat it as `whole-feature`.
 
-  - **Value validation (binding for every consumer of this field):** the canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Absent → silent default to `whole-feature` (no log line; this is the documented default behavior). Any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) is invalid: fail fast with a clear error naming (a) the SPEC file path, (b) the offending value verbatim, and (c) the canonical enum. Never silently fall through to the default branch. When this body runs in autonomous mode, surface the failure by emitting an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` (mirrors `## Awaiting Clarification` shape) so the orchestrator halts; in supervised mode, surface inline. The same rule applies wherever `delivery_mode:` is read by downstream phases — the implementation phase, the slice handling, sdd-flow Step 4, the slice-integrity reviewers, and the practicality gate below — each consumer either fails fast with the same error shape or delegates to a single shared validation step.
+  - **Value validation (binding for every consumer of this field):** the canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Absent → silent default to `whole-feature` (no log line; this is the documented default behavior). Any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) is invalid: fail fast with a clear error naming (a) the SPEC file path, (b) the offending value verbatim, and (c) the canonical enum. Never silently fall through to the default branch. This body surfaces the failure by returning it to the orchestrator, in both modes, and writes no stop note — `## Awaiting Slicing Decision` belongs to the practicality gate alone. The same rule applies wherever `delivery_mode:` is read by downstream phases — the implementation phase, the slice handling, sdd-flow Step 4, the slice-integrity reviewers, and the practicality gate below — each consumer either fails fast with the same error shape or delegates to a single shared validation step.
 
 These fields have sensible defaults; populate them intentionally rather than leaving as boilerplate.
 
@@ -388,7 +388,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
 9. **Validate `delivery_mode:` value (spec ingestion gate):**
    - Read the `delivery_mode:` field from the spec frontmatter being created (or, when this body runs against an existing spec, the field already on disk).
    - Apply the value-validation rule from the frontmatter prose above: exact match against `{whole-feature, per-slice}`; absent → silent default `whole-feature`; any other value → fail fast.
-   - On invalid value, emit the error: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-invoke the planning body.` In autonomous mode, append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` mirroring the `## Awaiting Clarification` shape so the orchestrator halts; in supervised mode, surface inline and stop processing.
+   - On invalid value, emit the error: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-invoke the planning body.` Stop processing and return that error to the orchestrator as a failure, in both modes. Write no stop note — `## Awaiting Slicing Decision` is the practicality gate's block (step 10) and its resume options do not apply to a malformed value.
    - Do NOT silently fall through to the `whole-feature` branch when the value is malformed — that masks user typos and produces silent misbehavior downstream.
 
 10. **Practicality Check (per-slice mode only — the practicality gate):**

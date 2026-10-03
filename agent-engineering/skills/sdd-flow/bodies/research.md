@@ -6,19 +6,15 @@ RESEARCH PHASE INITIALIZATION
 
 Starting research phase for new feature/issue.
 
-IMPORTANT: Before starting this phase, check if `SDD/orchestration/progress.md` contains any important information about an existing task. If it does and this appears to be a different task, append an `## Awaiting Archive Decision` block (stating the conflict and asking whether to archive the existing content) to `SDD/orchestration/progress.md`, then return to the orchestrator. Otherwise, reset the file to only contain a heading: `# Research Progress` — followed, unchanged, by the orchestrator's Step 0 record for this task if one is there (resolved identifiers, SKILL_ROOT and the other resolved paths, mode and flags, and any `Next-tier cycle` lines); later steps and resumed sessions read it. We are starting on a new task and want to ensure that the progress file is clean.
+IMPORTANT: `SDD/orchestration/progress.md` is append-only. It already holds the orchestrator's Step 0 record for this task (resolved identifiers, SKILL_ROOT and the other resolved paths, mode and flags, any `Next-tier cycle` lines) and the outcome of the clarification gate; it may also hold an earlier feature's history. Later steps and resumed sessions read all of it. Never reset, rewrite, or archive the file, and never ask whether to — clearing it is the orchestrator's rotation, not yours. Append your entry at the end, as every other body does.
 
 ## Pre-Research Clarification (if available)
 
-Before any codebase investigation, check whether a clarification artifact exists for this feature:
+Before any codebase investigation, check whether your prompt names a clarification artifact for this feature. Do not list `SDD/research/` to look for one — other clarification documents there belong to earlier features.
 
-```bash
-ls SDD/research/CLARIFICATION-*.md 2>/dev/null
-```
+If your prompt names a `CLARIFICATION-[###]-[feature-name].md` document, **load it first.** It contains the user's externalized design concept — clarified problem statement, success criteria, constraints, branches already resolved, and open questions inherited as research risk. The research must address every branch the clarification surfaced; open questions become explicit research targets.
 
-If a `CLARIFICATION-[###]-[feature-name].md` document exists matching the feature being researched, **load it first.** It contains the user's externalized design concept — clarified problem statement, success criteria, constraints, branches already resolved, and open questions inherited as research risk. The research must address every branch the clarification surfaced; open questions become explicit research targets.
-
-If no clarification exists, the design concept lives only in the prompt. If that prompt is fuzzy, append an `## Awaiting Clarification` block (listing the ambiguities and options) to `SDD/orchestration/progress.md`, then return to the orchestrator. If the prompt is crisp, proceed directly.
+If your prompt names no clarification, the design concept lives only in the task description. Proceed with it. The orchestrator's clarification gate (Step 1.5) already offered the user a clarification pass, and declining it was their decision — do not reopen it, and do not write an `## Awaiting Clarification` block. Where the task description is ambiguous, state the assumption you made in the research document, so the research review and the design gate can see it.
 
 Also check for `SDD/UBIQUITOUS_LANGUAGE.md` and load it if present — use the project's canonical domain vocabulary throughout the research document.
 
