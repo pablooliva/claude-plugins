@@ -59,6 +59,7 @@ Reached only after Step 0 says the feature fits one cycle. If the invocation alr
 > **Choose execution mode:**
 > **Supervised** (default) — runs autonomously but pauses at two checkpoints: after the design brief, and before committing implementation.
 > **Autonomous** — stops for you to approve the design brief, and again only if the spec departs from it, then runs to the end.
+> Both modes begin with the clarification step, and a feature built in slices pauses after each slice unless you pass `--skip-slice-checkpoints`.
 > Reply **s** for supervised or **a** for autonomous. (Default: supervised)
 
 Record the chosen mode in `progress.md`.

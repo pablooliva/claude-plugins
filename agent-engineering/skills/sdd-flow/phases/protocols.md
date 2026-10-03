@@ -50,9 +50,13 @@ Rules are evaluated top-to-bottom; the first matching rule fires and short-circu
 
   Halt; do not attempt new-layout phase detection (it would fail — no artifacts there). Do not auto-migrate. When the new-layout `progress.md` IS present (C false), this rule does NOT fire even if legacy artifacts also exist — that is the partly-migrated state; continue to the halt-block rules below. (`/sdd-migrate-layout --resume-partial` is the user-facing recovery for a partly-migrated tree; it operates independently of `/sdd-flow continue`.)
 
+- **`## Awaiting Clarification` block latest in `progress.md`** (the Step 1.5 gate is waiting): if `SDD/research/CLARIFICATION-[###]-[feature-name].md` now exists → resume at Step 2 (gate satisfied); if it still doesn't, re-prompt the user to run `/research-clarify` or skip. This rule sits with the other halt blocks, above the phase rules, so that a completed earlier feature's `Implementation Phase - COMPLETE` line in the live file — always present on a next-tier cycle — cannot answer for the new one.
+
 - **`## Awaiting Design Approval` block latest in `progress.md`** (the design gate, Step 2.5b, is waiting): re-show the gate from the brief on disk — `phases/planning.md` → 2.5b — and act on the reply. Nothing is re-spawned. The block's `Re-plan:` line says whether an `approve` continues into a first planning run or a re-plan.
 
 - **The latest `## Design Brief - ` line is `Drafted`, and no `## Awaiting Design Approval` block follows it** (the brief was written or revised, and the flow stopped before the gate was shown): go to 2.5b and show the gate. This rule sits above the implementation rules on purpose — during a re-plan the implementation markers are still present, and without it `continue` would resume the old plan with an unapproved brief. If a re-plan's revise subagent was interrupted before writing its `Drafted` line, `## Awaiting Re-planning Decision` is still the latest block and its rule applies: the user re-issues `--replan`.
+
+- **A re-plan's planning run is in progress** — the latest `## Awaiting Design Approval` block says `Re-plan: yes`, a `## Design Brief - APPROVED` line follows it, and no `## Planning - Accepted` line follows that: resume Step 3 (3a–3g) for the re-plan, with the rolling ledger and the triggering retrospective named in that block, and its `from-slice` value once the new spec exists. Do not resume implementation — its markers belong to the plan being replaced.
 
 - **`## Awaiting Deviation Approval` block latest in `progress.md`** (Step 3g paused because the spec departs from the approved brief): re-read the spec's `## Deviations from Design Brief` — the user may have edited the spec — and re-run the 3g check (`phases/planning.md` → 3g). A section that now reads `None.` routes to Step 4 without a pause.
 
@@ -84,11 +88,10 @@ Rules are evaluated top-to-bottom; the first matching rule fires and short-circu
   - `## Fix <SCOPE> iter <k> - Complete` with no `## Site Count <SCOPE> iter <k> - Complete` → spawn the fresh recount for iteration k.
   - **Whole-feature exception:** after `## Review FEATURE iter 0 - …`, resume 4c–4e by the existing sub-step detection (4c writes no `## Fix` marker); the rules above apply again once `## Final Recount - Started` is present.
   - Caps count the `## Fix <SCOPE> iter <k>` lines already present (for 4e.5, only those after the latest `## Awaiting Site-Count Resolution`), so a resumed run never resets a cap.
-- If **"Planning Phase - COMPLETE"** → start Step 4 (route on `delivery_mode:`).
-- If planning is active → resume the appropriate sub-step (3a–3g).
+- If **"Planning Phase - COMPLETE"** with a later `## Planning - Accepted` line → start Step 4 (route on `delivery_mode:`). With no `Accepted` line and no `## Design Brief - ` line at all (a flow planned before the design gate existed) → also Step 4.
+- If planning is active — including `Planning Phase - COMPLETE` with no later `## Planning - Accepted`, since the completion subagent writes `COMPLETE` in 3a, before the reviews → resume the appropriate sub-step (3a–3g). After a `### Panel Review Halt`, that is a fresh 3c panel run over the spec as the user left it. 3g is never skipped: its deviation check runs before `## Planning - Accepted` is written.
 - If **"Research Phase - COMPLETE"** → Step 2.5 (`phases/planning.md`), by the **latest** `## Design Brief - ` line in `progress.md`: no such line → 2.5a (a brief file with no `Drafted` line is a partial write — the subagent overwrites it); latest is `Drafted` → 2.5b (show the gate); latest is `APPROVED` → start Step 3 (planning). Read the latest line, never "any": a re-plan writes a new `Drafted` line below an old `APPROVED` one.
 - If research is active → resume the appropriate sub-step (2a–2e).
-- If `## Awaiting Clarification` is latest AND `SDD/research/CLARIFICATION-[###]-[feature-name].md` now exists → resume at Step 2 (gate satisfied). If it still doesn't exist, re-prompt the user to run `/research-clarify` or skip.
 - If no phase info → start from Step 0 (read `phases/setup.md`).
 
 ---

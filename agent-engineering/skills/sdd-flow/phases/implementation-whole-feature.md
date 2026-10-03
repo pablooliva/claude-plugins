@@ -51,7 +51,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 
 Spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus):
 - **Body:** `bodies/critical-review.md` — apply its **Implementation Phase** section.
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files, test files, and **TIERS** when the spec carries `tier:` (the body's *Respect the tier* principle).
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, implemented code files, test files, and **TIERS** when the spec carries `tier:` (the body's *Respect the Tier* principle).
 - **Outputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`.
 - **Task:** Adversarial review of the implementation.
 

@@ -62,7 +62,7 @@ If the user knows of more branches relevant to this specific feature (e.g., lega
 
 Applies when `/sdd-flow --next-tier` started this cycle: an earlier delivery tier of the feature is built and has been used, and this cycle adds the next one. The design concept was externalized in the earlier cycle. What is not yet written down is what using that tier showed — and that, not the plan made before it was used, is what the next tier starts from.
 
-1. **Load the tier plan** at the path `/sdd-flow` gave you (`SDD/flow/TIERS-[feature-name].md` — the first tier's feature name, without the `-t2` / `-t3` suffix this cycle's artifacts carry). This is the one exception to §8's "do not read project files": it is the record of the earlier cycle, not the codebase.
+1. **Load the tier plan** at the path `/sdd-flow` gave you (`SDD/flow/TIERS-[feature-name].md` — the first tier's feature name, without the `-t2` / `-t3` suffix this cycle's artifacts carry). §8's "do not read project files" does not cover it: like the glossary, it is an SDD record, not the codebase.
 2. **Walk the `## Feedback` notes** one at a time. For each: is it still true, how often did it come up, and what should change because of it?
 3. **Ask what using the shipped tier showed**, one question at a time, in the posture of §3: what was used and what was not; what was missing on first real use; what failed, and whether the failure was visible; what was done by hand that should not have to be; what turned out not to matter.
 4. **Walk the Deferred rows aimed at this tier and its sketch.** For each: still wanted, wanted differently, or no longer wanted? Do not assume a sketched item is still needed — a tier that turns out smaller than its sketch, or is dropped, is a good outcome.
@@ -164,4 +164,4 @@ After the artifact is written, surface to the user:
 
 Begin clarification now. Open with: "Before I research the codebase, I'd like to interview you about the feature itself — what you want, for whom, under what constraints, and where you're not sure yet. I'll capture this in a CLARIFICATION document. Ready?"
 
-Then walk the branches in §4, one question at a time, until the design concept is externalized.
+Then walk the branches in §4, one question at a time, until the design concept is externalized. On a next-tier cycle, open by saying the interview is about what using the shipped tier showed, and follow §4a instead.

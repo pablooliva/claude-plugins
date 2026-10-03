@@ -65,7 +65,7 @@ Then return to 2.5b. The loop has no cap — every round is requested by the use
 
 ### Re-plan
 
-`/sdd-flow continue --replan` (after a re-planning halt — `phases/protocols.md`) re-enters here before Step 3: run 2.5c with the rolling ledger and the triggering retrospective as extra inputs and, in place of a user reply, the line `RE-PLAN: revise the brief from the ledger and retrospective`. The gate then fires as above, in both modes, with `Re-plan: yes` in the halt block — it also records the `--from-slice` value, so the flag survives the stop. On `approve`, continue to 3a with the ledger and retrospective in the planning subagent's prompt.
+`/sdd-flow continue --replan` (after a re-planning halt — `phases/protocols.md`) re-enters here before Step 3: run 2.5c with the rolling ledger and the triggering retrospective as extra inputs and, in place of a user reply, the line `RE-PLAN: revise the brief from the ledger and retrospective`. The gate then fires as above, in both modes, with `Re-plan: yes` in the halt block — it also records the `--from-slice` value, so the flag survives the stop. On `approve`, continue to 3a with the ledger and retrospective in the planning subagent's prompt; the re-plan's planning run ends, like any other, with `## Planning - Accepted` at 3g.
 
 ---
 
@@ -112,7 +112,7 @@ The `agent_security:` value also gates Step 4b's agentic-surface code-review len
 
 Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, multiple spawns). Each uses its matching shipped agent type `agent-engineering:sdd-spec-<panel-value>-specialist`:
 - **Body:** `bodies/panel-specialist.md` ("apply ONLY the Section your panel value names").
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, the panel value, and the resolved PANEL-FINDINGS output path. For the `agent-security` value, also pass the resolved **CATALOG** path (`SKILL.md` → SKILL_ROOT resolution). When the spec's frontmatter carries `tier:`, also pass **TIERS** — the body's *Respect the tier* principle needs it.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, the panel value, and the resolved PANEL-FINDINGS output path. For the `agent-security` value, also pass the resolved **CATALOG** path (`SKILL.md` → SKILL_ROOT resolution). When the spec's frontmatter carries `tier:`, also pass **TIERS** — the body's *Respect the Tier* principle needs it.
 - **Output:** `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md`.
 - Each specialist writes exactly one findings file and spawns nothing. (The `slice-integrity` specialist short-circuits unless `delivery_mode: per-slice`.)
 
@@ -214,4 +214,4 @@ Read the spec's `## Deviations from Design Brief` with the same body contract th
 
 A spec written before the design gate shipped has no brief: if no `## Design Brief - ` line exists in `progress.md`, skip this check.
 
-**Route to Step 4.** Read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint — the design gate covered the decision. The next stops are the slice-boundary pauses (per-slice mode) and the supervised checkpoint before the final implementation commit.
+**Route to Step 4.** First append `## Planning - Accepted` to `progress.md` — one line, the spec path. It is the phase-detection marker that planning's reviews and this check are done: `Planning Phase - COMPLETE` alone does not say so, because the completion subagent writes it back in 3a. Then read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint — the design gate covered the decision. The next stops are the slice-boundary pauses (per-slice mode) and the supervised checkpoint before the final implementation commit.
