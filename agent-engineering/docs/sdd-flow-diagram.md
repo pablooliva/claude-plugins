@@ -4,6 +4,48 @@ A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.5.
 
 **How to read it.** Rounded boxes are work done by a spawned subagent. Red boxes are places the flow **stops and waits for you**. Grey boxes are things the orchestrator (the main conversation) does itself: commits, running a script, recording state.
 
+## How a feature is made small: tiers, then slices
+
+The flow cuts a feature down twice, in two different directions, so that you have something real to use and judge as early as possible, in the smallest pieces possible.
+
+- **Tiers cut by depth — how much of the feature exists.** Tier 1 is the narrowest version that is really usable; Tier 2 adds what a normal feature is expected to do; Tier 3 adds the rare cases, hardening, and scale. Each tier is more complete than the one before it. You use a tier before the next one is planned, and a later tier is only built if it turns out to be needed.
+- **Slices cut a tier by path — one thin, working thread at a time.** A slice is one concentrated function built all the way through every layer it touches — interface, logic, storage, tests — so that when it lands there is something to run and check. The first slice is the thinnest end-to-end happy path; each later slice adds a capability or hardens an edge.
+
+A tier says **how much** to build. Slices say **in what order** to build it.
+
+```mermaid
+flowchart TD
+    feature(["A feature"]) --> t1("Tier 1 — POC-plus<br/>narrowest usable version<br/>built now")
+    feature -.-> t2("Tier 2 — Standard<br/>a sketch until its own cycle")
+    feature -.-> t3("Tier 3 — Full<br/>a sketch until its own cycle")
+    t1 --> s1("Slice 1<br/>thinnest end-to-end path")
+    t1 --> s2("Slice 2<br/>adds a capability")
+    t1 --> s3("Slice 3<br/>hardens the edges")
+    subgraph layers ["every slice runs through all the layers it needs"]
+        direction LR
+        ui["interface"] --- logic["logic"] --- data["storage"] --- tests["tests"]
+    end
+    s1 --> layers
+    s2 --> layers
+    s3 --> layers
+    layers --> try["after each slice:<br/>something you can run and review"]:::stop
+
+    classDef stop fill:#fde2e2,stroke:#c0392b,color:#000
+```
+
+| | Tier | Slice |
+|---|---|---|
+| Cuts the feature by | Depth: how complete it is | Path: one working thread through the layers |
+| Size | One whole cycle of the flow, with its own brief, spec, reviews, and commits | One implement–review–commit loop inside a cycle |
+| Decided at | The design gate: the brief proposes three, you pick one (Tier 1 unless you say otherwise) | Planning: the spec lists the slices for the chosen tier, starting from the brief's delivery outline |
+| What you get at the end | A version of the feature you can use, and leave feedback on | A piece of that version you can run and check |
+| Where you are asked | Design gate, then the completion announcement | The pause after each slice |
+| What happens to the rest | Later tiers stay ten-line sketches of behaviour; their own cycle re-decides them | Later slices are already specified; they are built next, in order |
+
+**A slice is vertical, not horizontal.** "Build the database layer, then the API, then the screen" is three horizontal layers: nothing can be tried until the last one lands. A slice goes the other way — a narrow column through all of them — which is why each one ends with something testable. The spec review rejects slices that are layers in disguise.
+
+**There is a third cut, before either of these:** when a request is too broad for one cycle, Step 0 splits it into separately deliverable features (a decomposition), and each of those gets its own tiers and slices. A feature too small to tier or slice is not forced into either — the brief says tiers are not applicable, and the spec falls back to building it whole.
+
 ## The whole cycle
 
 ```mermaid
