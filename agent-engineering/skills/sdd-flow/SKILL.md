@@ -98,6 +98,7 @@ SDD/
 │   ├── IMPLEMENTATION-PLAN-*.md
 │   ├── sites/{SITES-IMPL-*, SITE-CONVENTIONS-*}.md
 │   ├── slices/{SLICE-*, RETROSPECTIVE-SLICE-*, LEARNINGS-FEATURE-*}.md   # per-slice mode only
+│   │   └── superseded/[YYYY-MM-DD_HH-MM-SS]/   # a replaced plan's slice retrospectives, reviews, counts, diffs — kept, never read
 │   └── summaries/IMPLEMENTATION-SUMMARY-*.md
 ├── orchestration/{progress.md, subagent-calls/, counters/, compacted/}
 └── reviews/{CRITICAL-RESEARCH-*, PANEL-FINDINGS-*, PANEL-SPEC-*, CRITICAL-SPEC-*,
@@ -107,7 +108,7 @@ SDD/
 
 ## Orchestrator Discipline (the load-bearing core)
 
-**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step runs inside a spawned subagent — even ones that "look small." The orchestrator's only direct work: spawning subagents, running commits (per `commands/commit.md`), running the two deterministic matchers (the retro recommendation matcher and `scripts/site-diff.py`), running the tier task mirror (`scripts/tier-mirror.py` — see Tier Task Mirror below), writing user-facing checkpoint messages, and recording state in `progress.md`. The orchestrator has no `/clear`; subagent boundaries are the only context reset.
+**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step runs inside a spawned subagent — even ones that "look small." The orchestrator's only direct work: spawning subagents, running commits (per `commands/commit.md`), running the two deterministic matchers (the retro recommendation matcher and `scripts/site-diff.py`), running the tier task mirror (`scripts/tier-mirror.py` — see Tier Task Mirror below), writing user-facing checkpoint messages, recording state in `progress.md`, and the few mechanical edits the phase files give it by name (a slice's row to `Complete` before its commit; after a re-plan, archiving the old slice table, moving the replaced plan's slice files aside, and stamping its slice IDs in the ledger; setting `delivery_mode:` when the user falls back from slices). The orchestrator has no `/clear`; subagent boundaries are the only context reset.
 
 - **Bounded returns.** Every subagent returns **≤200 words + artifact paths**. The orchestrator reads artifact files only when a decision genuinely needs them (e.g. spec frontmatter to route Step 4).
 - **progress.md is append-only.** Never overwrite or delete prior content.
@@ -143,6 +144,15 @@ Three rules go with it, and an edit to a phase file is checked against them:
 - **A handoff passes what a fresh spawn would.** A continuation, a recount, or a re-review is given the same inputs — paths, `SCOPE`, `ITER`, the base commit, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer.
 
 The full marker table and the rules are in `phases/protocols.md` → Phase Detection Priority.
+
+### Who owns the slice path (state changes, stops, commits)
+
+**Every slice state change, stop, and commit has a named owner in the phase chapter.** The per-slice path has more hand-offs than any other — a slice's row moves through four states, and its cycle can end in a commit, a fix-loop stop, or a re-planning stop — and a step that each side assumes the other performs is a step nobody performs. Two rules, and an edit to a slice body or to `phases/implementation-per-slice.md` is checked against them:
+
+- **The owner table in `phases/implementation-per-slice.md` ("Who owns what on the slice path") is complete.** Every row of the slice table's status, every `## Slice SLICE-XXX - …` marker, every stop, and the commit appear there with one owner and one step. A new marker, state, or stop is added to that table in the same edit.
+- **A body describes what it does — never what "the orchestrator may" do.** A body that needs something done outside its own run says what it leaves behind (a status, a marker, a file); the phase chapter says who acts on it and when.
+
+A slice's cycle has exactly two kinds of end: its commit (4c.6, which also sets its row to `Complete`) or a halt block with a resume rule (`## Awaiting Slice Resolution`, `## Awaiting Re-planning Decision`). A session that ends anywhere between is resumed from the slice markers (`phases/protocols.md` → per-slice cycle sub-steps).
 
 ### Tier Task Mirror (record-keeping, never silent)
 
@@ -227,12 +237,12 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 | `--skip-clarify` | Suppress the Step 1.5 clarification gate; gate-skip recorded in the Step 2c review |
 | `--tier N` | Have the design brief recommend Tier N (1, 2, or 3) instead of Tier 1. The tier can still be changed at the design gate |
 | `--next-tier [feature-name]` | Start a new cycle for the next unshipped tier in `SDD/flow/TIERS-[feature-name].md` (`phases/setup.md` → Step 0) |
-| `--skip-slice-checkpoints` | Suppress per-slice pauses (default ON in per-slice mode). The re-planning halt fires regardless |
-| `--fall-back-to-whole-feature` | With `continue` after a practicality-gate halt: flip `delivery_mode` to whole-feature |
-| `--retry-slicing "<hint>"` | With `continue` after a practicality-gate halt: re-run slice extraction with a hint |
-| `--replan` | With `continue` after a re-planning halt: revise the design brief (the gate fires), then re-run Step 3 with ledger + triggering retro |
+| `--skip-slice-checkpoints` | Suppress per-slice pauses (default ON in per-slice mode). The re-planning halt and the slice fix-loop halt fire regardless |
+| `--fall-back-to-whole-feature` | With `continue` after a practicality-gate halt: set `delivery_mode` to whole-feature and carry on with planning — the spec check, panel, and reviews (3a–3g) still run |
+| `--retry-slicing "<hint>"` | With `continue` after a practicality-gate halt: re-run slice extraction with a hint, then carry on with planning (3a–3g) |
+| `--replan` | With `continue` after a re-planning halt: commit the triggering slice as it stands, revise the design brief (the gate fires), then re-run Step 3 with ledger + triggering retro |
 | `--from-slice SLICE-XXX` | With `--replan`: resume from a named slice in the NEW plan (validated post-replan) |
-| `--override-replan` | With `continue` after a re-planning halt: continue on the current plan. Cannot combine with `--replan` |
+| `--override-replan` | With `continue` after a re-planning halt: commit the triggering slice and continue on the current plan. Cannot combine with `--replan` |
 | `continue` | Resume from the last interruption point (see `phases/protocols.md`) |
 
 ## Key Principles
@@ -243,7 +253,7 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 4. **ADRs compound across features; the spec is the source of truth; document deviations.**
 5. **Never persist PII or secrets in SDD docs. Commit messages have NO co-author attribution.**
 6. **Explicit paths always; the orchestrator never does phase/review/fix/capture/completion work itself.**
-7. **Per-slice cycle is strict** — one subagent per slice, mandatory per-slice review, retro + ledger before the atomic per-slice commit. Slice subagents receive ONLY the rolling ledger.
+7. **Per-slice cycle is strict** — one subagent per slice, mandatory per-slice review with every finding resolved (HIGH, MEDIUM, and LOW), retro + ledger before the atomic per-slice commit. Slice subagents receive ONLY the rolling ledger.
 8. **Re-planning recommendations halt the flow regardless of `--skip-slice-checkpoints` and mode.**
 9. **No control is Complete on the implementer's word.** Every control (any SPEC rule that must hold on every path — guards, refusals, write controls, output contracts, invariants, security controls) is inventoried site by site with per-site mutation evidence, then counted **blind** by a separate spawn and diffed (4a.5 per slice or feature; 4e.5 feature-wide before completion). Mismatches are findings in the existing fix loop; a control with no independent count stays `Partial`. Standard: `references/enforcement-sites.md`.
 10. **The user approves a design, not a spec.** The design brief is the one planning document written for a person; nothing is specified until it is approved, with every question in it answered. The spec is held to it, and a spec that departs from it is shown to the user before any code is written.

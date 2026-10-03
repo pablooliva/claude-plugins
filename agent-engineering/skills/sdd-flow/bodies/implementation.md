@@ -195,14 +195,14 @@ Create the implementation tracking document using this enhanced template. **The 
 
 ## Slice Progress
 
-> **Required only when `delivery_mode: per-slice`.** Omit this section entirely when `delivery_mode: whole-feature` (the default). When per-slice, the planning phase's `## Delivery Slices` from the SPEC seeds this table; the slice-start phase initializes the row to `In Progress`; the slice-retro phase updates `Status`, `Test result`, and `Notes` only (never `SLICE-ID`, `Name`, or `Acceptance check`). State transitions are forward-only — `Not Started` → `In Progress` → `Acceptance Check Passing` → `Complete`. SLICE-XXX values must be unique within this table.
+> **Required only when `delivery_mode: per-slice`.** Omit this section entirely when `delivery_mode: whole-feature` (the default). When per-slice, the planning phase's `## Delivery Slices` from the SPEC seeds this table; the slice-start phase initializes the row to `In Progress`; the slice-retro phase updates `Status` (to `Acceptance Check Passing`), `Test result`, and `Notes` only (never `SLICE-ID`, `Name`, or `Acceptance check`); the orchestrator sets `Complete` just before the per-slice commit. State transitions are forward-only — `Not Started` → `In Progress` → `Acceptance Check Passing` → `Complete`. SLICE-XXX values must be unique within this table.
 
 | SLICE-ID  | Name              | Status        | Acceptance check                            | Test result | Notes |
 |-----------|-------------------|---------------|---------------------------------------------|-------------|-------|
 | SLICE-001 | [from SPEC]       | Not Started   | [from SPEC's Acceptance check field]        | —           | —     |
 | SLICE-002 | [from SPEC]       | Not Started   | [from SPEC's Acceptance check field]        | —           | —     |
 
-**Status enum (binding):** `Not Started`, `In Progress`, `Acceptance Check Passing`, `Complete`. Any "stuck" condition lives in the rolling ledger's `Open recommendations awaiting user decision` section, NOT the Status column. The implementation-start phase scaffolds the table; the slice-start phase flips Status to `In Progress`; the slice-retro phase writes `Status`/`Test result`/`Notes` after the slice's review-and-fix loop completes.
+**Status enum (binding):** `Not Started`, `In Progress`, `Acceptance Check Passing`, `Complete`. Any "stuck" condition lives in the rolling ledger's `Open recommendations awaiting user decision` section, NOT the Status column. The implementation-start phase scaffolds the table; the slice-start phase flips Status to `In Progress`; the slice-retro phase writes `Status`/`Test result`/`Notes` after the slice's review-and-fix loop completes; the orchestrator sets `Complete` as its last edit before the slice's commit.
 ```
 
 ## Implementation Process

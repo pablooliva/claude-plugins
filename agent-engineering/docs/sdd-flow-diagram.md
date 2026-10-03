@@ -96,12 +96,14 @@ flowchart TD
     impl --> count("4a.5 — blind site count<br/>a fresh subagent that never sees the implementer's list")
     count --> diff["diff the two lists<br/>scripts/site-diff.py"]:::orch
     diff --> review("4b — slice review<br/>includes the design brief check")
-    review -- "findings" --> fix("4c — fix, then recount and re-review<br/>at most 3 rounds")
+    review -- "any finding" --> fix("4c — fix all of them, then recount<br/>and re-review, at most 3 rounds")
     fix --> count
-    fix -- "no progress" --> halt["STOP — slice halted<br/>findings go to the ledger"]:::stop
+    fix -- "no progress, or 3 rounds used" --> halt["STOP in every mode — slice halted<br/>findings go to the ledger<br/>you fix them, then continue re-reviews"]:::stop
+    halt -- "continue" --> count
     review -- "approved" --> retro("4c.5 — slice retrospective<br/>updates the learnings ledger")
-    retro -- "recommends re-planning" --> replan["STOP in every mode<br/>--replan revises the brief first,<br/>then the spec"]:::stop
-    retro --> commit["4c.6 — commit the slice"]:::orch
+    retro -- "recommends re-planning" --> replan["STOP in every mode<br/>--replan commits the slice, revises<br/>the brief, then the spec"]:::stop
+    replan -- "--override-replan" --> commit
+    retro --> commit["4c.6 — mark the slice complete<br/>and commit it"]:::orch
     commit --> pause["STOP — slice pause<br/>unless --skip-slice-checkpoints<br/>shows the brief check line"]:::stop
     pause -- "more slices" --> impl
     pause -- "last slice done" --> eof(["end-of-feature steps"])
@@ -120,7 +122,7 @@ flowchart TD
 | 2 Research | Investigates the codebase; finds cross-cutting decisions (written as ADRs in autonomous mode, proposed for the design gate in supervised mode); adversarial review; fixes | Sonnet subagents; Opus for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*`, `adr/*` | — |
 | 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. In supervised mode it also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*` | **Both modes, every time the brief is written or rewritten.** `approve` is refused while a question is open |
 | 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief | Sonnet subagents; Opus for synthesis and review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, both modes, when the spec departs from the brief** |
-| 4 Implementation | Builds the feature (whole, or slice by slice). Every control is counted twice — by the implementer and by a blind subagent — and the lists are diffed. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; Opus for the adversarial review | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Re-planning halt (every mode). Recount halt. 4h before the final commit (supervised only) |
+| 4 Implementation | Builds the feature (whole, or slice by slice). Every control is counted twice — by the implementer and by a blind subagent — and the lists are diffed. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; Opus for the adversarial review | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Slice fix-loop halt and re-planning halt (every mode). Recount halt. 4h before the final commit (supervised only) |
 | Done | Tier marked shipped in the tier plan; task set to done; announcement names what shipped and what is left | Orchestrator | updated `flow/TIERS-*` | — |
 
 ## What the stops are for
@@ -130,11 +132,12 @@ flowchart TD
 | Decomposition (Step 0) | stops | stops | The request is too large for one cycle |
 | Clarification (1.5) | stops | stops | Your intent has to be written down before research |
 | Design gate (2.5) | stops | stops | You approve *what will be built* before anything is specified |
-| Slicing not practical (3a) | asks | stops | The spec asked for slices, and no meaningful ones exist |
+| Slicing not practical (3a) | stops | stops | The spec asked for slices, and no meaningful ones exist. Fall back to building it whole, or point at a slice boundary and retry — either way planning carries on from the spec check, with every review |
 | Panel halt (3c) | stops | stops | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
 | Deviation check (3g) | stops if deviations | stops if deviations | The spec is no longer what you approved |
+| Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. You resolve the findings; `continue` re-counts and re-reviews the slice |
 | Slice pause | stops | stops | Review each slice while it is small. Off with `--skip-slice-checkpoints` |
-| Re-planning halt | stops | stops | A slice showed the plan is wrong |
+| Re-planning halt (4c.5) | stops | stops | A slice showed the plan is wrong. `--replan` or `--override-replan`; either one commits the slice first |
 | Final recount halt (4e.5) | stops | stops | The two counts of enforcement sites still disagree after 3 fix rounds |
 | Before the final commit (4h) | stops; until you say yes nothing is committed, and `continue` asks again | does not stop | Last look before everything is committed |
 

@@ -4,6 +4,8 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 
 You are running the per-slice retrospective for a single `SLICE-XXX` within a feature whose SPEC declares `delivery_mode: per-slice`. This body writes TWO artifacts in a strict order (per OQ-E conservative default — FIRST-WRITE-WINS): the immutable `RETROSPECTIVE-SLICE-XXX-...md` audit trail FIRST, then the rolling `LEARNINGS-FEATURE-[feature-name].md` ledger update SECOND.
 
+**If your prompt carries the line `MODE: halt-note`, this is not a retrospective:** after the Inert-Mode Gate and Slice-ID Validation below, do only what "Halt-Note Mode" (near the end of this file) says, and nothing else in this body.
+
 ## Active-Slice Resolution Convention (shared with slice-start, slice-review, and the per-slice commit)
 
 Per SPEC MODULE-002 active-slice fallback asymmetry:
@@ -71,6 +73,8 @@ Check for an existing retrospective at the canonical path:
 ```bash
 ls SDD/implementation/slices/RETROSPECTIVE-SLICE-<SLICE-XXX>-*.md
 ```
+
+Only that folder counts. Files under `SDD/implementation/slices/superseded/` belong to a plan that was replaced, or to a run that was cut short; the orchestrator moved them there, and they never trigger this refusal. So the refusal fires only for a true second run on the same slice.
 
 If a retrospective for this slice already exists, refuse loudly per REQ-005's re-invocation policy:
 
@@ -196,7 +200,7 @@ Omitting either section is a **malformed retro** — the orchestrator cannot dis
 Retrospectives can raise recommendations at three escalating tiers (per REQ-014 three-tier model):
 
 1. **Normal recommendation** — structured `## Recommended SPEC Amendments` entries (slice-bounded; user reviews at next slice-boundary pause OR at the consolidated announcement under `--skip-slice-checkpoints`; **no halt**).
-2. **Iteration-cap-exhaustion** — per-slice review-fix-rerun loop fails to reduce HIGH findings across the cap (REQ-013); halts the slice's iteration loop, routes findings to ledger's `Open recommendations awaiting user decision` section; in `--skip-slice-checkpoints` mode halts the whole flow.
+2. **Iteration-cap-exhaustion** — per-slice review-fix-rerun loop fails to reduce HIGH findings across the cap (REQ-013); stops the flow in every mode with an `## Awaiting Slice Resolution` block the orchestrator writes, and routes the findings to the ledger's `Open recommendations awaiting user decision` section (this body's Halt-Note Mode).
 3. **Re-planning recommendation** — `## Recommended Re-planning` (this retro section) with a **non-`None.` body**; **halts the flow even under `--skip-slice-checkpoints`** (mirrors Step 3c panel-review halt). The section with a `None.` body is the required no-re-plan shape and does not halt.
 
 Each tier has its own surfacing mechanism. Implementations SHOULD treat the three as distinct user-decision points; UI/CLI surfaces SHOULD label them by tier so users grasp the severity at a glance.
@@ -271,14 +275,17 @@ Or inline:
 
 When Step 7 consolidation rewrites an existing entry to fold in a new retro's contribution, the `Sources:` list MUST be updated to include the new SLICE-XXX. When Step 7 supersedes an entry, the new entry's `Sources:` lists the retro that produced the supersession (and may optionally cite the prior retro in a "supersedes:" sub-line for audit trail).
 
+**Stamped IDs.** An ID written `SLICE-XXX@<stamp>` names a slice of a plan that was since replaced; its retrospective is under `SDD/implementation/slices/superseded/<stamp>/`. The orchestrator adds the stamp at a re-plan — never write or remove one yourself. A stamped ID is a different slice from the bare `SLICE-XXX` of the current plan: keep it as it is when you consolidate an entry, and add the current slice's bare ID beside it.
+
+**Halt-note IDs.** An ID written `SLICE-XXX#halt` marks an entry that Halt-Note Mode wrote while the slice was stopped — before the slice had a retrospective. It is not a bare ID and says nothing about whether the slice's retrospective has reached the ledger. When that slice's retrospective resolves or supersedes the entry (Step 7), rewrite the entry and replace `SLICE-XXX#halt` with the bare `SLICE-XXX`.
+
 User-edited entries that were authored manually (no retro source) carry no `Sources:` field — that is the explicit signal `--reconcile-ledger` uses to flag orphans (per Step 5 of the algorithm, see `--reconcile-ledger` Mode below).
 
 ## Step 8: Update the `## Slice Progress` table (per REQ-022 column-write authority)
 
 This body updates `Status`, `Test result`, and `Notes` columns ONLY — never `SLICE-ID`, `Name`, or `Acceptance check`.
 
-- **Status:** advance per the forward-only state machine. Typical transition: `In Progress` → `Acceptance Check Passing` (when the acceptance check has been run and passes; the row will go to `Complete` after the per-slice commit (step 4c.6) lands).
-  - In sdd-flow per-slice mode, the orchestrator may set `Status: Complete` directly here if the retro+ledger writes are durable AND the commit will follow as part of the same orchestration step. This body documents both transitions; the orchestrator picks the appropriate one.
+- **Status:** advance per the forward-only state machine: `In Progress` → `Acceptance Check Passing`, when the acceptance check has been run and passes. This body never writes `Complete`: the orchestrator sets it as its last edit before the per-slice commit (step 4c.6).
 - **Test result:** free-form text — `passing`, `failing: <test name> + <reason>`, `n/a (manual)`, etc.
 - **Notes:** brief pointer — `see retro at SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md` or `see ledger §Open recommendations` for blocking issues.
 
@@ -297,7 +304,7 @@ Append an entry to `SDD/orchestration/progress.md` recording the retrospective:
 - **Retrospective:** SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md
 - **Ledger updated:** SDD/implementation/slices/LEARNINGS-FEATURE-<feature-name>.md
 - **Recommendations raised:** <count of SPEC Amendments> SPEC amendment(s); <count of Re-planning entries> re-planning entr(y/ies)
-- **Slice Progress Status advanced to:** <Acceptance Check Passing | Complete>
+- **Slice Progress Status advanced to:** Acceptance Check Passing
 - **Controls Partial after this slice:** <IDs, or "none">
 ```
 
@@ -336,9 +343,9 @@ When `--reconcile-ledger` is passed, this body does NOT write a new retrospectiv
 
 The classifier MUST use the durable `Sources:` field convention introduced in Step 7 above (resolves M-4) — NOT literal-text matching. The `Sources:` field on each ledger entry lists which retros contributed; the reconcile checks whether each retro is in some ledger entry's Sources list.
 
-1. **Read all retros for the active feature:** `ls SDD/implementation/slices/RETROSPECTIVE-SLICE-*-<feature-name>-*.md`. Sort by SLICE-XXX number (lexicographic on the SLICE-ID is correct given the zero-padded `\d{3}` format; a lettered split such as `SLICE-005a` sorts after `SLICE-005` and before `SLICE-006`).
+1. **Read all retros for the active feature:** `ls SDD/implementation/slices/RETROSPECTIVE-SLICE-*-<feature-name>-*.md` — that folder only; never `superseded/`, whose retrospectives describe a replaced plan (their ledger entries keep their `Sources:` and are preserved as they stand). Sort by SLICE-XXX number (lexicographic on the SLICE-ID is correct given the zero-padded `\d{3}` format; a lettered split such as `SLICE-005a` sorts after `SLICE-005` and before `SLICE-006`).
 2. **Read the current ledger:** `SDD/implementation/slices/LEARNINGS-FEATURE-<feature-name>.md`. If absent, treat as empty (the rebuild will scaffold it).
-3. **For each retrospective (in order),** determine "covered" by reading every ledger entry's `Sources:` field. A retro is COVERED if its `SLICE-XXX` ID appears in at least one ledger entry's `Sources:` list. A retro is NOT covered if its SLICE-XXX is absent from every `Sources:` list — this means its learnings have not yet been incorporated. The classifier does NOT compare retro text to ledger text; consolidation under Step 7 may have rewritten the wording away from the retro's literal text, but the `Sources:` field is the authoritative marker.
+3. **For each retrospective (in order),** determine "covered" by reading every ledger entry's `Sources:` field. A retro is COVERED if its `SLICE-XXX` ID appears **bare** in at least one ledger entry's `Sources:` list — a stamped `SLICE-XXX@<stamp>` is a replaced plan's slice and a `SLICE-XXX#halt` is a halt note; neither covers a current retrospective. A retro is NOT covered if its SLICE-XXX is absent from every `Sources:` list — this means its learnings have not yet been incorporated. The classifier does NOT compare retro text to ledger text; consolidation under Step 7 may have rewritten the wording away from the retro's literal text, but the `Sources:` field is the authoritative marker.
 4. **If a retro is NOT covered,** append its ledger-update entries to the appropriate ledger sections — consolidating with existing entries on the same topic, not blind-appending. Use the consolidation rules in Step 7 above. Each newly-appended or newly-consolidated entry MUST carry a `Sources:` field listing the retro's SLICE-XXX (plus any prior contributors if consolidating).
 5. **Ledger entries with no `Sources:` field** are user-authored manual entries. They are PRESERVED — the ledger is not destroyed. Such entries are flagged in the rebuild output as `> orphan entry — no Sources field; review (was this intentionally hand-authored, or did Sources tracking drop?)` so the user can decide. Note: this is **distinct from "consolidated entry"** — consolidated entries carry one or more SLICE-XXX values in `Sources:` and are NOT flagged as orphans. The `Sources:` field convention IS the disambiguator.
 6. **Mark the ledger header** with a `<!-- reconciled at YYYY-MM-DD -->` HTML comment timestamp (visible in source, invisible in rendered markdown).
@@ -347,11 +354,32 @@ The classifier MUST use the durable `Sources:` field convention introduced in St
 
 **Backward-compatibility note for ledgers predating the `Sources:` convention:** older ledgers may have entries lacking `Sources:` fields that ARE in fact retro-derived (just from before the convention was adopted). On the first reconcile run after upgrading, expect some false-orphans. The user can either (a) add `Sources:` fields manually based on inspection, or (b) accept the false-orphan flag and let the reconcile append fresh entries from the retros (which will carry `Sources:` fields going forward; duplicates can be cleaned up at the user's discretion).
 
+### Finishing a retrospective that was cut short (`FINISH: SLICE-XXX`)
+
+When your prompt carries the line `FINISH: SLICE-XXX` with `--reconcile-ledger`, a retrospective for that slice is on disk and the run that wrote it ended before its remaining writes. That file is the record: do not rewrite, replace, or add to it. Do, in this order:
+
+1. The reconcile algorithm above, with one change: **treat the named slice's retrospective as NOT covered, whatever the `Sources:` lists say.** The run that wrote it may have stopped partway through the ledger update, so a bare ID already in the ledger proves nothing. Consolidate every one of its ledger-update entries (step 4 of the algorithm); the consolidation rules leave an entry that is already there as it is, so repeating this is safe.
+2. Step 8 for the slice (the `## Slice Progress` row and `## Control Site Status`), from the retrospective, the review, and the site diffs in your prompt.
+3. Step 9 — the `## Slice <SLICE-XXX> - Retrospective Complete` entry, naming the existing retrospective's path — unless that entry is already there.
+
+Return as a normal retrospective does: the retrospective's path, and the first non-empty body line of its two recommendation sections, re-read from the file.
+
 ### Scope
 
 The reconcile uses the FULL retro corpus for the active feature, NOT just the named slice. The named SLICE-XXX argument scopes only the existence-check at REQ-005's re-invocation refusal (so users can target the reconcile to a specific slice's retro for diagnostic purposes); the rebuild uses every retro on disk.
 
 **Audit-trail invariant:** retros remain authoritative; the ledger is derived. The reconcile algorithm respects this by treating retros as immutable inputs and the ledger as the rebuilt output.
+
+## Halt-Note Mode (`MODE: halt-note`)
+
+The slice's fix loop stopped without passing review (cap reached, or no progress), and the flow is about to stop for the user. Your prompt names the slice, its latest review, and the ledger path. There is no retrospective to write — the slice is not finished.
+
+1. Read the review. Collect every finding it leaves open — HIGH, MEDIUM, and LOW.
+2. Append them to the ledger's `## Open recommendations awaiting user decision` section, one entry per finding: severity, a one-line statement, the review path, and `(Sources: SLICE-XXX#halt)` — the `#halt` suffix says a halt note wrote the entry, not a retrospective. If the ledger does not exist, create it in the Step 7 scaffold shape first. An entry that already says the same thing is left as it is.
+3. Append a `progress.md` entry of at most 5 lines: the slice, how many findings were recorded, the ledger path. Use the header `## Slice <SLICE-XXX> - Halt Note Recorded`.
+4. Return ≤100 words with the ledger path.
+
+Write nothing else: no `RETROSPECTIVE-SLICE` file, no `## Slice Progress` or `## Control Site Status` change, no `Retrospective Complete` entry, and no `## Awaiting …` block — the orchestrator writes the halt block. When the slice later passes review, its retrospective (Step 7) supersedes these entries with what was actually resolved.
 
 ## Flag Inventory (REQ-025)
 
@@ -359,7 +387,7 @@ This body recognizes ONE flag.
 
 | Flag | Semantics | Default (without flag) | Supervised flow | Autonomous flow |
 |------|-----------|------------------------|-----------------|-----------------|
-| `--reconcile-ledger SLICE-XXX` | Re-reads every `RETROSPECTIVE-SLICE-XXX-...md` for the active feature; rebuilds `LEARNINGS-FEATURE-[feature-name].md` per the 8-step algorithm above. | Writes a new retro + updates ledger (or refuses per EDGE-014 if a retro already exists). | The orchestrator passes the flag only on an explicit user recovery directive; produce a diff between pre- and post-reconcile ledger and surface it via your bounded return so the user can confirm at the next checkpoint. | Same algorithm; the diff-confirm step degrades to "write without prompt" but the change is logged to `progress.md`. |
+| `--reconcile-ledger SLICE-XXX` | Re-reads every `RETROSPECTIVE-SLICE-XXX-...md` for the active feature; rebuilds `LEARNINGS-FEATURE-[feature-name].md` per the 8-step algorithm above. | Writes a new retro + updates ledger (or refuses per EDGE-014 if a retro already exists). | The orchestrator passes the flag on an explicit user recovery directive, and — with the line `FINISH: SLICE-XXX` — on its own when it resumes a retrospective that was cut short (`phases/protocols.md`); produce a diff between pre- and post-reconcile ledger and surface it via your bounded return so the user can see it at the next checkpoint. | Same algorithm; the diff-confirm step degrades to "write without prompt" but the change is logged to `progress.md`. |
 
 The `--reconcile-` prefix is the convention for "reconstruct derived state from authoritative sources" (the retros are authoritative; the ledger is derived). Future flags following the same pattern (`--reconcile-progress`, `--reconcile-counters`) inherit this convention.
 
@@ -369,9 +397,9 @@ The flags `--replan`, `--from-slice SLICE-XXX`, and `--override-replan` are **NO
 
 | Flag | Step | Semantics | Default | Notes |
 |------|------|-----------|---------|-------|
-| `--replan` | orchestrator continue | Re-runs the planning phase with the ledger and triggering retro in scope; resumes implementation from SLICE-001. | Without `--replan`, the orchestrator's continue step proceeds along the existing flow. | Triggered by `## Recommended Re-planning` retro recommendations. |
+| `--replan` | orchestrator continue | Commits the triggering slice as it stands, revises the design brief for approval, then re-runs the planning phase with the ledger and triggering retro in scope; resumes implementation from SLICE-001 of the new plan. | Without `--replan`, the orchestrator's continue step proceeds along the existing flow. | Triggered by `## Recommended Re-planning` retro recommendations. |
 | `--from-slice SLICE-XXX` | orchestrator continue (only meaningful with `--replan`) | Resume implementation from the named slice after the re-plan completes. | Without the flag, re-plan resumes from `SLICE-001`. | **Validation:** `--from-slice` value MUST match `^SLICE-\d{3}[a-z]?$` AND MUST reference an existing SLICE-XXX in the IMPLEMENTATION-PLAN's `## Slice Progress` table. Invalid value (regex mismatch or unknown slice) refuses with the REQ-007 message-discipline shape. |
-| `--override-replan` | orchestrator continue | Continues with the current plan despite a `## Recommended Re-planning` recommendation. Documented but discouraged. | Without the flag, a non-`None.` `## Recommended Re-planning` halts the flow per REQ-014 (even under `--skip-slice-checkpoints`). | The orchestrator does NOT silently emit `--override-replan`; in autonomous mode the halt fires per REQ-014. |
+| `--override-replan` | orchestrator continue | Commits the triggering slice, then continues with the current plan despite a `## Recommended Re-planning` recommendation. Documented but discouraged. | Without the flag, a non-`None.` `## Recommended Re-planning` halts the flow per REQ-014 (even under `--skip-slice-checkpoints`). | The orchestrator does NOT silently emit `--override-replan`; in autonomous mode the halt fires per REQ-014. |
 
 **Combination semantics for the orchestrator's continue step:**
 

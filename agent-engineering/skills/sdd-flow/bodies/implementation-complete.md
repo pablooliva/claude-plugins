@@ -67,6 +67,13 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 
 ### 2. Pre-Completion Verification
 
+**Per-slice specs — fill the requirement rows first.** When the SPEC's frontmatter says `delivery_mode: per-slice`, the IMPLEMENTATION-PLAN was scaffolded only: no slice step updates its per-requirement rows, so they still read as not started. They are yours to fill, from two sources:
+
+- The plan's `## Slice Progress` table. **Every row must be `Complete`.** A row in any other state is an incomplete item — list it under the warning below; do not mark it yourself.
+- The SPEC's `## Delivery Slices`: each slice's `REQs satisfied` field. An item (`REQ-XXX`, `EDGE-XXX`, `FAIL-XXX`, `PERF-XXX`, `SEC-XXX`, `UX-XXX`) is satisfied when every slice that lists it is `Complete` — an item split across slices (`partial`) needs all of them. Set its row to the done value the checklist below expects, citing the slice or slices and their `REVIEW-SLICE-*` documents as the evidence. An item no slice lists is an incomplete item.
+
+Then run the checklist. In per-slice mode it is satisfied from the rows you just filled; the Test Verification Gate below still runs in full.
+
 **STOP and verify these conditions from the loaded documents:**
 
 ```text

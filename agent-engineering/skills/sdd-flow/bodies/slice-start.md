@@ -64,7 +64,7 @@ The IMPLEMENTATION-PLAN's `## Slice Progress` table is the source of truth for s
   - The implementation scaffolding step scaffolds the table (one row per `SLICE-XXX` from the SPEC's `## Delivery Slices` section).
   - `slice-start` flips `Status` from `Not Started` → `In Progress` for the active slice.
   - `slice-retro` updates `Status`, `Test result`, and `Notes` only — NEVER `SLICE-ID`, `Name`, or `Acceptance check` (those are SPEC-derived and immutable from this side).
-  - The orchestrator flips `Status` to `Complete` (terminal state) after the per-slice commit (step 4c.6) lands.
+  - The orchestrator sets `Status` to `Complete` (terminal state) as its last edit before the per-slice commit (step 4c.6), so that commit carries it. No slice body sets `Complete`.
 - **FIRST-WRITE-WINS rule:** at most ONE slice may be at `Status: In Progress` at any time. Enforced by the EDGE-012 conflict check below.
 - **SLICE-XXX uniqueness invariant:** SLICE-XXX values within a single IMPLEMENTATION-PLAN's `## Slice Progress` table MUST be unique; duplicate detection is the human reviewer's responsibility (tooling does not enforce).
 
@@ -85,7 +85,7 @@ Apply the **Active-Slice Resolution Convention** above. For `slice-start`, the e
 - **`[SLICE-ID]` provided:** use it (after regex validation). Verify the SLICE-XXX row exists in `## Slice Progress`; if missing, fail with: `SLICE-XXX not found in <IMPLEMENTATION-PLAN-XXX-...md>'s ## Slice Progress table. Available slice IDs: <list>. Either correct the argument or update the SPEC's ## Delivery Slices section and re-run the implementation scaffolding step.`
 - **No argument, single `Not Started` row:** use it.
 - **No argument, multiple `Not Started` rows (EDGE-010):** return a failure to the orchestrator listing all `Not Started` SLICE-IDs and Names; write no stop note. Do NOT silently pick the first.
-- **No argument, zero `Not Started` rows:** if all slices are `Complete`, fail with: `All slices in <IMPLEMENTATION-PLAN-XXX-...md> are already Complete. Nothing to start. To re-start a Complete slice, pass --force SLICE-XXX explicitly.` If any are `In Progress` / `Acceptance Check Passing`, fall through to the EDGE-012 conflict check.
+- **No argument, zero `Not Started` rows:** if all slices are `Complete`, fail with: `All slices in <IMPLEMENTATION-PLAN-XXX-...md> are already Complete. Nothing to start.` If any are `In Progress` / `Acceptance Check Passing`, fall through to the EDGE-012 conflict check.
 
 ## Step 5: EDGE-012 conflict — another slice is `In Progress` (or `Acceptance Check Passing`)
 
@@ -97,14 +97,17 @@ Cannot start <requested SLICE-XXX>: <other SLICE-XXX> is currently <state>. Resu
 
 This body does NOT regress the in-progress slice's state, does NOT silently switch active slice, and does NOT overwrite either row's transition timestamp. The forward-only invariant in REQ-022 holds at the primitive boundary.
 
-**`--resume SLICE-XXX` exception:** if `--resume SLICE-XXX` was explicitly passed and that SLICE-XXX is the row currently at `In Progress`, skip the EDGE-012 refusal and proceed to Step 7 (re-attach without state regression). See "Flag Inventory" below.
+**`--resume SLICE-XXX`:** if your prompt carries `--resume SLICE-XXX` and that SLICE-XXX is the row currently at `In Progress`, this is a slice start that was interrupted: proceed to Step 7 and re-attach without state regression — leave the row as it is (Step 8), carry the base commit forward (Step 9), and continue the implementation from what is already in the working tree (Step 10). See "Flag Inventory" below.
 
 ## Step 6: EDGE-013 conflict — slice is already `Complete`
 
-If the requested SLICE-XXX row is at `Status: Complete`, the default response is REFUSE. Re-starting a `Complete` slice would overwrite acceptance-check evidence on the row and create ambiguity in the ledger.
+If the requested SLICE-XXX row is at `Status: Complete`, REFUSE and return a failure to the orchestrator, with no partial state writes and no stop note:
 
-- **Without `--force`:** refuse and return without partial state writes. Note: the orchestrator handles re-start decisions for EDGE-013 (emitting `## Awaiting Re-start Decision` to `SDD/orchestration/progress.md` per the REQ-011 halt-shape pattern). The orchestrator may re-invoke this body with `--force SLICE-XXX` to proceed.
-- **With `--force`:** proceed. Reset only `Status`/`Test result`/`Notes` columns to `In Progress` / `—` / `Re-started YYYY-MM-DD; previous retro at <path>`. Do NOT delete the pre-existing `RETROSPECTIVE-SLICE-XXX-...md` file. Do NOT erase ledger entries. Append a ledger note recording the re-start with timestamp under the `Open recommendations awaiting user decision` section.
+```
+SLICE-XXX is already Complete. A finished slice is not re-started: its row, review, and retrospective are the record of what was committed. Change its behaviour in a later slice, or re-plan.
+```
+
+Re-starting a `Complete` slice would overwrite acceptance-check evidence on the row and create ambiguity in the ledger. There is no override flag.
 
 ## Step 7: Load the rolling ledger (audit-trail-only context propagation per OQ-6)
 
@@ -123,9 +126,10 @@ If the ledger does not yet exist (this is the first slice of the feature), conti
 Edit the IMPLEMENTATION-PLAN in place:
 
 - Locate the row for the active SLICE-XXX.
-- Change `Status` from `Not Started` (or `Complete` if `--force` was used) → `In Progress`.
+- Change `Status` from `Not Started` → `In Progress`.
 - Leave `SLICE-ID`, `Name`, `Acceptance check` UNCHANGED (column-write authority — see schema above).
-- Reset `Test result` to `—` and `Notes` to `Started YYYY-MM-DD` (or `Re-started YYYY-MM-DD; previous retro at <path>` under `--force`).
+- Reset `Test result` to `—` and `Notes` to `Started YYYY-MM-DD`.
+- Under `--resume` the row is already `In Progress`: change nothing in it.
 
 ## Step 9: Update `progress.md`
 
@@ -139,11 +143,11 @@ Append an entry to `SDD/orchestration/progress.md` recording the slice start:
 - **IMPLEMENTATION-PLAN:** SDD/implementation/IMPLEMENTATION-PLAN-XXX-<feature-name>-<date>.md
 - **Ledger loaded:** Yes / No (first slice)
 - **Flags:** <list of flags used, or "none">
-- **Active-slice resolution:** <how the slice was resolved — explicit arg / single Not Started row / --resume / --force>
+- **Active-slice resolution:** <how the slice was resolved — explicit arg / single Not Started row / --resume>
 - **Base commit:** <output of `git rev-parse HEAD` now, before any slice work; `none` if the repo has no commits>
 ```
 
-The **Base commit** line is load-bearing: the slice stays uncommitted until its per-slice commit, so the blind site count (4a.5) and the slice review diff the working tree against this commit. It is the only durable record of it — a resumed session reads it from here. On `--resume`, copy the base from the slice's earlier `In Progress` entry rather than re-reading HEAD.
+The **Base commit** line is load-bearing: the slice stays uncommitted until its per-slice commit, so the blind site count (4a.5) and the slice review diff the working tree against this commit. It is the only durable record of it — a resumed session reads it from here. On `--resume`, copy the base from the slice's earlier `In Progress` entry rather than re-reading HEAD; if the earlier run ended before writing one, HEAD is correct — the previous slice is committed and this one is not.
 
 ## Step 10: Implement the slice
 
@@ -184,17 +188,16 @@ Return a bounded result (≤200 words + artifact paths) summarizing:
 
 ## Flag Inventory (REQ-025 — applies to `slice-start`)
 
-This body introduces TWO flags. The flag conventions are binding for downstream slice primitives.
+This body recognizes ONE flag. The orchestrator decides when to pass it (`phases/implementation-per-slice.md` → 4a); this body only says what it does.
 
 | Flag | Semantics | Default (without flag) | Orchestrated mode |
 |------|-----------|------------------------|-------------------|
-| `--resume SLICE-XXX` | Re-attach to an `In Progress` slice if context was lost. Does NOT regress state, does NOT switch active slice. | EDGE-012 refusal fires when a slice is already `In Progress`. | Orchestrator emits the flag in resume invocations after a context loss; same semantics. |
-| `--force SLICE-XXX` | Destructive override for re-starting a `Complete` slice. Resets `Status`/`Test result`/`Notes` only; pre-existing `RETROSPECTIVE-SLICE` file and ledger entries are NOT deleted; a ledger note records the re-start with timestamp. | EDGE-013 refusal fires (default = REFUSE without partial state). | Absence of `--force` is refusal-without-state-write; the orchestrator handles re-start decisions (emitting `## Awaiting Re-start Decision` per REQ-011 halt-shape). |
+| `--resume SLICE-XXX` | Re-attach to an `In Progress` slice whose start was interrupted. Does NOT regress state, does NOT switch active slice. | EDGE-012 refusal fires when another slice is already `In Progress`. | Passed when the slice's row is already `In Progress` and it has no `Implemented` entry. |
 
 **Convention boundaries:**
 
-- Every `--<flag>` is a literal argument; absence is the default behavior; `--force` is the universal flag-equivalent for destructive overrides.
-- `--force` adopts the destructive-action override convention going forward (mirrors common Unix tooling: `git push --force`, `rm --force`). Future destructive overrides in the SDD workflow SHOULD use `--force` rather than ad-hoc names.
+- Every `--<flag>` is a literal argument; absence is the default behavior.
+- There is no destructive override: a `Complete` slice is never re-started (Step 6).
 - The orchestrator flags `--replan`, `--from-slice SLICE-XXX`, and `--override-replan` are NOT slice-primitive flags — they belong to the orchestrator and are documented in the `slice-retro` body (since retrospectives can recommend re-planning) and in the sdd-flow skill documentation.
 
 ## Path Conventions (REQ-016)
@@ -211,7 +214,7 @@ This body emits paths under the SDD 2.0.0 layout:
 Every refusal path in this body follows the REQ-007 message-discipline standard:
 
 1. Name the detected condition (e.g., "another slice is In Progress", "SLICE-XXX is already Complete", "no Slice Progress table").
-2. Name the resolution path (`--resume`, `--force`, implementation scaffolding step, manual edit).
+2. Name the resolution path (`--resume`, a later slice or a re-plan, implementation scaffolding step, manual edit).
 3. Exit cleanly without partial state writes.
 
 The friendly-message tone matches the existing SDD convention (no cryptic stacktraces; no silent fallthroughs; no surprise behavior).

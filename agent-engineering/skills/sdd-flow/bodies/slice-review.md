@@ -138,7 +138,7 @@ Your prompt provides five paths: `STANDARD` (`references/enforcement-sites.md`),
 
 Write the results into the review document's `## Enforcement-Site Verification` section (template below). Do NOT edit the Control Site Status table — the retro owns it.
 
-When the review document is written, append to `SDD/orchestration/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one; `<r>` = how many of the `<h>` HIGH you tagged `[row-only]` in step 1c; omit the bracket when `<r>` is 0). It is a phase-detection marker; do not paraphrase it.
+When the review document is written, append to `SDD/orchestration/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM, <l> LOW)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one; `<r>` = how many of the `<h>` HIGH you tagged `[row-only]` in step 1c; omit the bracket when `<r>` is 0). The counts are every finding in this review document, and all three follow **either** verdict, zeros included — `APPROVED (0 HIGH, 0 MEDIUM, 2 LOW)`, `APPROVED (0 HIGH, 0 MEDIUM, 0 LOW)` — because the fix step runs on any finding and the orchestrator reads the counts from this line. Never write a bare `APPROVED`, and never leave the LOW count out: a marker without one is read as written by an older version. It is a phase-detection marker; do not paraphrase it.
 
 ## Step 5.7: Design Brief Check (informational)
 
@@ -219,7 +219,7 @@ A control is **Complete-eligible** only if its per-control diff outcome is `MATC
 
 ## Per-Slice Review Iteration Cap (REQ-013, reference — enforced elsewhere)
 
-This review itself can be re-run any number of times. The **iteration cap of 3 with progress-stall check** (needs-code-or-test HIGH — HIGH minus row-only — must strictly decrease across iterations; or MEDIUM when that is zero) is enforced by the sdd-flow Step 4b/4c orchestration loop, NOT by this review. On halt, findings route to the rolling ledger's `Open recommendations awaiting user decision` section. In `--skip-slice-checkpoints` mode, the entire flow halts. See `agent-engineering/skills/sdd-flow/SKILL.md` Step 4b/4c for the loop logic.
+This review itself can be re-run any number of times. The **iteration cap of 3 with progress-stall check** (needs-code-or-test HIGH — HIGH minus row-only — must strictly decrease across iterations; or MEDIUM when that is zero; LOW never counts) is enforced by the orchestrator's per-slice 4b/4c loop, NOT by this review. The fix step runs on any finding — HIGH, MEDIUM, or LOW — which is why the marker above reports all three. On cap or stall the flow stops in every mode and the findings go to the rolling ledger's `Open recommendations awaiting user decision` section. The loop is defined in `phases/implementation-per-slice.md` → 4c.
 
 ## Flag Inventory (REQ-025 — applies to slice review)
 
@@ -230,7 +230,6 @@ For reference, the slice-command flag inventory across all four slice commands (
 | Flag | Command | Default | Notes |
 |------|---------|---------|-------|
 | `--resume SLICE-XXX` | `slice-start` | Off | Re-attach to In Progress slice. |
-| `--force SLICE-XXX` | `slice-start` | Off | Destructive override for re-starting a Complete slice. |
 | `--reconcile-ledger SLICE-XXX` | `slice-retro` | Off | Rebuild ledger from on-disk retros. |
 
 The sdd-flow `--replan`, `--from-slice SLICE-XXX`, `--override-replan` are orchestrator-level flags, NOT slice-command flags.
