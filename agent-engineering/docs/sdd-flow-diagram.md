@@ -1,6 +1,6 @@
 # sdd-flow — the development cycle at a glance
 
-A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.5.1. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
+A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.5.2. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
 
 **How to read it.** Rounded boxes are work done by a spawned subagent. Red boxes are places the flow **stops and waits for you**. Grey boxes are things the orchestrator (the main conversation) does itself: commits, running a script, recording state.
 
@@ -54,7 +54,7 @@ flowchart TD
     s0 -- "too large" --> decomp["STOP — decomposition written<br/>you run /sdd-flow per item"]:::stop
     s0 -- "fits" --> s1["Step 1 — Mode<br/>supervised or autonomous"]:::orch
     s1 --> s15["Step 1.5 — Clarification gate<br/>STOP in both modes<br/>you run /research-clarify"]:::stop
-    s15 --> s2("Step 2 — Research<br/>2a research and completeness check<br/>2b ADRs: written, or proposed for the design gate<br/>2c critical review, 2d fix findings")
+    s15 --> s2("Step 2 — Research<br/>2a research and completeness check<br/>2b ADR candidates listed for the design gate<br/>2c critical review, 2d fix findings")
     s2 --> c2["2e commit research"]:::orch
     c2 --> s25a("Step 2.5a — Design brief<br/>at most 150 lines, plain language<br/>proposes three tiers, writes the tier plan")
     s25a --> gate["Step 2.5b — Design gate<br/>STOP in both modes<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve"]:::stop
@@ -119,8 +119,8 @@ flowchart TD
 | 0 Scope | Decides whether the request fits one cycle. `--next-tier` instead reads the tier plan and copies task comments into its Feedback | Sonnet subagent | `flow/DECOMPOSITION-*` (only when too large) | Always, when the feature is too large |
 | 1 Mode | Supervised or autonomous | Orchestrator | — | — |
 | 1.5 Clarification | An interview that gets your design concept written down. On a next-tier cycle it is a feedback interview instead | You, with `/research-clarify` | `research/CLARIFICATION-*` | Both modes, unless `--skip-clarify` or the file exists |
-| 2 Research | Investigates the codebase; finds cross-cutting decisions (written as ADRs in autonomous mode, proposed for the design gate in supervised mode); adversarial review; fixes | Sonnet subagents; Opus for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*`, `adr/*` | — |
-| 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. In supervised mode it also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*` | **Both modes, every time the brief is written or rewritten.** `approve` is refused while a question is open |
+| 2 Research | Investigates the codebase; finds cross-cutting decisions and lists them as ADR candidates for the design gate; adversarial review; fixes | Sonnet subagents; Opus for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*` | — |
+| 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. It also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*`, `adr/*` (on approval) | **Both modes, every time the brief is written or rewritten.** `approve` is refused while a question is open |
 | 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief | Sonnet subagents; Opus for synthesis and review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, both modes, when the spec departs from the brief** |
 | 4 Implementation | Builds the feature (whole, or slice by slice). Every control is counted twice — by the implementer and by a blind subagent — and the lists are diffed. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; Opus for the adversarial review | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Slice fix-loop halt and re-planning halt (every mode). Recount halt. 4h before the final commit (supervised only) |
 | Done | Tier marked shipped in the tier plan; task set to done; announcement names what shipped and what is left | Orchestrator | updated `flow/TIERS-*` | — |

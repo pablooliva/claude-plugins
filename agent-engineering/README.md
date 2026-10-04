@@ -70,7 +70,11 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.5.1.
+Version 3.5.2.
+
+### What's new in 3.5.2
+
+- **Research-stage ADRs are handled the same way in both modes.** Autonomous mode used to write them straight after research — before the design brief existed, with no way to drop one, and committed with the research. That was left over from before the design gate, when autonomous mode had no stop to ask at. Now both modes list the candidates at the design gate and write the accepted ones on `approve`; a bare `approve` accepts all of them. An autonomous run started on an earlier version, whose records are already written, is resumed without listing or rewriting them.
 
 ### What's new in 3.5.1
 

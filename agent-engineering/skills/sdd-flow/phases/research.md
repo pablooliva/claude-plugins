@@ -21,19 +21,19 @@ Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 
 ---
 
-## 2b. ADR Capture from Research
+## 2b. ADR Candidates from Research
 
-After research is complete, capture cross-cutting architectural decisions expressed as comparison-with-selection patterns.
+After research is complete, find the cross-cutting architectural decisions it expresses as comparison-with-selection patterns. Nothing is written here: the candidates go to the design gate.
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
-- **Body:** `bodies/adr-capture.md` — run in **PROPOSE mode** when supervised, **AUTO mode** when autonomous. State the mode in the prompt.
+- **Body:** `bodies/adr-capture.md` — run in **PROPOSE mode**, in supervised and autonomous mode alike. State the mode in the prompt.
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, existing `SDD/adr/` (if present).
-- **Outputs:** PROPOSE — one `## ADR Candidates` entry appended to `progress.md`, and nothing else. AUTO — zero or more `SDD/adr/NNNN-slug.md`, updated `SDD/adr/README.md`, append `progress.md`.
-- **Task:** Scan research for cross-cutting decisions with explicit comparison+selection and apply the scope test to each. In PROPOSE mode the subagent writes no ADR and no stop note: it appends one `## ADR Candidates` entry (title and chosen option per candidate, or `none`) and returns. In AUTO mode it writes every ADR that passes the scope test.
+- **Outputs:** one `## ADR Candidates` entry appended to `progress.md`, and nothing else.
+- **Task:** Scan research for cross-cutting decisions with explicit comparison+selection and apply the scope test to each. The subagent writes no ADR and no stop note: it appends one `## ADR Candidates` entry (title and chosen option per candidate, or `none`) and returns.
 
-**There is no confirmation stop here.** In supervised mode the candidates are shown at the design gate (`phases/planning.md` → 2.5b), where `approve` accepts them and a reply may drop any by title; the accepted ones are written right after approval, before 3a. In autonomous mode the ADRs are already written, and the gate shows which.
+**There is no confirmation stop here, and no record is written here.** The candidates are shown at the design gate (`phases/planning.md` → 2.5b), which stops in both modes: `approve` accepts them and a reply may drop any by title; the accepted ones are written right after approval, before 3a. A decision record is never written, or committed, before the design it belongs to is approved.
 
-If no cross-cutting decisions are detected, AUTO mode writes nothing and PROPOSE mode appends the entry with `none` — either way, continue to 2c.
+If no cross-cutting decisions are detected, the entry is appended with `none`. Continue to 2c.
 
 ---
 
@@ -58,7 +58,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent (fix subagent — no bod
 
 ## 2e. Commit Research Artifacts
 
-The **orchestrator** runs the commit directly (not a subagent), per `commands/commit.md` conventions — **no co-author attribution**. Include any ADRs written in 2b.
+The **orchestrator** runs the commit directly (not a subagent), per `commands/commit.md` conventions — **no co-author attribution**. No decision record exists yet — 2b only lists candidates; the accepted ones are committed at 3f. *Runs started on 3.5.1 or earlier in autonomous mode:* 2b wrote its records itself; if any are still uncommitted under `SDD/adr/`, include them here.
 
 **Then append `## Research - Accepted` to `progress.md`** — one line, the research document's path. It is the phase-detection marker that research is done: review, fixes, and commit included. The orchestrator writes it, here and nowhere earlier; the note the completion subagent leaves in 2a ("Research phase complete…") is not a marker and nothing matches it.
 

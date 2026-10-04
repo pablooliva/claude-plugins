@@ -4,8 +4,8 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 
 Your prompt names the input doc (research doc or spec), the existing `SDD/adr/` directory, and your mode:
 
-- **PROPOSE mode** (supervised detection at research, Step 2b): write no ADR and no stop note. Append ONE `## ADR Candidates` entry to `SDD/orchestration/progress.md` listing each candidate's title and chosen option — or `none` — and return. The user sees the candidates at the design gate; the accepted ones are written later by an AUTO-mode run.
-- **AUTO mode** (autonomous detection at research; candidates the user accepted at the design gate; frontmatter-declared decisions, which are pre-approved): write every ADR that passes the scope test directly, then regenerate `SDD/adr/README.md`. **When your prompt lists accepted candidate titles, write exactly those** — derive each from the input doc as usual, and do not scan for others. If no cross-cutting decision is detected, write nothing and return a no-op note.
+- **PROPOSE mode** (detection at research, Step 2b — in supervised and autonomous mode alike): write no ADR and no stop note. Append ONE `## ADR Candidates` entry to `SDD/orchestration/progress.md` listing each candidate's title and chosen option — or `none` — and return. The user sees the candidates at the design gate; the accepted ones are written later by an AUTO-mode run.
+- **AUTO mode** (candidates the user accepted at the design gate; frontmatter-declared decisions, which are pre-approved): write every ADR that passes the scope test directly, then regenerate `SDD/adr/README.md`. **When your prompt lists accepted candidate titles, write exactly those** — derive each from the input doc as usual, and do not scan for others. If no cross-cutting decision is detected, write nothing and return a no-op note.
 
 ---
 

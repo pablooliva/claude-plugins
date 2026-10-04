@@ -39,8 +39,8 @@ Re-plan: <no | yes — triggering retrospective: <retro-path>; from-slice: <SLIC
 > **Tiers:** building **Tier [N]** — [one line]. Left for later: Tier 2 — [one line]; Tier 3 — [one line]. [Or: "Tiers: not applicable — [the brief's reason]".]
 > **Decisions made:** [D1 title — chosen option] · [D2 …]
 > **Questions for you:** [Q1 — options — recommended (a)] · [Q2 …] [Or: "None."]
-> **Research review:** [one line: critical-review severity and whether findings were resolved] · ADRs captured: [numbers or "none"]
-> **ADR candidates:** [title — chosen option] · [title — chosen option] — written as decision records when you approve; name any you want dropped. [Supervised mode only, and only when the latest `## ADR Candidates` entry lists any and no `## ADR Capture - Done` line follows it. Otherwise omit this line.]
+> **Research review:** [one line: critical-review severity and whether findings were resolved] [· ADRs captured: [numbers] — only when an `## ADR Capture - Done` line that names any already follows the latest `## ADR Candidates` entry, as at a re-plan's gate. Otherwise omit this part.]
+> **ADR candidates:** [title — chosen option] · [title — chosen option] — written as decision records when you approve; name any you want dropped. [Both modes. Only when the latest `## ADR Candidates` entry lists any and no `## ADR Capture - Done` line follows it. Otherwise omit this line.]
 > Brief ([N] lines): `SDD/requirements/DESIGN-[###]-[feature-name].md`
 > Research: `SDD/research/RESEARCH-[###]-[feature-name].md`
 > Reply with your answers and any changes — including `tier 2` or `tier 3` to build more now. `approve` accepts the brief as written, and is available once every question above has an answer. `stop` halts here.
@@ -53,12 +53,12 @@ Act on the reply:
 - **`approve`** → accepted only when the brief's `## Questions for you` is `None.`. Append `## Design Brief - APPROVED (revision N, tier T)` to `progress.md` — `T` is the brief's recommended tier (`1`, `2`, `3`), or `none` when the brief says tiers are not applicable — and proceed to 3a. If any question is still open, **refuse**: reply with the open questions, say that each needs an answer ("use your recommendation" counts as one, given per question), and stay at the gate. Nothing is rewritten and nothing is assumed.
 - **`stop`** → leave `## Awaiting Design Approval` as the latest block and halt. `/sdd-flow continue` re-shows this gate.
 
-**ADR candidates (supervised mode).** Research's ADR step (2b) proposed candidates instead of writing them; this gate is where the user accepts them. The `ADR candidates:` line is built from the latest `## ADR Candidates` entry in `progress.md`, minus any candidate already dropped.
+**ADR candidates (both modes).** Research's ADR step (2b) proposes candidates and writes none; this gate is where the user accepts them. The `ADR candidates:` line is built from the latest `## ADR Candidates` entry in `progress.md`, minus any candidate already dropped.
 
 - **A reply that drops a candidate** — at approval or in an earlier round — is recorded at once: append `## ADR Candidate Dropped - <title>` to `progress.md`, one line per candidate, so the choice survives a stop.
 - **On `approve`**, after the `## Design Brief - APPROVED` line and before 3a: if the entry lists any candidate not dropped, spawn ONE **`agent-engineering:sdd-workhorse`** subagent with `bodies/adr-capture.md` in **AUTO mode**, passing the research document, the existing `SDD/adr/`, and the accepted candidate titles ("write exactly these"). Then append `## ADR Capture - Done (<ADR numbers | none>)` — `none` when every candidate was dropped or the entry said `none`. The records are committed at 3f.
 - A re-plan's gate does not repeat this: a `## ADR Capture - Done` line already follows the candidates.
-- In autonomous mode none of this applies — 2b wrote the ADRs, and the `ADRs captured:` part of the gate message names them.
+- *Runs started on 3.5.1 or earlier in autonomous mode:* 2b wrote the records itself and left no `## ADR Candidates` entry. With no entry there is nothing to list and nothing to write on approval — omit the `ADR candidates:` line and skip the capture.
 
 **Mirror the tiers to BB tasks** on approval, when `T` is not `none` — before spawning 3a, so the task keys the script writes into the tier plan are part of the 3f commit:
 
@@ -214,7 +214,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 
 ## 3f. Commit Planning Artifacts
 
-The **orchestrator** runs the commit per `commands/commit.md` — no co-author attribution. Include the design brief, the tier plan, and any ADRs written in 3b.
+The **orchestrator** runs the commit per `commands/commit.md` — no co-author attribution. Include the design brief, the tier plan, and every ADR change made since the research commit — the records written on approval at the design gate (2.5b) and those written in 3b, with the `SDD/adr/README.md` index and any superseded record edited along the way.
 
 If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
 

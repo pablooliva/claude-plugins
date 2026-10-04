@@ -111,7 +111,7 @@ Slice-level markers — who writes each, at which step — are in `phases/implem
 
 - **Any other `## Awaiting …` block latest in `progress.md`** (the catch-all — a halt this version has no rule for, such as one left by an older version): show the block to the user verbatim, say that there is no resume rule for it, and stop. Never guess what it was waiting for, and never route past it. When the user says how to proceed, append `## Halt Resolved - <the block's header text>` with their instruction on one line, so the block is no longer latest, and evaluate these rules again.
 
-- **A `## Design Brief - APPROVED` line follows the latest `## ADR Candidates` entry, and no `## ADR Capture - Done` line follows that entry** (supervised mode: the brief was approved, and the flow stopped before the accepted decision records were written): run the capture now (`phases/planning.md` → 2.5b, ADR candidates) for every candidate not named in an `## ADR Candidate Dropped - ` line, append `## ADR Capture - Done (…)`, and evaluate these rules again — planning (3a) follows.
+- **A `## Design Brief - APPROVED` line follows the latest `## ADR Candidates` entry, and no `## ADR Capture - Done` line follows that entry** (the brief was approved, and the flow stopped before the accepted decision records were written): run the capture now (`phases/planning.md` → 2.5b, ADR candidates) for every candidate not named in an `## ADR Candidate Dropped - ` line, append `## ADR Capture - Done (…)`, and evaluate these rules again — planning (3a) follows.
 
 - If **`## Feature - Done`** → the feature is finished and only its rotation is owed (the rotation replaces this record with the `Finished:` line): run the feature-completion rotation (4j), then show the final summary.
 - If **`## Implementation - Committed`** with no `## Feature - Done` → 4j: the task mirror, the announcement, `## Feature - Done`, the rotation.
@@ -146,7 +146,7 @@ Slice-level markers — who writes each, at which step — are in `phases/implem
   - no mode recorded → Step 1; no CLARIFICATION file, no `## Clarification Skipped` block, and no `--skip-clarify` among the recorded flags → Step 1.5 (`phases/setup.md`);
   - no RESEARCH document → 2a;
   - RESEARCH document, but no "Research phase complete" note from the completion subagent → 2a's completion spawn;
-  - no `CRITICAL-RESEARCH-*` review for this feature → 2b, then 2c. Skip 2b when an `## ADR Candidates` entry is already there; re-running it in AUTO mode is safe (the body declines a decision that already has a record);
+  - no `CRITICAL-RESEARCH-*` review for this feature → 2b, then 2c. Skip 2b when an `## ADR Candidates` entry is already there; re-running it is safe (it writes no record, and the body declines a decision that already has one — which is also what happens for a run whose 2b wrote its records itself, on 3.5.1 or earlier in autonomous mode);
   - the review has no "Findings Addressed" section → 2d;
   - otherwise → 2e: commit, then `## Research - Accepted`.
 - If no phase info → nothing to resume. When the latest record is a `Finished:` line, tell the user that feature is done and show the line. Otherwise start from Step 0 (read `phases/setup.md`).

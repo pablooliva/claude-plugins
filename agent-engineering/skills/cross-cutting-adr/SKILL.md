@@ -93,7 +93,7 @@ Behavior differs by trigger source to respect automation vs. confirmation bounda
 
 - **Trigger A (manual):** proceed to capture without additional confirmation — user already chose to invoke.
 - **Trigger B (ambient comparison+scope in conversation):** show the proposed ADR to the user and ask `Capture as ADR? (y/N)`. Default no. False positives here are likely; require explicit confirmation.
-- **Trigger C (sdd-flow, comparison detected in research):** show the proposed ADR to the user at end of research phase and ask for confirmation. Do not silently commit — the user should see what's being captured.
+- **Trigger C (sdd-flow, comparison detected in research):** the flow lists each match as a candidate at its design gate, in supervised and autonomous mode alike; the user approves or drops them there, and only the accepted ones are written. Do not silently commit — the user should see what's being captured.
 - **Trigger C (sdd-flow, listed in spec frontmatter):** assume pre-approved. The spec explicitly declared the decision should be captured. Proceed without extra confirmation.
 - **Trigger D (ambient scope language):** same as Trigger B — confirm before writing.
 
@@ -314,7 +314,7 @@ sdd-flow can invoke this skill at two phase boundaries:
 
 ### Research completion
 
-sdd-flow scans the research doc for comparison-with-selection patterns with cross-cutting scope. For each match, invoke this skill to propose an ADR. User confirms per-ADR before writing.
+sdd-flow scans the research doc for comparison-with-selection patterns with cross-cutting scope. Each match is listed as a candidate at the design gate; the accepted ones are written when the user approves the design brief.
 
 ### Planning completion
 
