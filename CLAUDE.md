@@ -36,6 +36,7 @@ agent-engineering/
 │                                   #   8× sdd-spec-*-specialist (sonnet)
 ├── hooks/log_subagent_call.py      # logs subagent transcripts
 ├── docs/sdd-flow-diagram.md        # human-facing picture of the sdd-flow cycle — update it when a step or a stop changes
+├── docs/observability-diagram.md    # picture of the tracing-and-evals proposal (proposals/observability-and-evals-2026-10-04.md) — NOT implemented yet; update it as each build step ships
 ├── commands/                       # interactive (depth-0) commands the user runs:
 │                                   #   adr-capture, prompt-doctor, research-clarify,
 │                                   #   critical-review, continue, commit, and four compact commands
