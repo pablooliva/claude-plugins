@@ -4,7 +4,7 @@
 **Date:** 2026-10-04
 **Affects:** `agent-engineering/` plugin — two new skills (`observability-init`, `eval-harvest`), one new reference file, one new script, and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `references/enforcement-sites.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.
-**Tracked in:** BB Tasks, `CLAUDEPLUG-5` — one sub-task per build step (`CLAUDEPLUG-8` to `CLAUDEPLUG-11`), plus the merge (`CLAUDEPLUG-6`) and what is needed from the user first (`CLAUDEPLUG-7`). This status line is updated as each step ships.
+**Tracked in:** BB Tasks, `CLAUDEPLUG-5` — one sub-task per build step (`CLAUDEPLUG-8` to `CLAUDEPLUG-11`), plus the merge (`CLAUDEPLUG-6`, done), the Langfuse key pair (`CLAUDEPLUG-7`), and the trial application's first slice (`CLAUDEPLUG-12`). This status line is updated as each step ships.
 **Companion:** `agent-engineering/docs/observability-diagram.md` — the same design as diagrams and tables, beside `sdd-flow-diagram.md`.
 **Source:** the Obsidian note *Stop Reading Code, Start Understanding Systems — AI That Works* (Horthy & Gupta, 2026-07-10), and its companions *Agent Observability Signals and Metrics* and *Tracing, Observability, and Evals in AI Application Development*.
 
@@ -39,7 +39,7 @@ The question was whether to build this into the flow or run it as a separate ste
 
 ## 2. The tracing foundation — `observability-init`
 
-A user-invoked skill, run once per application, in the same shape as `bb-worktree-init`: inspect the repository, propose a plan for approval, render bundled templates, validate. Python and TypeScript.
+A user-invoked skill, run once per application, in the same shape as `bb-worktree-init`: inspect the repository, propose a plan for approval, render bundled templates, validate. Step 1 ships the Python templates only; the TypeScript ones are added when an application needs them.
 
 **What it writes into the application:**
 
@@ -217,32 +217,29 @@ Each step is shipped and used on a real application before the next is started.
 
 ## Decided (2026-10-04)
 
-1. Languages: Python and TypeScript.
+1. Languages: Python and TypeScript. Step 1 builds the Python templates only; TypeScript templates are built when a TypeScript application needs them (decided 2026-10-04, in line with the tier standard's "nothing is built ahead").
 2. Evals use Opik only. Tracing stays swappable between Opik and Langfuse.
 3. Backends: Opik at `http://192.168.100.161:5173`, Langfuse at `http://192.168.100.132:3000`.
 4. No relay to start; each application points at a backend through its own environment variables.
 5. Opik is used without an API key. The setup skill does not ask for one, check for one, or warn about its absence.
 6. A requirement that only an LLM judge can score is accepted by the user at the commit checkpoint (4h), which fires in `--auto` as well as supervised mode for a spec that has one (§5). An unattended run of such a feature waits there; it does not commit and announce on its own.
 7. The tracing standard's rules are exempt from the enforcement-site standard unless a spec restates one with an ID (§7).
+8. The trial application is a new education app (an app that helps students learn), written in Python and built with `sdd-flow` from its first slice. Currents is not the trial: it is too complicated to try this on, and gets tracing later as its own piece of work. Step 1 is validated on the education app's first slice — one route, one model call — so that slice is built before step 1 can be proven (`CLAUDEPLUG-12`).
 
 **Checked on 2026-10-04, by read-only requests:** Opik answers as version 2.2.88, Langfuse as 3.175.0. On both, the OpenTelemetry trace route exists (it refuses a GET with "method not allowed" rather than "not found"). Opik's API answered without credentials; Langfuse's required them.
 
 ## Open
 
-Needed before step 1:
-
-1. **Which application is the trial for step 1.** The notes name Currents as planning exactly this work.
-
 Deliberately left to the build step that needs the answer:
 
-2. **Step 3 — whether a second eval library (DeepEval) is added beside Opik**, decided when the first judged metric is needed (Alternatives considered).
-3. **Step 4 — whether agents query traces through Opik's MCP server or its REST API** (§8).
+1. **Step 3 — whether a second eval library (DeepEval) is added beside Opik**, decided when the first judged metric is needed (Alternatives considered).
+2. **Step 4 — whether agents query traces through Opik's MCP server or its REST API** (§8).
 
 ## Files affected
 
 | File | Change |
 |---|---|
-| `skills/observability-init/SKILL.md` + `templates/` (Python, TypeScript) | New — step 1. Eval runner templates added in step 3 |
+| `skills/observability-init/SKILL.md` + `templates/` (Python) | New — step 1. Eval runner templates added in step 3; TypeScript templates when an application needs them |
 | `skills/observability-init/references/tracing.md` | New — the tracing standard — step 1 |
 | `skills/sdd-flow/SKILL.md` | Resolve **TRACING** (the standard's path) at Step 0 beside CATALOG, STANDARD, TIERS; two rows in Artifact Paths (`TRACE-TREE-*`, `EVAL-RESULTS-*`) and `SDD/OBSERVABILITY.md`; `tracing` and `evals` in the description's frontmatter list; the `--auto` argument's list of stops gains 4h-on-sign-off; one Key Principle — steps 2, 3 |
 | `skills/sdd-flow/phases/setup.md` | Step 0 records TRACING and whether `SDD/OBSERVABILITY.md` exists — step 2 |
