@@ -4,6 +4,7 @@
 **Date:** 2026-10-04
 **Affects:** `agent-engineering/` plugin — two new skills (`observability-init`, `eval-harvest`), one new reference file, one new script, and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `references/enforcement-sites.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.
+**Tracked in:** BB Tasks, `CLAUDEPLUG-5` — one sub-task per build step (`CLAUDEPLUG-8` to `CLAUDEPLUG-11`), plus the merge (`CLAUDEPLUG-6`) and what is needed from the user first (`CLAUDEPLUG-7`). This status line is updated as each step ships.
 **Companion:** `agent-engineering/docs/observability-diagram.md` — the same design as diagrams and tables, beside `sdd-flow-diagram.md`.
 **Source:** the Obsidian note *Stop Reading Code, Start Understanding Systems — AI That Works* (Horthy & Gupta, 2026-07-10), and its companions *Agent Observability Signals and Metrics* and *Tracing, Observability, and Evals in AI Application Development*.
 
@@ -186,10 +187,10 @@ The same skill is where coding agents get query access to traces (the note's Ste
 
 Each step is shipped and used on a real application before the next is started.
 
-1. **`observability-init` and the tracing standard.** No change to `sdd-flow`. Useful alone: any application gets traces, the kill switch, and the swap. Ends with the swap validated against both backends.
-2. **Tracing in `sdd-flow`** (§3, §4, §6, §7): Step 0 record, the `tracing:` gate, the planned call graph, the slice line, the implementer rule, the Tracing Lens, the final verification at 4e.5, `trace-tree.py`, the paragraph in the enforcement-site standard.
-3. **Evals in `sdd-flow`** (§3, §5, §6): the `evals:` gate, the brief decision, `### Evals` in the spec, the slice line, the eval runner templates, the implementer and review rules, sign-off at 4h, the Opik upload.
-4. **`eval-harvest`** (§8), with trace query access for agents.
+1. **`observability-init` and the tracing standard** (`CLAUDEPLUG-8`). No change to `sdd-flow`. Useful alone: any application gets traces, the kill switch, and the swap. Ends with the swap validated against both backends.
+2. **Tracing in `sdd-flow`** (`CLAUDEPLUG-9`) (§3, §4, §6, §7): Step 0 record, the `tracing:` gate, the planned call graph, the slice line, the implementer rule, the Tracing Lens, the final verification at 4e.5, `trace-tree.py`, the paragraph in the enforcement-site standard.
+3. **Evals in `sdd-flow`** (`CLAUDEPLUG-10`) (§3, §5, §6): the `evals:` gate, the brief decision, `### Evals` in the spec, the slice line, the eval runner templates, the implementer and review rules, sign-off at 4h, the Opik upload.
+4. **`eval-harvest`** (`CLAUDEPLUG-11`) (§8), with trace query access for agents.
 
 ## Costs and risks
 
