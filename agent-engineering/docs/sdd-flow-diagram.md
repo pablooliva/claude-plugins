@@ -138,7 +138,7 @@ flowchart TD
 | Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. You resolve the findings; `continue` re-counts and re-reviews the slice |
 | Slice pause | stops | stops | Review each slice while it is small. Off with `--skip-slice-checkpoints` |
 | Re-planning halt (4c.5) | stops | stops | A slice showed the plan is wrong. `--replan` or `--override-replan`; either one commits the slice first |
-| Final recount halt (4e.5) | stops | stops | The two counts of enforcement sites still disagree after 3 fix rounds |
+| Final recount halt (4e.5) | stops | stops | The final recount's verification review still has open findings after 3 fix rounds, or a round made no progress. That covers the two counts of enforcement sites disagreeing, and matching counts where a site's justification for having no proof of its own has not been accepted. You resolve the findings; `continue` starts from a fresh recount |
 | Before the final commit (4h) | stops; until you say yes the final commit is not made, and `continue` asks again. In per-slice mode the slices are already committed, one commit each | does not stop | Last look before the final commit |
 | A stop record `continue` does not recognise | stops | stops | A stop left by another version. It is shown to you as written; the flow never guesses what it was waiting for |
 | A subagent failed twice | stops | stops | The same step failed, was retried with more context, and failed again |

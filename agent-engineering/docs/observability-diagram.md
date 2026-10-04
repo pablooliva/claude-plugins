@@ -16,7 +16,7 @@ The same machinery serves two different needs, and a feature can be in the first
 | The implementer adds | Spans for the entry points and external calls the feature adds | Also spans for its LLM calls, a dataset, and scorers |
 | The review checks | The call tree a real run produced, against the plan | Also runs the evals and sends the results to Opik |
 | What you are asked | Nothing new | At the design gate: how quality will be judged. At the final commit: whether to accept what only a judge could score |
-| After the tier is used | Traces are in Opik or Langfuse to look at | `/eval-harvest` turns real failures into new eval cases |
+| After the tier is used | Traces are in Opik or Langfuse to look at | `/eval-harvest` turns real failures into new eval cases — only while traces go to Opik |
 
 ```mermaid
 flowchart TD
@@ -41,9 +41,9 @@ Three skills, at three different moments. Only the middle one is `sdd-flow`.
 flowchart LR
     init("/observability-init<br/>once per application<br/>bootstrap, kill switch, entry-point test") --> cycle("/sdd-flow<br/>one cycle per tier<br/>spans and evals built slice by slice")
     cycle --> use["you use the tier<br/>traces arrive in Opik or Langfuse"]:::stop
-    use --> harvest("/eval-harvest<br/>Scenario 2 only<br/>real failures become eval cases,<br/>you approve each one")
+    use -- "Scenario 2,<br/>traces in Opik" --> harvest("/eval-harvest<br/>real failures become eval cases,<br/>you approve each one")
     harvest --> next("/sdd-flow --next-tier<br/>starts from your feedback<br/>and the larger dataset")
-    use -- "Scenario 1" --> next
+    use -- "Scenario 1,<br/>or traces in Langfuse" --> next
     next --> use
 
     classDef stop fill:#fde2e2,stroke:#c0392b,color:#000
@@ -64,7 +64,7 @@ flowchart TD
     impl --> review("4b Slice review<br/>tracing: trace run, call tree, compare with the plan<br/>evals: eval run of record, results file, upload to Opik")
     review -- "any finding" --> fix("4c Fix, recount, re-review<br/>at most 3 rounds")
     fix --> review
-    fix -- "no progress" --> halt["STOP — slice halted<br/>an existing stop"]:::stop
+    fix -- "no progress,<br/>or 3 rounds used" --> halt["STOP — slice halted<br/>an existing stop"]:::stop
     review -- "no finding" --> commit["4c.6 commit the slice"]:::orch
     commit --> pause["Slice pause<br/>evals: shows the slice's judged scores"]:::stop
     pause -- "more slices" --> impl
@@ -72,7 +72,7 @@ flowchart TD
     crit --> final("4e.5 Final recount<br/>with either gate on, its verification always runs<br/>tracing: whole call graph compared<br/>evals: evals run again")
     final -- "any finding" --> ffix("fix, recount, verify again<br/>at most 3 rounds")
     ffix --> final
-    ffix -- "no progress" --> fhalt["STOP — final recount halt<br/>an existing stop"]:::stop
+    ffix -- "no progress,<br/>or 3 rounds used" --> fhalt["STOP — final recount halt<br/>an existing stop"]:::stop
     final -- "no finding" --> done("4f Completion<br/>reads the final call tree and eval results")
     done --> q{"Is there a requirement<br/>only a judge can score?"}
     q -- "yes" --> ask["4h STOP in both modes<br/>scores and sample outputs shown<br/>yes commits and accepts"]:::stop
@@ -94,12 +94,14 @@ flowchart TD
     subgraph T ["Tracing check — when tracing is on"]
         run("trace run<br/>the tests that drive real entry points,<br/>tracing forced on, every request kept") --> file["span file on disk"]:::orch
         file --> tree["trace-tree.py<br/>call tree per request, call counts,<br/>scan for headers and secrets"]:::orch
-        tree --> cmp{"Any of these?<br/>a header or secret on a span<br/>an LLM or external call the plan does not show<br/>more LLM calls in a request than the plan allows<br/>a marked node of this slice or an earlier one that never ran,<br/>unless the spec marks it not exercised in tests<br/>an entry point the entry-point test does not cover<br/>a structured value stored as a JSON string"}
+        tree --> cmp{"Any of these?<br/>a header or secret on a span<br/>an LLM or external call the plan does not show<br/>more LLM calls in a request than the plan allows<br/>a marked node of this slice or an earlier one that never ran,<br/>unless the spec marks it not exercised in tests<br/>a new entry point the entry-point test does not cover<br/>a structured value stored as a JSON string"}
         cmp -- "yes" --> tf["finding"]
     end
     subgraph E ["Eval check — when evals are on"]
-        ev("eval command<br/>real model calls on the spec's cases") --> hard{"Rule-based evals pass?"}
-        hard -- "no" --> ef["finding — blocks, like a failing test"]
+        cov{"Does every eval in scope<br/>have cases and a scorer?"} -- "no" --> ef["finding"]
+        cov -- "yes" --> ev("eval command<br/>real model calls on the spec's cases")
+        ev --> hard{"Rule-based evals pass?"}
+        hard -- "no" --> ef
         ev --> judged["judged scores recorded<br/>they never pass or fail anything"]:::orch
         judged --> res["results file"]:::orch
         res --> up["upload to Opik as one experiment<br/>if Opik is unreachable: a warning, the run still counts"]:::orch
@@ -159,7 +161,7 @@ Evals do not swap: they go to Opik only, and `/eval-harvest` works only while tr
 | 4e.5 Final recount | Whole graph compared after every fix has landed | Evals run again after every fix has landed | Sonnet subagents |
 | 4f Completion | Summary filled from the final call tree | Judged requirements listed with their scores | Sonnet subagent |
 | 4h Commit question | — | Fires in both modes when a requirement can only be judged; yes accepts it | You |
-| `/eval-harvest` | Reads the tier's real traces from Opik | Proposes failures as new cases; writes the ones you approve | A skill you run, after using the tier |
+| `/eval-harvest` | Reads the tier's real traces from Opik; stops if the application sends them to Langfuse | Proposes failures as new cases; writes the ones you approve | A skill you run, after using the tier |
 
 ## What changes about the stops
 
@@ -169,7 +171,7 @@ No stop is added. Two existing ones change.
 |---|---|---|
 | Before the final commit (4h) | Supervised mode only | Also in autonomous mode, when the spec has a requirement only a judge can score. It shows the scores and sample outputs, and yes accepts them |
 | Final recount halt (4e.5) | The final recount's verification still has open findings after 3 fix rounds, or a round made no progress | The same, with tracing and eval findings counted among them — low-severity ones included |
-| Slice fix-loop halt (4c) | A slice did not pass its review in 3 fix rounds | Unchanged — tracing and eval findings are ordinary review findings |
+| Slice fix-loop halt (4c) | A slice did not pass its review in 3 fix rounds, or a round made no progress | Unchanged — tracing and eval findings are ordinary review findings |
 | Slice pause | Shows the brief check line | Also shows the slice's judged scores |
 
 ## What exists after each build step

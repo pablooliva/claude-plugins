@@ -1,6 +1,6 @@
 # Tracing and Evals for Applications Built with sdd-flow
 
-**Status:** Proposal. Nothing is implemented. Revised on 2026-10-04 after four Codex review passes of earlier drafts (28 findings in all, the fourth pass covering the companion picture too; each is addressed). The six fixes made for the fourth pass have not themselves been reviewed.
+**Status:** Proposal. Nothing is implemented. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
 **Date:** 2026-10-04
 **Affects:** `agent-engineering/` plugin — two new skills (`observability-init`, `eval-harvest`), one new reference file, one new script, and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `references/enforcement-sites.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.
@@ -67,7 +67,7 @@ Three steps of cost reduction are therefore available before code is touched: dr
 **The tracing standard** — `skills/observability-init/references/tracing.md` — is the plugin's one definition of what the foundation promises and what an implementer must do. It is owned by this skill and read by `sdd-flow`, the same arrangement as the tier standard and the OWASP catalog. It holds, from the note:
 
 - **What gets a span — the three traced kinds:** every entry point; every LLM call; every call to an external system. Nothing else is required to have one.
-- **Capture policy:** span name, timing, and status always. LLM inputs and outputs always, subject to the content switch above. External calls record target, method, status, and latency. Request headers and environment variable values never.
+- **Capture policy:** span name, timing, and status always. LLM inputs and outputs always, subject to the content switch above. External calls record target, method, status, and latency. Request and response headers never. The value of a secret-named environment variable never — one whose name contains `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, or `CREDENTIAL`. (The note's rule is "environment variable values never, because secrets live there"; other environment values, such as the application version every trace carries, are allowed.)
 - **Attribute rules:** typed, flat, dotted names that mirror the code (`args.<param>`, `output.<field>`); no stringified JSON; OpenTelemetry's GenAI naming conventions on LLM spans so either backend recognises model, token counts, and messages.
 - **What makes a trace usable for evals:** an LLM span carries its input, output, model, and token counts, and every trace carries the application version.
 
@@ -107,7 +107,7 @@ When `tracing` is on:
 4. **The review gains a Tracing Lens** (Appendix C), in `bodies/code-review.md` and `bodies/slice-review.md`. The reviewer runs the trace run, renders the span file with `scripts/trace-tree.py`, writes the result to the trace-tree path in its prompt, and compares it with the marked nodes in scope. Findings come from a short fixed list.
 5. **Completion fills `## Monitoring & Observability` from the final trace tree** — the spans added and where to look in the backend — and the tier plan's `## Tier N` paragraph names it as what to look at when using the tier.
 
-**`trace-tree.py` is deterministic.** It reads the span file and prints, per entry point, the parent–child tree of each trace (one trace is one request) with durations, and the minimum and maximum number of LLM and external calls seen in any single trace. A maximum-calls finding is therefore about one request, never a total across requests. It also scans every span for attributes that carry request or response headers, and for attribute values equal to the value of a secret-named environment variable; it reports the span and attribute name of each hit, never the value. The capture-policy check is therefore mechanical, not a reviewer's reading. The note's rule is to prefer a view derived from traces over a model's summary of the code. Matching rendered span names to planned node names stays the reviewer's judgement in this proposal; it becomes a script once naming has been tried on a real application.
+**`trace-tree.py` is deterministic.** It reads the span file and prints, per entry point, the parent–child tree of each trace (one trace is one request) with durations, and the minimum and maximum number of LLM and external calls seen in any single trace. A maximum-calls finding is therefore about one request, never a total across requests. It also scans every span for attributes that carry request or response headers, and for attribute values equal to the value of a secret-named environment variable (as the capture policy in §2 defines it); it reports the span and attribute name of each hit, never the value. The capture-policy check is therefore mechanical, not a reviewer's reading. The note's rule is to prefer a view derived from traces over a model's summary of the code. Matching rendered span names to planned node names stays the reviewer's judgement in this proposal; it becomes a script once naming has been tried on a real application.
 
 **A marked node that no trace contains is a coverage finding, not a defect claim.** The trace run only shows what its tests drove. Tests that replace an external system with a stand-in will not produce that system's span. So the spec may mark a node `not exercised in tests` with a reason (no test instance of the external system exists), and the lens skips it with a note; any other missing node means no test drives it for real, which is a test gap to close.
 
@@ -199,7 +199,7 @@ Each step is shipped and used on a real application before the next is started.
 - **Eval runs make real model calls** on every slice of an LLM feature — slow, and not runnable offline.
 - **Seed cases are few and written before the code exists.** They show a slice is not broken; they do not show it is good. The dataset becomes meaningful only after `eval-harvest` has been run on real use.
 - **Judged requirements wait for a person.** An `--auto` run of an LLM feature with a sign-off requirement now stops at the commit checkpoint, where today it would commit unattended. In per-slice mode the slices are already committed by then.
-- **The Opik instance answers API requests without a key, and stays that way (decided).** Anything on the network can read and write traces, and traces will hold LLM inputs and outputs. The capture policy keeps headers and environment values out; it does not keep personal data out of a prompt.
+- **The Opik instance answers API requests without a key, and stays that way (decided).** Anything on the network can read and write traces, and traces will hold LLM inputs and outputs. The capture policy keeps headers and secret environment values out; it does not keep personal data out of a prompt.
 - **The swap is unproven until step 1 validates it.** Both backends have the OpenTelemetry intake route; neither has been sent a span from here, and the two display LLM spans differently.
 - **Tracing has a run-time cost** even when well configured. The three switches in §2 are the answer; whether `OTEL_SDK_DISABLED` behaves as documented in both language SDKs is part of step 1's validation.
 
@@ -228,7 +228,14 @@ Each step is shipped and used on a real application before the next is started.
 
 ## Open
 
+Needed before step 1:
+
 1. **Which application is the trial for step 1.** The notes name Currents as planning exactly this work.
+
+Deliberately left to the build step that needs the answer:
+
+2. **Step 3 — whether a second eval library (DeepEval) is added beside Opik**, decided when the first judged metric is needed (Alternatives considered).
+3. **Step 4 — whether agents query traces through Opik's MCP server or its REST API** (§8).
 
 ## Files affected
 
@@ -307,7 +314,7 @@ in one line. `tracing: on`:
 
 | Finding | Severity |
 |---|---|
-| A header, environment value, or credential recorded on a span (any hit in the script's scan) | HIGH |
+| A header, or the value of a secret-named environment variable, recorded on a span (any hit in the script's scan) | HIGH |
 | More LLM calls in one trace than the node's stated maximum | HIGH |
 | An external or LLM call in a trace that the plan does not show | MEDIUM |
 | A marked node in scope that no trace contains, and that is not marked `not exercised in tests` | MEDIUM |
