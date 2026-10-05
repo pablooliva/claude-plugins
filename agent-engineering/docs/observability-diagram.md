@@ -33,21 +33,36 @@ flowchart TD
 
 The spec can overrule the detection in either direction: `tracing:` and `evals:` each take `auto` (the default, shown above), `true`, or `false`. Asking for either with no foundation is a planning failure that tells you to run `/observability-init` first.
 
-## Across the life of an application
+## Three commands, run at three different times
 
-Three skills, at three different moments. Only the middle one is `sdd-flow`.
+Tracing and evals are not one thing you switch on. The work is split across three commands — each is a skill you start by typing its name — and you run them at different points in an application's life. `/sdd-flow` is the one you already use; the other two are new, and you run them yourself, outside an `/sdd-flow` cycle.
+
+| | Command | When you run it | What it does |
+|---|---|---|---|
+| 1 | `/observability-init` | **Once per application, ever** — not once per cycle. At a moment when no `/sdd-flow` cycle is running: for a new application, right after its first cycle finishes | Puts the tracing plumbing into the application: the one module that sends traces, the kill switch, and a test that fails if an entry point is not traced |
+| 2 | `/sdd-flow` | Every time you build a feature or a tier, as you do today | Uses that plumbing while it builds: adds tracing for what each slice adds, checks what really ran against the plan, and writes and runs the evals |
+| 3 | `/eval-harvest` | After you have used what was built for a while | Looks at the real runs that went wrong and offers them to you as new eval cases, so the next round of building is tested against them |
+
+**Why step 1 is never run in the middle of a cycle.** `/sdd-flow` decides at the start of a cycle whether tracing and evals are on, writes the spec to match, and keeps that answer until the cycle ends. Plumbing installed halfway through changes nothing until the next cycle starts. And it cannot be run on an empty repository: it wires up the framework and entry points it finds, so there has to be something to find.
+
+- **An existing application:** run it once, any time before the next cycle.
+- **A new application, starting from nothing:** run `/sdd-flow` on the idea as usual and build its first tier. Nothing about tracing is done or asked for in that cycle. When the cycle is finished, run `/observability-init` once; it instruments what the first cycle built. Every later cycle is traced from its research step on, with no further setup. The only cost is that the first cycle is built without trace checks or evals — a reason to keep the first tier small, not a reason to build an artificial skeleton.
+
+The diagram is the same three commands on a timeline. Step 1 happens once. Steps 2 and 3 repeat: build a tier, use it, harvest what went wrong, build the next tier.
 
 ```mermaid
 flowchart LR
-    init("/observability-init<br/>once per application<br/>bootstrap, kill switch, entry-point test") --> cycle("/sdd-flow<br/>one cycle per tier<br/>spans and evals built slice by slice")
+    init("1 — /observability-init<br/>once per application<br/>bootstrap, kill switch, entry-point test") --> cycle("2 — /sdd-flow<br/>one cycle per tier<br/>spans and evals built slice by slice")
     cycle --> use["you use the tier<br/>traces arrive in Opik or Langfuse"]:::stop
-    use -- "Scenario 2,<br/>traces in Opik" --> harvest("/eval-harvest<br/>real failures become eval cases,<br/>you approve each one")
-    harvest --> next("/sdd-flow --next-tier<br/>starts from your feedback<br/>and the larger dataset")
+    use -- "Scenario 2,<br/>traces in Opik" --> harvest("3 — /eval-harvest<br/>real failures become eval cases,<br/>you approve each one")
+    harvest --> next("2 again — /sdd-flow --next-tier<br/>starts from your feedback<br/>and the larger dataset")
     use -- "Scenario 1,<br/>or traces in Langfuse" --> next
     next --> use
 
     classDef stop fill:#fde2e2,stroke:#c0392b,color:#000
 ```
+
+Step 3 applies only to an application with an LLM in it (Scenario 2), and only while its traces go to Opik. Otherwise you go from using a tier straight to building the next one.
 
 ## Inside one cycle
 
@@ -135,7 +150,9 @@ flowchart LR
     classDef orch fill:#eeeeee,stroke:#888888,color:#000
 ```
 
-Reviews never read a backend. They read a local file made by the trace run, which forces tracing on and keeps every request whatever the env file says — so a review gives the same answer with the kill switch set everywhere else.
+**How an `/sdd-flow` review sees what the application did.** It does not look anything up in Opik or Langfuse. The application has one special test command, the *trace run*, that runs the tests and writes a record of every call they made to a file inside the repository. The reviewer reads that file.
+
+The trace run ignores the switches in the table below: it records everything for that one test run, even if you have turned tracing off or set it to record only a fraction of requests. So switching tracing off to save performance never breaks a review, and a review needs no network connection and no keys.
 
 | To do this | Set in the env file |
 |---|---|

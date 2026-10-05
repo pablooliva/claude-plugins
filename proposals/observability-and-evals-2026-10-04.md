@@ -41,6 +41,8 @@ The question was whether to build this into the flow or run it as a separate ste
 
 A user-invoked skill, run once per application, in the same shape as `bb-worktree-init`: inspect the repository, propose a plan for approval, render bundled templates, validate. Step 1 ships the Python templates only; the TypeScript ones are added when an application needs them.
 
+**When it is run:** once per application, ever — at a moment when no `/sdd-flow` cycle is running. The gates of §3 are settled at the start of a cycle and the spec is written to match, so a foundation installed mid-cycle changes nothing until the next cycle. It also needs something to wire up — a framework and at least one entry point — so it cannot be run on an empty repository. An existing application runs it before its next cycle. A new application builds its first tier with `/sdd-flow` as usual, runs the skill when that cycle is done — it instruments what the cycle built — and is traced from the following cycle on. The first cycle is therefore built without trace checks or evals, which is a reason to keep the first tier small.
+
 **What it writes into the application:**
 
 1. **One bootstrap module** — the only file that knows a tracing backend exists. Application code calls OpenTelemetry (the vendor-neutral tracing API) and nothing else. Framework auto-instrumentation is switched on here for whatever the repository uses (web framework, HTTP client, database driver, LLM SDK), so the common calls are traced without anyone remembering to.
@@ -224,7 +226,7 @@ Each step is shipped and used on a real application before the next is started.
 5. Opik is used without an API key. The setup skill does not ask for one, check for one, or warn about its absence.
 6. A requirement that only an LLM judge can score is accepted by the user at the commit checkpoint (4h), which fires in `--auto` as well as supervised mode for a spec that has one (§5). An unattended run of such a feature waits there; it does not commit and announce on its own.
 7. The tracing standard's rules are exempt from the enforcement-site standard unless a spec restates one with an ID (§7).
-8. The trial application is a new education app (an app that helps students learn), written in Python and built with `sdd-flow` from its first slice. Currents is not the trial: it is too complicated to try this on, and gets tracing later as its own piece of work. Step 1 is validated on the education app's first slice — one route, one model call — so that slice is built before step 1 can be proven (`CLAUDEPLUG-12`).
+8. The trial application is a new education app (an app that helps students learn), written in Python and built with `sdd-flow` from its first slice. Currents is not the trial: it is too complicated to try this on, and gets tracing later as its own piece of work. Step 1 is validated on the education app once its first `sdd-flow` cycle — a small Tier 1 with at least one route and one model call — is finished (`CLAUDEPLUG-12`). The cycle after that is the first one traced.
 
 **Checked on 2026-10-04, by read-only requests:** Opik answers as version 2.2.88, Langfuse as 3.175.0. On both, the OpenTelemetry trace route exists (it refuses a GET with "method not allowed" rather than "not found"). Opik's API answered without credentials; Langfuse's required them.
 
