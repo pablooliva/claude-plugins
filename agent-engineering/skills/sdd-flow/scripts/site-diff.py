@@ -6,10 +6,16 @@ Usage:
                  [--base <commit|none>]
 
 Both inputs carry a `## Site Inventory` table in the shape defined by
-`references/enforcement-sites.md` §4. Rows of Kind `site` are counted per
+`references/enforcement-sites.md` §4. Rows of Kind `site` are grouped per
 Control + File + Symbol on each side (Markdown backslash-escapes and wrapping
-backticks are normalised away first); blind-count `gap` rows are reported as
-findings. The result is written to <out.md> and its first line is echoed.
+backticks are normalised away first) and the two sides are compared on which
+keys they have, not on how many rows a key has: a key only the blind count has
+is MISSED (HIGH) — or CROSS-FILED (MEDIUM) when the implementer lists that
+File + Symbol under another control — and a key only the implementer has is
+EXTRA (MEDIUM). A key both sides have with different row counts is not a
+finding: it is listed LOW under `## Row Counts Differ`. Blind-count `gap` rows
+are reported as findings. The result is written to <out.md> and its first line
+is echoed.
 
 --base (SLICE scope only): the slice's base commit. A key whose code the slice
 did not change (per `git diff <base>` of the working tree, untracked files
@@ -244,9 +250,15 @@ def main() -> None:
     impl_sites = Counter(key(r) for r in impl_kept)
     blind_sites = Counter(key(r) for r in blind if r["kind"] == "site")
 
+    # Every control under which the implementer files a File + Symbol, whatever its scope or slice.
+    impl_filed: dict[tuple[str, str], set[str]] = {}
+    for r in impl:
+        if r["kind"] == "site":
+            impl_filed.setdefault((r["file"], r["symbol"]), set()).add(r["control"])
+
     gaps = [r for r in blind if r["kind"] == "gap"]
     per_control: dict[str, dict[str, Any]] = {
-        c: {"impl": 0, "blind": 0, "missed": [], "extra": [], "carried": [], "oos": []}
+        c: {"impl": 0, "blind": 0, "missed": [], "cross": [], "extra": [], "rows": [], "carried": [], "oos": []}
         for c in sorted(in_scope)
     }
     for k in sorted(set(impl_sites) | set(blind_sites)):
@@ -258,36 +270,38 @@ def main() -> None:
             continue
         if carried(k):
             pc["carried"].append((k, i, b))
-        elif b > i:
-            pc["missed"].append((k, i, b))
-        else:
+        elif i and b:
+            pc["rows"].append((k, i, b))  # both sides have the key: not a finding
+        elif i:
             pc["extra"].append((k, i, b))
+        elif k[0] in impl_controls and impl_filed.get(k[1:], set()) - {k[0]}:
+            pc["cross"].append((k, sorted(impl_filed[k[1:]] - {k[0]}), b))
+        else:
+            pc["missed"].append((k, i, b))
     for r, was_carried in out_of_scope:
         per_control[r["control"]]["oos"].append((r, was_carried))
 
-    high = medium = low = 0
+    high = medium = low = rows_low = rows_more = 0
     table = []
     for c, pc in per_control.items():
         oos_medium = sum(1 for _, cr in pc["oos"] if not cr)
         low += len(pc["carried"]) + len(pc["oos"]) - oos_medium
+        rows_low += len(pc["rows"])
+        rows_more += sum(1 for _, i, b in pc["rows"] if b > i)
         medium += oos_medium
         if feature and c in declared:
             medium += 1
+        differing = [name for name in ("missed", "cross", "extra") if pc[name]]
         if c not in blind_controls:
             outcome = "UNCOUNTED"
             medium += 1
         elif c not in impl_controls and pc["missed"]:
             outcome = "MISSED"
             high += 1
-        elif pc["missed"]:
-            outcome = "MISSED"
+        elif differing:
+            outcome = "+".join({"missed": "MISSED", "cross": "CROSS-FILED", "extra": "EXTRA"}[d] for d in differing)
             high += len(pc["missed"])
-            if pc["extra"]:
-                outcome = "MISSED+EXTRA"
-                medium += len(pc["extra"])
-        elif pc["extra"]:
-            outcome = "EXTRA"
-            medium += len(pc["extra"])
+            medium += len(pc["cross"]) + len(pc["extra"])
         elif pc["carried"]:
             outcome = "CARRIED"
         elif pc["oos"]:
@@ -302,12 +316,18 @@ def main() -> None:
 
     if high == 0 and medium == 0:
         result = "MATCH"
+        notes = []
         if low:
-            result += f" ({low} LOW carried or out-of-scope, owed to the FEATURE recount)"
+            notes.append(f"{low} LOW carried or out-of-scope, owed to the FEATURE recount")
+        if rows_low:
+            # "more blind rows" tells the orchestrator a reviewer still owes those keys a check (§6).
+            notes.append(f"{rows_low} LOW row counts differ" + (f", {rows_more} with more blind rows" if rows_more else ""))
+        if notes:
+            result += f" ({'; '.join(notes)})"
     else:
         result = f"MISMATCH ({high} HIGH, {medium} MEDIUM)"
-        if low:
-            result += f" + {low} LOW"
+        if low + rows_low:
+            result += f" + {low + rows_low} LOW"
     if not in_scope:
         # Legitimate for a slice/feature with no controls, but also what a mis-tagged
         # inventory plus an empty blind count looks like — make it visible to the reviewer.
@@ -351,6 +371,12 @@ def main() -> None:
                 n += 1
                 out.append(f"{n}. **HIGH — MISSED `{ctl}` at `{f}` `{s}`**: blind count {b}, implementer {i}. "
                            "Add the missing site(s) to the inventory with a disposition and mutation evidence.")
+        for (ctl, f, s), others, b in pc["cross"]:
+            n += 1
+            filed = ", ".join(f"`{o}`" for o in others)
+            out.append(f"{n}. **MEDIUM — CROSS-FILED `{ctl}` at `{f}` `{s}`**: blind count {b}; the implementer lists "
+                       f"this symbol under {filed} only. Reviewer re-runs the mutation of each site the blind count "
+                       "names here: a test fails → CONFIRMED-CROSS-FILED; none fails → HIGH.")
         for (ctl, f, s), i, b in pc["extra"]:
             n += 1
             out.append(f"{n}. **MEDIUM — EXTRA `{ctl}` at `{f}` `{s}`**: implementer {i}, blind count {b}. "
@@ -368,6 +394,23 @@ def main() -> None:
     if n == 0:
         out.append("None.")
     out.append("")
+
+    rows_lines = []
+    for c, pc in per_control.items():
+        for (ctl, f, s), i, b in pc["rows"]:
+            rows_lines.append(f"- **LOW — ROWS-DIFFER `{ctl}` at `{f}` `{s}`**: implementer {i}, blind count {b}"
+                              + ("; the blind count has more — reviewer checks this key." if b > i else "."))
+    if rows_lines:
+        out += [
+            "## Row Counts Differ",
+            "",
+            "Keys both sides list, with a different number of rows. Not findings: the two sides need not split a "
+            "site into the same rows. Where the blind count has more, the reviewer re-runs the mutation of each "
+            "blind row no implementer row describes (§6); a site there that no test proves is a HIGH.",
+            "",
+            *rows_lines,
+            "",
+        ]
 
     carried_lines = []
     for c, pc in per_control.items():

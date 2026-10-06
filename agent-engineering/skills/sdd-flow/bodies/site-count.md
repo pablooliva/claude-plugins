@@ -62,7 +62,7 @@ For each in-scope control:
 3. For each path, find the place where the path commits to the rule — that is one **site**. Shared helpers are not sites; the call on each path is. File it per `STANDARD` §4 and any `CONVENTIONS` rule.
 4. A path on which the rule must hold but nothing enforces it is a **gap** — record it (Kind `gap`).
 
-Count one row per site. Two sites of the same control in the same function are two rows.
+Write one row per site — two sites of the same control in the same function are two rows — each with a description that says which path or condition it is. The diff compares which `Control + File + Symbol` keys you list, not how many rows a key has (`STANDARD` §6), so matching anyone's row total is not the goal. Every distinct site you can see still gets its own row: a reviewer later checks each of your rows one by one. Above all, every function that enforces a control appears under that control, at the innermost named symbol.
 
 ### 4. Write OUTPUT
 

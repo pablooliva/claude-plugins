@@ -27,7 +27,7 @@
       "name": "agent-engineering",
       "source": "./agent-engineering",
       "description": "Cross-cutting skills for disciplined AI-assisted development based on the 10 Claude Code Principles (Forsythe). Includes agent-prompt diagnosis, four-section restatement of end-of-work reports (done / pending / blocking / next), cross-cutting architectural decision capture, codebase architecture surveys (deep-module candidates), development-cycle retrospectives, a simplicity challenge that cuts a proposal down to tiers before it is built, OWASP AI-agent security review (standalone + wired into the SDD flow), git-worktree support for BB IDE (repo provisioning setup + merge-back handoff), and self-contained SDD flow orchestration (no SDD plugin required) with a human design gate and tiered delivery.",
-      "version": "3.5.2",
+      "version": "3.6.0",
       "author": {
         "name": "Pablo Oliva"
       }

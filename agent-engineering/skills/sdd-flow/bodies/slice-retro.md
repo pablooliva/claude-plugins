@@ -64,7 +64,7 @@ If absent, fail with: `No per-slice review found for SLICE-XXX (expected SDD/rev
 
 If present, read it into context. Note its findings (HIGH/MEDIUM/LOW counts and any unresolved items).
 
-Also read the slice's **site-count trail** (paths in your prompt): every `SDD/reviews/SITE-DIFF-<SLICE-XXX>-*-iter<N>-*.md` for this slice (iter0 through the latest), the review's `## Enforcement-Site Verification` section, and `STANDARD` (`references/enforcement-sites.md` §6). Note, per iteration, which sites the implementer missed (`MISSED` / `GAP`), which extras the reviewer confirmed, and which controls ended `Partial`.
+Also read the slice's **site-count trail** (paths in your prompt): every `SDD/reviews/SITE-DIFF-<SLICE-XXX>-*-iter<N>-*.md` for this slice (iter0 through the latest), the review's `## Enforcement-Site Verification` section, and `STANDARD` (`references/enforcement-sites.md` §6). Note, per iteration, which sites the implementer missed (`MISSED` / `GAP`), which extra and cross-filed keys the reviewer confirmed, any site the reviewer's row-count check found unproven, and which controls ended `Partial`.
 
 ## Step 5: EDGE-014 — re-invocation refusal when retrospective already exists
 
@@ -144,7 +144,7 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 
 ## Site Count Reconciliation
 
-[Structured, REQUIRED. One row per control that was ever not `MATCH` for this slice, across all iterations (a `CARRIED` outcome gets a row too; its `Resolved how` is `owed to FEATURE recount`). If every control matched at iter0, the body is the single line `None.`]
+[Structured, REQUIRED. One row per control that, in any iteration of this slice, was not `MATCH` (a `CARRIED` outcome gets a row too; its `Resolved how` is `owed to FEATURE recount`) **or** had a site the reviewer's row-count check found unproven — that can happen under a `MATCH`. A difference in row counts alone (the diff's `## Row Counts Differ` section) is not a mismatch and gets no row. The body is the single line `None.` only when neither happened in any iteration.]
 
 | Control | Iter | Outcome | Sites missed by implementer (file · symbol · path class) | Resolved how |
 |---|---|---|---|---|
@@ -242,7 +242,7 @@ If the ledger does not yet exist, scaffold it with this initial structure:
 
 ## Enforcement-site count mismatches
 
-(Kinds of enforcement site that implementers under-counted, as found by the blind count. Slice implementers read this before recording their inventory.)
+(Kinds of enforcement site that implementers left out of their inventory, as found by the blind count. Slice implementers read this before recording their inventory.)
 
 ## Open recommendations awaiting user decision
 
@@ -289,7 +289,7 @@ This body updates `Status`, `Test result`, and `Notes` columns ONLY — never `S
 - **Test result:** free-form text — `passing`, `failing: <test name> + <reason>`, `n/a (manual)`, etc.
 - **Notes:** brief pointer — `see retro at SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md` or `see ledger §Open recommendations` for blocking issues.
 
-**Control Site Status (same step).** For every control in this slice's latest site diff, update its row in the IMPLEMENTATION-PLAN's `## Control Site Status` table (add the row if absent): implementer and independent site counts and the diff path from the latest `SITE-DIFF-<SLICE-XXX>` for this slice, and `Status` per standard §6 — `Complete` only if that diff's per-control outcome is `MATCH` (or only `CONFIRMED-EXTRA` differences in the review) — `CARRIED` and `OUT-OF-SCOPE-BY-DECLARED-SCOPE` are `Partial`, settled by the FEATURE recount, no gap is open, and the review accepted every (ii)/(iii); otherwise `Partial`. **A control with no independent count is `Partial`.** Never set `Complete` from the implementer's inventory alone. A later slice may flip a `Complete` control back to `Partial` if its recount no longer matches — control status is re-evaluated per count, unlike the forward-only slice Status.
+**Control Site Status (same step).** For every control in this slice's latest site diff, update its row in the IMPLEMENTATION-PLAN's `## Control Site Status` table (add the row if absent): implementer and independent site counts and the diff path from the latest `SITE-DIFF-<SLICE-XXX>` for this slice, and `Status` per standard §6 — `Complete` only if that diff's per-control outcome is `MATCH` (or only `CONFIRMED-EXTRA` / `CONFIRMED-CROSS-FILED` differences in the review) — `CARRIED` and `OUT-OF-SCOPE-BY-DECLARED-SCOPE` are `Partial`, settled by the FEATURE recount — the review recorded its check of every row-count key of the control where the blind count has more rows with no site left unproven, no gap is open, and the review accepted every (ii)/(iii); otherwise `Partial`. Different row totals in the two site columns do not make a control `Partial`. **A control with no independent count is `Partial`.** Never set `Complete` from the implementer's inventory alone. A later slice may flip a `Complete` control back to `Partial` if its recount no longer matches — control status is re-evaluated per count, unlike the forward-only slice Status.
 
 State transitions are forward-only (no backwards transitions encoded in the column; "stuck" surfaces via the ledger's `Open recommendations` section, not the column). SLICE-ID, Name, and Acceptance check are SPEC-derived and immutable from this side.
 

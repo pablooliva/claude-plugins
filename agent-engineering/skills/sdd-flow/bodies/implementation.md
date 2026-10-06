@@ -187,7 +187,7 @@ Create the implementation tracking document using this enhanced template. **The 
 
 ## Control Site Status
 
-> **Required in both delivery modes.** One row per control (any SPEC rule that must hold on every path — see `references/enforcement-sites.md` §1). Scaffold it empty; `slice-retro` (per-slice) or the completion step (whole-feature) fills `Independent sites`, `Latest diff`, and `Status`. `Status` is `Partial` until a blind, independent count matches — **a control with no independent count is never `Complete`**.
+> **Required in both delivery modes.** One row per control (any SPEC rule that must hold on every path — see `references/enforcement-sites.md` §1). Scaffold it empty; `slice-retro` (per-slice) or the completion step (whole-feature) fills `Independent sites`, `Latest diff`, and `Status`. `Status` is `Partial` until the control has been checked against a blind, independent count (`references/enforcement-sites.md` §6) — **a control with no independent count is never `Complete`**.
 
 | Control | Implementer sites | Independent sites | Latest diff | Status | Open (iii) owners |
 |---------|-------------------|-------------------|-------------|--------|-------------------|

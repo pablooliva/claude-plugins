@@ -70,7 +70,26 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.5.2.
+Version 3.6.0.
+
+### What's new in 3.6.0
+
+The site diff compares **which places each side lists, not how many rows each place has**. Before, the diff counted rows per control, file, and function, and any place where the blind count had more rows was a HIGH `MISSED`.
+
+**Why.** On a per-slice run (SPEC-103 SLICE-001, on 3.5.2) the slice did not converge. Its last four blind counts filed 113, 117, 153, and 156 rows for code that barely changed between them: fresh counters do not split a compound condition into the same number of rows, so no inventory could match all of them. The slice took six fix rounds and three stops for the operator, and was committed with its controls `Partial` by override. Reviews 3 to 5 raised 19 HIGH, none of which needed code or a test. Twelve of those — all ten in the last two reviews — were a place both sides had listed, with more rows on the blind side. In the fourth recount, 18 of the diff's 25 HIGH were one function filed under two controls, where the spec states one rule twice.
+
+**What changed.**
+
+- **Row counts are no longer compared.** A place both sides list, with a different number of rows, is reported LOW in a new `## Row Counts Differ` section of the diff with both counts. It is not a finding: it does not make the result `MISMATCH`, does not block `Complete`, and never enters a review's findings, the fix loop, or the stall check. Fixers are told not to add, split, or merge rows to make two totals agree.
+- **One check replaces the count rule.** The diff no longer flags a second, forgotten site inside a function that already has one listed. So wherever the blind count has more rows at a place both sides list, the reviewer re-runs the mutation of every blind row there that no implementer row describes — every one, not a sample — and records the result per place. A site no test proves is a HIGH needing code or a test, as before. A `MATCH` whose result line says `more blind rows` always goes to a reviewer, the final recount included.
+- **New outcome `CROSS-FILED` (MEDIUM).** A place only the blind count lists under a control, in a function the implementer lists under another control, used to be a HIGH `MISSED`. The reviewer now settles it by mutation, not by judgment: delete the site the blind count names; a test fails → `CONFIRMED-CROSS-FILED`, resolved, and the keying goes into the filing conventions; none fails → HIGH. A function that enforces a second rule nothing tests still comes out HIGH.
+- **Unchanged.** A place only the blind count lists, in a function the implementer lists under no control, is still `MISSED` (HIGH), as is a control the implementer never listed. A place only the implementer lists is still `EXTRA` (MEDIUM). `UNCOUNTED`, gaps, carried sites, and declared scope behave as before; a carried place with different row counts is still LOW under `## Carried`.
+- **Filing conventions settle keying only.** A convention says which control and which function a site is filed under. It no longer needs to say how many rows a statement is (standard §4.2).
+- **Result line.** Still `Result: MATCH` or `Result: MISMATCH (h HIGH, m MEDIUM)`, exit codes 0 / 1 / 2. A `MATCH` may now carry `n LOW row counts differ` (and `, k with more blind rows`) beside the existing carried note; `+ n LOW` after a `MISMATCH` counts both kinds.
+- **Measured on that slice's files.** Its committed inventory against its last three blind counts, old rule → new rule: `2 HIGH, 17 MEDIUM` → `2 HIGH, 3 MEDIUM + 14 LOW`; `23 HIGH, 15 MEDIUM` → `4 HIGH, 23 MEDIUM + 11 LOW` (18 of the 23 MEDIUM are `CROSS-FILED`); `4 HIGH, 6 MEDIUM` → `3 HIGH, 4 MEDIUM + 3 LOW`.
+- **What this gives up.** A forgotten second site in an already-listed function is no longer raised by the script; it is caught only if the reviewer runs the check above. On that slice, 1 of the 26 places where the blind count had more rows was such a site with no test (the other 25 needed only inventory rows).
+- **Tests.** `skills/sdd-flow/scripts/tests/test_site_diff.py` now has 35 cases. Four existing cases were changed because they produced a miss or an extra by repeating a row at one key; they now use a key only one side has, and still pass against the old script.
+- **Compatible.** Existing `SITES-IMPL-*` and `SITE-COUNT-*` files parse unchanged, and no progress marker changed. A diff of older files reads differently only where row counts differed or a function was filed under two controls.
 
 ### What's new in 3.5.2
 

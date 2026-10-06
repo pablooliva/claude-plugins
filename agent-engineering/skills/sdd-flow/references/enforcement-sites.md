@@ -65,9 +65,9 @@ Column rules:
 - **Disposition / Evidence** — implementer only: `(i)`, `(ii)`, `(iii)` with evidence per §3. The blind count writes `—` in both.
 - **Slice** — `SLICE-XXX` that introduced or last changed the site (per-slice mode; three digits, optionally one lowercase letter, e.g. `SLICE-005a`) — fix subagents set it to the slice being fixed; `—` in whole-feature mode. The diff does **not** use this column to decide whether a site is carried from an earlier slice (see §6); it only decides which controls the implementer claims for the scope.
 
-**The implementer inventory is kept current, not append-only.** Whoever changes code (implementer or fixer) deletes the row of any site that no longer exists in the working tree, and records the removal in its progress entry's key-decision line. A stale row shows up as a phantom `EXTRA` in every later diff.
+**The implementer inventory is kept current, not append-only.** Whoever changes code (implementer or fixer) deletes the row of any site that no longer exists in the working tree, and records the removal in its progress entry's key-decision line. A stale row shows up in every later diff — as a phantom `EXTRA` when it is the only row at its key.
 
-Cells must not contain a literal `|` (write `\|` if one is unavoidable). One row per site; two sites of the same control in the same symbol are two rows.
+Cells must not contain a literal `|` (write `\|` if one is unavoidable). One row per site: a row is a unit of evidence, with its own disposition and mutation. The diff compares which `Control + File + Symbol` keys each side lists, not how many rows a key has (§6), so the two sides do not have to split a compound condition into the same number of rows.
 
 The table has exactly these nine columns. There is no owner/carried column: a note like "carried — owner SLICE-001a" in a description cell is harmless but ignored. Whether a site is carried is decided mechanically (§6).
 
@@ -98,6 +98,8 @@ One row per place the control **was** counted; `*` in Symbol means the whole fil
 | 2 | EDGE-009 is enforced as part of REQ-005: key its sites `REQ-005`. | SLICE-003 iter 1 |
 ```
 
+**What a convention settles.** Which **control** and which **symbol** a site is keyed to — the two things the diff compares. It does not need to settle how many rows a statement or a compound condition is: the diff does not compare row counts (§6), so a ruling written only to make two row totals agree is not worth adding.
+
 **Count-free by rule.** A convention states a filing or keying rule. It never contains: a number of sites, a site row, a file or symbol at which a particular site sits, a list of controls to count or to skip, or anything about scope. A convention that would only make sense to someone who had seen the inventory is a leak (MEDIUM in the reviewers' leak check) — rewrite it as a general rule or drop it. Rows are append-only; a reversed ruling is a new row that names the row it supersedes.
 
 ## 5. Artifacts
@@ -113,24 +115,31 @@ One row per place the control **was** counted; `*` in Symbol means the whole fil
 
 ## 6. Diff outcomes and Complete
 
-`scripts/site-diff.py` counts `Kind = site` rows per `Control + File + Symbol` on each side and reports, per control:
+`scripts/site-diff.py` groups `Kind = site` rows per `Control + File + Symbol` on each side and compares **which keys each side has — not how many rows a key has**. Two careful readers split a compound condition into different numbers of rows; that is a difference of filing, not a place either of them forgot. Per control the script reports:
 
-**Carried sites (`SLICE-XXX` scope, `--base` given).** The orchestrator passes the slice's base commit. A key whose code the slice did not change is *carried*: its file existed at `BASE`, still exists, and either differs in no line from `BASE`, or (Python) the named symbol's lines are untouched. The script decides this from git, identically for both sides — never from either side's labels. Anything it cannot place with certainty (a file new since `BASE` — untracked, git-ignored, or renamed — or a missing file, `<module>` in a changed file, a non-Python changed file, a symbol it cannot find) counts as changed, so uncertainty never hides a finding. A disagreement at a carried key is reported **LOW** in a separate `## Carried` section, never as `MISSED`/`EXTRA`, and is owed to the `FEATURE` recount (4e.5), which always runs and compares every row. Carried keys that agree are ordinary matches.
+**Carried sites (`SLICE-XXX` scope, `--base` given).** The orchestrator passes the slice's base commit. A key whose code the slice did not change is *carried*: its file existed at `BASE`, still exists, and either differs in no line from `BASE`, or (Python) the named symbol's lines are untouched. The script decides this from git, identically for both sides — never from either side's labels. Anything it cannot place with certainty (a file new since `BASE` — untracked, git-ignored, or renamed — or a missing file, `<module>` in a changed file, a non-Python changed file, a symbol it cannot find) counts as changed, so uncertainty never hides a finding. A disagreement at a carried key — a key only one side has, or a different number of rows — is reported **LOW** in a separate `## Carried` section, never as `MISSED`/`CROSS-FILED`/`EXTRA`, and is owed to the `FEATURE` recount (4e.5), which always runs and compares every key. Carried keys with the same number of rows are ordinary matches.
 
 | Outcome | Meaning | Severity |
 |---|---|---|
-| `MATCH` | Every key's counts agree | — |
-| `MISSED` | The blind count has more sites at some key than the implementer, or a control the implementer never listed | HIGH |
-| `EXTRA` | The implementer lists more sites at some key than the blind count | MEDIUM — the reviewer re-runs each extra site's mutation in the same pass: a test fails → `CONFIRMED-EXTRA` (resolved); no test fails → HIGH |
+| `MATCH` | Every key one side lists, the other lists too | — |
+| `MISSED` | A key only the blind count has, at a File + Symbol the implementer lists under no control — or a control the implementer never listed | HIGH |
+| `CROSS-FILED` | A key only the blind count has, at a File + Symbol the implementer lists under **another control** | MEDIUM — the reviewer re-runs the mutation of each site the blind count names there, in the same pass: a test fails → `CONFIRMED-CROSS-FILED` (resolved: the place is listed and proven, only the control label differs — the reviewer records the keying in the filing conventions, §4.2); no test fails → HIGH, needing code or a test |
+| `EXTRA` | A key only the implementer has | MEDIUM — the reviewer re-runs each extra site's mutation in the same pass: a test fails → `CONFIRMED-EXTRA` (resolved); no test fails → HIGH |
 | `UNCOUNTED` | A control in the implementer's inventory for this scope that the blind count did not inventory | control stays `Partial`; MEDIUM — the reviewer adjudicates it: **not a control / out of scope** → the fixer deletes its rows (resolved); **a real control** → its ID goes into the next recount's `ALSO INVENTORY` list (ID only, never sites or counts) |
-| `MISSED+EXTRA` | Both of the above at different keys of one control (often the same site filed under different symbols) | the `MISSED` keys are HIGH and each `EXTRA` key is MEDIUM, handled as above |
+| `MISSED+EXTRA`, `CROSS-FILED+EXTRA`, `MISSED+CROSS-FILED`, `MISSED+CROSS-FILED+EXTRA` | More than one of `MISSED`, `CROSS-FILED`, `EXTRA` at different keys of one control (often the same site filed under different symbols or controls) | each `MISSED` key is HIGH and each `CROSS-FILED` or `EXTRA` key is MEDIUM, handled as above |
 | `CARRIED` | The only differences are at carried keys | LOW, listed under `## Carried`; not a finding for this slice. The control stays `Partial` until the `FEATURE` recount |
 | `OUT-OF-SCOPE-BY-DECLARED-SCOPE` | The blind count declared partial scope (§4.1) and the only differences are implementer rows outside it | carried rows: LOW, under `## Carried`. Rows in code this slice changed: MEDIUM — the count skipped code it was responsible for; the reviewer adjudicates as for `UNCOUNTED`. Control stays `Partial` |
 | `GAP` | The only issue is a blind-count gap | HIGH (below) |
 
 Blind-count `gap` rows are reported separately as HIGH findings, carried or not — a gap is broken code, not a filing disagreement. At `FEATURE` scope, each control in a `## Declared Scope` table is a MEDIUM `PARTIAL COUNT` finding and the comparison stays complete.
 
-**A control is `Complete` only when** the per-control outcome in its latest site diff is `MATCH` (or its only differences are `CONFIRMED-EXTRA` recorded in the review), the blind count has no open gap for it, and the reviewer has accepted every (ii) argument and (iii) owner note. Otherwise it is `Partial`. **A control with no independent count is `Partial` — never `Complete`.** A (iii) site does not by itself block `Complete`; it is carried to the ledger's *Open recommendations awaiting user decision* with its owner.
+**Row counts (`## Row Counts Differ`).** A key both sides list, with a different number of rows, is reported **LOW** in its own section with both counts (`ROWS-DIFFER`). It is **not a finding**: it does not make the result `MISMATCH`, does not change the control's outcome, does not block `Complete`, and never enters a review's findings, the fix loop, or the stall check. No inventory row is owed for it.
+
+One check remains, because the diff no longer flags a second, forgotten site inside a function that already has one listed. At every such key where **the blind count has more rows**, the reviewer re-runs the mutation of each blind row there that no implementer row describes — every one, not a sample — and records the result per key in the review. A test fails → nothing is owed. No test fails → that site is a HIGH `needs-code-or-test` finding, like any other site no test proves. A key where the implementer has more rows needs nothing beyond the reviewer's ordinary mutation sample.
+
+**The `Result:` line.** `MATCH` or `MISMATCH (h HIGH, m MEDIUM)`. A `MATCH` may carry a bracketed LOW note — `n LOW carried or out-of-scope, owed to the FEATURE recount`, `n LOW row counts differ` (with `, k with more blind rows` when the check above is owed at `k` keys), or both joined by `; `. A `MISMATCH` may carry `+ n LOW`, the total of both kinds.
+
+**A control is `Complete` only when** the per-control outcome in its latest site diff is `MATCH` (or its only differences are `CONFIRMED-EXTRA` or `CONFIRMED-CROSS-FILED` recorded in the review), every key of it where the blind count has more rows has its check recorded in a review of that diff with no site left unproven, the blind count has no open gap for it, and the reviewer has accepted every (ii) argument and (iii) owner note. Otherwise it is `Partial`. **A control with no independent count is `Partial` — never `Complete`.** A (iii) site does not by itself block `Complete`; it is carried to the ledger's *Open recommendations awaiting user decision* with its owner.
 
 Control status lives in the IMPLEMENTATION-PLAN's `## Control Site Status` table:
 
@@ -141,3 +150,5 @@ Control status lives in the IMPLEMENTATION-PLAN's `## Control Site Status` table
 |---|---|---|---|---|---|
 | D-10 | 26 | 26 | SDD/reviews/SITE-DIFF-SLICE-003-…-iter2-….md | Complete | — |
 ```
+
+The two site columns are row totals copied from the diff. They are a record, not the test: a control can be `Complete` with different totals, and is not `Complete` merely because they are equal.

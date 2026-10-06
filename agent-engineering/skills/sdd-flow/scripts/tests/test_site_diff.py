@@ -133,13 +133,112 @@ class NoGitCases(unittest.TestCase):
         self.assertEqual(run_diff(self.dir, impl, blind, "SLICE-004")[:2], (0, "Result: MATCH"))
 
     def test_legacy_inventory_parses(self) -> None:
-        """A 2.6.1 inventory (nine columns, no Declared Scope) diffs as before."""
+        """A 2.6.1 inventory (nine columns, no Declared Scope) still parses."""
         impl = inventory([impl_row("D-10", "src/cli/main.py", "run", "SLICE-002"),
-                          impl_row("D-10", "src/cli/main.py", "run", "SLICE-002")])
+                          impl_row("D-10", "src/cli/main.py", "main", "SLICE-002")])
         blind = inventory([blind_row("D-10", "src/cli/main.py", "run")])
         code, line, out = run_diff(self.dir, impl, blind, "SLICE-002")
         self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
-        self.assertIn("MEDIUM — EXTRA `D-10` at `src/cli/main.py` `run`", out)
+        self.assertIn("MEDIUM — EXTRA `D-10` at `src/cli/main.py` `main`", out)
+
+    # --- Presence, not row count ------------------------------------------------------------
+
+    def test_more_blind_rows_at_a_listed_key_is_not_a_finding(self) -> None:
+        impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003")])
+        blind = inventory([blind_row("D-10", "a.py", "run")] * 3)
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (0, "Result: MATCH (1 LOW row counts differ, 1 with more blind rows)"))
+        self.assertIn("| D-10 | 1 | 3 | MATCH |", out)
+        self.assertIn("## Findings\n\nNone.", out)
+        rows = out.split("## Row Counts Differ")[1]
+        self.assertIn("LOW — ROWS-DIFFER `D-10` at `a.py` `run`**: implementer 1, blind count 3; "
+                      "the blind count has more", rows)
+        self.assertNotIn("MISSED", out)
+
+    def test_more_implementer_rows_at_a_listed_key_is_not_a_finding(self) -> None:
+        impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003")] * 2)
+        blind = inventory([blind_row("D-10", "a.py", "run")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (0, "Result: MATCH (1 LOW row counts differ)"))
+        self.assertIn("LOW — ROWS-DIFFER `D-10` at `a.py` `run`**: implementer 2, blind count 1.", out)
+        self.assertNotIn("EXTRA", out)
+
+    def test_row_count_differences_leave_a_mismatch_unaffected(self) -> None:
+        impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003")])
+        blind = inventory([blind_row("D-10", "a.py", "run"), blind_row("D-10", "a.py", "run"),
+                           blind_row("D-10", "a.py", "other")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 0 MEDIUM) + 1 LOW"))
+        self.assertIn("| D-10 | 1 | 3 | MISSED |", out)
+        self.assertNotIn("MISSED `D-10` at `a.py` `run`", out)
+
+    def test_key_only_the_blind_count_has_is_high(self) -> None:
+        impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003")])
+        blind = inventory([blind_row("D-10", "a.py", "run"), blind_row("D-10", "a.py", "other")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 0 MEDIUM)"))
+        self.assertIn("HIGH — MISSED `D-10` at `a.py` `other`**: blind count 1, implementer 0", out)
+
+    def test_key_only_the_implementer_has_is_medium(self) -> None:
+        impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003"), impl_row("D-10", "a.py", "other", "SLICE-003")])
+        blind = inventory([blind_row("D-10", "a.py", "run")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("MEDIUM — EXTRA `D-10` at `a.py` `other`**: implementer 1, blind count 0", out)
+
+    # --- Cross-control filing ---------------------------------------------------------------
+
+    def test_symbol_listed_under_another_control_is_cross_filed_medium(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003"),
+                          impl_row("FAIL-001", "a.py", "load", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("FAIL-001", "a.py", "load"),
+                           blind_row("FAIL-001", "a.py", "check")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("| FAIL-001 | 1 | 2 | CROSS-FILED |", out)
+        self.assertIn("MEDIUM — CROSS-FILED `FAIL-001` at `a.py` `check`**: blind count 1; "
+                      "the implementer lists this symbol under `REQ-005` only", out)
+        self.assertNotIn("MISSED", out)
+
+    def test_cross_filing_reads_implementer_rows_of_any_slice(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-001"),
+                          impl_row("FAIL-001", "a.py", "load", "SLICE-003")])
+        blind = inventory([blind_row("FAIL-001", "a.py", "load"), blind_row("FAIL-001", "a.py", "check")])
+        self.assertEqual(run_diff(self.dir, impl, blind, "SLICE-003")[1], "Result: MISMATCH (0 HIGH, 1 MEDIUM)")
+
+    def test_unlisted_control_is_missed_even_at_a_listed_symbol(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("FAIL-001", "a.py", "check")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 0 MEDIUM)"))
+        self.assertIn("HIGH — MISSED control `FAIL-001`", out)
+        self.assertNotIn("CROSS-FILED", out)
+
+    def test_missed_cross_filed_and_extra_in_one_control(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003"),
+                          impl_row("FAIL-001", "a.py", "stale", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("FAIL-001", "a.py", "check"),
+                           blind_row("FAIL-001", "a.py", "new")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 2 MEDIUM)"))
+        self.assertIn("| FAIL-001 | 1 | 2 | MISSED+CROSS-FILED+EXTRA |", out)
+
+    # --- Gaps and uncounted controls --------------------------------------------------------
+
+    def test_blind_gap_is_high(self) -> None:
+        impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003")])
+        blind = inventory([blind_row("D-10", "a.py", "run"), blind_row("D-10", "a.py", "run", kind="gap")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 0 MEDIUM)"))
+        self.assertIn("| D-10 | 1 | 1 | GAP |", out)
+        self.assertIn("HIGH — GAP `D-10` at `a.py` `run`", out)
+
+    def test_control_absent_from_the_blind_count_is_uncounted(self) -> None:
+        impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003"), impl_row("D-11", "a.py", "run", "SLICE-003")])
+        blind = inventory([blind_row("D-10", "a.py", "run")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("| D-11 | 1 | 0 | UNCOUNTED |", out)
 
     def test_without_base_nothing_is_carried(self) -> None:
         impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003")])
@@ -186,9 +285,8 @@ class GitCases(unittest.TestCase):
         self.assertNotIn("MISSED", out)
 
     def test_changed_symbol_in_touched_file_is_owned(self) -> None:
-        impl = inventory([impl_row("REQ-019", "app/groups.py", "_group_payload", "SLICE-005a")])
-        blind = inventory([blind_row("REQ-019", "app/groups.py", "_group_payload"),
-                           blind_row("REQ-019", "app/groups.py", "_group_payload")])
+        impl = inventory([])
+        blind = inventory([blind_row("REQ-019", "app/groups.py", "_group_payload")])
         self.assertEqual(self.diff(impl, blind)[1], "Result: MISMATCH (1 HIGH, 0 MEDIUM)")
 
     def test_unchanged_symbol_in_touched_file_is_carried(self) -> None:
@@ -202,8 +300,8 @@ class GitCases(unittest.TestCase):
         self.assertEqual(self.diff(impl, blind)[1], "Result: MISMATCH (1 HIGH, 0 MEDIUM)")
 
     def test_untracked_file_is_owned(self) -> None:
-        impl = inventory([impl_row("D-10", "app/export.py", "run", "SLICE-005a")])
-        blind = inventory([blind_row("D-10", "app/export.py", "run"), blind_row("D-10", "app/export.py", "run")])
+        impl = inventory([])
+        blind = inventory([blind_row("D-10", "app/export.py", "run")])
         self.assertEqual(self.diff(impl, blind)[1], "Result: MISMATCH (1 HIGH, 0 MEDIUM)")
 
     def test_new_gitignored_file_is_owned(self) -> None:
@@ -238,6 +336,25 @@ class GitCases(unittest.TestCase):
         code, line, out = self.diff(impl, blind)
         self.assertEqual(line, "Result: MISMATCH (0 HIGH, 1 MEDIUM)")
         self.assertIn("MEDIUM — OUT-OF-SCOPE-BY-DECLARED-SCOPE `REQ-019` at `app/export.py` `run`", out)
+
+    def test_carried_row_count_difference_stays_carried(self) -> None:
+        impl = inventory([impl_row("REQ-005", "app/registry.py", "lookup", "SLICE-001a")])
+        blind = inventory([blind_row("REQ-005", "app/registry.py", "lookup")] * 2)
+        code, line, out = self.diff(impl, blind)
+        self.assertEqual(line, "Result: MATCH (1 LOW carried or out-of-scope, owed to the FEATURE recount)")
+        self.assertIn("| REQ-005 | 1 | 2 | CARRIED |", out)
+        self.assertNotIn("## Row Counts Differ", out)
+
+    def test_owned_row_count_difference_is_reported_beside_carried(self) -> None:
+        impl = inventory([impl_row("REQ-005", "app/registry.py", "lookup", "SLICE-001a"),
+                          impl_row("D-10", "app/export.py", "run", "SLICE-005a")])
+        blind = inventory([blind_row("REQ-005", "app/registry.py", "lookup"),
+                           blind_row("REQ-005", "app/registry.py", "validate"),
+                           blind_row("D-10", "app/export.py", "run"), blind_row("D-10", "app/export.py", "run")])
+        code, line, out = self.diff(impl, blind)
+        self.assertEqual((code, line), (0, "Result: MATCH (1 LOW carried or out-of-scope, owed to the FEATURE "
+                                           "recount; 1 LOW row counts differ, 1 with more blind rows)"))
+        self.assertIn("| D-10 | 1 | 2 | MATCH |", out)
 
     def test_feature_scope_counts_carried_rows_normally(self) -> None:
         impl = inventory([impl_row("REQ-005", "app/registry.py", "lookup", "SLICE-001a")])
@@ -281,10 +398,10 @@ class GitCases(unittest.TestCase):
         self.assertEqual(line, "Result: MATCH (3 LOW carried or out-of-scope, owed to the FEATURE recount)")
 
     def test_worked_example_genuine_owned_miss_is_one_high(self) -> None:
-        blind = self.BLIND_005A + [blind_row("D-10", "app/export.py", "run")]
+        blind = self.BLIND_005A + [blind_row("D-10", "app/export.py", "<module>")]
         code, line, out = self.diff(inventory(self.IMPL_005A), inventory(blind, declared=self.DECLARED_005A))
         self.assertEqual(line, "Result: MISMATCH (1 HIGH, 0 MEDIUM) + 3 LOW")
-        self.assertIn("HIGH — MISSED `D-10` at `app/export.py` `run`", out)
+        self.assertIn("HIGH — MISSED `D-10` at `app/export.py` `<module>`", out)
 
 
 if __name__ == "__main__":
