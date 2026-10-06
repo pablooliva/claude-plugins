@@ -1,6 +1,6 @@
 # Tracing and evals in an sdd-flow cycle — at a glance
 
-A picture of where tracing and evals are set up, built, checked, and used in an `/sdd-flow` cycle. **It describes a proposal; none of it is implemented as of agent-engineering 3.5.2.** The proposal — `proposals/observability-and-evals-2026-10-04.md` at the repository root — is the source of truth when this picture and it disagree. As each build step ships, this file is updated to say what exists; the cycle itself is in `sdd-flow-diagram.md`, beside this file.
+A picture of where tracing and evals are set up, built, checked, and used in an `/sdd-flow` cycle. **It describes a proposal, built in four steps. As of agent-engineering 3.7.0 only step 1 exists: `/observability-init` and the tracing standard. Nothing inside `/sdd-flow` uses them yet, and `/eval-harvest` does not exist** — the table at the end says which parts of this picture work. The proposal — `proposals/observability-and-evals-2026-10-04.md` at the repository root — is the source of truth when this picture and it disagree. As each build step ships, this file is updated to say what exists; the cycle itself is in `sdd-flow-diagram.md`, beside this file.
 
 **How to read it.** Same conventions as `sdd-flow-diagram.md`: rounded boxes are work done by a spawned subagent or a skill, red boxes are places the flow **stops and waits for you**, grey boxes are things the orchestrator (the main conversation) or a script does. In boxes that carry both, a line starting `tracing:` applies when tracing is on and a line starting `evals:` when evals are on.
 
@@ -152,7 +152,7 @@ flowchart LR
 
 **How an `/sdd-flow` review sees what the application did.** It does not look anything up in Opik or Langfuse. The application has one special test command, the *trace run*, that runs the tests and writes a record of every call they made to a file inside the repository. The reviewer reads that file.
 
-The trace run ignores the switches in the table below: it records everything for that one test run, even if you have turned tracing off or set it to record only a fraction of requests. So switching tracing off to save performance never breaks a review, and a review needs no network connection and no keys.
+The trace run ignores the switches in the table below: it records everything for that one test run, even if you have turned tracing off or set it to record only a fraction of requests. So switching tracing off to save performance never breaks a review, and a review needs no network connection and no keys. The one switch it does respect is the one that drops the model's inputs and outputs: an application that keeps that text out of its traces keeps it out of this file too.
 
 | To do this | Set in the env file |
 |---|---|
@@ -195,7 +195,7 @@ No stop is added. Two existing ones change.
 
 | Build step | What it ships | Which parts of this picture then work |
 |---|---|---|
-| 1 | `/observability-init` and the tracing standard | In "Where the data goes": application tracing, the switches, the choice of backend, and the local span file — for any application, outside the flow. Not the eval run or `/eval-harvest` |
-| 2 | Tracing in `sdd-flow` | Scenario 1 end to end |
-| 3 | Evals in `sdd-flow` | Scenario 2 inside a cycle |
-| 4 | `/eval-harvest` | The loop from a used tier back into the next one |
+| 1 — **shipped in 3.7.0** | `/observability-init` and the tracing standard (`skills/observability-init/references/tracing.md`) | In "Where the data goes": application tracing, the switches, the choice of backend, and the local span file — for a Python application, outside the flow. Sending to Opik is proven; sending to Langfuse is not yet. Not the eval run or `/eval-harvest` |
+| 2 — not built | Tracing in `sdd-flow` | Scenario 1 end to end |
+| 3 — not built | Evals in `sdd-flow` | Scenario 2 inside a cycle |
+| 4 — not built | `/eval-harvest` | The loop from a used tier back into the next one |

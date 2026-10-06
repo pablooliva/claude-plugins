@@ -1,0 +1,181 @@
+"""Tracing bootstrap: the one file of this application that names a tracing backend, an exporter or an
+instrumentation library. Everything else uses the OpenTelemetry API only.
+
+Settings are standard OpenTelemetry environment variables, read from the process environment first and then from
+the env file. See SDD/OBSERVABILITY.md for where each part of the tracing foundation lives.
+"""
+
+import functools
+import inspect
+import os
+import re
+import threading
+from importlib import metadata
+from pathlib import Path
+
+from opentelemetry import trace
+
+SERVICE_NAME = "@@SERVICE_NAME@@"
+DISTRIBUTION = "@@DISTRIBUTION@@"
+ENV_FILE = @@ENV_FILE@@
+
+# Set by the trace run. When present, every span goes to this file and nowhere else, whatever the kill switch
+# and the sampling settings say.
+TRACE_RUN_FILE = "TRACE_RUN_FILE"
+
+_CONTENT_SWITCH = "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"
+_HEADER_CAPTURE = "OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_"
+_CONVENTIONS = "OTEL_SEMCONV_STABILITY_OPT_IN"
+
+_lock = threading.Lock()
+_done = False
+
+
+def setup_tracing(env_file: Path | None = None) -> None:
+    """Switch tracing on for this process. The first call that finishes decides; later calls do nothing."""
+    global _done
+    with _lock:
+        if _done:
+            return
+        _set_up(ENV_FILE if env_file is None else Path(env_file))
+        _done = True
+
+
+def _set_up(env_file: Path) -> None:
+    _read_env_file(env_file)
+    _never_capture_headers()
+    span_file = os.environ.get(TRACE_RUN_FILE)
+    if span_file:
+        os.environ["OTEL_SDK_DISABLED"] = "false"
+    elif os.environ.get("OTEL_SDK_DISABLED", "").strip().lower() == "true":
+        return
+    _apply_content_switch()
+
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+    from opentelemetry.sdk.trace.sampling import ALWAYS_ON
+
+    identity = {"service.name": SERVICE_NAME, "service.version": _version()}
+    resource = Resource.create(identity)
+    if span_file:
+        provider = TracerProvider(resource=resource, sampler=ALWAYS_ON)
+        provider.add_span_processor(_identity_on_first_span(identity))
+        provider.add_span_processor(SimpleSpanProcessor(_span_file_exporter(span_file)))
+    else:
+        provider = TracerProvider(resource=resource)
+        provider.add_span_processor(_identity_on_first_span(identity))
+        # No endpoint, no exporter: the library's own default would send to localhost.
+        if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT") or os.environ.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"):
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+    # Instrument first: the provider can be published only once, so nothing that can fail comes after it.
+    _instrument(provider)
+    trace.set_tracer_provider(provider)
+
+
+def _instrument(provider) -> None:
+    """Framework instrumentation for what this application uses."""
+@@INSTRUMENTATION@@
+
+
+def traced(fn):
+    """Wrap an entry point the framework does not see (a job, a consumer, a command) in a span named after it."""
+    name = f"{fn.__module__}.{fn.__qualname__}"
+
+    if inspect.iscoroutinefunction(fn):
+
+        @functools.wraps(fn)
+        async def wrapper(*args, **kwargs):
+            with trace.get_tracer(SERVICE_NAME).start_as_current_span(name):
+                return await fn(*args, **kwargs)
+
+    else:
+
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            with trace.get_tracer(SERVICE_NAME).start_as_current_span(name):
+                return fn(*args, **kwargs)
+
+    wrapper.__traced__ = True
+    return wrapper
+
+
+def _read_env_file(path: Path) -> None:
+    """Copy the OTEL_* settings of the env file into the environment. A name already set there wins."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError):
+        return
+    for line in lines:
+        line = line.strip().removeprefix("export ").lstrip()
+        name, equals, value = line.partition("=")
+        name = name.strip()
+        if equals and name.startswith("OTEL_") and not name.startswith(_HEADER_CAPTURE):
+            os.environ.setdefault(name, _env_value(value))
+
+
+def _never_capture_headers() -> None:
+    """Headers are never recorded, whatever the environment asks for."""
+    for name in [name for name in os.environ if name.startswith(_HEADER_CAPTURE)]:
+        del os.environ[name]
+
+
+def _env_value(raw: str) -> str:
+    """The value of one env-file line: the text inside quotes, or the text up to a ` #` comment."""
+    raw = raw.strip()
+    if raw[:1] in ("'", '"'):
+        end = raw.find(raw[0], 1)
+        if end != -1:
+            return raw[1:end]
+    if raw.startswith("#"):
+        return ""
+    return re.split(r"\s+#", raw, maxsplit=1)[0].strip()
+
+
+def _apply_content_switch() -> None:
+    """LLM inputs and outputs are recorded unless the content switch says no. The library's own default is off,
+    and it takes `span_only` and `no_content`, not true and false."""
+    asked = os.environ.get(_CONTENT_SWITCH, "").strip().lower()
+    os.environ[_CONTENT_SWITCH] = "no_content" if asked in ("false", "0", "no", "off", "no_content") else "span_only"
+    conventions = [item for item in os.environ.get(_CONVENTIONS, "").split(",") if item.strip()]
+    if "gen_ai_latest_experimental" not in conventions:
+        os.environ[_CONVENTIONS] = ",".join([*conventions, "gen_ai_latest_experimental"])
+
+
+def _version() -> str:
+    try:
+        return metadata.version(DISTRIBUTION)
+    except metadata.PackageNotFoundError:
+        return "unknown"
+
+
+def _identity_on_first_span(identity: dict):
+    """The name and version also go on the first span of each trace: a backend may drop what is recorded once
+    for the whole process."""
+    from opentelemetry.sdk.trace import SpanProcessor
+
+    class Identity(SpanProcessor):
+        def on_start(self, span, parent_context=None):
+            if span.parent is None:
+                span.set_attributes(identity)
+
+    return Identity()
+
+
+def _span_file_exporter(path: str):
+    from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
+
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    write_lock = threading.Lock()
+
+    class SpanFileExporter(SpanExporter):
+        def export(self, spans):
+            with write_lock, target.open("a", encoding="utf-8") as handle:
+                for span in spans:
+                    handle.write(span.to_json(indent=None) + "\n")
+            return SpanExportResult.SUCCESS
+
+    return SpanFileExporter()

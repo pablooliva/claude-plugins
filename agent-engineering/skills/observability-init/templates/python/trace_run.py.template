@@ -1,0 +1,33 @@
+"""The trace run: run the tests with tracing forced on and every request kept, and write every span to a fresh
+local file. Nothing is sent to a backend. Reviews read the file; see SDD/OBSERVABILITY.md.
+
+    @@TRACE_RUN_COMMAND@@
+"""
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = @@ROOT@@
+SPAN_FILE = ROOT / ".traces" / "spans.jsonl"
+COMMAND = [sys.executable, "-m", "pytest", "-q"@@TEST_ARGS@@]
+
+
+def main() -> int:
+    SPAN_FILE.parent.mkdir(exist_ok=True)
+    SPAN_FILE.unlink(missing_ok=True)
+    # The bootstrap module sees this name and writes to the file, ignoring the kill switch and the sampling settings.
+    result = subprocess.run(COMMAND, cwd=ROOT, env={**os.environ, "TRACE_RUN_FILE": str(SPAN_FILE)})
+    count = len(SPAN_FILE.read_text(encoding="utf-8").splitlines()) if SPAN_FILE.exists() else 0
+    print(f"trace run: {count} spans in {SPAN_FILE.relative_to(ROOT)}")
+    if result.returncode:
+        return result.returncode
+    if not count:
+        print("trace run: the tests passed but no span was recorded", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

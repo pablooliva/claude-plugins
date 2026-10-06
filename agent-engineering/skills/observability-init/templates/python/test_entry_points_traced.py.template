@@ -1,0 +1,79 @@
+"""Every entry point is traced (the tracing standard's entry-point test).
+
+The routes come from the application's own route table, never from a list kept here. A fresh process sends one
+request to each of them under the trace-run setting, and the test reads the span file that process wrote: a route
+with no span of its own fails the test by name. So does anything in the route table this test does not know how
+to send a request to.
+"""
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = @@ROOT@@
+
+
+def _client():
+    """The application as a test client, started the way the other tests start it."""
+@@BUILD_CLIENT@@
+
+
+# Sent with every request, so that anything in front of the routes lets it through to the route.
+HEADERS = @@REQUEST_HEADERS@@
+
+
+def _routes(app) -> tuple[list[list[str]], list[str]]:
+    """The route table as (method, path) pairs, and the entries this test cannot check (a mount, a WebSocket)."""
+    from starlette.routing import Route
+
+    routes, unchecked = [], []
+    for route in app.routes:
+        if isinstance(route, Route):
+            methods = set(route.methods or ())
+            # The framework answers HEAD wherever GET is registered; a HEAD of its own is an entry point.
+            routes += [[method, route.path] for method in methods if method != "HEAD" or "GET" not in methods]
+        else:
+            unchecked.append(f"{type(route).__name__} {getattr(route, 'path', '')}".strip())
+    return sorted(routes), sorted(unchecked)
+
+
+def _drive(routes_file: str) -> None:
+    """Runs in the fresh process: one request per route, then the list of routes for the test to compare."""
+    with _client() as client:
+        routes, unchecked = _routes(client.app)
+        for method, path in routes:
+            client.request(method, path, headers=HEADERS)
+    Path(routes_file).write_text(json.dumps({"routes": routes, "unchecked": unchecked}))
+
+
+def test_every_route_is_traced(tmp_path):
+    span_file = tmp_path / "spans.jsonl"
+    routes_file = tmp_path / "routes.json"
+    env = {**os.environ, "TRACE_RUN_FILE": str(span_file), "PYTHONPATH": os.pathsep.join(filter(None, sys.path))}
+    subprocess.run([sys.executable, __file__, str(routes_file)], cwd=REPO, env=env, check=True, timeout=120)
+
+    found = json.loads(routes_file.read_text())
+    routes = found["routes"]
+    assert not found["unchecked"], f"Entry points this test cannot check yet: {found['unchecked']}"
+    assert routes, "the application has no routes to check"
+    lines = span_file.read_text().splitlines() if span_file.exists() else []
+    # Under the trace run these spans belong in its file too.
+    if lines and os.environ.get("TRACE_RUN_FILE"):
+        with open(os.environ["TRACE_RUN_FILE"], "a", encoding="utf-8") as trace_run_file:
+            trace_run_file.write("\n".join(lines) + "\n")
+    spans = [json.loads(line) for line in lines]
+    traced = {
+        (span["attributes"].get("http.request.method") or span["attributes"].get("http.method"), span["attributes"].get("http.route"))
+        for span in spans
+    }
+    untraced = [f"{method} {path}" for method, path in routes if (method, path) not in traced]
+    assert not untraced, f"Untraced entry points: {untraced}"
+
+
+@@REGISTRY_TEST@@
+
+
+if __name__ == "__main__":
+    _drive(sys.argv[1])

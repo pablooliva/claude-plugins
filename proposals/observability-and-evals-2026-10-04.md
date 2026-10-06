@@ -1,6 +1,6 @@
 # Tracing and Evals for Applications Built with sdd-flow
 
-**Status:** Proposal. Nothing is implemented. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
+**Status:** Build step 1 shipped in agent-engineering 3.7.0 (2026-10-06): the `observability-init` skill and the tracing standard. Proven on a scratch copy of the trial application against Opik; not yet run on the trial application itself, and the Langfuse swap is not yet proven (see "Step 1 as built" below). Steps 2 to 4 are not built. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
 **Date:** 2026-10-04
 **Affects:** `agent-engineering/` plugin — two new skills (`observability-init`, `eval-harvest`), one new reference file, one new script, and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `references/enforcement-sites.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.
@@ -203,7 +203,7 @@ Each step is shipped and used on a real application before the next is started.
 - **Seed cases are few and written before the code exists.** They show a slice is not broken; they do not show it is good. The dataset becomes meaningful only after `eval-harvest` has been run on real use.
 - **Judged requirements wait for a person.** An `--auto` run of an LLM feature with a sign-off requirement now stops at the commit checkpoint, where today it would commit unattended. In per-slice mode the slices are already committed by then.
 - **The Opik instance answers API requests without a key, and stays that way (decided).** Anything on the network can read and write traces, and traces will hold LLM inputs and outputs. The capture policy keeps headers and secret environment values out; it does not keep personal data out of a prompt.
-- **The swap is unproven until step 1 validates it.** Both backends have the OpenTelemetry intake route; neither has been sent a span from here, and the two display LLM spans differently.
+- **The swap is unproven until step 1 validates it.** Both backends have the OpenTelemetry intake route. As of 2026-10-06 Opik has received and correctly displayed a trace from the step-1 templates; Langfuse has not been sent one, and the two display LLM spans differently.
 - **Tracing has a run-time cost** even when well configured. The three switches in §2 are the answer; whether `OTEL_SDK_DISABLED` behaves as documented in both language SDKs is part of step 1's validation.
 
 ## Alternatives considered
@@ -229,6 +229,31 @@ Each step is shipped and used on a real application before the next is started.
 8. The trial application is a new education app (an app that helps students learn), written in Python and built with `sdd-flow` from its first slice. Currents is not the trial: it is too complicated to try this on, and gets tracing later as its own piece of work. Step 1 is validated on the education app once its first `sdd-flow` cycle — a small Tier 1 with at least one route and one model call — is finished (`CLAUDEPLUG-12`). The cycle after that is the first one traced.
 
 **Checked on 2026-10-04, by read-only requests:** Opik answers as version 2.2.88, Langfuse as 3.175.0. On both, the OpenTelemetry trace route exists (it refuses a GET with "method not allowed" rather than "not found"). Opik's API answered without credentials; Langfuse's required them.
+
+## Step 1 as built (2026-10-06)
+
+The tracing standard (`agent-engineering/skills/observability-init/references/tracing.md`) is now the source of truth for the rules of §2; where it and §2 differ, the standard holds. It goes beyond §2 in eight places, each confirmed by the user on 2026-10-06:
+
+1. A retry the application makes is a second LLM span; retries an SDK makes on its own stay inside one. A "max N calls" in a planned call graph therefore counts the application's calls.
+2. The HTTP request behind an LLM call is not also counted as an external call.
+3. An application's own rule overrides the capture policy when it is stricter.
+4. The attribute rules bind the application's own code. Attributes an instrumentation library writes are left alone — the GenAI message attributes are JSON strings by convention (Appendix C's last row is narrowed to match).
+5. With no backend address set, the bootstrap module installs no exporter and nothing is sent.
+6. The trace run overrides the kill switch and sampling, but leaves the content switch as it finds it.
+7. Request and response bodies of external calls are not recorded.
+8. `OTEL_EXPORTER_OTLP_HEADERS` counts as secret-named.
+
+Found while building, and built in:
+
+- **The content switch needs translating.** The OpenAI instrumentation records no message text unless asked, and takes `span_only` / `no_content`, not true and false. The bootstrap module turns recording on by default and maps `false` to off, so the switch in §2 works as written.
+- **Opik drops the values recorded once for the whole process**, the application version among them. The bootstrap module also puts name and version on the first span of each trace.
+- **The trace run is keyed on one variable**, `TRACE_RUN_FILE`, which the bootstrap module reads: when it is set, spans go to that file only, every request is kept, and the kill switch is ignored.
+- **The entry-point test drives each route in a fresh process** under that same setting and reads the span file, instead of checking a mark. A registry of jobs or commands is still checked by the wrapper's mark.
+- **A broken package pair:** `opentelemetry-instrumentation-openai-v2` 2.4b0 fails to import with `opentelemetry-util-genai` 1.0 or later; the recipes pin the latter below 1.
+
+Shown on a scratch copy of the trial application (FastAPI 0.142, `openai` 3.24): a real request's trace read back from Opik with the route as first span and the model call beneath it — model, both token counts, input and output messages recognised; nothing sent with the kill switch set, with no endpoint set, or with sampling off; settings taken from the env file alone; the entry-point test failing by name when tracing was taken off one route; no header and no secret value in the span file.
+
+Still to do for step 1: run `/observability-init` on the trial application itself, and prove the swap to Langfuse (`CLAUDEPLUG-7`).
 
 ## Open
 
@@ -259,7 +284,7 @@ Deliberately left to the build step that needs the answer:
 | `skills/eval-harvest/SKILL.md` | New — step 4 |
 | `docs/observability-diagram.md` | Exists (written with this proposal, marked as not implemented); updated to say what exists as each step ships — steps 1–4 |
 | `docs/sdd-flow-diagram.md` | The 4h row's condition (also in `--auto` when a sign-off requirement exists); the 4e.5 row's note on what it now also verifies — steps 2, 3 |
-| `README.md`, repo `CLAUDE.md`, `plugin.json`, `marketplace.json` | Each step is a minor version (3.6.0 onward) |
+| `README.md`, repo `CLAUDE.md`, `plugin.json`, `marketplace.json` | Each step is a minor version (3.7.0 onward; 3.6.0 went to an unrelated `sdd-flow` change) |
 
 ---
 
@@ -319,7 +344,7 @@ in one line. `tracing: on`:
 | An external or LLM call in a trace that the plan does not show | MEDIUM |
 | A marked node in scope that no trace contains, and that is not marked `not exercised in tests` | MEDIUM |
 | A new entry point the entry-point test does not cover | MEDIUM |
-| A structured value stored as a JSON string | LOW |
+| A structured value stored as a JSON string by the application's own code (attributes an instrumentation library writes are left as it writes them — tracing standard, Attribute rules) | LOW |
 
 A difference is resolved by changing the code or the tests, or by recording it under the spec's
 deviations — never by editing the planned call graph to match.

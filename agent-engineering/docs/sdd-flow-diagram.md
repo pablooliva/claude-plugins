@@ -1,6 +1,6 @@
 # sdd-flow — the development cycle at a glance
 
-A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.6.0. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
+A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.7.0. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
 
 **How to read it.** Rounded boxes are work done by a spawned subagent. Red boxes are places the flow **stops and waits for you**. Grey boxes are things the orchestrator (the main conversation) does itself: commits, running a script, recording state.
 

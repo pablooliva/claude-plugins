@@ -1,0 +1,38 @@
+# Observability record
+
+Where each part of this application's tracing foundation lives. Written by `/observability-init` on @@DATE@@; the rules it follows are the agent-engineering plugin's tracing standard (`skills/observability-init/references/tracing.md`).
+
+| What | Where |
+|---|---|
+| Language | @@LANGUAGE@@ |
+| Bootstrap module | @@BOOTSTRAP_PATH@@ |
+| Entry-point wrapper | @@BOOTSTRAP_PATH@@::traced |
+| Entry-point test | @@ENTRY_POINT_TEST_PATH@@ |
+| Trace run | `@@TRACE_RUN_COMMAND@@` — writes @@SPAN_FILE@@ |
+| Tracing backend now | @@BACKEND@@ |
+| Eval command | — |
+
+## Switches
+
+Set in `@@ENV_FILE_NAME@@`, or in the environment, which wins. Read when the process starts.
+
+| To do this | Set |
+|---|---|
+| Switch tracing off entirely | `OTEL_SDK_DISABLED=true` |
+| Keep spans, drop LLM inputs and outputs | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` |
+| Record a fraction of requests | `OTEL_TRACES_SAMPLER=parentbased_traceidratio`, `OTEL_TRACES_SAMPLER_ARG=0.1` |
+| Choose the backend | `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` |
+
+With no endpoint set, nothing is sent anywhere.
+
+## What is traced
+
+@@TRACED@@
+
+## This application's own rules
+
+@@APPLICATION_RULES@@
+
+## Shown to work on @@DATE@@
+
+@@PROOF@@
