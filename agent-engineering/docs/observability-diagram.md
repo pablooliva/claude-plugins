@@ -167,7 +167,7 @@ Evals do not swap: they go to Opik only, and `/eval-harvest` works only while tr
 
 | Stage | With tracing on | With evals on | Who does it |
 |---|---|---|---|
-| `/observability-init` | Writes the bootstrap module, the entry-point wrapper and test, the trace run, and `SDD/OBSERVABILITY.md`; proves the swap, the kill switch, and that the test can fail | — | A skill you run, once per application |
+| `/observability-init` | Writes the bootstrap module, the entry-point wrapper and test, the trace run, and `SDD/OBSERVABILITY.md`; proves that a trace arrives, the kill switch, and that the test can fail | — | A skill you run, once per application |
 | 0 Scope | Records whether the foundation exists | Same record | Orchestrator |
 | 2.5 Design brief and gate | — | The brief states how quality will be judged; you approve it | Opus subagent, then you |
 | 3a Specification | Planned call graph; each slice lists its traced nodes | Eval cases; each slice lists its evals | Sonnet subagent |

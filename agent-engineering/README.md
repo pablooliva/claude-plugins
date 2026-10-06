@@ -71,7 +71,11 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.7.0.
+Version 3.7.1.
+
+### What's new in 3.7.1
+
+- **`observability-init`: sending to a second backend is no longer a condition for the foundation to count as installed.** Applications send to one backend (Opik here). In 3.7.0 the tracing standard also required showing that the same application could send to the other backend after changing only its two backend variables. That test is now run the first time an application needs a second backend; until then the skill reports it as not run and the application's observability record says so. Nothing else in the skill, the templates, or the standard changed.
 
 ### What's new in 3.7.0
 

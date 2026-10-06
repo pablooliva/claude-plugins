@@ -1,6 +1,6 @@
 # Tracing and Evals for Applications Built with sdd-flow
 
-**Status:** Build step 1 shipped in agent-engineering 3.7.0 (2026-10-06): the `observability-init` skill and the tracing standard. Proven on a scratch copy of the trial application against Opik; not yet run on the trial application itself, and the Langfuse swap is not yet proven (see "Step 1 as built" below). Steps 2 to 4 are not built. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
+**Status:** Build step 1 shipped in agent-engineering 3.7.0 (2026-10-06): the `observability-init` skill and the tracing standard. Proven on a scratch copy of the trial application against Opik; not yet run on the trial application itself; the Langfuse swap test is deferred by decision (see "Step 1 as built" below). Steps 2 to 4 are not built. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
 **Date:** 2026-10-04
 **Affects:** `agent-engineering/` plugin — two new skills (`observability-init`, `eval-harvest`), one new reference file, one new script, and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `references/enforcement-sites.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.
@@ -189,7 +189,7 @@ The same skill is where coding agents get query access to traces (the note's Ste
 
 Each step is shipped and used on a real application before the next is started.
 
-1. **`observability-init` and the tracing standard** (`CLAUDEPLUG-8`). No change to `sdd-flow`. Useful alone: any application gets traces, the kill switch, and the swap. Ends with the swap validated against both backends.
+1. **`observability-init` and the tracing standard** (`CLAUDEPLUG-8`). No change to `sdd-flow`. Useful alone: any application gets traces, the kill switch, and the swap. Ends with a real trace read back from one backend; the swap to the other is validated the first time an application needs it (decided 2026-10-06, see "Step 1 as built").
 2. **Tracing in `sdd-flow`** (`CLAUDEPLUG-9`) (§3, §4, §6, §7): Step 0 record, the `tracing:` gate, the planned call graph, the slice line, the implementer rule, the Tracing Lens, the final verification at 4e.5, `trace-tree.py`, the paragraph in the enforcement-site standard.
 3. **Evals in `sdd-flow`** (`CLAUDEPLUG-10`) (§3, §5, §6): the `evals:` gate, the brief decision, `### Evals` in the spec, the slice line, the eval runner templates, the implementer and review rules, sign-off at 4h, the Opik upload.
 4. **`eval-harvest`** (`CLAUDEPLUG-11`) (§8), with trace query access for agents.
@@ -253,7 +253,9 @@ Found while building, and built in:
 
 Shown on a scratch copy of the trial application (FastAPI 0.142, `openai` 3.24): a real request's trace read back from Opik with the route as first span and the model call beneath it — model, both token counts, input and output messages recognised; nothing sent with the kill switch set, with no endpoint set, or with sampling off; settings taken from the env file alone; the entry-point test failing by name when tracing was taken off one route; no header and no secret value in the span file.
 
-Still to do for step 1: run `/observability-init` on the trial application itself, and prove the swap to Langfuse (`CLAUDEPLUG-7`).
+**Decided 2026-10-06: the Langfuse swap test is deferred.** Applications send to Opik. Sending to Langfuse by changing the two backend variables stays designed-for and unproven until an application actually needs it; the standard no longer makes it a condition for the foundation to count as installed, and the skill reports it as not run. `CLAUDEPLUG-7` (the Langfuse key pair) is optional until then.
+
+Still to do for step 1: run `/observability-init` on the trial application itself.
 
 ## Open
 

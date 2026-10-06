@@ -149,7 +149,7 @@ The standard does not count the foundation as installed until these have been se
 1. **The entry-point test can fail.** Take tracing off one entry point (`references/python-recipes.md` says how for each framework), run the entry-point test, and confirm it fails naming that entry point. Put tracing back; confirm it passes.
 2. **A real trace arrives.** With the backend lines in the env file, send one real request through the application — the documented start command and one request, or a few lines that build the app with its real env file and call it through a test client. Stop the process, so the last spans are sent. Then read the trace back from the backend (`references/python-recipes.md`, Backends) and confirm: the entry point is the first span, the model call is beneath it with its model, both token counts, and — unless the content switch is off — its input and output.
 3. **The kill switch stops everything.** Set `OTEL_SDK_DISABLED=true` for one more request and confirm the backend's trace count did not change.
-4. **The other backend, by changing two variables.** Change the two backend variables and nothing else, send one request, read it back from the other backend. Without credentials for it this is not run: say so, and record it as not run.
+4. **The other backend, by changing two variables** — only when the user wants the application able to send to a second backend now. Change the two backend variables and nothing else, send one request, read it back from the other backend. Otherwise it is not run: say so, and record it as not run. The standard does not require it for the foundation to count as installed.
 5. **The trace run** already produced its file in Step 5.
 
 Never print a credential while doing this. Run commands so that keys come from the environment or the env file.
@@ -179,7 +179,7 @@ Tracing foundation installed (create mode)
   Proof:  entry-point test fails without tracing on POST /ask ✓
           trace in Opik: POST /ask → chat <model>, 348 in / 70 out tokens, messages present ✓
           kill switch: no new trace ✓
-          Langfuse: NOT RUN — no key pair
+          Langfuse: NOT RUN — no second backend wanted yet
 
 Not committed:
   git add -A && git commit -m "Add the tracing foundation"
@@ -192,7 +192,7 @@ Not committed:
 
 ### GOOD — a FastAPI application that had telemetry switched off on purpose
 
-Step 2 finds `telemetry={"tracing": False, …}` where the app is built, a requirement that nothing about a request leaves the process, a decision record saying a later tracing tool may carry request text, and a test asserting the option is off. **Plan:** turn the framework's tracing on with `auto_configure` left off; quote the requirement and the decision record side by side and say the decision record is what permits this; list the one test to rewrite (it now asserts that with no endpoint set nothing is exported) and the README sentence that becomes untrue. The user approves; render; the proof runs against Opik; Langfuse is reported as not run for want of a key pair.
+Step 2 finds `telemetry={"tracing": False, …}` where the app is built, a requirement that nothing about a request leaves the process, a decision record saying a later tracing tool may carry request text, and a test asserting the option is off. **Plan:** turn the framework's tracing on with `auto_configure` left off; quote the requirement and the decision record side by side and say the decision record is what permits this; list the one test to rewrite (it now asserts that with no endpoint set nothing is exported) and the README sentence that becomes untrue. The user approves; render; the proof runs against Opik; Langfuse is reported as not run, because no second backend is wanted yet.
 
 ### BAD — making the tests pass by editing them unannounced
 

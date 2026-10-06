@@ -16,7 +16,7 @@ The tracing foundation is five parts. `observability-init` writes them once per 
 4. **One trace run.** A single command that runs the tests which drive real entry points and writes every span to a fresh local file that is complete before the command exits. It sends nothing to a backend, and the file is git-ignored.
 5. **`SDD/OBSERVABILITY.md`**, the observability record: one row each for the language, the bootstrap module, the wrapper, the entry-point test, the trace run and the file it writes, the backend traces go to now, and the eval command (empty until the application has one). Its presence is the sign that the foundation exists.
 
-**The foundation is not installed until it has been shown to work** on the application itself: a span sent from the application arrives in the backend; the same application sends to the other backend after only its two backend variables change; with the kill switch set nothing is sent; the trace run produces its file; and the entry-point test fails when tracing is taken off one entry point, and passes again when it is put back.
+**The foundation is not installed until it has been shown to work** on the application itself: a span sent from the application arrives in the backend; with the kill switch set nothing is sent; the trace run produces its file; and the entry-point test fails when tracing is taken off one entry point, and passes again when it is put back.
 
 ## What gets a span — the three traced kinds
 
@@ -81,7 +81,7 @@ Standard OpenTelemetry environment variables, set in the application's one env f
 | Choose the backend | `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` |
 
 - **With none of them set:** tracing is on, LLM inputs and outputs are recorded, and every request the application starts a trace for is kept. No endpoint is set, so the bootstrap module installs no exporter and nothing is sent anywhere.
-- **Swapping the backend changes those two variables and no file.**
+- **Swapping the backend changes those two variables and no file.** This is shown on an application the first time it needs a second backend; until then its observability record says the swap has not been shown.
 - **The switches are read when the process starts.** Changing one takes effect at the next start.
 - **The trace run overrides the kill switch and the sampling settings** for its one run, in a fresh process, so its span file does not depend on either. It leaves the content switch as it finds it: an application that keeps LLM content out of its traces keeps it out of that file too.
 
