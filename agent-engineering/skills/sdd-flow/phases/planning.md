@@ -4,6 +4,8 @@ Read when research's last step (2e) is done. Phase-execution and fix subagents c
 
 Three resolved paths recur below. **BRIEF** = `SDD/requirements/DESIGN-[###]-[feature-name].md`, the design brief. **TIERS** = the tier standard resolved at Step 0 (`SKILL.md` → SKILL_ROOT resolution). **TIER_PLAN** = `SDD/flow/TIERS-[feature-name].md`, the record of what each delivery tier contains — on a next-tier cycle it is the path recorded at Step 0, which carries the first tier's feature name (no `-t2` / `-t3` suffix).
 
+Two more come from the Step 0 record. **TRACING** = the tracing standard. **The observability line** = `Observability record: present` or `Observability record: absent` — whether the application has the tracing foundation (`phases/setup.md` → Step 0). A Step 0 record with no such line (a flow started before tracing was part of the flow) is read as `absent`. From 3c on, the **tracing gate** is `on` or `off`, as the latest `## Gates - ` line says; a spawn after 3c in a cycle that has no such line (it was planned before tracing was part of the flow) is passed `tracing: off`.
+
 ---
 
 ## Step 2.5: Design Gate
@@ -89,9 +91,9 @@ Then return to 2.5b. The loop has no cap — every round is requested by the use
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning.md`
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/orchestration/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), and on a next-tier cycle the previous tier's research document.
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/orchestration/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **the observability line** copied verbatim, **TRACING** when that line says `present`, and on a next-tier cycle the previous tier's research document.
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, append `progress.md`.
-- **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force.
+- **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force. The body's **tracing rule** applies: the spec carries `tracing:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when the observability line says `present` and the field is not `false` — a `### Planned call graph` under `## Modules` with every entry point, LLM call, and external call marked, plus a `Traced nodes:` line per slice in per-slice mode; otherwise neither.
 
 **If the practicality gate fired** — the subagent's return says so, and an `## Awaiting Slicing Decision` block is the latest in `progress.md` — do not go on: the spec asked for slices and no meaningful ones exist. Show the block's two options and stop, in both modes (in supervised mode the user may answer in the same session). The answer is handled by `phases/protocols.md` → `## Awaiting Slicing Decision`, and both answers come back here: falling back to whole-feature continues with the completion spawn below, and a retry re-runs the spawn above with `RETRY SLICING: <hint>`. Neither skips 3b–3g.
 
@@ -127,6 +129,35 @@ Panel composition comes from the spec's `review_panel:` frontmatter. If absent o
 
 The `agent_security:` value also gates Step 4b's agentic-surface code-review lens, so it must be resolved even when `review_panel:` was authored by hand.
 
+**`tracing` gate — the binding decision.** Whether this feature's real call tree is checked against the planned one is decided here, once per planning run, before any panel spawn. It is decided when no `## Gates - ` line follows the latest `Planning Phase - COMPLETE` line in `progress.md` — so on the first entry to 3c after a spec is written or rewritten, and not again when the fix loop below re-runs the panel. Read the spec's `tracing:` frontmatter (absent means `auto`) and the observability line:
+
+| `tracing:` | Observability line | Gate |
+|---|---|---|
+| `false` | — | `off` |
+| `auto` | `absent` | `off` |
+| `auto` | `present` | `on` |
+| `true` | `present` | `on` |
+| `true` | `absent` | none — halt (below) |
+| any other value | — | none — halt (below) |
+
+- **Record it.** Append `## Gates - tracing: on` or `## Gates - tracing: off` to `progress.md`. The latest such line is the gate for the rest of this cycle: every later spawn that needs it is passed exactly `tracing: on` or `tracing: off`, and no subagent reads the field to decide for itself. An edit to the field after this point — by a fix subagent or by hand — changes nothing until Step 3 runs again (a re-plan writes a new spec, a new `Planning Phase - COMPLETE`, and so a new line here).
+- **No specialist is given the gate.** The panel does not review the planned call graph; the spec critical review (3d) does.
+- **`true` with no foundation, or a value outside the three → halt, in both modes, and spawn nothing.** Append this block to `progress.md`, then tell the user which of the two it is:
+
+  ```markdown
+  ## Awaiting Tracing Decision
+
+  SPEC: SDD/requirements/SPEC-[###]-[feature-name].md
+  tracing: <the value, verbatim>   Observability record: <present|absent>
+  Set `tracing:` in the spec to a value this cycle can honour, then run `/sdd-flow continue`.
+  ```
+
+  > **The spec asks for tracing, and this application has no tracing foundation.** `tracing: true` in `SDD/requirements/SPEC-[###]-[feature-name].md` needs `SDD/OBSERVABILITY.md`, which was absent when this cycle started. A cycle keeps the answer it started with, so tracing cannot be switched on in this one. Set `tracing:` to `auto` or `false` in the spec and run `/sdd-flow continue`; run `/observability-init` once this cycle is finished, and the next cycle is traced.
+
+  > **Invalid `tracing` value '[value]' in `SDD/requirements/SPEC-[###]-[feature-name].md`.** Allowed values: `auto`, `true`, `false`. Edit the spec frontmatter and run `/sdd-flow continue`.
+
+  No gate line is written. `/sdd-flow continue` — or the user's reply in the same session — comes back to this decision and reads the field again (`phases/protocols.md` → `## Awaiting Tracing Decision`). When it resolves, the `## Gates - ` line written then is what ends the halt.
+
 ### Stage 1 — specialists in parallel
 
 Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, multiple spawns). The agent type depends on the value:
@@ -160,9 +191,9 @@ Each iteration:
 
 1. **Record iteration state** in `progress.md` under `## Panel Review Iterations`: iteration number, HIGH/MEDIUM/LOW counts, verdict, timestamp.
 2. **Spawn a fix subagent** (`agent-engineering:sdd-workhorse`):
-   - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, and **TIERS** when the spec carries `tier:`.
+   - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, and **TRACING** when it is `on`.
    - **Outputs:** updated spec (in place), "Findings Addressed" appended to the panel review.
-   - **Task:** Resolve every HIGH and MEDIUM finding; each resolution cites the specific spec change made. Do NOT claim resolution without an actual edit. Embed the **Brief and tier rules for spec fixes** (below) verbatim.
+   - **Task:** Resolve every HIGH and MEDIUM finding; each resolution cites the specific spec change made. Do NOT claim resolution without an actual edit. Embed the **Brief and tier rules for spec fixes** (below) verbatim, and with `tracing: on` the **Call-graph rule for spec fixes** beneath them.
 3. **Re-run Step 3c** (both stages — fresh PANEL-FINDINGS + a fresh synthesis) over the updated spec, producing a new/overwritten `PANEL-SPEC-*`.
 4. **Act on the new verdict, in this order:**
    - **The panel now returns `PROCEED`** → exit the loop and continue to 3d — at any iteration, the third included. A passing verdict is never a halt.
@@ -175,6 +206,10 @@ Each iteration:
 > **Stay inside the approved brief.** If a resolution departs from the design brief's Key decisions, Not doing list, or answered questions, add an entry to the spec's `## Deviations from Design Brief` — do not leave that section saying `None.`. Never reopen a question the user has answered.
 >
 > **Deferral is a resolution only for absent scope.** When the spec carries `tier:` and a finding says something is *missing* — an unspecified edge case, variation, or hardening — you may resolve it by adding a row to `## Deferred to Later Tiers` (next free `DEFER-XXX`, `Came from` = `review`) instead of specifying it, provided the tier standard's cut tests place it in a later tier and its floor does not protect it. If this tier can reach the deferred case, add the `FAIL-XXX` entry for its loud failure in the same edit. A finding about behaviour this tier *does* specify is a defect: fix it — it can never be deferred. A finding that says a deferral is unsafe, or that a part is built ahead for a later tier, is resolved by specifying the item or removing the part.
+
+### Call-graph rule for spec fixes (embed verbatim in the 3c and 3e fix prompts when the gate is `tracing: on`)
+
+> **Keep the planned call graph true to the spec.** A fix that adds, removes, renames, or moves an entry point, a call to a model, a call to an external system, or a delivery slice updates `### Planned call graph` and the slices' `Traced nodes:` lines in the same edit: every such call is a marked node, every LLM node states its maximum, and in per-slice mode every marked node is in exactly one slice's line. Marks follow the tracing standard at the path in your prompt. Never change the spec's `tracing:` field.
 
 ### On halt (cap exhausted or progress stall)
 
@@ -197,18 +232,18 @@ Each iteration:
 
 Spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus):
 - **Body:** `bodies/critical-review.md` — apply its **Planning Phase** section.
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, **BRIEF** with its approved revision and tier, and **TIERS** when the spec carries `tier:`.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, and **TRACING** when it is `on`.
 - **Outputs:** `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`.
-- **Task:** Adversarial review of the spec — the Design Brief Fidelity block (is the spec what the user approved?), ambiguities, untestable criteria, dropped research findings, contradictions, and the feasibility-arithmetic gate over the spec's `### Quantitative Ledger` (do the spec's own numeric constraints permit its own numeric goals?). Complementary to the panel: critical-review is generalist/adversarial; the panel was domain-specialist.
+- **Task:** Adversarial review of the spec — the Design Brief Fidelity block (is the spec what the user approved?), ambiguities, untestable criteria, dropped research findings, contradictions, the feasibility-arithmetic gate over the spec's `### Quantitative Ledger` (do the spec's own numeric constraints permit its own numeric goals?), and the body's **Planned Call Graph** block (with `tracing: on`: is every entry point, LLM call, and external call the spec describes a marked node, and assigned to a slice? with `tracing: off`: is the spec free of one?). Complementary to the panel: critical-review is generalist/adversarial; the panel was domain-specialist.
 
 ---
 
 ## 3e. Address Spec Review Findings (panel + critical, combined)
 
 Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, and **TIERS** when the spec carries `tier:`.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, and **TRACING** when it is `on`.
 - **Outputs:** updated SPEC, append `progress.md`.
-- **Task:** Resolve ALL findings from BOTH reviews — clarify ambiguous requirements, make criteria testable, add missing edge cases or record them as deferred, resolve contradictions, address panel anti-patterns, incorporate dropped research findings. Append "Findings Addressed" sections to both review documents. Embed the **Brief and tier rules for spec fixes** (3c) verbatim.
+- **Task:** Resolve ALL findings from BOTH reviews — clarify ambiguous requirements, make criteria testable, add missing edge cases or record them as deferred, resolve contradictions, address panel anti-patterns, incorporate dropped research findings. Append "Findings Addressed" sections to both review documents. Embed the **Brief and tier rules for spec fixes** (3c) verbatim, and with `tracing: on` the **Call-graph rule for spec fixes** (3c).
 
 ---
 

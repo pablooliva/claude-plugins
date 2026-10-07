@@ -133,6 +133,7 @@ flowchart TD
 | Clarification (1.5) | stops | stops | Your intent has to be written down before research |
 | Design gate (2.5) | stops | stops | You approve *what will be built* before anything is specified |
 | Slicing not practical (3a) | stops | stops | The spec asked for slices, and no meaningful ones exist. Fall back to building it whole, or point at a slice boundary and retry — either way planning carries on from the spec check, with every review |
+| Tracing asked for and not possible (3c) | stops | stops | The spec says `tracing: true` and the application had no tracing foundation when the cycle started, or the field holds a value other than `auto`, `true`, `false`. You change the field in the spec; nothing is reviewed until you do. It cannot fire with the field left at `auto` |
 | Panel halt (3c) | stops | stops | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
 | Deviation check (3g) | stops if deviations | stops if deviations | The spec is no longer what you approved |
 | Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. You resolve the findings; `continue` re-counts and re-reviews the slice |

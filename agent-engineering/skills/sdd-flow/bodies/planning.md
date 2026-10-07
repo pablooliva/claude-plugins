@@ -25,7 +25,11 @@ Starting planning phase based on completed research.
    - When your prompt gives an approved tier of `1`, `2`, or `3`, read **TIERS** (the tier standard — tiers, the floor, the cut tests) and **TIER_PLAN** (what this feature's tiers contain, with its Deferred table) at the paths in your prompt.
    - When the approved tier is `none`, the feature is untiered: skip this, omit `tier:` from the frontmatter, and omit `## Deferred to Later Tiers`.
 
-5. **Update Progress for Planning Phase:**
+5. **Read the Tracing Inputs:**
+   - Your prompt carries the line `Observability record: present` or `Observability record: absent` — whether this application has the tracing foundation. A prompt with no such line (a flow that began before tracing was part of the flow) is read as `absent`.
+   - When it is `present`, your prompt also gives the path of the tracing standard (**TRACING**). Read its sections *What gets a span — the three traced kinds* and *Adding code to a traced application*: they define the three kinds of call you will mark in the planned call graph (Planning Process → *Planned call graph rules*).
+
+6. **Update Progress for Planning Phase:**
    - Add a new planning section to `SDD/orchestration/progress.md`
    - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
    - Add reference to the SPEC document being created
@@ -71,6 +75,7 @@ review_panel: [security, performance, data-modeling, api-contract, module-depth]
 cross_cutting_decisions: []
 delivery_mode: per-slice
 agent_security: auto
+tracing: auto
 tier: 1
 ---
 
@@ -216,6 +221,20 @@ Each module also carries a **Risk** tier consumed by code review to scale review
 
 [Add as many modules as the feature touches. If the feature does not introduce or significantly change any module — e.g., a config-only change — write a single line stating that and skip module entries.]
 
+### Planned call graph
+
+> **Only when tracing is on for this spec** (`tracing:` under Specification Frontmatter Fields). Otherwise omit this sub-section entirely.
+
+One tree per entry point this feature adds or changes. Mark every node of a traced kind; only marked nodes are compared with a trace.
+
+~~~text
+handle_upload(req)                              [entry: POST /uploads]
+├─ validate(req) -> UploadSpec
+├─ store_blob(spec) -> BlobRef                  [external: object store, host from BLOB_ENDPOINT]
+├─ extract(blob) -> Document                    [LLM, max 1 call]
+└─ index(document) -> None                      [external: qdrant — not exercised in tests: no test instance]
+~~~
+
 ## Delivery Slices
 
 > **Required only when `delivery_mode: per-slice`.** Omit this section entirely when `delivery_mode: whole-feature` (the default).
@@ -232,6 +251,7 @@ Each module also carries a **Risk** tier consumed by code review to scale review
 - **Concentrated function:** [one-line description of the vertical thread this slice delivers]
 - **REQs satisfied:** [REQ-XXX references — full or partial. A slice may partially satisfy a REQ; later slices fill it in. Mark partial coverage explicitly, e.g., "REQ-003 (partial: happy path only)".]
 - **Modules touched:** [MODULE-XXX entries this slice cuts through. Use the `Spec refs:` field on each module as the raw material for this list.]
+- **Traced nodes:** [Only when tracing is on; omit the line otherwise. The marked nodes of `### Planned call graph` that this slice brings into existence, each with its kind — e.g. `handle_upload [entry], store_blob [external]` — or `none`.]
 - **Acceptance check:** [a single, focused test that proves the slice works end-to-end. Ideally an automated test name; manual verification step otherwise.]
 - **Sequence rationale:** [why this slice is at this position. SLICE-001 = thinnest end-to-end happy path; subsequent slices add depth, edge cases, and additional concentrated functions.]
 
@@ -318,6 +338,20 @@ The spec template includes these YAML frontmatter fields, consumed by sdd-flow a
 
   This field is about **agentic** risk — prompt injection, tool over-scoping, memory poisoning, excessive autonomy, Denial of Wallet. Classical appsec stays with the `security` panel value; do not drop `security` because you added `agent-security`.
 
+- **`tracing:`** — `auto` (default), `true`, or `false`. Decides whether the flow checks what the feature really does when it runs — the tree of calls a real request produced — against the tree this spec plans. The check needs the application's tracing foundation, which `/observability-init` installs once per application, outside the flow.
+
+  | `tracing:` | `Observability record:` in your prompt | Tracing for this spec |
+  |---|---|---|
+  | `false` | — | off |
+  | `auto` | `absent` | off |
+  | `auto` | `present` | on |
+  | `true` | `present` | on |
+  | `true` | `absent` | off for what you write — the orchestrator stops the flow at Step 3c and asks the user to change the field |
+
+  **Write `auto`** unless the task description in your prompt, the research, or the approved brief says to force the check on or off; the user's word wins over the default in both directions. Write the value in lowercase; any value outside the three is rejected at Step 3c. **Absent means `auto`.**
+
+  **On:** the spec carries `### Planned call graph` under `## Modules` and, in per-slice mode, a `Traced nodes:` line in every slice (Planning Process → *Planned call graph rules*). **Off:** it carries neither, and says nothing about tracing. The orchestrator makes the binding decision from this field at Step 3c and records it; nothing after that reads the field again.
+
 - **`tier:`** — `1`, `2`, or `3`: the delivery tier this spec covers, copied from the approved tier in your prompt. A tier says how much of the feature to build; slices say in what order to build it. Omit the field when the approved tier is `none` (the brief said tiers are not applicable). **Absent means untiered:** every rule applies as it did before tiers existed, so specs written before this field behave unchanged. A `tier:` value is never a reason to lower rigour — the same panel, reviews, tests, and site counts apply to whatever the tier builds.
 
 - **`delivery_mode:`** — `whole-feature` (default) or `per-slice`. Controls whether the spec must include a `## Delivery Slices` section and whether downstream phases route through per-slice behavior.
@@ -375,6 +409,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - If a module must be shallow, fill the `Justification (if shallow)` field. Unjustified shallow modules will be flagged by the `module-depth` specialist in spec-review-panel and should be merged, deepened, or removed.
    - Assign each module a **Risk** tier (low/medium/high) — this drives review depth in code review. High-risk = irreversible, financial, security-critical, regulatory. Low-risk = contained, recoverable, boundary-only.
    - Map every REQ-XXX/EDGE-XXX/FAIL-XXX to at least one module via the `Spec refs:` field — every requirement must have a home.
+   - **With tracing on, draw `### Planned call graph`** beneath the module entries, following *Planned call graph rules* at the end of this list. It is drawn here, before the slices, so that step 8 can assign its marked nodes and so that it exists whichever way the practicality gate (step 10) goes.
 
 8. **Define Delivery Slices (per-slice mode only):**
    - Applies only when `delivery_mode: per-slice` is set in the spec frontmatter. In `whole-feature` mode (the default), omit the `## Delivery Slices` section entirely and skip this step.
@@ -384,6 +419,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - A slice is a vertical thread, not a horizontal layer. Slices that touch only one module when the feature spans multiple are likely horizontal layers in disguise — either widen the thread or justify the single-module slice explicitly in the rationale.
    - REQs may be split across slices; mark partial coverage explicitly (e.g., `REQ-003 (partial: happy path only)`) so later slices can complete them.
    - Every REQ-XXX / EDGE-XXX / FAIL-XXX should be reachable through some slice in the sequence by the time the last slice lands.
+   - **With tracing on, give every slice its `Traced nodes:` line** (*Planned call graph rules* → per-slice mode).
 
 9. **Validate `delivery_mode:` value (spec ingestion gate):**
    - Read the `delivery_mode:` field from the spec frontmatter being created (or, when this body runs against an existing spec, the field already on disk).
@@ -403,7 +439,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
      - Replace the populated `## Delivery Slices` section with the single line: `Slicing not applicable: <reason citing the firing heuristic or "Qualitative judgment: <specific concern>">`.
      - Append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` mirroring the `## Awaiting Clarification` shape exactly. The block names the spec, the firing heuristic (or qualitative judgment text), and the two options: (a) fall back to `whole-feature` for this feature only — `/sdd-flow continue --fall-back-to-whole-feature` [recommended]; (b) point at a slice boundary that was missed and retry — `/sdd-flow continue --retry-slicing "<hint>"`. This header is this gate's alone; nothing else writes it.
      - **In both modes, return** a bounded message (≤200 words) saying the gate fired, with the SPEC path and `SDD/orchestration/progress.md` as artifact paths. You cannot ask the user anything; the orchestrator shows the options (supervised) or stops (autonomous), and either answer brings the flow back into planning — the spec is checked and reviewed before any code is written.
-   - **Retry run.** When your prompt carries the line `RETRY SLICING: <hint>`, the spec already exists and the gate fired on it once: redo step 8 using the hint as the slice boundary to start from, then steps 9–10. Change nothing else in the spec. If the gate fires again, write a new block as above.
+   - **Retry run.** When your prompt carries the line `RETRY SLICING: <hint>`, the spec already exists and the gate fired on it once: redo step 8 using the hint as the slice boundary to start from — its `Traced nodes:` lines included when tracing is on — then steps 9–10. Change nothing else in the spec. If the gate fires again, write a new block as above.
    - When none of the heuristics fire and qualitative judgment is that slicing is meaningful, proceed with the populated `## Delivery Slices` section — no halt, no annotation.
 
 11. **Run the Feasibility Arithmetic Self-Check:**
@@ -411,6 +447,21 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - For each `goal` row, take every constraint named in its `Bears on` column and do the arithmetic: does the headroom the constraint permits cover the movement the goal requires? Convert to a common unit first; a unit mismatch is itself a finding.
    - If any goal needs more headroom than its constraints permit, the spec is internally contradictory — effective and compliant are mutually exclusive. Do NOT write the spec around it. Resolve it now: relax the constraint, lower the goal, or specify a different mechanism, and record which you chose in `## Implementation Notes`.
    - If a goal's `Bears on` column is empty because no constraint was written down, re-read the Non-Functional Requirements before accepting that — an unstated cap that shows up later as an eval criterion is the same failure, discovered more expensively.
+
+### Planned call graph rules (tracing on only)
+
+Steps 7 and 8 apply these when tracing is on for this spec (the table under `tracing:` above). When it is off, write no `### Planned call graph` and no `Traced nodes:` line.
+
+- **One tree per entry point the feature adds or changes** (step 7), under `## Modules`: the entry point at the top, and beneath it what it calls, in call order, down to every call to a model and every call that leaves the process. The whole tree is there so a reader can check the design; ordinary functions in it are left unmarked and are never compared with anything.
+- **Naming nodes.** A call that crosses into a module is written as that module's `Public Interface` names it. A step inside a module — the model and external calls usually are, since they are what a module hides — is named for what it does; it needs no interface entry and does not make the module's interface any larger.
+- **Mark every node of the three traced kinds** the tracing standard defines. A review later compares each marked node with what a real run recorded, so write each mark in the form a trace will show:
+  - **`[entry: …]`** — for an HTTP route, the method and the route's path exactly as the framework will register it: `[entry: POST /uploads]`, `[entry: GET /items/{item_id}]`. For a queue consumer, a scheduled job, or a command, the dotted name of the function that is the entry point: `[entry: app.jobs.nightly_digest]`.
+  - **`[LLM, max N calls]`** — `N` is the most calls to a model the application makes at this node in one request, counting its own retries (each is a call of its own; retries an SDK makes inside one call are not). The review holds one request to the sum of these maxima for its entry point, so state the real ceiling, not a hope.
+  - **`[external: X]`** — `X` is the system the call reaches, named as a trace names it: the database's or message system's own name (`postgresql`, `redis`, `kafka`), otherwise the host (`api.stripe.com`). When the host comes from configuration, name the system and the setting that holds its address (`object store, host from BLOB_ENDPOINT`). The HTTP request a model SDK makes belongs to its LLM node; do not mark it separately.
+- **`not exercised in tests: <reason>`** — add it inside the mark of an external or LLM node only when no test can drive that call for real, because no test instance of the other system exists. The review skips such a node and says so. It is not for a node a test merely does not cover yet: that is a test to write, and the review will ask for it.
+- **Per-slice mode — assign every marked node to a slice** (step 8). Each `SLICE-XXX` entry gets a `Traced nodes:` line listing the marked nodes that slice brings into existence, each with its kind. Every marked node appears in exactly one slice's line: the slice whose code first makes that call — whether or not a test can drive it, so a `not exercised in tests` node is assigned like any other. A slice that brings none writes `none`. A slice is later reviewed against its own nodes and those of the slices before it, so a node assigned too early is a finding against a slice that could not have built it.
+- **Whole-feature mode** has no slices and no `Traced nodes:` lines; the whole graph is checked in the one code review.
+- A feature that adds or changes no entry point, model call, or external call still gets the sub-section, with the single line `No entry point, LLM call, or external call is added or changed.`
 
 ## Deliverable Expectations
 
@@ -450,6 +501,10 @@ Before considering the specification complete:
 - [ ] `### Quantitative Ledger` is populated with every goal and constraint the spec asserts, or carries the single line `No quantitative goals or constraints.`
 - [ ] Each `goal` row's `Bears on` column names the constraints acting on it, and the arithmetic clears — no goal requires more headroom than its constraints permit
 - [ ] `agent_security:` is populated, and when the feature has an agentic surface the value is `true` and `review_panel:` includes `agent-security`
+- [ ] `tracing:` is `auto`, `true`, or `false`
+- [ ] Tracing on: `### Planned call graph` has one tree per entry point the feature adds or changes; every entry point, LLM call, and external call in it is marked in the form *Planned call graph rules* gives; every LLM node states its maximum; a `not exercised in tests` mark carries its reason
+- [ ] Tracing on, `delivery_mode: per-slice`: every slice has a `Traced nodes:` line, and every marked node is in exactly one of them
+- [ ] Tracing off: the spec has no `### Planned call graph` and no `Traced nodes:` line
 
 ---
 

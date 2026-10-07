@@ -151,6 +151,23 @@ If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## De
 - [ ] **Coverage** — Will every REQ-XXX / EDGE-XXX / FAIL-XXX be reachable through some slice by the time the last slice lands? Orphan REQs are a HIGH finding.
 - [ ] **Acceptance check quality** — Each slice's `Acceptance check` field cites a single, focused, testable criterion. Bare "manual verification" with no detail is a MEDIUM finding.
 
+### Planned Call Graph (by the tracing gate in your prompt)
+
+Your prompt carries the line `tracing: on` or `tracing: off` — whether the flow will later check what this feature really does when it runs against the tree of calls the spec plans. With no such line (a spec reviewed outside the flow, or a flow begun before tracing was part of it), skip this sub-section silently.
+
+**`tracing: off`** — the spec must carry no `### Planned call graph` and no `Traced nodes:` line. One that is there is a LOW finding: nothing will check it, and a reader will assume something does. Record one line and move on.
+
+**`tracing: on`** — read the tracing standard at the path in your prompt (*What gets a span — the three traced kinds*): an entry point, a call to a model, a call to an external system. Those are the nodes a later review compares with a real run, so each must be in the graph, marked, and assigned. Verify:
+
+- [ ] **Graph present** — `### Planned call graph` exists under `## Modules`, with one tree per entry point the feature adds or changes. No graph, or an entry point the requirements describe that has no tree, is a HIGH finding: the code review will have nothing to compare.
+- [ ] **Every traced call is a marked node** — walk the requirements, the modules' `Hides` fields, and the failure scenarios. Every call to a model and every external system they mention appears in a tree as `[LLM, max N calls]` or `[external: X]`. One that is missing or left unmarked is a MEDIUM finding.
+- [ ] **Marks can be matched to a trace** — an entry mark is the HTTP method and the route's path as the framework will register it, or the dotted name of the job, consumer, or command; an external mark names the system as a trace names it (the database's or message system's own name, otherwise the host or the setting that holds it). A mark that only describes (`[entry: the upload endpoint]`, `[external: the API]`) is a MEDIUM finding.
+- [ ] **Every LLM node's maximum is the real ceiling** — check `N` against what the spec says about retries, loops, and fallbacks. A `FAIL-XXX` that retries a model call three times beside `max 1 call` is a contradiction, and a HIGH finding; so is an LLM node with no maximum.
+- [ ] **`not exercised in tests` is earned** — it carries a reason, and the reason is that no test instance of the other system exists. Used for a call the application's tests could drive is a MEDIUM finding: it switches the later check off for that node.
+- [ ] **Nothing else is marked** — a mark on an ordinary in-process function, or the HTTP request behind a model call marked as an external node of its own, is a LOW finding.
+- [ ] **The graph and the modules describe one design** — a call that crosses into a module is named as that module's `Public Interface` names it; one that is not is a MEDIUM finding. A step inside a module needs no interface entry — the model and external calls are usually what a module hides — but each belongs to a `MODULE-XXX`, and a marked node no module accounts for is a MEDIUM finding.
+- [ ] **Slice assignment (per-slice mode only)** — every slice has a `Traced nodes:` line; every marked node is in exactly one of them; and each is assigned to the slice whose code first makes that call, judged by the slices' `REQs satisfied` and `Modules touched` — a node marked `not exercised in tests` included. A node unassigned, assigned twice, or assigned to a slice that could not have built it is a MEDIUM finding — a slice is reviewed against its own nodes and those of the slices before it.
+
 ### Research Alignment Issues
 
 - [ ] **Dropped findings** - What research insights didn't make it into the spec? (In a tiered spec, a finding recorded under `## Deferred to Later Tiers` is accounted for, not dropped.)
@@ -204,6 +221,9 @@ If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## De
 
 ### Design Brief Fidelity
 [One line if no brief exists. Otherwise each unrecorded departure, with the brief's text and the spec's, or "Spec matches the approved brief; N recorded deviation(s) verified."]
+
+### Planned Call Graph
+[Omit when your prompt carries no tracing gate. `tracing: off`: one line. `tracing: on`: each finding with its severity, the node or slice it concerns, and the correction — or "Graph covers N entry point(s); every LLM and external call marked and assigned."]
 
 ### Research Disconnects
 - Research finding "[X]" not addressed in spec
