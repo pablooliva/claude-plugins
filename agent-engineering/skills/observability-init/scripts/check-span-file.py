@@ -5,8 +5,9 @@
 
 Reports, by name only, every secret-named environment variable whose value appears anywhere in the span file,
 and every attribute that carries request or response headers. A secret-named variable is one whose name contains
-KEY, TOKEN, SECRET, PASSWORD or CREDENTIAL, plus OTEL_EXPORTER_OTLP_HEADERS, whose header values are checked one
-by one. Values come from the process environment and from every env file given; a name with different values in
+KEY, TOKEN, SECRET, PASSWORD or CREDENTIAL. OTEL_EXPORTER_OTLP_HEADERS is checked header by header: the value of a
+header that carries a credential (its name contains AUTH, COOKIE or one of the words above) is a secret; any other
+header, such as a project name, is not. Values come from the process environment and from every env file given; a name with different values in
 different places has each value checked. No value is ever printed: a name that itself contains a secret value is
 printed with that part replaced.
 
@@ -24,6 +25,7 @@ from urllib.parse import unquote
 
 SECRET_NAME = re.compile("KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL", re.IGNORECASE)
 OTLP_HEADERS = re.compile(r"^OTEL_EXPORTER_OTLP_(TRACES_)?HEADERS$")
+CREDENTIAL_HEADER = re.compile("AUTH|COOKIE|KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL", re.IGNORECASE)
 HEADER_ATTRIBUTE = re.compile(r"(^|\.)headers?(\.|$)", re.IGNORECASE)
 # A value shorter than this is matched only against a whole recorded value: inside longer text it matches by accident.
 SHORTEST_SUBSTRING = 4
@@ -65,8 +67,8 @@ def secrets(sources):
         for name, value in environment.items():
             if OTLP_HEADERS.match(name):
                 for number, pair in enumerate(value.split(","), start=1):
-                    _, equals, header_value = pair.partition("=")
-                    if not equals:
+                    header_name, equals, header_value = pair.partition("=")
+                    if not equals or not CREDENTIAL_HEADER.search(unquote(header_name)):
                         continue
                     header_value = unquote(header_value.strip())
                     found.append((f"{name} header {number} ({where})", header_value))
@@ -116,10 +118,10 @@ def redact(text, wanted):
 def check(span_lines, sources):
     """Returns (labels of secrets found, header attribute names, labels matched as whole values only).
 
-    The first two are safe to print; the third holds variable names only.
+    All three are safe to print.
     """
     wanted = secrets(sources)
-    short = sorted({label for label, value in wanted if len(value) < SHORTEST_SUBSTRING})
+    short = sorted({redact(label, wanted) for label, value in wanted if len(value) < SHORTEST_SUBSTRING})
     leaked, headers = set(), set()
     for line in span_lines:
         if not line.strip():

@@ -45,6 +45,17 @@ Goes beside the application's other modules (`src/<package>/telemetry.py`).
 
 **Where `setup_tracing()` is called.** Once, where the application loads its configuration at startup — not at import. Pass the env file path through if the application lets a caller choose one, so that a test which supplies its own env file never reads the developer's. For FastAPI that is the lifespan function, next to the configuration load. For a command-line program it is the first line of `main()`.
 
+**Where `flush_tracing()` is called.** Once, when the application shuts down. Python's own exit hook sends waiting spans from an ordinary process, but a server worker started by a reloader (`fastapi dev`, `uvicorn --reload`) or by a process manager is ended without it, and the spans of its last seconds are lost (seen: three requests just before a stop left no trace). For FastAPI, the end of the lifespan function:
+
+```python
+    try:
+        yield
+    finally:
+        flush_tracing()
+```
+
+For a command-line program or a job, the end of `main()`. It asks the tracing library for five seconds; the library can take longer when the backend is slow to answer. It does nothing when tracing is off.
+
 **It is decided once per process.** The first call fixes the settings; later calls return at once. That is what makes it safe to call from every app instance a test suite builds.
 
 ## Web framework
@@ -105,6 +116,13 @@ def test_every_job_is_traced():
 
 `traced` sets `__traced__`. If entry points of some kind are in no table at all, do not invent one unasked: say in the plan that this kind is outside the test, as the standard allows, and name them in the record.
 
+## The application's tests
+
+Two changes to tests the application already has, when Step 2 finds them. Both go in the plan.
+
+- **A test that starts the application from the repository** (the documented start command, or the app built with no env file of its own) reads the developer's real env file. Keep it from sending: set `OTEL_SDK_DISABLED=true` in the environment that test gives the process. If the tests share a fixture that cleans the environment, have it also remove `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS`, so a developer's shell cannot make a test send either.
+- **A test that starts a real server with an environment it builds itself** drops `TRACE_RUN_FILE`. Pass that one name through when it is set (`if "TRACE_RUN_FILE" in os.environ: env["TRACE_RUN_FILE"] = os.environ["TRACE_RUN_FILE"]`), so the trace run's file holds those requests — often the only ones that make a real model-client call.
+
 ## `trace_run.py.template` — the trace run
 
 Goes in the project's scripts folder (`scripts/trace_run.py`).
@@ -145,7 +163,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://<host>:5173/api/v1/private/otel
 OTEL_EXPORTER_OTLP_HEADERS=projectName=<application>
 ```
 
-To confirm a trace arrived, a few seconds after the process that sent it has exited:
+The project name is not a credential, and `scripts/check-span-file.py` does not treat it as one. To confirm a trace arrived, a few seconds after the process that sent it has exited:
 
 ```bash
 curl -s "http://<host>:5173/api/v1/private/traces?project_name=<application>&size=1"

@@ -71,7 +71,18 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.7.1.
+Version 3.7.2.
+
+### What's new in 3.7.2
+
+Four fixes to `observability-init`, each found on its first run on a real application (a FastAPI app started with `fastapi dev`), where each had to be worked around by hand.
+
+- **The last traces before a stop are no longer lost.** A server worker started by a reloader or a process manager is ended without Python's exit hooks, so spans from its last seconds were never sent: three requests made just before a stop left no trace. The bootstrap module gains `flush_tracing()`, called when the application shuts down; the tracing standard now makes that part of the bootstrap module's job.
+- **The span-file check no longer flags the project name.** `check-span-file.py` treated every header in `OTEL_EXPORTER_OTLP_HEADERS` as a secret, so the Opik recipe's own `projectName=<application>` line — the same text as the service name on every trace — failed the check on every install. Only a header that carries a credential (an authorization header, a key, a token, a cookie) is a secret now, and the standard says so.
+- **Discovery looks for tests that would send traces.** A test that starts the application from the repository reads the developer's real env file and would send traces on every run once backend lines are in it. A test that starts a real server with an environment of its own drops the trace run's variable, so its requests were missing from the trace run's file. The skill now searches for both, puts each in the plan, and the recipes say how to fix each.
+- **The plan says everything that is recorded.** It now also states that a request's query string is recorded, and that a failed call records its error text, which can repeat what the other system answered. The standard's capture policy lists both.
+
+The skill has now been run on the trial application itself (2026-10-07), with every proof seen except the swap to a second backend, which is deferred.
 
 ### What's new in 3.7.1
 

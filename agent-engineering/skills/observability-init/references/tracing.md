@@ -10,7 +10,7 @@ Two words used throughout: a **span** is one timed record of one operation — i
 
 The tracing foundation is five parts. `observability-init` writes them once per application.
 
-1. **One bootstrap module.** The only file of the application's own code that names a tracing backend, an exporter, or an instrumentation library; tests may name them too. It switches on the framework instrumentation for what the application uses (web framework, HTTP client, database driver, LLM SDK), so the common calls are traced without anyone remembering to. The rest of the application uses the OpenTelemetry API — the vendor-neutral tracing interface — and nothing else.
+1. **One bootstrap module.** The only file of the application's own code that names a tracing backend, an exporter, or an instrumentation library; tests may name them too. It switches on the framework instrumentation for what the application uses (web framework, HTTP client, database driver, LLM SDK), so the common calls are traced without anyone remembering to. It also sends the spans still waiting when the application shuts down, so that the last requests before a stop are not lost. The rest of the application uses the OpenTelemetry API — the vendor-neutral tracing interface — and nothing else.
 2. **One wrapper** for entry points the framework instrumentation does not see.
 3. **One entry-point test.** It lists the application's entry points from the application's own registries — the framework's route table, the job registry, the command table — never from a hand-kept list, and fails naming every entry point that is not traced. An entry point of a kind that has no registry is outside this test; whoever reviews the code has to catch it.
 4. **One trace run.** A single command that runs the tests which drive real entry points and writes every span to a fresh local file that is complete before the command exits. It sends nothing to a backend, and the file is git-ignored.
@@ -39,6 +39,8 @@ A span existing is cheap. Storing values on it costs money and can leak. The pol
 | Data | Policy |
 |---|---|
 | Span name, timing, and status (ok or error) | Always |
+| Entry point: the request's path and query string | Always, as the framework instrumentation records them. A question or an id sent in the address is therefore in the trace |
+| A failed call: the error's type and text | Always, as the instrumentation records them. The text can repeat what the other system answered |
 | LLM call: the model asked for | Always |
 | LLM call: the model that answered, token counts in and out | Always when the reply reports them; left out when it does not |
 | LLM call: inputs and outputs | Always, unless the content switch is off (see Switches) |
@@ -48,7 +50,7 @@ A span existing is cheap. Storing values on it costs money and can leak. The pol
 | Other environment values | Allowed (the application version on every trace is one) |
 | Arguments and return values of ordinary functions | Off. Recorded only on a span someone added by hand while debugging |
 
-- **Secret-named** means the variable's name contains `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, or `CREDENTIAL`, in any letter case — and `OTEL_EXPORTER_OTLP_HEADERS`, which carries the backend's own credentials.
+- **Secret-named** means the variable's name contains `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, or `CREDENTIAL`, in any letter case. In `OTEL_EXPORTER_OTLP_HEADERS`, the value of each header that carries a credential (an authorization header, an API key, a token) is a secret too; a header that only names a project is not.
 - **An application's own rule overrides this policy when it is stricter.** If the application's spec or a decision record forbids recording something this policy records, the application's rule holds. The bootstrap module applies it — with a switch below where one fits, by removing the value before it is recorded where none does — and the observability record says so.
 
 ## Attribute rules

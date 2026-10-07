@@ -1,6 +1,6 @@
 # Tracing and Evals for Applications Built with sdd-flow
 
-**Status:** Build step 1 shipped in agent-engineering 3.7.0 (2026-10-06): the `observability-init` skill and the tracing standard. Proven on a scratch copy of the trial application against Opik; not yet run on the trial application itself; the Langfuse swap test is deferred by decision (see "Step 1 as built" below). Steps 2 to 4 are not built. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
+**Status:** Build step 1 shipped in agent-engineering 3.7.0 (2026-10-06): the `observability-init` skill and the tracing standard. Run on the trial application on 2026-10-07 (3.7.1), sending to Opik, with every proof seen; four gaps that run found were fixed in 3.7.2. The Langfuse swap test is deferred by decision (see "Step 1 as built" below). Steps 2 to 4 are not built. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
 **Date:** 2026-10-04
 **Affects:** `agent-engineering/` plugin — two new skills (`observability-init`, `eval-harvest`), one new reference file, one new script, and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `references/enforcement-sites.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.
@@ -241,7 +241,7 @@ The tracing standard (`agent-engineering/skills/observability-init/references/tr
 5. With no backend address set, the bootstrap module installs no exporter and nothing is sent.
 6. The trace run overrides the kill switch and sampling, but leaves the content switch as it finds it.
 7. Request and response bodies of external calls are not recorded.
-8. `OTEL_EXPORTER_OTLP_HEADERS` counts as secret-named.
+8. In `OTEL_EXPORTER_OTLP_HEADERS`, the value of a header that carries a credential counts as a secret. (First written as "the whole variable counts as secret-named"; narrowed in 3.7.2, because the Opik recipe's project-name header is the service name on every trace.)
 
 Found while building, and built in:
 
@@ -255,7 +255,11 @@ Shown on a scratch copy of the trial application (FastAPI 0.142, `openai` 3.24):
 
 **Decided 2026-10-06: the Langfuse swap test is deferred.** Applications send to Opik. Sending to Langfuse by changing the two backend variables stays designed-for and unproven until an application actually needs it; the standard no longer makes it a condition for the foundation to count as installed, and the skill reports it as not run. `CLAUDEPLUG-7` (the Langfuse key pair) is optional until then.
 
-Still to do for step 1: run `/observability-init` on the trial application itself.
+**Run on the trial application, 2026-10-07** (eduKate commit `ad7f201`, plugin 3.7.1, `CLAUDEPLUG-8` done). Seen there: the entry-point test failing by name with tracing off `POST /ask`; a real request's trace read back from Opik with the model call beneath the route, its model, token counts, input and output, and the application version on the first span; the kill switch leaving Opik's trace count unchanged; the trace run writing 366 spans. The span names seen, for step 2's comparison: a route is `METHOD /path`; the model call is `chat <model>`; the framework adds `fastapi.dependencies`, `fastapi.endpoint` and `fastapi.serialization` beneath the route; a refused request or an unknown path is named by the method alone.
+
+That run found four gaps, fixed in 3.7.2 (`CLAUDEPLUG-14`): spans of the last seconds lost when the server is stopped under a reloader (the bootstrap module now has `flush_tracing()`, called at shutdown — proven on a scratch copy started with `fastapi dev`: no trace received without it, one with it); the span-file check flagging the Opik project-name header; discovery missing tests that start the application from the repository, and real-server tests dropping the trace run's variable; and the plan not saying that the query string and a failed call's error text are recorded.
+
+Nothing remains to do for step 1.
 
 ## Open
 

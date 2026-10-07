@@ -29,6 +29,7 @@ _CONVENTIONS = "OTEL_SEMCONV_STABILITY_OPT_IN"
 
 _lock = threading.Lock()
 _done = False
+_provider = None
 
 
 def setup_tracing(env_file: Path | None = None) -> None:
@@ -41,7 +42,16 @@ def setup_tracing(env_file: Path | None = None) -> None:
         _done = True
 
 
+def flush_tracing(timeout_seconds: float = 5) -> None:
+    """Send the spans still waiting. Call it when the application shuts down: a process that is ended without
+    running Python's exit hooks - a server worker under a reloader or a process manager - would lose the spans of
+    its last seconds. The timeout is a request; the tracing library can take longer when the backend is slow."""
+    if _provider is not None:
+        _provider.force_flush(int(timeout_seconds * 1000))
+
+
 def _set_up(env_file: Path) -> None:
+    global _provider
     _read_env_file(env_file)
     _never_capture_headers()
     span_file = os.environ.get(TRACE_RUN_FILE)
@@ -73,6 +83,7 @@ def _set_up(env_file: Path) -> None:
     # Instrument first: the provider can be published only once, so nothing that can fail comes after it.
     _instrument(provider)
     trace.set_tracer_provider(provider)
+    _provider = provider
 
 
 def _instrument(provider) -> None:

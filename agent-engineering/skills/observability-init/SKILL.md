@@ -36,7 +36,7 @@ Bundled files (read by path when needed):
 1. **Printing secrets.** Reading the env file into the conversation to see which tracing settings it has. Resolution: names only (Step 2's command). Values never enter the transcript, and no credential is ever written into a file by this skill — the user adds backend lines to the env file themselves.
 2. **Quietly reversing the application's own decision.** The application switched something off on purpose — framework telemetry, an access log — and has a requirement, a decision record, or a test that says so. Flipping it because the template needs it is wrong. Resolution: Step 2 looks for these; Step 3 shows each one, what changes, and which of the application's tests and documents change with it. Nothing of the kind is edited without that approval.
 3. **A second file that knows the backend.** A vendor SDK import (`opik`, `langfuse`) or a vendor decorator in application code; a framework left to build its own exporter from the environment. Resolution: the bootstrap module is the only place; application code uses the OpenTelemetry API.
-4. **Tests that send traces.** Calling `setup_tracing()` at import, or letting it read the developer's env file under the test suite. Resolution: call it where configuration is loaded at startup, and pass the env file through when the application lets a caller choose one.
+4. **Tests that send traces.** Calling `setup_tracing()` at import, or letting it read the developer's env file under the test suite. Once backend lines are in that file, every test run would send traces. Resolution: call it where configuration is loaded at startup, and pass the env file through when the application lets a caller choose one; Step 2 finds every test that starts the application from the repository itself, and the plan says how each is kept from sending (`references/python-recipes.md`, The application's tests).
 5. **Claiming it works without looking.** Reporting "traces are sent" because no error was printed. Resolution: Step 6 reads the trace back from the backend. A check that was not run is reported as not run.
 6. **Leaving the proof in.** Taking tracing off one entry point to show the test fails, and not putting it back. Resolution: Step 6 restores it and re-runs the test; Step 7's `git diff` is read for the leftover.
 7. **Trusting an unproven recipe.** The instrumentation packages are betas and break between releases. Resolution: a recipe marked unproven is named as such in the plan, and only Step 5's import check and Step 6's real span make it proven.
@@ -94,7 +94,7 @@ Find, by reading the code:
 - **The framework and where the app is built**, and every **entry point**: routes, and anything the framework does not see (jobs, consumers, commands) with the table that lists them, if one exists.
 - **Every LLM call and external call**, and the library each goes through.
 - **Where configuration is loaded at startup**, which env file it reads, and whether a caller can pass a different one.
-- **How the tests build the application**: fixtures, stand-ins for the model, how they keep a developer's environment out, and which tests start a real server.
+- **How the tests build the application**: fixtures, stand-ins for the model, how they keep a developer's environment out, and which tests start a real server. Two kinds matter most. A test that **starts the application from the repository** — runs the documented start command, or builds the app with no env file of its own — reads the developer's real env file, and will send traces once backend lines are in it. A test that **starts a real server with an environment it builds itself** drops the trace run's variable, so its requests are missing from the trace run's file. Search for them: `git grep -n -E 'subprocess|Popen|uvicorn|fastapi (dev|run)' -- '*test*'`.
 - **The application's own rules** about what may be recorded or sent out — in its spec, decision records, README, and tests. A rule stricter than the standard's capture policy overrides it. A test that asserts tracing or telemetry is off will fail once it is on.
 - **Whether its installed packages work together**: in a scratch directory, never the repository, install the packages `references/python-recipes.md` names for what you found and import each instrumentation.
 
@@ -104,9 +104,10 @@ One plan, in one message. Nothing is written before the user approves it.
 
 - **Packages** to add, with any pin and its reason.
 - **New files** — the four, with their paths.
-- **Edits to existing files** — each one: file, the line, what it becomes, and why. This always includes the call to `setup_tracing()` and the framework's tracing switch.
+- **Edits to existing files** — each one: file, the line, what it becomes, and why. This always includes the call to `setup_tracing()`, the call to `flush_tracing()` at shutdown, and the framework's tracing switch.
 - **The application's own decisions this touches** (Anti-Pattern 2) — each rule found in Step 2, quoted with its source, and what happens to it: kept and applied (how), or changed (which requirement text, test, and document change with it). A stricter rule is applied, not argued with.
-- **What will be recorded** — in one plain paragraph: which requests, and that the text sent to and returned by the model goes to the backend unless the content switch is set.
+- **What will be recorded** — in plain words, each of these: which requests; that the text sent to and returned by the model goes to the backend unless the content switch is set; that a request's path **and query string** are recorded, so anything sent in the address is in the trace; and that when a call fails, **the error text is recorded**, which can repeat what the other system answered — a gateway's error body, for one. If the application has a rule against any of these, that rule is in the next item, not waved through here.
+- **The application's tests** — each test found in Step 2 that would send traces or drop the trace run's variable, and the change that fixes it.
 - **Backend** — which one, and the exact lines the user adds to the env file. The skill does not write them.
 - **The proof** (Step 6) — what will be run, including that it makes **one real model call** and sends **one real trace** to the backend, and which checks cannot be run yet and why (no key pair for the second backend, for example).
 - **Unproven recipes** in use.
@@ -120,7 +121,7 @@ Read the templates and `references/python-recipes.md`, then:
 
 1. Add the packages with the project's own tool.
 2. Write the bootstrap module, the entry-point test, and the trace run from their templates.
-3. Make the approved edits: the `setup_tracing()` call, the framework switch, `.traces/` in `.gitignore`, and the application's own tests and documents listed in the plan.
+3. Make the approved edits: the `setup_tracing()` call and the `flush_tracing()` call at shutdown, the framework switch, `.traces/` in `.gitignore`, and the application's own tests and documents listed in the plan.
 
 Do not write `SDD/OBSERVABILITY.md` yet — it records Step 6's results.
 
@@ -147,7 +148,7 @@ Any failure: fix and re-run this step. A secret or a header in the span file is 
 The standard does not count the foundation as installed until these have been seen. Run the ones the plan listed; a check that cannot be run is reported as not run, with the reason.
 
 1. **The entry-point test can fail.** Take tracing off one entry point (`references/python-recipes.md` says how for each framework), run the entry-point test, and confirm it fails naming that entry point. Put tracing back; confirm it passes.
-2. **A real trace arrives.** With the backend lines in the env file, send one real request through the application — the documented start command and one request, or a few lines that build the app with its real env file and call it through a test client. Stop the process, so the last spans are sent. Then read the trace back from the backend (`references/python-recipes.md`, Backends) and confirm: the entry point is the first span, the model call is beneath it with its model, both token counts, and — unless the content switch is off — its input and output.
+2. **A real trace arrives.** With the backend lines in the env file, send one real request through the application — the documented start command and one request, or a few lines that build the app with its real env file and call it through a test client. Stop the process the way a user would; the `flush_tracing()` call at shutdown is what sends the last spans, and this step is its proof — if the trace is missing, look there first. Then read the trace back from the backend (`references/python-recipes.md`, Backends) and confirm: the entry point is the first span, the model call is beneath it with its model, both token counts, and — unless the content switch is off — its input and output.
 3. **The kill switch stops everything.** Set `OTEL_SDK_DISABLED=true` for one more request and confirm the backend's trace count did not change.
 4. **The other backend, by changing two variables** — only when the user wants the application able to send to a second backend now. Change the two backend variables and nothing else, send one request, read it back from the other backend. Otherwise it is not run: say so, and record it as not run. The standard does not require it for the foundation to count as installed.
 5. **The trace run** already produced its file in Step 5.
@@ -170,7 +171,7 @@ Tracing foundation installed (create mode)
   scripts/trace_run.py                    uv run python scripts/trace_run.py → .traces/spans.jsonl
   SDD/OBSERVABILITY.md                    the record
 
-  Also changed: src/app/app.py (setup_tracing call, framework tracing on), .gitignore,
+  Also changed: src/app/app.py (setup_tracing and flush_tracing calls, framework tracing on), .gitignore,
                 tests/test_app.py (one test rewritten — plan item 4), README.md (one paragraph)
   Packages:     opentelemetry-sdk, opentelemetry-exporter-otlp-proto-http,
                 opentelemetry-instrumentation-openai-v2, opentelemetry-util-genai<1 (pin: see recipes)

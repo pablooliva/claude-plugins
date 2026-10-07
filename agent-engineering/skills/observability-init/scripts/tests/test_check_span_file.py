@@ -69,6 +69,22 @@ class CheckTest(unittest.TestCase):
         leaked, _ = self.check([span({"x": "Basic QUJDREVGRw=="})], environment)
         self.assertEqual(leaked, ["OTEL_EXPORTER_OTLP_HEADERS header 2 (environment)"])
 
+    def test_an_otlp_header_that_carries_no_credential_is_not_a_secret(self):
+        # The Opik recipe's own line: the project name is also the service name on every first span.
+        environment = {"OTEL_EXPORTER_OTLP_HEADERS": "projectName=edukate"}
+        self.assertEqual(self.check([span({"service.name": "edukate"})], environment), ([], []))
+        for credential_header in ("Authorization=edukate", "x-api-key=edukate", "Cookie=edukate", "Comet-Token=edukate"):
+            leaked, _ = self.check([span({"service.name": "edukate"})], {"OTEL_EXPORTER_OTLP_HEADERS": credential_header})
+            self.assertEqual(leaked, ["OTEL_EXPORTER_OTLP_HEADERS header 1 (environment)"], credential_header)
+
+    def test_a_credential_header_whose_name_is_percent_encoded_is_still_a_secret(self):
+        environment = {"OTEL_EXPORTER_OTLP_HEADERS": "%41uthorization=Bearer%20demo-credential"}
+        leaked, _ = self.check([span({"x": "demo-credential"})], environment)
+        self.assertEqual(leaked, ["OTEL_EXPORTER_OTLP_HEADERS header 1 (environment)"])
+
+    def test_a_short_secret_inside_its_own_variable_name_is_not_printed(self):
+        self.assertEqual(self.short([], {"API_KEY_abc": "abc"}), ["API_KEY_<secret> (environment)"])
+
     def test_a_name_that_is_not_secret_named_is_not_checked(self):
         self.assertEqual(self.check([span({"gen_ai.request.model": "big-model"})], {"LLM_MODEL": "big-model"})[0], [])
 
@@ -95,7 +111,7 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(headers, ["http.request.header.<secret>"])
 
     def test_nothing_printed_holds_a_secret_value_or_a_control_character(self):
-        environment = {"API_KEY": "demo-secret-value", "OTEL_EXPORTER_OTLP_HEADERS": "demo-secret-value=x%20yz12"}
+        environment = {"API_KEY": "demo-secret-value", "OTEL_EXPORTER_OTLP_HEADERS": "auth-demo-secret-value=x%20yz12"}
         leaked, headers = self.check(
             [span({"http.request.header.demo-secret-value": "1", "http.request.header.a\nb": "yz12"})], environment
         )
