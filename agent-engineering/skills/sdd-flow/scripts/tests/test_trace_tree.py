@@ -279,7 +279,7 @@ class EntryPointTest(unittest.TestCase):
         spans.llm(None, trace="t2")
         _, document, _ = run(spans.lines)
         self.assertIn("Result: 1 entry point, 1 request,", document)
-        self.assertIn("- Spans in no request (above an entry point, or outside any): chat model-x ×1", document)
+        self.assertIn("- Spans in no request (above an entry point, or outside any): chat model-x [LLM] ×1", document)
 
     def test_a_request_no_route_matched_is_grouped_by_its_method_and_said_to_have_no_route(self):
         spans = Spans()

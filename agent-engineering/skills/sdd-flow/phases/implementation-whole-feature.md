@@ -4,6 +4,18 @@ Reached at Step 4 when the spec's `delivery_mode:` is `whole-feature` (the defau
 
 Phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file + the `implementation-compact.md` compact body path (blind site counts: `site-count-compact.md`). Implementation-chunk and blind-site-count counters use `Reads: 0/20`. Body paths are `SKILL_ROOT/bodies/<file>.md`, resolved absolute. **STANDARD** = `SKILL_ROOT/references/enforcement-sites.md`, resolved absolute, passed to every implementation, site-count, review, fix, and completion spawn.
 
+**Tracing inputs.** The tracing gate is the latest `## Gates - tracing: on|off` line after the latest `Planning Phase - COMPLETE` in `progress.md` (`phases/planning.md` → 3c); a cycle with no such line has it `off`. Every implementation, code-review, and fix spawn below is passed the gate as the line `tracing: on` or `tracing: off`. With `tracing: on` it is also passed these, resolved absolute:
+
+- **TRACING** — the tracing standard, resolved at Step 0.
+- **OBS_RECORD** — `SDD/OBSERVABILITY.md`, the application's observability record: it names the trace run, the span file it writes, the env file, and the entry-point test.
+- **TRACE_TREE_SCRIPT** — `SKILL_ROOT/scripts/trace-tree.py`.
+- **LENS** — `SKILL_ROOT/references/tracing-lens.md`, the one definition of the review's Tracing Lens (review and fix spawns).
+- **TRACE_TREE** — `SDD/reviews/TRACE-TREE-FEATURE-[feature-name]-[YYYYMMDD].md`: the file a review writes the rendered call tree to. A fix spawn is given the tree written by the review it answers; one that answers a review which ran no lens (4e, after the critical review, in per-slice mode) is given none.
+
+With `tracing: off` none of the five is passed and the bodies do nothing about tracing. The blind site count is never passed any of them, nor the gate: its allowlist is unchanged. TRACE_TREE_SCRIPT and LENS ship inside this skill; one that is missing is a broken install — halt and tell the user. **With the gate on, embed this fix rule verbatim in every fix prompt (4c, 4e, per-slice 4c):**
+
+> **Tracing.** Leave the entry-point test passing and the trace run completing. Resolve a Tracing Lens finding as LENS §6 says: change the code or the tests; a MEDIUM difference between the plan and the trace may instead be recorded, with its reason, under `### Implementation Deviations` in the IMPLEMENTATION-PLAN; a HIGH is always fixed. Never edit the spec's `### Planned call graph`, a `Traced nodes:` line, or its `tracing:` field. Add no span the tracing standard does not require.
+
 The post-implementation steps (4e.5 final recount, 4f completion, 4h checkpoint, 4i commit, 4j announcement — there is no 4g; eval capture was removed in 3.0.0) are shared with per-slice's end-of-feature cycle.
 
 ---
@@ -24,6 +36,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/implementation.md`
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present — use canonical names in code, comments, commits, tests), **STANDARD**, and **CONVENTIONS** (`SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md`, standard §4.2) if it exists.
 - **Outputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, implemented code and tests, the site inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md` (every site of every control, each with a disposition and per-site mutation evidence — body Implementation Process step 6), append `progress.md`.
+- **Tracing:** the **tracing inputs** (top of this file), the same to every chunk. With `tracing: on` the body's step 7 applies: the implementer follows the tracing standard for what it adds and checks its marked nodes against the trace run.
 - **Task:** Implement ALL requirements — core/happy path, edge cases (EDGE-XXX), failure handling (FAIL-XXX), tests alongside each component, performance + security validation — updating IMPLEMENTATION-PLAN throughout, and record enforcement sites.
 
 When the last implementation subagent (or chunk) returns, the **orchestrator** appends `## Feature - Implemented` to `progress.md` (one line: the inventory path). It is the phase-detection marker that 4a finished and 4a.5 is next.
@@ -44,6 +57,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/code-review.md`
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, the implemented code files (paths from IMPLEMENTATION-PLAN), **BRIEF** (`SDD/requirements/DESIGN-[###]-[feature-name].md`, with its approved revision and tier) for the review's `## Design Brief Check`, `BASE` = the `Base commit:` recorded under `## Feature - Implementing` (the same one 4a.5 uses — the check compares the files changed since it against the brief's footprint), **TIERS** (the tier standard resolved at Step 0) when the spec carries `tier:`, and — whenever the catalog is passed (below) — the panel review `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, whose `AI Agent Security Findings` and `Abuse cases to cover` blocks the lens checks the code against.
 - **Outputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`.
+- **Tracing:** the **tracing inputs**. With `tracing: on` the body's **Tracing Lens** runs the application's trace run, writes TRACE_TREE, and compares it with every marked node of the spec's planned call graph (`SCOPE = FEATURE`); a HIGH lens finding is a rejection criterion. With `tracing: off` the body records that the lens was skipped.
 - **Task:** Specification-driven review (70% spec alignment, 20% context engineering, 10% test alignment). The body's **Agentic-Surface Lens** fires when the spec's `agent_security:` gate is open — pass the resolved **CATALOG** path and the resolved gate value (`agent_security: true` or `agent_security: auto`) in the prompt whenever `agent_security:` is `true` or `auto`/absent **and CATALOG exists**. A missing catalog closed the gate for the whole run at Step 0, `true` included: pass no catalog path and no panel review, and the body records that the lens was skipped. A HIGH lens finding is a rejection criterion. Pass `SCOPE = FEATURE`, `ITER = 0`, **STANDARD**, **CONVENTIONS** (the path even if absent — the review may create it), the site inventory, and the iter0 `SITE-COUNT` / `SITE-DIFF` paths; the review appends `## Review FEATURE iter 0 - APPROVED | REJECTED (h HIGH, m MEDIUM)` to `progress.md` — the body's **Enforcement-Site Verification** section (mandatory) carries every diff finding into the review, resolves `EXTRA` sites by re-running their mutations, re-runs a mutation sample, and verifies dispositions (ii)/(iii). Apply **Risk-Tiered Review Depth** — read each `MODULE-XXX`'s `Risk:` field and scale internal-review depth: `high` → full internals; `medium` → default; `low` → tested-boundary only. Escalate any tier that looks misclassified (e.g., a `low`-tagged module touching irreversible state) and flag it in the Module Review Log.
 
 ---
@@ -53,6 +67,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 - **Inputs:** `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the IMPLEMENTATION-PLAN path, the implemented code files, **STANDARD**, **CONVENTIONS** (if it exists), and the site inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md` — the fix edits the inventory, so it must be handed it and the standard that defines its shape.
 - **Outputs:** updated code and tests, updated site inventory, updated IMPLEMENTATION-PLAN, "Findings Addressed" appended to the review.
+- **Tracing:** the **tracing inputs** — TRACE_TREE being the file 4b wrote — and, with the gate on, the fix rule.
 - **Task:** Fix ALL findings until the implementation reaches APPROVED status — spec misalignment, missing edge/failure handling, test gaps, and everything else. For site-count findings: add each missing site to `SITES-IMPL-[feature-name].md` with a disposition and a fresh per-site mutation (`Slice` = `—` in whole-feature mode; in per-slice 4e.5, the slice that owns the code), delete rows for sites the fix removed, fix or implement each `GAP`, and never delete a (ii)/(iii) site as dead code. Never add, split, or merge rows only to make the two sides' row counts agree — a row-count difference is not a finding (standard §6). (No recount and no `## Fix FEATURE` marker here — 4e.5 recounts after all fixes, before completion.)
 
 ---
@@ -72,6 +87,7 @@ Spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus):
 Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 - **Inputs:** `SDD/reviews/CRITICAL-IMPL-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the IMPLEMENTATION-PLAN path, implemented code files, **STANDARD**, **CONVENTIONS** (if it exists), and the site inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`.
 - **Outputs:** updated code and tests, updated site inventory, updated IMPLEMENTATION-PLAN, "Findings Addressed" appended to the review.
+- **Tracing:** the **tracing inputs** — TRACE_TREE being the file 4b wrote — and, with the gate on, the fix rule.
 - **Task:** Resolve ALL findings regardless of severity — spec deviations, security vulnerabilities, silent failures, missing test coverage, and every other issue. **Site duties, the same as 4c:** a fix that adds, moves, or removes an enforcement site updates the inventory in the same pass — add each new site with a disposition and a fresh per-site mutation, delete rows for sites the fix removed, fix or implement each `GAP`, and never delete a (ii)/(iii) site as dead code. (No recount and no `## Fix FEATURE` marker here — 4e.5 recounts next.)
 
 ---
@@ -146,7 +162,7 @@ In the last two cases `/sdd-flow continue` re-shows this checkpoint (`phases/pro
 
 **Task mirror — in review (both modes, both delivery modes).** For a tiered spec, as soon as 4f returns — before the 4h pause when there is one, and always before this commit — run `python3 "$SKILL_ROOT/scripts/tier-mirror.py" sync <TIER_PLAN> --in-review <tier>`; record and report the result per `SKILL.md` → Tier Task Mirror. It belongs to this step, not to 4h, so that autonomous runs (which have no 4h) still make it. Running it before the commit means any task key it writes into the tier plan is committed here.
 
-The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts (including the site inventory, every `SITE-COUNT-*` / `SITE-DIFF-*` / `REVIEW-SITES-*`, and the updated tier plan). No co-author attribution. If nothing is uncommitted — a resumed run whose commit had already landed — make no commit.
+The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, reviews, SDD artifacts (including the site inventory, every `SITE-COUNT-*` / `SITE-DIFF-*` / `REVIEW-SITES-*` / `TRACE-TREE-*`, and the updated tier plan). No co-author attribution. If nothing is uncommitted — a resumed run whose commit had already landed — make no commit.
 
 **Then append `## Implementation - Committed` to `progress.md`** — one line, the commit's SHA (or `already committed`). It is the phase-detection marker that the code is in history. `Implementation Phase - COMPLETE`, written by the completion subagent at 4f, does not say so.
 

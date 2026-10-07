@@ -147,6 +147,15 @@ Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]
 
 **Informational only.** Do not raise a finding for an out-of-footprint file on that ground alone, and do not let this section affect the APPROVED / REJECTED decision. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body.
 
+## Step 5.8: Tracing Lens (conditional)
+
+Your prompt carries the line `tracing: on` or `tracing: off` — the decision the orchestrator recorded when the spec was planned. Do not read the spec's `tracing:` field to decide for yourself.
+
+- **`tracing: off`, or no such line** → skip this step and write the one line `Tracing lens skipped — tracing: off` as the body of the review document's `## Tracing Lens` section.
+- **`tracing: on`** → your prompt also gives **LENS** (`references/tracing-lens.md` of this skill), **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE**. Read LENS and run it as written, at `SCOPE = SLICE-XXX`: once the slice's tests pass, run the application's trace run, render the span file to TRACE_TREE with the script, and compare the tree with the marked nodes on this slice's `Traced nodes:` line and those of every slice before it. A later slice's nodes are never held against this one.
+
+The spec planned which entry points, model calls, and external calls each slice brings into existence; this step checks that plan against what a real run recorded. Its findings come only from the fixed table in LENS, at the severities given there. They are ordinary findings of this review: number them with the others, count them in the progress marker, and let a HIGH reject the slice.
+
 ## Step 6: Write the per-slice review document
 
 Write the review output to:
@@ -201,6 +210,10 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 **Row-count keys checked (blind count has more rows):** one line per key — `<Control> <File> <Symbol>: <n> blind row(s) no implementer row describes; mutation → <failing test id> | NO TEST FAILED → finding <#>` — or `None.` when the diff marks no such key.
 
 A control is **Complete-eligible** only if its per-control diff outcome is `MATCH` (or its only differences are `CONFIRMED-EXTRA` or `CONFIRMED-CROSS-FILED`), every row-count key of it listed above is checked with no site left unproven, it has no open gap, every re-run mutation failed a test, and every (ii)/(iii) is argued. A difference in row counts alone never makes a control Partial. Every other control is **Partial** — including a `CARRIED` or `OUT-OF-SCOPE-BY-DECLARED-SCOPE` control, until the FEATURE recount. Findings raised here also appear, numbered, under Slice-Specific Findings.
+
+## Tracing Lens
+
+[When the lens ran: the section in the shape LENS §7 gives — trace-tree path with its `Result:` line, the table of marked nodes compared, recorded deviations, spans in no request, and the findings. When it was skipped, the one line: "Tracing lens skipped — tracing: off".]
 
 ## Module Review Log (Risk-Tiered Depth Applied)
 

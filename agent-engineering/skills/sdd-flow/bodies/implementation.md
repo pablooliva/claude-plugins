@@ -247,6 +247,19 @@ Create the implementation tracking document using this enhanced template. **The 
    - Fill `Implementer sites` in `## Control Site Status`; leave `Status` at `Partial`.
    - **Do not leak the list.** Site comments carry no counts, indices, or greppable site tags; your `progress.md` entry names the inventory path only. A blind, independent count (Step 4a.5) runs after you and is diffed against your inventory — every site it finds that you did not list becomes a HIGH finding.
 
+7. **Follow the Tracing Standard (whole-feature, by the gate in your prompt):**
+
+   Your prompt carries the line `tracing: on` or `tracing: off`. With `tracing: off`, or no such line, this step does not apply: the flow makes no tracing check on this work, and you are given no tracing paths. If the application has tests about tracing of its own — an entry-point test among them — they are part of its test suite and have to pass like any other test.
+
+   With `tracing: on`, your prompt also gives **TRACING** (the tracing standard), **OBS_RECORD** (the application's observability record — where its bootstrap module, entry-point wrapper, entry-point test, and trace run are), and **TRACE_TREE_SCRIPT**. Read TRACING's *Adding code to a traced application* and do what its five points say for the code you add, and nothing more. In this flow that means:
+
+   1. **Build the marked nodes as the spec marks them.** In whole-feature mode that is every marked node of the spec's `### Planned call graph` that the requirements given to you build — all of them when you implement the whole feature, and when the work is split into chunks, the nodes of your chunk; a node a later chunk builds is not yours, and is not missing. An `[entry: …]` node is registered under exactly the method and path, or the function name, in its mark. An `[LLM, max N calls]` node makes at most `N` calls to a model in one request, your own retries included. An `[external: X]` node reaches the system its mark names.
+   2. **An entry point the framework does not see** — a job, a consumer, a command — goes through the wrapper OBS_RECORD names and, where the application keeps a registry of that kind of entry point, into the registry the entry-point test reads. A kind with no registry is outside that test; the wrapper is what traces it.
+   3. **Check with the trace run, after the tests pass.** Run the command OBS_RECORD gives, then look at what it recorded: `python3 <TRACE_TREE_SCRIPT> <span file> <env file>` prints the tree (the span file and the env file are named in OBS_RECORD; leave the env file out if it does not exist). Print it only — the review writes the trace-tree file, not you. Every marked node of yours should be there — judged as the review will judge it (an entry point by its name, a model call by a count beneath its entry point, an external call by the system it reached). One that is missing, and is not marked `not exercised in tests`, means no test drives that call for real: write the test. Only when a model or external call ran and no instrumentation gave it a span do you add a span by hand, following the standard's capture policy and attribute rules.
+   4. **Leave no other span in the code,** and name no backend, exporter, or instrumentation library outside the bootstrap module.
+   5. **The entry-point test passes and the trace run completes** when you hand the work over.
+   6. **Where the plan cannot be followed** — a marked call turned out not to be needed, or one the plan does not show is — do not edit `### Planned call graph`, a `Traced nodes:` line, or the `tracing:` field. Record the difference and its reason under `### Implementation Deviations` in the IMPLEMENTATION-PLAN; the review reads it there. This is for a call that differs from the plan, never for a request that makes more model calls than its node's maximum.
+
 ## Implementation Approach
 
 Do all investigation and research inline using your available tools (Read, Bash, Edit, Write). When you need to find implementation examples, locate test files, or discover utilities, use Read and Bash directly with grep/find. When you need to understand existing patterns or find reusable components, search inline. Document all findings directly in the IMPLEMENTATION-PLAN's Session Notes as you go.
@@ -267,6 +280,7 @@ During implementation, continuously verify:
 - [ ] Security requirements (SEC-XXX) are implemented
 - [ ] Every control's sites are recorded in `SITES-IMPL-[feature-name].md`, each with a disposition and evidence
 - [ ] Output / stream contracts have a real-subprocess test per path class
+- [ ] `tracing: on` only: every marked node of the planned call graph that your requirements build shows in the trace run's tree (or is marked `not exercised in tests`); no other span was added; the entry-point test passes
 - [ ] Code follows existing project patterns (discovered via inline search)
 - [ ] Documentation is updated as needed
 

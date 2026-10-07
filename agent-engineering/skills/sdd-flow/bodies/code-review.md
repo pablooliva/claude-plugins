@@ -204,6 +204,17 @@ If your prompt gives a catalog path but no gate value, read `agent_security:` fr
 
 **Abuse cases.** Close the lens by listing the catalog Section 5 rows this implementation's threat surface makes relevant, each with its expected denial, and whether a test currently covers it. Start from the panel review's **Abuse cases to cover** block when there is one — every row it names is relevant by the spec panel's ruling — and add any further row the code itself makes relevant. A test covers a row only if it performs the attack and asserts the expected denial — one that merely asserts "no crash" does not. Mark uncovered rows `NOT COVERED` in the abuse-case coverage table **and raise each as a HIGH finding** in this section (Resolution: the test to add, file named). An uncovered relevant abuse case is a rejection criterion, like any other HIGH here.
 
+## Tracing Lens (conditional)
+
+**Gate:** your spawn prompt carries the line `tracing: on` or `tracing: off` — the decision the orchestrator recorded when the spec was planned. Do not read the spec's `tracing:` field to decide for yourself.
+
+- `tracing: off`, or no such line in your prompt → skip the lens and record the one line `Tracing lens skipped — tracing: off` in the review document.
+- `tracing: on` → your prompt also gives **LENS** (`references/tracing-lens.md` of this skill), **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE**. Read LENS and run it as written, at `SCOPE = FEATURE`: run the application's trace run, render the span file to TRACE_TREE with the script, and compare the tree with every marked node of the spec's `### Planned call graph`.
+
+**What it is.** The spec planned which entry points, model calls, and external calls the feature has. The lens checks that plan against what a real run recorded — the one check in this review that looks at what the code did, not at what it says. Its findings come only from the fixed table in LENS, at the severities given there.
+
+**How it interacts with the review budget.** Like the Agentic-Surface Lens, it is an overlay on the 70/20/10 split, not a slice of it. It runs after the test suite has passed (Step 6), because the trace run is made of those tests. Its findings are reported in their own section and count in the decision like any other; a HIGH is a rejection criterion.
+
 ## Enforcement-Site Verification (mandatory)
 
 Your prompt provides `STANDARD` (`references/enforcement-sites.md`), `CONVENTIONS` (`SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` — may not exist yet), the implementer's inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, the latest blind count `SDD/reviews/SITE-COUNT-FEATURE-…-iter<N>-….md`, and the orchestrator's diff `SDD/reviews/SITE-DIFF-FEATURE-…-iter<N>-….md`. Read the standard first — it defines control, enforcement site, gap, the per-site mutation standard, and the three dispositions. You are not blind; the blind count was a separate spawn before you. Turn the diff into findings and verify the implementer's evidence:
@@ -311,6 +322,10 @@ Run the **Design Brief Check** section above. It produces no findings.
 3. Check failure scenario testing
 4. Confirm success criteria validation
 
+### Step 6b: Run the Tracing Lens
+
+Run the **Tracing Lens** section above, once the test suite has passed. Every finding it raises goes into the review's findings at the severity LENS gives it.
+
 ## Feedback Templates
 
 ### For Specification Misalignment
@@ -386,6 +401,7 @@ Run the **Design Brief Check** section above. It produces no findings.
 7. Test suite was not run or has failing tests
 8. E2E/Playwright tests are missing for a web-facing feature (N/A requires explicit justification)
 9. The Agentic-Surface Lens ran and produced a HIGH finding
+10. The Tracing Lens ran and produced a HIGH finding
 
 (An input artifact that is missing altogether never reaches this list — it is a returned failure, per Pre-Review Artifact Verification.)
 
@@ -478,6 +494,10 @@ Include this section only when the lens ran. When it was skipped, replace it wit
 **Abuse-case coverage:** [catalog Section 5 rows relevant here | expected denial | covered by test? (test name or NOT COVERED — each NOT COVERED row is also a HIGH finding above)]
 
 **Spec-to-code regressions:** [any `agent-security` panel finding the spec resolved but the code does not honor, or "None."]
+
+## Tracing Lens (conditional)
+
+[When the lens ran: the section in the shape LENS §7 gives — trace-tree path with its `Result:` line, the table of marked nodes compared, recorded deviations, spans in no request, and the findings. When it was skipped, the one line: "Tracing lens skipped — tracing: off".]
 
 ## Enforcement-Site Verification
 

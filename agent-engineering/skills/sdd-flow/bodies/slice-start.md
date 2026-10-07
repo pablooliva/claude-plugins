@@ -165,6 +165,19 @@ Read the enforcement-site standard at the `STANDARD` path in your prompt (`refer
 
 A blind, independent count runs after you return and is diffed against your inventory. Every site it finds that you did not list becomes a HIGH finding.
 
+## Step 11.5: Follow the tracing standard (by the gate in your prompt)
+
+Your prompt carries the line `tracing: on` or `tracing: off`. With `tracing: off`, or no such line, this step does not apply: the flow makes no tracing check on this work, and you are given no tracing paths. If the application has tests about tracing of its own — an entry-point test among them — they are part of its test suite and have to pass like any other test.
+
+With `tracing: on`, your prompt also gives **TRACING** (the tracing standard), **OBS_RECORD** (the application's observability record — where its bootstrap module, entry-point wrapper, entry-point test, and trace run are), and **TRACE_TREE_SCRIPT**. Read TRACING's *Adding code to a traced application* and do what its five points say for the code you add, and nothing more. In this flow that means:
+
+1. **Build the marked nodes as the spec marks them.** For a slice that is the marked nodes on this slice's `Traced nodes:` line — not those of later slices, which are not yours to build. An `[entry: …]` node is registered under exactly the method and path, or the function name, in its mark. An `[LLM, max N calls]` node makes at most `N` calls to a model in one request, your own retries included. An `[external: X]` node reaches the system its mark names.
+2. **An entry point the framework does not see** — a job, a consumer, a command — goes through the wrapper OBS_RECORD names and, where the application keeps a registry of that kind of entry point, into the registry the entry-point test reads. A kind with no registry is outside that test; the wrapper is what traces it.
+3. **Check with the trace run, after the tests pass.** Run the command OBS_RECORD gives, then look at what it recorded: `python3 <TRACE_TREE_SCRIPT> <span file> <env file>` prints the tree (the span file and the env file are named in OBS_RECORD; leave the env file out if it does not exist). Print it only — the review writes the trace-tree file, not you. Every marked node of yours should be there — judged as the review will judge it (an entry point by its name, a model call by a count beneath its entry point, an external call by the system it reached). One that is missing, and is not marked `not exercised in tests`, means no test drives that call for real: write the test. Only when a model or external call ran and no instrumentation gave it a span do you add a span by hand, following the standard's capture policy and attribute rules.
+4. **Leave no other span in the code,** and name no backend, exporter, or instrumentation library outside the bootstrap module.
+5. **The entry-point test passes and the trace run completes** when you hand the work over.
+6. **Where the plan cannot be followed** — a marked call turned out not to be needed, or one the plan does not show is — do not edit `### Planned call graph`, a `Traced nodes:` line, or the `tracing:` field. Record the difference and its reason under `### Implementation Deviations` in the IMPLEMENTATION-PLAN; the review reads it there. This is for a call that differs from the plan, never for a request that makes more model calls than its node's maximum.
+
 ## Step 12: Append the `Implemented` entry to `progress.md`
 
 ```markdown
@@ -184,6 +197,7 @@ Return a bounded result (≤200 words + artifact paths) summarizing:
 - The `Modules touched` field from the SPEC's `### SLICE-XXX:` block (read SPEC's `## Delivery Slices` section).
 - The ledger summary (if loaded): one line per ledger section with entry counts.
 - The site-inventory path and the number of controls you inventoried (not per-control counts).
+- With `tracing: on`: whether every node on the slice's `Traced nodes:` line showed in the trace run's tree, and any difference you recorded under `### Implementation Deviations`.
 - Next step: blind site count, then `slice-review` for SLICE-XXX.
 
 ## Flag Inventory (REQ-025 — applies to `slice-start`)

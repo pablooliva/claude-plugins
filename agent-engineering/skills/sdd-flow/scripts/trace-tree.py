@@ -13,7 +13,7 @@ trace when it is of another kind and not an outgoing call (a job or a command
 traced by the wrapper). A *request* is one entry-point span and everything beneath
 it, down to the next entry-point span. Spans in no request — the test's own client
 above a route, a call made while the application starts — are listed by name in
-the notes. Requests are grouped per entry point by the entry span's name, and
+the notes, an LLM span among them marked `[LLM]`. Requests are grouped per entry point by the entry span's name, and
 requests whose trees are identical are shown once, as one *shape*, with how many
 there were.
 
@@ -232,7 +232,8 @@ def analyse(spans: dict[tuple[str, str], Span]) -> tuple[dict[str, list[Request]
     for span in sorted(spans.values(), key=lambda span: (span.start, span.trace, span.id)):
         if span.reached and (span.kind in INCOMING or (id(span) in first and span.kind not in OUTGOING)):
             groups.setdefault(span.name, []).append(Request(span))
-    outside = Counter(span.name for span in spans.values() if span.reached and not span.in_request)
+    outside = Counter(span.name + (" [LLM]" if span.model_call else "")
+                      for span in spans.values() if span.reached and not span.in_request)
     return groups, outside, orphans, sum(1 for span in spans.values() if not span.reached)
 
 
