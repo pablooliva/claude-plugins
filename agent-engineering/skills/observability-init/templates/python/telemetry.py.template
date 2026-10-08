@@ -9,6 +9,7 @@ from the process environment first and then from the env file. See SDD/OBSERVABI
 tracing foundation lives.
 """
 
+import builtins
 import functools
 import inspect
 import logging
@@ -55,6 +56,10 @@ _SHORTEST_INSIDE = 4  # a secret or header value shorter than this is matched on
 _SHORTEST_PART = 6  # a recorded text at least this long is also matched as a piece cut out of a header value
 _SIZED = {id(kind): kind.__name__ for kind in (bytes, bytearray, list, tuple, dict, set, frozenset)}
 _class_name = type.__dict__["__qualname__"].__get__  # a class's name, without running anything the class defines
+# Python's own exception classes by identity: the only class names the hook's failure warning ever writes.
+_BUILT_IN_EXCEPTIONS = {
+    id(kind): kind.__name__ for kind in vars(builtins).values() if isinstance(kind, type) and issubclass(kind, BaseException)
+}
 
 # The calls to own functions that are open right now, and how many times the hook itself failed. For tests.
 _function_hook = {"open": {}, "failures": 0}
@@ -434,7 +439,24 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
         _function_hook["failures"] += 1
         if _function_hook["failures"] == 1:
             try:
-                logging.getLogger(__name__).warning("Recording a call to an own function failed; it is skipped.", exc_info=True)
+                # Nothing in this line comes from the application or from a request: an exception's text can carry
+                # what a user sent, and so can a class, file or function name that code made at run time chose.
+                # So: the class name only when it is one of Python's own, and line numbers of this file.
+                kind, _, step = sys.exc_info()
+                lines, elsewhere = [], 0
+                while step is not None:
+                    if step.tb_frame.f_code.co_filename == bootstrap:
+                        lines.append(str(step.tb_lineno))
+                    else:
+                        elsewhere += 1
+                    step = step.tb_next
+                logging.getLogger(__name__).warning(
+                    "Recording a call to an own function failed (%s at %s line %s, %d step(s) in other code); it is skipped.",
+                    _BUILT_IN_EXCEPTIONS.get(id(kind), "an exception that is not one of Python's own"),
+                    os.path.basename(bootstrap),
+                    " <- ".join(reversed(lines[-5:])) or "unknown",
+                    elsewhere,
+                )
             except Exception:
                 pass  # a logging handler that fails must not reach the function being recorded either
 

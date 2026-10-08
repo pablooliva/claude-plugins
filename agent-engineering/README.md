@@ -71,7 +71,17 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.8.0.
+Version 3.8.1.
+
+### What's new in 3.8.1
+
+One fix to `observability-init`, found the first time 3.8.0 was applied to a real application (the trial application, by running the skill on it again in audit mode).
+
+- **A failure inside the function-recording hook no longer logs the exception's text.** When the hook itself fails, the bootstrap module logs one warning per process. In 3.8.0 that warning carried a full traceback, exception text included — and an exception's text can repeat what a user sent, which is why the tracing standard keeps it off spans. The warning now carries the exception's class name when it is one of Python's own, and line numbers of the bootstrap module — nothing the application or a request could have written — and the standard states the rule for the log line too.
+
+An application already updated to 3.8.0 gets this by running `/observability-init` again: audit mode proposes the one edit.
+
+That audit run is also the first time the function-recording hook ran on a real application, as that thread reports it: the application's tests pass, one real request's trace arrived in Opik with the model call beneath the function that made it, the kill switch stopped everything, and no value was recorded with the values switch unset.
 
 ### What's new in 3.8.0
 

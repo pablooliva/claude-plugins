@@ -26,8 +26,12 @@ import bootstrap as telemetry
 
 provider = TracerProvider(); memory = InMemorySpanExporter(); provider.add_span_processor(SimpleSpanProcessor(memory))
 env_file = Path(tempfile.mkdtemp()) / "x.env"; env_file.write_text("FILE_SECRET=file-canary-7h2\n")
+_generated = {}  # code made at run time: its file name and its function's name are whatever its maker chose
+exec(compile("def name_canary_log_99(text):\n    raise (ValueError if text.startswith('log') else type('class_canary_log_77', (Exception,), {}))(text)\n", "file-canary-log-88", "exec"), _generated)
 def read_scope(local):
     scope = local.get("scope")
+    if type(scope) is dict and "fail_with" in scope:
+        _generated["name_canary_log_99"](scope["fail_with"])
     return [v.decode("latin-1") for _, v in scope["headers"]] if type(scope) is dict and "headers" in scope else None
 telemetry.OWN_DIRECTORIES = (os.path.join(here, "probe_pkg"),)
 telemetry.REPEAT_CAP = 3
@@ -213,6 +217,25 @@ check("no callback failed", state["failures"] == 0, f"failures={state['failures'
 if mode != "none":
     # The header reader runs only with the values switch on; it is the one callback step a test can make fail.
     import logging
+    class _Kept(logging.Handler):
+        lines = []
+        def emit(self, record): self.lines.append(self.format(record))  # format() adds a traceback when there is one
+    _kept = _Kept(); logging.getLogger(telemetry.__name__).addHandler(_kept)
+    async def _nothing_yet(): return "reached"
+    _reached = asyncio.run(probe_fw.framework_entry({"fail_with": "log-canary-771 env-canary-9f3k2"}, _nothing_yet))
+    state["failures"] = 0  # the warning is written for the first failure only: make the next one a first again
+    asyncio.run(probe_fw.framework_entry({"fail_with": "second-canary-552"}, _nothing_yet))  # a class made at run time
+    logging.getLogger(telemetry.__name__).removeHandler(_kept)
+    _logged = "\n".join(_Kept.lines)
+    _canaries = ("log-canary-771", "env-canary-9f3k2", "second-canary-552", "file-canary-log-88", "name_canary_log_99",
+                 "class_canary_log_77", "Traceback", "probe.py", "read_scope")
+    check("a callback failure is logged with a built-in class name and this file's line numbers - never the exception's "
+          "text, a traceback, or a class, file or function name from outside the bootstrap file",
+          _reached == "reached" and state["failures"] == 1 and len(_Kept.lines) == 2
+          and "ValueError at bootstrap.py line " in _Kept.lines[0] and "not one of Python's own at bootstrap.py line " in _Kept.lines[1]
+          and "2 step(s) in other code" in _Kept.lines[0] and not [c for c in _canaries if c in _logged],
+          f"lines={len(_Kept.lines)} failures={state['failures']} found={[c for c in _canaries if c in _logged]}")
+    state["failures"] = 0
     class _Broken(logging.Handler):
         def emit(self, record): raise RuntimeError("handler failed")
     logging.getLogger(telemetry.__name__).addHandler(_Broken())
