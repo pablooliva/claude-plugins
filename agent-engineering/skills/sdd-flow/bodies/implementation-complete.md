@@ -64,6 +64,12 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 6. **Tier Standard and Tier Plan (tiered specs only):**
    - When the SPEC's frontmatter carries `tier:`, your prompt provides **TIERS** (the tier standard — read its "Recording a deferral" and "Tier plan" sections) and **TIER_PLAN** (`SDD/flow/TIERS-[feature-name].md`). Load both. With no `tier:` in the SPEC, skip everything this body says about the tier plan.
 
+7. **Final Trace Tree (only when your prompt says `tracing: on`):**
+   - Your prompt carries the line `tracing: on` or `tracing: off` — the decision recorded when the spec was planned. Do not read the spec's `tracing:` field to decide for yourself. With `tracing: off`, or no such line, skip everything this body says about tracing.
+   - With `tracing: on` your prompt also provides **OBS_RECORD** (`SDD/OBSERVABILITY.md` — where traces go, the switches, the trace run, the entry-point test) and **TRACE_TREE** (the call tree the final verification rendered from a real run). The site review named in step 5 is that verification: its `## Tracing Lens` section holds the comparison of the tree with the spec's `### Planned call graph`. If either path is missing from your prompt or cannot be read, or that review has no `## Tracing Lens` section, return a failure to the orchestrator naming it.
+   - **Run nothing for tracing** — no trace run, no script, no reading of a span file. You report what the final verification found; you do not repeat it.
+   - **Change no code and no test in this run.** The tree in your prompt is of the code and the tests as they stood at the final verification; a change made after it would be completed without that check. Wherever this body tells you to fix a failing test, write a missing test, or complete an implementation, with `tracing: on` list the item as incomplete instead and return it (Error Recovery → Save Progress), saying in the return that it needs code or tests changed. Completion documents — the plan, the spec's summary, the tier plan, the glossary, the implementation summary — are yours to write as before.
+
 ### 2. Pre-Completion Verification
 
 **Per-slice specs — fill the requirement rows first.** When the SPEC's frontmatter says `delivery_mode: per-slice`, the IMPLEMENTATION-PLAN was scaffolded only: no slice step updates its per-requirement rows, so they still read as not started. They are yours to fill, from two sources:
@@ -85,6 +91,8 @@ COMPLETION READINESS CHECKLIST
 □ All EDGE-XXX edge cases show "Complete" implementation
 □ All FAIL-XXX failure scenarios show error handling "Implemented"
 □ Every control in "## Control Site Status" is "Complete" (independently counted, diff matched)
+□ With `tracing: on` — the final verification review ran the Tracing Lens and lists no finding of any severity
+  (a "Tracing lens skipped" or "Tracing Lens not run" line there, or an open HIGH, MEDIUM, or LOW, is an incomplete item)
 □ Test coverage meets or exceeds target from specification
 □ No "Blocked/Pending" items remain in IMPLEMENTATION-PLAN document
 □ All delegations have been completed and documented
@@ -449,6 +457,21 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 
 ### Error Tracking
 - [Error scenario]: [How it's tracked]
+
+### Tracing
+
+[Only with `tracing: on` in your prompt — with `tracing: off`, or no such line, leave this whole subsection out, heading included. Fill it from the final trace tree and the final verification review's `## Tracing Lens` section — names and counts only, never a value recorded on a span:]
+
+- **Where traces go, and the switches:** see `SDD/OBSERVABILITY.md` [name its sections; do not copy an endpoint, a key, or any other value out of it]
+- **Final trace tree:** [TRACE_TREE path] — [its `Result:` line, verbatim]
+
+| Entry point this feature added | Requests in the trace run | LLM calls in one request (most seen / planned ceiling) | External targets seen |
+|--------------------------------|---------------------------|--------------------------------------------------------|-----------------------|
+| [`POST /uploads`] | [14] | [1 / 1] | [`postgres`, `qdrant`] |
+
+- **Planned calls the trace run did not prove:** [each marked node the review lists as `not exercised in tests`, `not shown in the shapes drawn`, `not told apart by function`, or `not distinguishable by count`, with the reason it gives — or "None."]
+- **Recorded differences from the planned call graph:** [each plan-versus-trace difference under `### Implementation Deviations`, or "None."]
+- **Own-function calls the repeat cap left without a record:** [per entry point, the range the tree's *Own-function calls not recorded in one request* line gives — or "None cut."]
 
 ## Rollback Plan
 
