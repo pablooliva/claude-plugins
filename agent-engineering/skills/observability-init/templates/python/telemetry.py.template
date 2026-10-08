@@ -1,12 +1,17 @@
 """Tracing bootstrap: the one file of this application that names a tracing backend, an exporter or an
 instrumentation library. Everything else uses the OpenTelemetry API only.
 
-Settings are standard OpenTelemetry environment variables, read from the process environment first and then from
-the env file. See SDD/OBSERVABILITY.md for where each part of the tracing foundation lives.
+It also records every call to one of the application's own functions, through Python's call-monitoring hook:
+no function is changed for that, and a function written later is recorded without anyone remembering to.
+
+Settings are standard OpenTelemetry environment variables, and one of this file's own (TRACE_FUNCTION_VALUES), read
+from the process environment first and then from the env file. See SDD/OBSERVABILITY.md for where each part of the
+tracing foundation lives.
 """
 
 import functools
 import inspect
+import logging
 import os
 import re
 import threading
@@ -19,13 +24,36 @@ SERVICE_NAME = "@@SERVICE_NAME@@"
 DISTRIBUTION = "@@DISTRIBUTION@@"
 ENV_FILE = @@ENV_FILE@@
 
+# The directories that hold the application's own code. A function defined in a file beneath one of them is
+# recorded; this file is not. Written as Python's import system writes them: not resolved through symlinks.
+OWN_DIRECTORIES = @@OWN_DIRECTORIES@@
+
 # Set by the trace run. When present, every span goes to this file and nowhere else, whatever the kill switch
 # and the sampling settings say.
 TRACE_RUN_FILE = "TRACE_RUN_FILE"
 
+# The values switch: unset records no argument and no return value of an own function; `all` records them for
+# every own function; module names separated by commas record them for those modules and the ones beneath them.
+VALUES_SWITCH = "TRACE_FUNCTION_VALUES"
+
 _CONTENT_SWITCH = "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"
 _HEADER_CAPTURE = "OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_"
 _CONVENTIONS = "OTEL_SEMCONV_STABILITY_OPT_IN"
+
+_TEXT_LIMIT = 200  # characters of a recorded text; a longer one is cut here and its full length recorded beside it
+_REDACTED = "[redacted]"
+_SECRET_NAME = re.compile("KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL", re.IGNORECASE)
+_CREDENTIAL_HEADER = re.compile("AUTH|COOKIE|KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL", re.IGNORECASE)
+# A parameter with one of these words in its name is never recorded, and neither is the return value of a
+# function with one in its name.
+_NEVER_NAMED = re.compile("HEADER|COOKIE|AUTH|KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL", re.IGNORECASE)
+_SHORTEST_INSIDE = 4  # a secret or header value shorter than this is matched only as a whole recorded value
+_SHORTEST_PART = 6  # a recorded text at least this long is also matched as a piece cut out of a header value
+_SIZED = {id(kind): kind.__name__ for kind in (bytes, bytearray, list, tuple, dict, set, frozenset)}
+_class_name = type.__dict__["__qualname__"].__get__  # a class's name, without running anything the class defines
+
+# The calls to own functions that are open right now, and how many times the hook itself failed. For tests.
+_function_hook = {"open": {}, "failures": 0}
 
 _lock = threading.Lock()
 _done = False
@@ -82,6 +110,7 @@ def _set_up(env_file: Path) -> None:
             provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
     # Instrument first: the provider can be published only once, so nothing that can fail comes after it.
     _instrument(provider)
+    _record_own_functions(provider, env_file)
     trace.set_tracer_provider(provider)
     _provider = provider
 
@@ -114,7 +143,8 @@ def traced(fn):
 
 
 def _read_env_file(path: Path) -> None:
-    """Copy the OTEL_* settings of the env file into the environment. A name already set there wins."""
+    """Copy the OTEL_* settings and the values switch from the env file into the environment. A name already
+    set there wins."""
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeDecodeError):
@@ -123,7 +153,7 @@ def _read_env_file(path: Path) -> None:
         line = line.strip().removeprefix("export ").lstrip()
         name, equals, value = line.partition("=")
         name = name.strip()
-        if equals and name.startswith("OTEL_") and not name.startswith(_HEADER_CAPTURE):
+        if equals and (name.startswith("OTEL_") or name == VALUES_SWITCH) and not name.startswith(_HEADER_CAPTURE):
             os.environ.setdefault(name, _env_value(value))
 
 
@@ -190,3 +220,292 @@ def _span_file_exporter(path: str):
             return SpanExportResult.SUCCESS
 
     return SpanFileExporter()
+
+
+def _header_source():
+    """Where the framework hands a request to the application: the code object of that framework function, and a
+    reader that takes the function's local variables and returns the request's header values as text (or None
+    when the call carries no request). Used only while the values switch is on, so that a header value an own
+    function was given is never recorded. (None, None) for an application that receives no requests."""
+@@HEADER_SOURCE@@
+
+
+def _secret_values(env_file: Path) -> set:
+    """Every value that must never be recorded: the value of each secret-named variable, from the environment and
+    from the env file, and each credential in the backend headers. Read once, when the process starts."""
+    from urllib.parse import unquote
+
+    found = list(os.environ.items())
+    try:
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            name, equals, value = line.strip().removeprefix("export ").lstrip().partition("=")
+            if equals:
+                found.append((name.strip(), _env_value(value)))
+    except (OSError, UnicodeDecodeError):
+        pass
+    values = set()
+    for name, value in found:
+        if re.fullmatch("OTEL_EXPORTER_OTLP_(TRACES_)?HEADERS", name):
+            for pair in value.split(","):
+                header, equals, credential = pair.partition("=")
+                if equals and _CREDENTIAL_HEADER.search(unquote(header)):
+                    credential = unquote(credential.strip())
+                    values.update((credential, credential.partition(" ")[2].strip()))  # with and without its scheme word
+        elif _SECRET_NAME.search(name):
+            values.add(value)
+    return {value.casefold() for value in values if value}
+
+
+def _record_own_functions(provider, env_file: Path) -> None:
+    """One span per call to a function of the application's own code, made by Python's call-monitoring hook.
+    Does nothing before Python 3.12, where the hook does not exist. Never raises."""
+    import sys
+
+    log = logging.getLogger(__name__)
+    if sys.version_info < (3, 12):
+        return
+    slot = next((slot for slot in (4, 3) if sys.monitoring.get_tool(slot) is None), None)
+    if slot is None:
+        log.warning("Own functions are not recorded: both spare call-monitoring slots are taken by other tools.")
+        return
+    try:
+        _install_function_hook(provider, env_file, sys.monitoring, slot)
+    except Exception as failure:
+        log.warning("Own functions are not recorded: %s while setting up the hook.", type(failure).__name__)
+
+
+def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> None:
+    import contextvars
+    import sys
+
+    from opentelemetry import context as otel_context
+    from opentelemetry.trace import Status, StatusCode
+
+    bootstrap = _install_function_hook.__code__.co_filename
+    roots = tuple(os.path.join(str(directory), "") for directory in OWN_DIRECTORIES)
+
+    asked = os.environ.get(VALUES_SWITCH, "").strip()
+    every_module = asked.lower() == "all"
+    value_modules = () if every_module else tuple(part.strip() for part in asked.split(",") if part.strip())
+    values_on = every_module or bool(value_modules)
+    secrets = _secret_values(env_file)  # also with the switch off: an exception's class name is always recorded
+    long_secrets = {secret for secret in secrets if len(secret) >= _SHORTEST_INSIDE}
+    secret_reach = max(map(len, long_secrets), default=0)
+    header_code, read_headers = _header_source() if values_on else (None, None)
+    # (every header value joined, the long ones, all of them, the longest one's length) for the request under way
+    request_headers = contextvars.ContextVar("request_headers", default=None)
+
+    tracer = provider.get_tracer(SERVICE_NAME + ".functions")
+    own = {}  # id(code) -> (span name, attributes, ((parameter, attribute name), ...) or None, record the result)
+    kept = []  # the code objects themselves, so that an id is never given to another one
+    live = _function_hook["open"]  # id(frame) -> [span, the context to make current on resuming, token or None]
+    disable = monitoring.DISABLE
+    get_frame = sys._getframe
+    set_span = trace.set_span_in_context
+    current_span = trace.get_current_span
+    attach = otel_context.attach
+    get_current = otel_context.get_current
+    runtime = otel_context._RUNTIME_CONTEXT  # its detach() does not log when a context was left behind
+    error = Status(StatusCode.ERROR)
+
+    def classify(code):
+        """What to record for this code object, or None when it is not one of the application's own functions."""
+        path = code.co_filename
+        root = next((root for root in roots if path.startswith(root)), None)
+        # Not own code, this file, a module or class body, or a lambda, comprehension or generator expression.
+        if root is None or path == bootstrap or not code.co_flags & 1 or code.co_name.startswith("<"):
+            return None
+        relative = path[len(os.path.dirname(root.rstrip(os.sep))) + 1 :]
+        module = relative.rsplit(".", 1)[0].replace(os.sep, ".").removesuffix(".__init__")
+        name = f"{module}.{code.co_qualname}"
+        parameters, result = None, False
+        if every_module or any(module == asked_for or module.startswith(asked_for + ".") for asked_for in value_modules):
+            count = code.co_argcount + code.co_kwonlyargcount + bool(code.co_flags & 4) + bool(code.co_flags & 8)
+            parameters = tuple(
+                (parameter, "args." + parameter)
+                for parameter in code.co_varnames[:count]
+                if parameter not in ("self", "cls") and not _NEVER_NAMED.search(parameter)
+            )
+            result = not _NEVER_NAMED.search(code.co_name)
+        attributes = {"code.function.name": name, "code.file.path": relative, "code.line.number": code.co_firstlineno}
+        own[id(code)] = info = (name, attributes, parameters, result)
+        kept.append(code)
+        return info
+
+    def is_secret(text: str) -> bool:
+        if text in secrets:
+            return True
+        headers = request_headers.get()
+        return headers is not None and text in headers[2]
+
+    def clean(text: str) -> str:
+        # Only the first _TEXT_LIMIT characters are ever stored, so only they, plus the length of the longest value
+        # that could start inside them, are searched: the cost does not grow with the text.
+        headers = request_headers.get()
+        reach = secret_reach if headers is None else max(secret_reach, headers[3])
+        folded = (text if len(text) <= _TEXT_LIMIT + reach else text[: _TEXT_LIMIT + reach]).casefold()
+        if folded in secrets or any(secret in folded for secret in long_secrets):
+            return _REDACTED
+        if headers is not None:
+            joined, long_values, values, _ = headers
+            if folded in values or (len(folded) >= _SHORTEST_PART and folded in joined):
+                return _REDACTED
+            if any(value in folded for value in long_values):
+                return _REDACTED
+        return text
+
+    def render(target: dict, key: str, value) -> None:
+        kind = type(value)
+        if kind is str:
+            text = clean(value)
+            if len(text) > _TEXT_LIMIT:
+                target[key] = text[:_TEXT_LIMIT]
+                target[key + ".length"] = len(text)
+            else:
+                target[key] = text
+        elif kind is bool:
+            target[key] = value
+        elif kind is float or (kind is int and -(2**63) <= value < 2**63):
+            target[key] = _REDACTED if is_secret(str(value)) else value
+        elif id(kind) in _SIZED:
+            target[key + ".type"] = _SIZED[id(kind)]
+            target[key + ".length"] = len(value)
+        else:
+            # Never repr(), str() or len() on anything else: that runs the object's own code and could dump it.
+            target[key + ".type"] = clean(_class_name(kind))
+
+    def note_headers(frame) -> None:
+        found = read_headers(frame.f_locals)
+        if found is not None:
+            values = {value.casefold() for value in found if value}
+            long_values = {value for value in values if len(value) >= _SHORTEST_INSIDE}
+            request_headers.set(("\n".join(values), long_values, values, max(map(len, values), default=0)))
+
+    def is_own(code) -> bool:
+        """Whether this is one of the application's own functions - also for one that was already running when
+        the hook went in, which its start never classified. Only another's code may have an event switched off."""
+        return id(code) in own or classify(code) is not None
+
+    def release(entry) -> None:
+        if entry[2] is not None:
+            try:
+                runtime.detach(entry[2])
+            except Exception:
+                pass  # the frame was finished off in another context; there is nothing here to restore
+            entry[2] = None
+
+    def failed() -> None:
+        if not _function_hook["failures"]:
+            logging.getLogger(__name__).warning("Recording a call to an own function failed; it is skipped.", exc_info=True)
+        _function_hook["failures"] += 1
+
+    # Every callback swallows its own failure: a fault in tracing must never reach the function being recorded.
+    def on_start(code, offset):
+        try:
+            info = own.get(id(code))
+            if info is None:
+                if code is header_code:
+                    note_headers(get_frame(1))
+                    return None
+                info = classify(code)
+                if info is None:
+                    return disable  # never called again for this code object
+            frame = get_frame(1)
+            stale = live.pop(id(frame), None)  # a frame that went away without returning; its id is being reused
+            if stale is not None:
+                stale[0].end()
+            if not current_span().is_recording():
+                return None  # outside a traced request, or the request was sampled out
+            attributes = info[1]
+            if info[2]:
+                attributes = dict(attributes)
+                local = frame.f_locals
+                for parameter, key in info[2]:
+                    if parameter in local:
+                        render(attributes, key, local[parameter])
+            span = tracer.start_span(info[0], attributes=attributes)
+            context = set_span(span)
+            live[id(frame)] = [span, context, attach(context)]
+        except Exception:
+            failed()
+        return None
+
+    def on_return(code, offset, value):
+        try:
+            if not is_own(code):
+                return disable
+            info = own[id(code)]
+            entry = live.pop(id(get_frame(1)), None)
+            if entry is not None:
+                release(entry)
+                if info[3]:
+                    result = {}
+                    render(result, "output", value)
+                    entry[0].set_attributes(result)
+                entry[0].end()
+        except Exception:
+            failed()
+        return None
+
+    def on_unwind(code, offset, exception):
+        try:
+            if id(code) in own:
+                entry = live.pop(id(get_frame(1)), None)
+                if entry is not None:
+                    release(entry)
+                    if not isinstance(exception, GeneratorExit):  # a generator being closed is not a failure
+                        entry[0].set_status(error)
+                        entry[0].set_attribute("error.type", clean(_class_name(type(exception))))
+                    entry[0].end()
+        except Exception:
+            failed()
+
+    def on_yield(code, offset, value):
+        try:
+            if not is_own(code):
+                return disable
+            entry = live.get(id(get_frame(1)))
+            if entry is not None and entry[2] is not None:
+                # What is current now is what must be current again on resuming: a library may have opened a span
+                # of its own inside this function, and it is still open.
+                entry[1] = get_current()
+                release(entry)
+        except Exception:
+            failed()
+        return None
+
+    def on_resume(code, offset):
+        try:
+            if not is_own(code):
+                return disable
+            entry = live.get(id(get_frame(1)))
+            if entry is not None and entry[2] is None:
+                entry[2] = attach(entry[1])
+        except Exception:
+            failed()
+        return None
+
+    def on_throw(code, offset, exception):
+        try:
+            if id(code) in own:
+                entry = live.get(id(get_frame(1)))
+                if entry is not None and entry[2] is None:
+                    entry[2] = attach(entry[1])
+        except Exception:
+            failed()
+
+    events = monitoring.events
+    callbacks = {
+        events.PY_START: on_start,
+        events.PY_RETURN: on_return,
+        events.PY_UNWIND: on_unwind,
+        events.PY_YIELD: on_yield,
+        events.PY_RESUME: on_resume,
+        events.PY_THROW: on_throw,
+    }
+    monitoring.use_tool_id(slot, SERVICE_NAME + "-functions")
+    watched = 0
+    for event, callback in callbacks.items():
+        monitoring.register_callback(slot, event, callback)
+        watched |= event
+    monitoring.set_events(slot, watched)

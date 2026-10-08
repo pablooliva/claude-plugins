@@ -12,7 +12,7 @@ It is a comparison, not a design review. Whether the planned call graph is a goo
 |---|---|
 | `SCOPE` | `SLICE-XXX` or `FEATURE` |
 | the SPEC | holds `### Planned call graph` and, in per-slice mode, each slice's `Traced nodes:` line |
-| **TRACING** | the tracing standard — the three traced kinds, the capture policy, the attribute rules |
+| **TRACING** | the tracing standard — the three traced kinds, how own functions are recorded, the capture policy, the attribute rules |
 | **OBS_RECORD** | the application's observability record, `SDD/OBSERVABILITY.md`: the trace run command, the span file it writes, the env file the switches are set in, the entry-point test |
 | **TRACE_TREE_SCRIPT** | absolute path of `scripts/trace-tree.py` |
 | **TRACE_TREE** | the path you write the rendered tree to |
@@ -27,9 +27,11 @@ If any of them is missing from your prompt, or OBS_RECORD cannot be read, return
 
 The tree groups requests by entry point and gives, per entry point, the fewest and the most LLM calls and external calls seen in any one request, and every external target seen — those lines cover every request. It draws each distinct tree of calls once, as a *shape*, heaviest first: the shapes with the most LLM calls, then the most external calls. **At most ten shapes are drawn per entry point.** When the tree says more were not shown, none of them has more LLM calls than the last one drawn, nor as many LLM calls and more external calls; an undrawn shape can still have more external calls than a drawn one with more LLM calls, which is why external calls are compared on the *External targets seen* line and the per-request counts, not on the shapes. Say in the review how many shapes were not drawn.
 
+The tree also shows the application's own functions. The application records every call to one (TRACING, *Own functions*), and each shows as a span named `<module>.<function>` beneath whatever called it; an `[LLM]` or `[external: …]` span sits beneath the function that made the call. Function spans are part of a shape, so an entry point has more shapes than it has outcomes: two requests that differ by one helper call are two shapes. A tree with no function spans at all comes from an application on a Python older than 3.12, where none are recorded.
+
 ## 2. The nodes in scope
 
-Only **marked** nodes of `### Planned call graph` are compared: `[entry: …]`, `[LLM, max N calls]`, `[external: X]`. An unmarked node is an ordinary function, has no span, and is never a finding.
+Only **marked** nodes of `### Planned call graph` are compared: `[entry: …]`, `[LLM, max N calls]`, `[external: X]`. An unmarked node is an ordinary function. It usually shows in the tree as a function span, and whether it shows or not is never a finding.
 
 - **`SCOPE = SLICE-XXX`:** the marked nodes on this slice's `Traced nodes:` line and on those of every slice before it in `## Delivery Slices`. Never a later slice's: it has not been built.
 - **`SCOPE = FEATURE`:** every marked node in the graph.
@@ -42,10 +44,22 @@ An entry point the tree shows and the planned graph does not name — a route th
 | Kind | Matched by | Seen when |
 |---|---|---|
 | `[entry: …]` | **Name, exactly.** The text after `entry:` is an entry-point heading in the tree (`## POST /uploads`, `## app.jobs.nightly_digest`) | that heading exists with at least one request |
-| `[LLM, max N calls]` | **Count beneath its entry point.** An LLM span is named for its operation and model, never for the function that made the call, so it cannot be matched by name | see *Which LLM node ran* below |
+| `[LLM, max N calls]` | **The function span above it.** An LLM span is named for its operation and model, never for the planned node, so it is matched by the function that made the call — or by count beneath its entry point, when the tree has no function spans | see *Which LLM node ran* below |
 | `[external: X]` | **Target.** `X` against the `[external: …]` marks in that entry point's shapes and its *External targets seen* line: the same database or message system, or the same host. Where the mark names a setting, compare with the host that setting holds | that target appears beneath that entry point |
 
-**Which LLM node ran.** An `[LLM]` span does not say which planned node made it, so a verdict about one node needs proof about that node. The **possible producers** of an `[LLM]` span beneath an entry point are the places in the code beneath that entry point that call a model (read the code to tell): the in-scope LLM nodes; a later slice's node, only when it was built early; and any model call the planned tree does not show. That last kind is the *call the plan does not show* finding as soon as you find it in the code, whether or not the trace run drove it.
+**Which LLM node ran.** An `[LLM]` span does not say which planned node made it, so a verdict about one node needs proof about that node. There are two ways to get it. Use the first whenever the tree has function spans.
+
+Both start from the **possible producers** of an `[LLM]` span beneath an entry point: the places in the code beneath that entry point that call a model (read the code to tell). They are the in-scope LLM nodes; a later slice's node, only when it was built early; and any model call the planned tree does not show. That last kind is the *call the plan does not show* finding as soon as you find it in the code, whether or not the trace run drove it.
+
+*By the function above it.* For each in-scope LLM node, find in the code the function that makes that node's model call. In the tree, the function that made an `[LLM]` span is the nearest function span above it: go up from the `[LLM]` span, past any span that is not a function span — a framework span, an agent or tool span a library opened — to the first one that is.
+
+- **`seen`** — some shape of the node's entry point shows an `[LLM]` span whose nearest function span above is that function's, and no other possible producer makes its call through the same function.
+- **Two possible producers that call the model through one shared function** are not told apart by that function. Go further up the tree from the `[LLM]` span to the first function span that only one of them passes through, and judge the node by that one. When there is none — both reach the shared function from the same function — write `not told apart by function` in the table for each, with the test meant to drive it. It is not a finding and it is not `seen`.
+- **Not shown** — the shapes drawn include every shape that has an `[LLM]` span, and in none of them is that function the nearest function span above one. That is the *marked node not shown* finding, one per node. When the function's own span is there with no `[LLM]` span beneath it, say so in the finding: a test reached the function, and the call was not made or went to a stand-in.
+- **`not shown in the shapes drawn`** — shapes were left undrawn and the last one drawn still has an `[LLM]` span, so an undrawn shape may hold the node's call. Write that in the table with the number of shapes not drawn. It is not a finding and it is not `seen`.
+- **An `[LLM]` span beneath a function that no in-scope node's call goes through** is the *call the plan does not show* finding, unless a later slice's node that was built early accounts for it.
+
+*By count, when the tree has no function spans.*
 
 - **`seen`** — the node is the only possible producer and some shape of the entry point shows an `[LLM]` span; or some shape shows more `[LLM]` spans than the *other* possible producers could have made between them (the sum of their maxima); or a shape puts the spans beneath different steps that match where the plan puts the nodes.
 - **Not shown, every node** — no request of the entry point shows an `[LLM]` span at all. Each in-scope LLM node of that entry point is the *marked node not shown* finding.
@@ -59,7 +73,7 @@ Then read four more lines of the tree, per in-scope entry point:
 - **`Reached from beneath an LLM call`.** Each target there was taken as the model call's own request and not counted. That is right when it is the model provider's host. Any other system there is an external call hiding under a model call: compare it with the plan as an external call.
 - **`Spans in no request`** (in the tree's notes). The test's own client above a route is expected. A span listed there with the mark `[LLM]` is a model call made outside any entry point — nothing in the plan can account for it. Other spans there are listed in the review and are not findings.
 
-Framework spans (`fastapi.endpoint` and the like) and every other unmarked span are ignored. Durations are not compared.
+Framework spans (`fastapi.endpoint` and the like) and function spans are not compared with the plan; a function span is read only to tell which node made an LLM call. A function span marked as an error is not a finding either: it says an exception left that function, which a refusal the application answers on purpose also does. Durations are not compared.
 
 ## 4. Capture policy and code
 
@@ -78,9 +92,9 @@ A finding comes from this table or it is not a Tracing Lens finding.
 | A header, or the value of a secret-named environment variable, recorded on a span (any hit in the scan) | HIGH |
 | More LLM calls in one request than the ceiling of its entry point | HIGH |
 | An LLM or external call beneath an in-scope entry point that the planned tree does not show — including another system reached from beneath an LLM call, and a span marked `[LLM]` in no request | MEDIUM |
-| A marked node in scope that the tree does not show, and that is not marked `not exercised in tests`. For LLM nodes, only as *Which LLM node ran* proves it: an entry point with no LLM span at all (one finding per node), or a path with fewer LLM calls than nodes (one finding for the path) | MEDIUM |
+| A marked node in scope that the tree does not show, and that is not marked `not exercised in tests`. For LLM nodes, only as *Which LLM node ran* proves it | MEDIUM |
 | A new entry point that is not traced, or that is of a kind the application keeps a registry for and is missing from the registry the entry-point test reads | MEDIUM |
-| In the application's own code: a structured value stored on a span as a JSON string; a hand-written span on something that is not an entry point, an LLM call, or an external call; a backend, exporter, or instrumentation library named outside the bootstrap module. (Attributes an instrumentation library writes are left as it writes them) | LOW |
+| In the application's own code: a structured value stored on a span as a JSON string; a span written by hand into a function the application already records automatically — it is a second record of the same call, and it sits between the function and the calls it makes; a backend, exporter, or instrumentation library named outside the bootstrap module. (Attributes an instrumentation library writes are left as it writes them) | LOW |
 
 A marked node the tree does not show is a statement about the tests, not a claim that the code is wrong: the trace run shows only what its tests drove for real. The usual fix is a test that drives the call, not a change to the call.
 
@@ -99,13 +113,13 @@ A `## Tracing Lens` section:
 ## Tracing Lens
 
 **Trace tree:** <TRACE_TREE path> — `Result:` line verbatim
-**Scope:** <SLICE-XXX | FEATURE> — <n> marked node(s) compared, <n> skipped as `not exercised in tests`, <n> `not distinguishable by count`
+**Scope:** <SLICE-XXX | FEATURE> — <n> marked node(s) compared, <n> skipped as `not exercised in tests`, <n> not told apart (`not shown in the shapes drawn`, `not told apart by function`, or `not distinguishable by count`)
 
 | Node | Kind | Planned | In the tree | Verdict |
 |------|------|---------|-------------|---------|
 | handle_upload | entry | POST /uploads | `## POST /uploads`, 14 requests | seen |
-| extract | LLM | max 1 call | the only LLM node under `POST /uploads`; most 1 in one request | seen, within ceiling |
-| classify | LLM | max 1 call | `## POST /digest`: most 2 in one request, and `summarise` (max 2) could have made both | not distinguishable by count — meant to be driven by `test_digest_classifies` |
+| extract | LLM | max 1 call | `[LLM]` beneath `app.extract.extract` under `POST /uploads`; most 1 in one request | seen, within ceiling |
+| classify | LLM | max 1 call | `## POST /digest`: 14 shapes not drawn, the last one drawn has an `[LLM]` span, none drawn shows one beneath `app.digest.classify` | not shown in the shapes drawn — meant to be driven by `test_digest_classifies` |
 | index | external | qdrant | — | skipped: no test instance |
 
 **Recorded deviations:** [each plan-versus-trace difference already under `### Implementation Deviations`, or `None.`]

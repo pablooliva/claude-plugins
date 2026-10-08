@@ -1,9 +1,10 @@
-"""Every entry point is traced (the tracing standard's entry-point test).
+"""Every entry point is traced (the tracing standard's entry-point test), and the application's own functions are
+recorded beneath them without their values.
 
 The routes come from the application's own route table, never from a list kept here. A fresh process sends one
-request to each of them under the trace-run setting, and the test reads the span file that process wrote: a route
-with no span of its own fails the test by name. So does anything in the route table this test does not know how
-to send a request to.
+request to each of them under the trace-run setting, and the tests read the span file that process wrote: a route
+with no span of its own fails the first test by name. So does anything in the route table this test does not know
+how to send a request to.
 """
 
 import json
@@ -11,6 +12,8 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO = @@ROOT@@
 
@@ -48,28 +51,59 @@ def _drive(routes_file: str) -> None:
     Path(routes_file).write_text(json.dumps({"routes": routes, "unchecked": unchecked}))
 
 
-def test_every_route_is_traced(tmp_path):
-    span_file = tmp_path / "spans.jsonl"
-    routes_file = tmp_path / "routes.json"
+@pytest.fixture(scope="module")
+def run(tmp_path_factory):
+    """One fresh process that sends a request to every route: what it found, and the spans it wrote."""
+    folder = tmp_path_factory.mktemp("entry-points")
+    span_file = folder / "spans.jsonl"
+    routes_file = folder / "routes.json"
     env = {**os.environ, "TRACE_RUN_FILE": str(span_file), "PYTHONPATH": os.pathsep.join(filter(None, sys.path))}
+    # The second test checks what is recorded when the values switch is unset.
+    env.pop("TRACE_FUNCTION_VALUES", None)
     subprocess.run([sys.executable, __file__, str(routes_file)], cwd=REPO, env=env, check=True, timeout=120)
 
-    found = json.loads(routes_file.read_text())
-    routes = found["routes"]
-    assert not found["unchecked"], f"Entry points this test cannot check yet: {found['unchecked']}"
-    assert routes, "the application has no routes to check"
     lines = span_file.read_text().splitlines() if span_file.exists() else []
     # Under the trace run these spans belong in its file too.
     if lines and os.environ.get("TRACE_RUN_FILE"):
         with open(os.environ["TRACE_RUN_FILE"], "a", encoding="utf-8") as trace_run_file:
             trace_run_file.write("\n".join(lines) + "\n")
-    spans = [json.loads(line) for line in lines]
+    return json.loads(routes_file.read_text()), [json.loads(line) for line in lines]
+
+
+def test_every_route_is_traced(run):
+    found, spans = run
+    routes = found["routes"]
+    assert not found["unchecked"], f"Entry points this test cannot check yet: {found['unchecked']}"
+    assert routes, "the application has no routes to check"
     traced = {
         (span["attributes"].get("http.request.method") or span["attributes"].get("http.method"), span["attributes"].get("http.route"))
         for span in spans
     }
     untraced = [f"{method} {path}" for method, path in routes if (method, path) not in traced]
     assert not untraced, f"Untraced entry points: {untraced}"
+
+
+def test_own_functions_are_recorded_without_values(run):
+    if sys.version_info < (3, 12):
+        pytest.skip("own functions are recorded from Python 3.12 on")
+    _, spans = run
+    # A span the bootstrap module's hook made for an own function is named for that function, and says which
+    # file and line it is defined at.
+    functions = [
+        span
+        for span in spans
+        if span["attributes"].get("code.function.name") == span["name"]
+        and "code.file.path" in span["attributes"]
+        and "code.line.number" in span["attributes"]
+    ]
+    assert functions, (
+        "No call to one of the application's own functions was recorded. Either the hook in the bootstrap module "
+        "is not installed, or no request above reaches the application's own code."
+    )
+    with_values = sorted(
+        {span["name"] for span in functions if any(key == "output" or key.startswith(("args.", "output.")) for key in span["attributes"])}
+    )
+    assert not with_values, f"Recorded with an argument or a return value although the values switch is unset: {with_values}"
 
 
 @@REGISTRY_TEST@@

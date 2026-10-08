@@ -1,6 +1,6 @@
 ---
 name: observability-init
-description: "INVOKE THIS SKILL when the user wants to give an application tracing — e.g. '/observability-init', 'add tracing to this app', 'set up observability here', 'instrument this application', 'send traces to Opik / Langfuse', 'install the tracing foundation'. Run once per application, at a moment when no `/sdd-flow` cycle is running. Inspects the repository (framework, entry points, LLM and external calls, where configuration is loaded, how the tests build the app, the application's own rules about what may be recorded), proposes a plan for the user to approve, then renders its bundled templates into one bootstrap module, an entry-point wrapper, an entry-point test, a trace run, and `SDD/OBSERVABILITY.md`. Proves the result on the application itself: a real trace arrives in the backend, the kill switch stops everything, the entry-point test fails when tracing is taken off one entry point. Applies the plugin's tracing standard (`references/tracing.md`). Python applications only for now. Never prints env values, never writes a credential into a file, never commits, builds nothing for evals."
+description: "INVOKE THIS SKILL when the user wants to give an application tracing — e.g. '/observability-init', 'add tracing to this app', 'set up observability here', 'instrument this application', 'send traces to Opik / Langfuse', 'install the tracing foundation'. Run once per application, at a moment when no `/sdd-flow` cycle is running. Inspects the repository (framework, entry points, LLM and external calls, where configuration is loaded, how the tests build the app, the application's own rules about what may be recorded), proposes a plan for the user to approve, then renders its bundled templates into one bootstrap module (which also records every call to the application's own functions, without their values, on Python 3.12 or later), an entry-point wrapper, an entry-point test, a trace run, and `SDD/OBSERVABILITY.md`. Proves the result on the application itself: a real trace arrives in the backend, the kill switch stops everything, the entry-point test fails when tracing is taken off one entry point. Applies the plugin's tracing standard (`references/tracing.md`). Python applications only for now. Never prints env values, never writes a credential into a file, never commits, builds nothing for evals."
 ---
 
 # Observability Init
@@ -9,7 +9,7 @@ Installs the **tracing foundation** in an application, once, so that every reque
 
 The foundation is five parts, defined in `references/tracing.md` (the plugin's tracing standard — read it before Step 2; it is the rulebook for everything below):
 
-1. **One bootstrap module** — the only file that knows a tracing backend exists.
+1. **One bootstrap module** — the only file that knows a tracing backend exists. It also records every call to the application's own functions, with no change to them.
 2. **One wrapper** for entry points the framework does not see.
 3. **One entry-point test** that fails when an entry point is not traced.
 4. **One trace run** — a command that runs the tests and writes every span to a local file.
@@ -40,10 +40,11 @@ Bundled files (read by path when needed):
 5. **Claiming it works without looking.** Reporting "traces are sent" because no error was printed. Resolution: Step 6 reads the trace back from the backend. A check that was not run is reported as not run.
 6. **Leaving the proof in.** Taking tracing off one entry point to show the test fails, and not putting it back. Resolution: Step 6 restores it and re-runs the test; Step 7's `git diff` is read for the leftover.
 7. **Trusting an unproven recipe.** The instrumentation packages are betas and break between releases. Resolution: a recipe marked unproven is named as such in the plan, and only Step 5's import check and Step 6's real span make it proven.
-8. **Spans everywhere.** Adding hand-written spans to ordinary functions to be thorough. Resolution: the three traced kinds and nothing else.
+8. **Spans everywhere.** Adding hand-written spans to functions to be thorough. Resolution: the bootstrap module already records every call to an own function. A span is written by hand only for an LLM or external call that no instrumentation covers.
 9. **Building for evals.** Creating an eval directory, runner, or dataset "while we are here". Resolution: this skill writes nothing for evals.
 10. **Replacing an existing foundation.** Re-rendering over a bootstrap module someone has tuned. Resolution: `SDD/OBSERVABILITY.md` present means audit mode (Step 1); changes are proposed as edits.
 11. **Leftover placeholders.** Resolution: Step 5 greps for `@@`.
+12. **Leaving values on.** Putting `TRACE_FUNCTION_VALUES` in the env file to prove it works, and leaving it there. Resolution: Step 6 sets it in the environment of one command only. It never goes into a file.
 
 ## When to Activate
 
@@ -93,6 +94,7 @@ Find, by reading the code:
 
 - **The framework and where the app is built**, and every **entry point**: routes, and anything the framework does not see (jobs, consumers, commands) with the table that lists them, if one exists.
 - **Every LLM call and external call**, and the library each goes through.
+- **The Python version the application runs on** (`.python-version`, `requires-python`) — own functions are recorded from 3.12 on — and **the directories that hold its own code**: normally the one package the bootstrap module goes into.
 - **Where configuration is loaded at startup**, which env file it reads, and whether a caller can pass a different one.
 - **How the tests build the application**: fixtures, stand-ins for the model, how they keep a developer's environment out, and which tests start a real server. Two kinds matter most. A test that **starts the application from the repository** — runs the documented start command, or builds the app with no env file of its own — reads the developer's real env file, and will send traces once backend lines are in it. A test that **starts a real server with an environment it builds itself** drops the trace run's variable, so its requests are missing from the trace run's file. Search for them: `git grep -n -E 'subprocess|Popen|uvicorn|fastapi (dev|run)' -- '*test*'`.
 - **The application's own rules** about what may be recorded or sent out — in its spec, decision records, README, and tests. A rule stricter than the standard's capture policy overrides it. A test that asserts tracing or telemetry is off will fail once it is on.
@@ -105,8 +107,9 @@ One plan, in one message. Nothing is written before the user approves it.
 - **Packages** to add, with any pin and its reason.
 - **New files** — the four, with their paths.
 - **Edits to existing files** — each one: file, the line, what it becomes, and why. This always includes the call to `setup_tracing()`, the call to `flush_tracing()` at shutdown, and the framework's tracing switch.
+- **Own functions** — the directories they are recorded from, and the header reader the bootstrap module gets for the values switch (which framework, proven or not). On a Python older than 3.12: that none will be recorded, and why.
 - **The application's own decisions this touches** (Anti-Pattern 2) — each rule found in Step 2, quoted with its source, and what happens to it: kept and applied (how), or changed (which requirement text, test, and document change with it). A stricter rule is applied, not argued with.
-- **What will be recorded** — in plain words, each of these: which requests; that the text sent to and returned by the model goes to the backend unless the content switch is set; that a request's path **and query string** are recorded, so anything sent in the address is in the trace; and that when a call fails, **the error text is recorded**, which can repeat what the other system answered — a gateway's error body, for one. If the application has a rule against any of these, that rule is in the next item, not waved through here.
+- **What will be recorded** — in plain words, each of these: which requests; that every call to one of the application's own functions is recorded with its name, file, line, timing and whether an exception left it, but never its arguments or return value unless the values switch is set, and what that costs per request (the standard's figures); that the text sent to and returned by the model goes to the backend unless the content switch is set; that a request's path **and query string** are recorded, so anything sent in the address is in the trace; and that when a call fails, **the error text is recorded**, which can repeat what the other system answered — a gateway's error body, for one. If the application has a rule against any of these, that rule is in the next item, not waved through here.
 - **The application's tests** — each test found in Step 2 that would send traces or drop the trace run's variable, and the change that fixes it.
 - **Backend** — which one, and the exact lines the user adds to the env file. The skill does not write them.
 - **The proof** (Step 6) — what will be run, including that it makes **one real model call** and sends **one real trace** to the backend, and which checks cannot be run yet and why (no key pair for the second backend, for example).
@@ -148,10 +151,12 @@ Any failure: fix and re-run this step. A secret or a header in the span file is 
 The standard does not count the foundation as installed until these have been seen. Run the ones the plan listed; a check that cannot be run is reported as not run, with the reason.
 
 1. **The entry-point test can fail.** Take tracing off one entry point (`references/python-recipes.md` says how for each framework), run the entry-point test, and confirm it fails naming that entry point. Put tracing back; confirm it passes.
-2. **A real trace arrives.** With the backend lines in the env file, send one real request through the application — the documented start command and one request, or a few lines that build the app with its real env file and call it through a test client. Stop the process the way a user would; the `flush_tracing()` call at shutdown is what sends the last spans, and this step is its proof — if the trace is missing, look there first. Then read the trace back from the backend (`references/python-recipes.md`, Backends) and confirm: the entry point is the first span, the model call is beneath it with its model, both token counts, and — unless the content switch is off — its input and output.
-3. **The kill switch stops everything.** Set `OTEL_SDK_DISABLED=true` for one more request and confirm the backend's trace count did not change.
-4. **The other backend, by changing two variables** — only when the user wants the application able to send to a second backend now. Change the two backend variables and nothing else, send one request, read it back from the other backend. Otherwise it is not run: say so, and record it as not run. The standard does not require it for the foundation to count as installed.
-5. **The trace run** already produced its file in Step 5.
+2. **Own functions are recorded, and the test for it can fail** (Python 3.12 or later). Take the line `_record_own_functions(provider, env_file)` out of the bootstrap module, run the entry-point test file, and confirm `test_own_functions_are_recorded_without_values` fails. Put the line back; confirm it passes. Count the function spans one typical request made, for the record.
+3. **With values on, a header is not recorded.** Start the application in a fresh process under the trace-run setting, with `TRACE_FUNCTION_VALUES=all` in that one command's environment and nowhere else. Send one request that carries a made-up value in a header of its own (`X-Probe: <made-up value>`). Count, never print: the made-up value appears 0 times in the span file, and at least one span carries an `args.` attribute. This is what proves the header reader. An application that receives no requests does not run it.
+4. **A real trace arrives.** With the backend lines in the env file, send one real request through the application — the documented start command and one request, or a few lines that build the app with its real env file and call it through a test client. Stop the process the way a user would; the `flush_tracing()` call at shutdown is what sends the last spans, and this step is its proof — if the trace is missing, look there first. Then read the trace back from the backend (`references/python-recipes.md`, Backends) and confirm: the entry point is the first span, the model call is beneath it with its model, both token counts, and — unless the content switch is off — its input and output.
+5. **The kill switch stops everything.** Set `OTEL_SDK_DISABLED=true` for one more request and confirm the backend's trace count did not change.
+6. **The other backend, by changing two variables** — only when the user wants the application able to send to a second backend now. Change the two backend variables and nothing else, send one request, read it back from the other backend. Otherwise it is not run: say so, and record it as not run. The standard does not require it for the foundation to count as installed.
+7. **The trace run** already produced its file in Step 5.
 
 Never print a credential while doing this. Run commands so that keys come from the environment or the env file.
 
@@ -178,6 +183,8 @@ Tracing foundation installed (create mode)
 
   Checks: placeholders ✓  tests 317 passed ✓  trace run 315 spans ✓  no secret or header in the span file ✓
   Proof:  entry-point test fails without tracing on POST /ask ✓
+          own functions: test fails without the hook ✓  31 function spans on one POST /ask, none with a value ✓
+          values on: made-up header value 0 times in the span file ✓
           trace in Opik: POST /ask → chat <model>, 348 in / 70 out tokens, messages present ✓
           kill switch: no new trace ✓
           Langfuse: NOT RUN — no second backend wanted yet
@@ -209,4 +216,4 @@ Adding `opik` to the dependencies and `@opik.track` to the route because the ven
 
 ## Scope Boundary
 
-This skill **installs and proves** an application's tracing foundation: the bootstrap module with its wrapper, the entry-point test, the trace run, and `SDD/OBSERVABILITY.md`, plus the few edits that wire them in. It inspects without printing env values, proposes a plan the user approves, renders its templates, and shows the result working on the real application. It does not commit, does not write credentials or backend addresses into any file, does not run while an `/sdd-flow` cycle is in progress, does not add spans beyond the three traced kinds, and builds nothing for evals. `sdd-flow` does not read the record or the standard yet; that is a later release.
+This skill **installs and proves** an application's tracing foundation: the bootstrap module with its wrapper, the entry-point test, the trace run, and `SDD/OBSERVABILITY.md`, plus the few edits that wire them in. It inspects without printing env values, proposes a plan the user approves, renders its templates, and shows the result working on the real application. It does not commit, does not write credentials or backend addresses into any file, does not run while an `/sdd-flow` cycle is in progress, does not write spans into the application's functions, and builds nothing for evals. `sdd-flow` does not read the record or the standard yet; that is a later release.

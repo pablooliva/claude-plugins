@@ -8,6 +8,8 @@ Where each part of this application's tracing foundation lives. Written by `/obs
 | Bootstrap module | @@BOOTSTRAP_PATH@@ |
 | Entry-point wrapper | @@BOOTSTRAP_PATH@@::traced |
 | Entry-point test | @@ENTRY_POINT_TEST_PATH@@ |
+| Own functions recorded from | @@OWN_CODE@@ |
+| Header reader, for the values switch | @@HEADER_READER@@ |
 | Trace run | `@@TRACE_RUN_COMMAND@@` — writes @@SPAN_FILE@@ |
 | Tracing backend now | @@BACKEND@@ |
 | Eval command | — |
@@ -21,6 +23,7 @@ Set in `@@ENV_FILE_NAME@@`, or in the environment, which wins. Read when the pro
 | Switch tracing off entirely | `OTEL_SDK_DISABLED=true` |
 | Keep spans, drop LLM inputs and outputs | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` |
 | Record a fraction of requests | `OTEL_TRACES_SAMPLER=parentbased_traceidratio`, `OTEL_TRACES_SAMPLER_ARG=0.1` |
+| Record arguments and return values of own functions, to find a fault | `TRACE_FUNCTION_VALUES=all`, or module names separated by commas. Unset: none. Take it out again afterwards |
 | Choose the backend | `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` |
 
 With no endpoint set, nothing is sent anywhere.
