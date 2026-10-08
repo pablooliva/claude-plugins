@@ -36,6 +36,10 @@ TRACE_RUN_FILE = "TRACE_RUN_FILE"
 # every own function; module names separated by commas record them for those modules and the ones beneath them.
 VALUES_SWITCH = "TRACE_FUNCTION_VALUES"
 
+# The repeat cap: how many calls of one function from one caller get a span of their own. Further ones get
+# none, and the caller's span says how many there were and how many of them ended in an exception.
+REPEAT_CAP = 10
+
 _CONTENT_SWITCH = "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"
 _HEADER_CAPTURE = "OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_"
 _CONVENTIONS = "OTEL_SEMCONV_STABILITY_OPT_IN"
@@ -296,9 +300,21 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
     request_headers = contextvars.ContextVar("request_headers", default=None)
 
     tracer = provider.get_tracer(SERVICE_NAME + ".functions")
-    own = {}  # id(code) -> (span name, attributes, ((parameter, attribute name), ...) or None, record the result)
+    # id(code) -> (span name, attributes, ((parameter, attribute name), ...) or None, record the result,
+    #              whether it is a generator or a coroutine, which can be left and entered again)
+    own = {}
     kept = []  # the code objects themselves, so that an id is never given to another one
-    live = _function_hook["open"]  # id(frame) -> [span, the context to make current on resuming, token or None]
+    # The calls that are open, by id(frame). One of three things:
+    #   [span, the context to make current on resuming, token or None, {function name: [calls, failed]}, trace id]
+    #       a call that has a span;
+    #   [None, the context to make current on resuming, token or None, the caller's [calls, failed] pair]
+    #       a generator or coroutine the cap left without a span: its context is kept like any other's;
+    #   the caller's [calls, failed] pair itself
+    #       any other call the cap left without a span, remembered only to count a failure.
+    live = _function_hook["open"]
+    caller_key = otel_context.create_key("own-function-caller")
+    set_value = otel_context.set_value
+    get_value = otel_context.get_value
     disable = monitoring.DISABLE
     get_frame = sys._getframe
     set_span = trace.set_span_in_context
@@ -328,7 +344,7 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
             )
             result = not _NEVER_NAMED.search(code.co_name)
         attributes = {"code.function.name": name, "code.file.path": relative, "code.line.number": code.co_firstlineno}
-        own[id(code)] = info = (name, attributes, parameters, result)
+        own[id(code)] = info = (name, attributes, parameters, result, bool(code.co_flags & 0x2A0))
         kept.append(code)
         return info
 
@@ -386,6 +402,17 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
         the hook went in, which its start never classified. Only another's code may have an event switched off."""
         return id(code) in own or classify(code) is not None
 
+    def finish(entry) -> None:
+        """End the span, saying first how many calls it made that the cap left without a span of their own."""
+        capped = {}
+        for name, (calls, failed) in entry[3].items():
+            if calls > REPEAT_CAP:
+                capped[f"calls.{name}.not_recorded"] = calls - REPEAT_CAP
+                capped[f"calls.{name}.not_recorded_failed"] = failed
+        if capped:
+            entry[0].set_attributes(capped)
+        entry[0].end()
+
     def release(entry) -> None:
         if entry[2] is not None:
             try:
@@ -412,10 +439,28 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
                     return disable  # never called again for this code object
             frame = get_frame(1)
             stale = live.pop(id(frame), None)  # a frame that went away without returning; its id is being reused
-            if stale is not None:
+            if stale is not None and len(stale) > 2 and stale[0] is not None:
                 stale[0].end()
-            if not current_span().is_recording():
+            parent = current_span()
+            if not parent.is_recording():
                 return None  # outside a traced request, or the request was sampled out
+            # The caller is the nearest own function above this call that has a span - for a plain call, the
+            # function that made it. Its span counts the calls the cap leaves without one. A caller left over
+            # from another trace (the function started a trace of its own) is not this call's caller, and one
+            # whose span has ended (background work outlived it) can count nothing any more.
+            caller = get_value(caller_key)
+            if caller is not None and caller[4] == parent.get_span_context().trace_id and caller[0].is_recording():
+                seen = caller[3].get(info[0])
+                if seen is None:
+                    seen = caller[3][info[0]] = [0, 0]
+                seen[0] += 1
+                if seen[0] > REPEAT_CAP:
+                    if info[4]:
+                        context = get_current()
+                        live[id(frame)] = [None, context, attach(context), seen]
+                    else:
+                        live[id(frame)] = seen
+                    return None
             attributes = info[1]
             if info[2]:
                 attributes = dict(attributes)
@@ -424,8 +469,10 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
                     if parameter in local:
                         render(attributes, key, local[parameter])
             span = tracer.start_span(info[0], attributes=attributes)
-            context = set_span(span)
-            live[id(frame)] = [span, context, attach(context)]
+            entry = [span, None, None, {}, span.get_span_context().trace_id]
+            entry[1] = context = set_value(caller_key, entry, set_span(span))
+            entry[2] = attach(context)
+            live[id(frame)] = entry
         except Exception:
             failed()
         return None
@@ -436,13 +483,14 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
                 return disable
             info = own[id(code)]
             entry = live.pop(id(get_frame(1)), None)
-            if entry is not None:
+            if entry is not None and len(entry) > 2:
                 release(entry)
-                if info[3]:
-                    result = {}
-                    render(result, "output", value)
-                    entry[0].set_attributes(result)
-                entry[0].end()
+                if entry[0] is not None:
+                    if info[3]:
+                        result = {}
+                        render(result, "output", value)
+                        entry[0].set_attributes(result)
+                    finish(entry)
         except Exception:
             failed()
         return None
@@ -451,12 +499,22 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
         try:
             if id(code) in own:
                 entry = live.pop(id(get_frame(1)), None)
-                if entry is not None:
+                closing = isinstance(exception, GeneratorExit)  # a generator being closed is not a failure
+                if entry is None:
+                    pass
+                elif len(entry) == 2:
+                    if not closing:
+                        entry[1] += 1
+                elif entry[0] is None:
                     release(entry)
-                    if not isinstance(exception, GeneratorExit):  # a generator being closed is not a failure
+                    if not closing:
+                        entry[3][1] += 1
+                else:
+                    release(entry)
+                    if not closing:
                         entry[0].set_status(error)
                         entry[0].set_attribute("error.type", clean(_class_name(type(exception))))
-                    entry[0].end()
+                    finish(entry)
         except Exception:
             failed()
 
@@ -465,7 +523,7 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
             if not is_own(code):
                 return disable
             entry = live.get(id(get_frame(1)))
-            if entry is not None and entry[2] is not None:
+            if entry is not None and len(entry) > 2 and entry[2] is not None:
                 # What is current now is what must be current again on resuming: a library may have opened a span
                 # of its own inside this function, and it is still open.
                 entry[1] = get_current()
@@ -479,7 +537,7 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
             if not is_own(code):
                 return disable
             entry = live.get(id(get_frame(1)))
-            if entry is not None and entry[2] is None:
+            if entry is not None and len(entry) > 2 and entry[2] is None:
                 entry[2] = attach(entry[1])
         except Exception:
             failed()
@@ -489,7 +547,7 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
         try:
             if id(code) in own:
                 entry = live.get(id(get_frame(1)))
-                if entry is not None and entry[2] is None:
+                if entry is not None and len(entry) > 2 and entry[2] is None:
                     entry[2] = attach(entry[1])
         except Exception:
             failed()

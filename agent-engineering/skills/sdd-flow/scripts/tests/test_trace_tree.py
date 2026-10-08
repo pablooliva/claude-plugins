@@ -495,5 +495,127 @@ class InputTest(unittest.TestCase):
         self.assertIn("POST /ask  [entry]\n", document)
 
 
+class RepeatCapTest(unittest.TestCase):
+    """Own-function spans, and the calls the application's repeat cap left without one."""
+
+    @staticmethod
+    def function(spans, name, parent, **more):
+        attributes = {"code.function.name": name, "code.file.path": "app/x.py", "code.line.number": 1}
+        attributes.update(more.pop("attributes", {}))
+        return spans.add(name, parent, attributes=attributes, **more)
+
+    def request(self, spans, trace, calls, not_recorded, failed):
+        route = spans.route(trace=trace)
+        loop = self.function(spans, "app.x.loop", route, trace=trace, attributes={
+            "calls.app.x.step.not_recorded": not_recorded, "calls.app.x.step.not_recorded_failed": failed})
+        for _ in range(calls):
+            self.function(spans, "app.x.step", loop, trace=trace)
+        return loop
+
+    def test_the_counts_are_printed_beside_the_capped_function(self):
+        spans = Spans()
+        self.request(spans, "t1", calls=3, not_recorded=4, failed=1)
+        status, out, _ = run(spans.lines)
+        self.assertEqual(status, 0)
+        self.assertRegex(out, r"└─ app\.x\.step  ×3  \+4 not recorded, 1 failed")
+        self.assertIn("- Own-function calls not recorded in one request (over the repeat cap): fewest 4, most 4; "
+                      "of those, ended in an exception: most 1", out)
+
+    def test_counts_that_differ_are_one_shape_with_a_range(self):
+        spans = Spans()
+        self.request(spans, "t1", calls=3, not_recorded=2, failed=0)
+        self.request(spans, "t2", calls=3, not_recorded=9, failed=2)
+        _, out, _ = run(spans.lines)
+        self.assertIn("- Shapes: 1", out)
+        self.assertRegex(out, r"app\.x\.step  ×3  \+2–9 not recorded, 0–2 failed")
+        self.assertIn("fewest 2, most 9; of those, ended in an exception: most 2", out)
+
+    def test_a_request_under_the_cap_and_one_over_it_in_the_same_shape(self):
+        spans = Spans()
+        self.request(spans, "t1", calls=3, not_recorded=5, failed=0)
+        route = spans.route(trace="t2")
+        loop = self.function(spans, "app.x.loop", route, trace="t2")
+        for _ in range(3):
+            self.function(spans, "app.x.step", loop, trace="t2")
+        _, out, _ = run(spans.lines)
+        self.assertIn("- Shapes: 1", out)
+        self.assertRegex(out, r"app\.x\.step  ×3  \+0–5 not recorded, 0 failed")
+
+    def test_the_count_goes_on_the_last_run_of_that_function(self):
+        spans = Spans()
+        route = spans.route()
+        loop = self.function(spans, "app.x.loop", route, attributes={
+            "calls.app.x.step.not_recorded": 6, "calls.app.x.step.not_recorded_failed": 0})
+        self.function(spans, "app.x.step", loop)
+        self.function(spans, "app.x.other", loop)
+        self.function(spans, "app.x.step", loop)
+        self.function(spans, "app.x.step", loop)
+        _, out, _ = run(spans.lines)
+        rows = [line for line in out.splitlines() if "app.x.step" in line]
+        self.assertEqual(len(rows), 2)
+        self.assertNotIn("not recorded", rows[0])
+        self.assertRegex(rows[1], r"app\.x\.step  ×2  \+6 not recorded, 0 failed")
+
+    def test_a_capped_function_drawn_nowhere_beneath_the_caller_gets_a_row_of_its_own(self):
+        spans = Spans()
+        route = spans.route()
+        loop = self.function(spans, "app.x.loop", route, attributes={
+            "calls.app.x.step.not_recorded": 7, "calls.app.x.step.not_recorded_failed": 3})
+        library = spans.add("library.batch", loop)
+        self.function(spans, "app.x.step", library)
+        _, out, _ = run(spans.lines)
+        self.assertRegex(out, r"├─ library\.batch.*\n.*│  └─ app\.x\.step.*\n.*└─ \(app\.x\.step  \+7 not recorded, 3 failed\)")
+
+    def test_no_capped_call_no_line_and_no_note(self):
+        spans = Spans()
+        route = spans.route()
+        loop = self.function(spans, "app.x.loop", route)
+        self.function(spans, "app.x.step", loop)
+        _, out, _ = run(spans.lines)
+        self.assertNotIn("not recorded", out)
+
+    def test_a_count_that_is_not_a_positive_whole_number_is_ignored(self):
+        for value in ("4", True, 0, -2, 1.5, None):
+            spans = Spans()
+            route = spans.route()
+            loop = self.function(spans, "app.x.loop", route, attributes={"calls.app.x.step.not_recorded": value})
+            self.function(spans, "app.x.step", loop)
+            status, out, _ = run(spans.lines)
+            self.assertEqual(status, 0)
+            self.assertNotIn("not recorded", out, repr(value))
+
+    def test_a_function_name_is_never_cut_and_any_other_long_name_still_is(self):
+        long_name = "app." + "very_long_module_name." * 5 + "function_"
+        spans = Spans()
+        route = spans.route()
+        self.function(spans, long_name + "one", route)
+        self.function(spans, long_name + "two", route)
+        spans.add("SELECT " + "column, " * 20, route)
+        _, out, _ = run(spans.lines)
+        self.assertIn(long_name + "one", out)
+        self.assertIn(long_name + "two", out)
+        self.assertIn("SELECT column", out)
+        self.assertNotIn("SELECT " + "column, " * 20, out)
+
+    def test_two_capped_names_that_print_alike_after_redaction_add_up(self):
+        spans = Spans()
+        route = spans.route()
+        self.function(spans, "app.x.loop", route, attributes={
+            "calls.app.hunter2secret.not_recorded": 4, "calls.app.hunter2secret.not_recorded_failed": 1,
+            "calls.app.swordfish99.not_recorded": 6, "calls.app.swordfish99.not_recorded_failed": 2})
+        _, out, _ = run(spans.lines, environment={"API_KEY": "hunter2secret", "DB_PASSWORD": "swordfish99"})
+        self.assertIn("fewest 10, most 10; of those, ended in an exception: most 3", out)
+        self.assertRegex(out, r"\+10 not recorded, 3 failed")
+        self.assertNotIn("hunter2secret", out)
+        self.assertNotIn("swordfish99", out)
+
+    def test_a_secret_inside_a_capped_function_name_is_not_printed(self):
+        spans = Spans()
+        route = spans.route()
+        self.function(spans, "app.x.loop", route, attributes={"calls.app.hunter2secret.not_recorded": 2})
+        status, out, _ = run(spans.lines, environment={"API_KEY": "hunter2secret"})
+        self.assertNotIn("hunter2secret", out)
+
+
 if __name__ == "__main__":
     unittest.main()

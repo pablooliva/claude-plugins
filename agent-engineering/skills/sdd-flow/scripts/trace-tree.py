@@ -28,8 +28,16 @@ Inside a request every span is one of:
                    the same, beneath an LLM span: taken as that call's own request
                    and not counted. The targets are listed per entry point, so a
                    call to some other system made from there can be seen.
-  (unmarked)       anything else — the framework's own spans, ordinary functions,
-                   tool and agent spans.
+  (unmarked)       anything else — the framework's own spans, tool and agent spans,
+                   and the application's own functions, which it records
+                   automatically, one span per call, named `<module>.<function>`.
+
+An application caps repeated calls: after the first few calls of one function from
+one caller, further calls get no span, and the caller's span counts them. The tree
+prints those counts beside the function — `×10  +4 not recorded, 1 failed` is 14
+calls, 10 of them drawn, 4 not, and 1 of those 4 ended in an exception. Across the
+requests of one shape the counts are given as a range, like the durations; they do
+not make two requests different shapes.
 
 The counts of LLM and external calls are per request: the fewest and the most seen
 in any one request of that entry point, never a total across requests.
@@ -68,7 +76,9 @@ TARGET_ATTRIBUTES = ["db.system.name", "db.system", "messaging.system", "rpc.sys
                      "server.address", "net.peer.name"]
 URL_ATTRIBUTES = ["url.full", "http.url"]
 MAX_SHAPES = 10   # shapes printed per entry point; the counts always cover every request
-MAX_NAME = 80     # a span name longer than this is cut (some database spans are named by their statement)
+MAX_NAME = 80     # a span name longer than this is cut (some database spans are named by their statement);
+                  # an own function's name never is: the tree is read to tell two functions apart
+CAPPED, CAPPED_FAILED = ".not_recorded", ".not_recorded_failed"   # `calls.<function>` + these, on the caller's span
 
 
 class Unreadable(Exception):
@@ -110,9 +120,13 @@ class Span:
             json.dumps(raw, sort_keys=True, default=str).encode("utf-8")).hexdigest())
         self.parent = raw.get("parent_id")
         name = redact(str(raw.get("name") or "?"))
-        self.name = name if len(name) <= MAX_NAME else name[:MAX_NAME - 1] + "…"
-        self.kind = str(raw.get("kind") or "").rpartition(".")[2].upper()
         self.attributes = a_dict(raw.get("attributes"))
+        # A span the application's own-function hook made: named for the function, with the file it is in.
+        self.function = (bool(raw.get("name")) and self.attributes.get("code.function.name") == raw.get("name")
+                         and "code.file.path" in self.attributes)
+        self.name = name if self.function or len(name) <= MAX_NAME else name[:MAX_NAME - 1] + "…"
+        self.kind = str(raw.get("kind") or "").rpartition(".")[2].upper()
+        self.unrecorded = self._unrecorded(redact)
         self.error = a_dict(raw.get("status")).get("status_code") == "ERROR"
         self.start = str(raw.get("start_time") or "")
         self.milliseconds = milliseconds(raw)
@@ -121,6 +135,21 @@ class Span:
         self.children: list[Span] = []
         self.reached = False      # some first span of a trace leads to it
         self.in_request = False   # it is in some request's tree
+
+    def _unrecorded(self, redact: Callable[[str], str]) -> dict[str, tuple[int, int]]:
+        """{function name: (calls the repeat cap left without a span, how many of those raised)}."""
+        def count(value: Any) -> int:
+            return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else 0
+
+        found = {}
+        for key, value in self.attributes.items():
+            if key.startswith("calls.") and key.endswith(CAPPED) and count(value):
+                name = key[len("calls."):-len(CAPPED)]
+                # Two names that print alike once a secret is taken out of them are one row: their counts add up.
+                calls, failed = found.get(redact(name), (0, 0))
+                found[redact(name)] = (calls + count(value),
+                                       failed + count(self.attributes.get(f"calls.{name}{CAPPED_FAILED}")))
+        return found
 
     def _target(self) -> str:
         for name in TARGET_ATTRIBUTES:
@@ -156,6 +185,7 @@ class Node:
         self.marks = " ".join(marks + (["error"] if span.error else []))
         self.milliseconds = span.milliseconds
         self.children = children
+        self.unrecorded = span.unrecorded   # not part of the key: the counts do not make a different shape
         self.key: tuple = (self.name, self.marks, tuple(child.key for child in children))
 
 
@@ -166,10 +196,14 @@ class Request:
         self.external = 0
         self.targets: set[str] = set()
         self.inside: set[str] = set()   # what outgoing spans beneath an LLM span reached
+        self.unrecorded = 0             # own-function calls the repeat cap left without a span
+        self.unrecorded_failed = 0      # ... and how many of those ended in an exception
         self.root = self._node(entry, first=True, inside=False)
 
     def _node(self, span: Span, first: bool, inside: bool) -> Node:
         span.in_request = True
+        self.unrecorded += sum(calls for calls, _ in span.unrecorded.values())
+        self.unrecorded_failed += sum(failed for _, failed in span.unrecorded.values())
         marks = ["[entry]"] if first else []
         if span.model_call:
             marks.append("[LLM]")
@@ -257,14 +291,23 @@ def plural(count: int, word: str) -> str:
     return f"{count} {word}" + ("" if count == 1 else "s")
 
 
-def tree_rows(nodes: list[Node], prefix: str, branch: str, times: int) -> list[tuple[str, str, str]]:
+def unrecorded_note(nodes: list[Node], name: str) -> str:
+    """`+4 not recorded, 1 failed` for one function beneath the same span of every request of a shape."""
+    counts = [node.unrecorded.get(name, (0, 0)) for node in nodes]
+    return (f"+{span_range([calls for calls, _ in counts])} not recorded, "
+            f"{span_range([failed for _, failed in counts])} failed")
+
+
+def tree_rows(nodes: list[Node], prefix: str, branch: str, times: int, note: str = "") -> list[tuple[str, str, str]]:
     """Rows (tree text, marks, duration) for the same position in every request of a shape.
 
-    Siblings that follow one another with identical trees are printed once, with how many there were.
+    Siblings that follow one another with identical trees are printed once, with how many there were. A function
+    the repeat cap left some calls of without a span has those counts on its last row here, or on a row of its
+    own when none of its calls is drawn directly beneath this span.
     """
     first = nodes[0]
-    rows = [(prefix + branch + first.name + (f"  ×{times}" if times > 1 else ""), first.marks,
-             duration([node.milliseconds for node in nodes]))]
+    rows = [(prefix + branch + first.name + (f"  ×{times}" if times > 1 else "") + (f"  {note}" if note else ""),
+             first.marks, duration([node.milliseconds for node in nodes]))]
     below = prefix + ("" if not branch else "│  " if branch == "├─ " else "   ")
     runs: list[list[int]] = []
     for index, child in enumerate(first.children):
@@ -272,9 +315,16 @@ def tree_rows(nodes: list[Node], prefix: str, branch: str, times: int) -> list[t
             runs[-1].append(index)
         else:
             runs.append([index])
-    for number, run in enumerate(runs, start=1):
+    capped = sorted({name for node in nodes for name in node.unrecorded})
+    last_run = {first.children[run[0]].name: number for number, run in enumerate(runs)}
+    alone = [name for name in capped if name not in last_run]
+    for number, run in enumerate(runs):
+        name = first.children[run[0]].name
         rows += tree_rows([node.children[index] for node in nodes for index in run], below,
-                          "└─ " if number == len(runs) else "├─ ", len(run))
+                          "└─ " if number == len(runs) - 1 and not alone else "├─ ", len(run),
+                          unrecorded_note(nodes, name) if name in capped and last_run[name] == number else "")
+    for number, name in enumerate(alone, start=1):
+        rows.append((f"{below}{'└─ ' if number == len(alone) else '├─ '}({name}  {unrecorded_note(nodes, name)})", "", ""))
     return rows
 
 
@@ -310,8 +360,12 @@ def render_entry(name: str, requests: list[Request]) -> list[str]:
         f"- External targets seen: {', '.join(targets) or 'none'}",
         f"- Reached from beneath an LLM call (taken as that call's own request, not counted): "
         f"{', '.join(inside) or 'none'}",
-        f"- Shapes: {len(ordered)}",
     ]
+    if any(request.unrecorded for request in requests):
+        lines.append(f"- Own-function calls not recorded in one request (over the repeat cap): fewest "
+                     f"{min(r.unrecorded for r in requests)}, most {max(r.unrecorded for r in requests)}; "
+                     f"of those, ended in an exception: most {max(r.unrecorded_failed for r in requests)}")
+    lines.append(f"- Shapes: {len(ordered)}")
     for number, group in enumerate(ordered[:MAX_SHAPES], start=1):
         http = statuses(group)
         lines += ["", f"### Shape {number} of {len(ordered)} — {plural(len(group), 'request')} · "

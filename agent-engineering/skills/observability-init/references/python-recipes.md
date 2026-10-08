@@ -105,6 +105,8 @@ An application that receives no requests (a command-line program, a job runner):
 - **An application that takes requests and has no reader** records headers handed to its functions when the values switch is on. Say so in the plan and in the record's *Header reader* row, and tell the user not to use the switch until there is one.
 - **The reader runs once per request, and only while the switch is on.** It must not raise and must not read the body.
 
+**`REPEAT_CAP`** is a constant near the top of the bootstrap module, not a placeholder. Leave it at 10. An application with a reason for another number changes that one line, and the *Repeat cap* row of its record with it.
+
 **What nobody has to do.** No decorator, no call, no registry. An own function added later is recorded without anyone touching the bootstrap module. A span written into a function by hand is a second record of the same call: do not add one.
 
 ## Web framework
