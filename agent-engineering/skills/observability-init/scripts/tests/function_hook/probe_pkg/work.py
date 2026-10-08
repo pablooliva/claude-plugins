@@ -181,3 +181,8 @@ def starts_a_trace_of_its_own(n, tracer):
 
 async def a_starts_background(coroutine):
     return asyncio.ensure_future(coroutine)
+
+
+async def a_worker(started, n):
+    await started.wait()
+    return [leaf(i) for i in range(n)]

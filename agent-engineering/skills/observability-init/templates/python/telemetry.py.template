@@ -265,17 +265,22 @@ def _record_own_functions(provider, env_file: Path) -> None:
     Does nothing before Python 3.12, where the hook does not exist. Never raises."""
     import sys
 
-    log = logging.getLogger(__name__)
+    def warn(message: str, *arguments) -> None:
+        try:
+            logging.getLogger(__name__).warning(message, *arguments)
+        except Exception:
+            pass  # a logging handler that fails must not stop the application from starting
+
     if sys.version_info < (3, 12):
         return
-    slot = next((slot for slot in (4, 3) if sys.monitoring.get_tool(slot) is None), None)
-    if slot is None:
-        log.warning("Own functions are not recorded: both spare call-monitoring slots are taken by other tools.")
-        return
     try:
+        slot = next((slot for slot in (4, 3) if sys.monitoring.get_tool(slot) is None), None)
+        if slot is None:
+            warn("Own functions are not recorded: both spare call-monitoring slots are taken by other tools.")
+            return
         _install_function_hook(provider, env_file, sys.monitoring, slot)
     except Exception as failure:
-        log.warning("Own functions are not recorded: %s while setting up the hook.", type(failure).__name__)
+        warn("Own functions are not recorded: %s while setting up the hook.", _class_name(type(failure)))
 
 
 def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> None:
@@ -370,6 +375,10 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
                 return _REDACTED
         return text
 
+    def clean_name(kind: type) -> str:
+        # clean() searches only what will be stored, so a class name is cut to the same limit as any other text.
+        return clean(_class_name(kind))[:_TEXT_LIMIT]
+
     def render(target: dict, key: str, value) -> None:
         kind = type(value)
         if kind is str:
@@ -388,7 +397,7 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
             target[key + ".length"] = len(value)
         else:
             # Never repr(), str() or len() on anything else: that runs the object's own code and could dump it.
-            target[key + ".type"] = clean(_class_name(kind))
+            target[key + ".type"] = clean_name(kind)
 
     def note_headers(frame) -> None:
         found = read_headers(frame.f_locals)
@@ -422,9 +431,12 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
             entry[2] = None
 
     def failed() -> None:
-        if not _function_hook["failures"]:
-            logging.getLogger(__name__).warning("Recording a call to an own function failed; it is skipped.", exc_info=True)
         _function_hook["failures"] += 1
+        if _function_hook["failures"] == 1:
+            try:
+                logging.getLogger(__name__).warning("Recording a call to an own function failed; it is skipped.", exc_info=True)
+            except Exception:
+                pass  # a logging handler that fails must not reach the function being recorded either
 
     # Every callback swallows its own failure: a fault in tracing must never reach the function being recorded.
     def on_start(code, offset):
@@ -443,7 +455,11 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
                 stale[0].end()
             parent = current_span()
             if not parent.is_recording():
-                return None  # outside a traced request, or the request was sampled out
+                parent_context = parent.get_span_context()
+                if not (parent_context.is_valid and parent_context.trace_flags.sampled):
+                    return None  # outside a traced request, or the request was sampled out
+                # Otherwise the span that is current has ended and its trace is kept: background work that
+                # outlived the function which started it. Its calls are recorded beneath that span.
             # The caller is the nearest own function above this call that has a span - for a plain call, the
             # function that made it. Its span counts the calls the cap leaves without one. A caller left over
             # from another trace (the function started a trace of its own) is not this call's caller, and one
@@ -513,7 +529,7 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
                     release(entry)
                     if not closing:
                         entry[0].set_status(error)
-                        entry[0].set_attribute("error.type", clean(_class_name(type(exception))))
+                        entry[0].set_attribute("error.type", clean_name(type(exception)))
                     finish(entry)
         except Exception:
             failed()

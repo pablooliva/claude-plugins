@@ -59,6 +59,13 @@ with provider.get_tracer("probe").start_as_current_span("root"):
     except Exception: pass
 _types = [x.attributes.get("error.type") for x in memory.get_finished_spans() if x.name.endswith(".raises")]; memory.clear()
 check("an exception class named like a secret value is not recorded by name, in any mode", _types == ["[redacted]"], str(len(_types)))
+with provider.get_tracer("probe").start_as_current_span("root"):
+    # Longer than the stored length plus the longest secret value this machine has set, so past what is searched.
+    try: work.raises(type("X" * 20000 + "env-canary-9f3k2", (Exception,), {})())
+    except Exception: pass
+_types = [x.attributes.get("error.type") for x in memory.get_finished_spans() if x.name.endswith(".raises")]; memory.clear()
+check("a secret value at the end of a very long exception class name is not recorded either",
+      len(_types) == 1 and "env-canary-9f3k2" not in _types[0] and len(_types[0]) <= 200, str([len(t) for t in _types]))
 # outside any span: nothing recorded
 work.leaf(1); check("no span outside a traced request", len(spans()) == 0)
 
@@ -187,11 +194,34 @@ asyncio.run(outlives()); s = spans(); e = edges(s)
 check("background work that outlives the function that started it loses no call",
       e[(P+"leaf", "lib.background")] == 6 and capped(next(x for x in s if x.name == P+"a_starts_background")) == {},
       str(sorted((k, v) for k, v in e.items() if k[0] == P+"leaf")))
+async def outlives_with_own_work():
+    started = asyncio.Event()
+    with tracer.start_as_current_span("root"):
+        task = await work.a_starts_background(work.a_worker(started, 6))
+    started.set()
+    await task
+asyncio.run(outlives_with_own_work()); s = spans(); e = edges(s)
+worker = [x for x in s if x.name == P+"a_worker"]
+check("own background work with no library span around it is recorded beneath the function that started it",
+      e[(P+"a_worker", P+"a_starts_background")] == 1 and e[(P+"leaf", P+"a_worker")] == 3
+      and len(worker) == 1 and capped(worker[0]).get(P+"leaf"+NOT) == 3,
+      str(sorted((k, v) for k, v in e.items() if k[0] in (P+"leaf", P+"a_worker"))))
 gc.collect()
 check("nothing left open", len(state["open"]) == 0, f"open={len(state['open'])}")
 check("no callback failed", state["failures"] == 0, f"failures={state['failures']}")
 
 if mode != "none":
+    # The header reader runs only with the values switch on; it is the one callback step a test can make fail.
+    import logging
+    class _Broken(logging.Handler):
+        def emit(self, record): raise RuntimeError("handler failed")
+    logging.getLogger(telemetry.__name__).addHandler(_Broken())
+    async def _nothing(): return "reached"
+    try: _reached = asyncio.run(probe_fw.framework_entry({"headers": [1]}, _nothing))  # the header reader fails on this
+    except Exception as error: _reached = repr(error)
+    check("a callback failure whose log line cannot be written still does not reach the application, and is counted",
+          _reached == "reached" and state["failures"] == 1, f"{_reached} failures={state['failures']}")
+    state["failures"] = 0
     class Config:
         def __repr__(self): return "env-canary-9f3k2"
     async def with_headers():
@@ -233,4 +263,26 @@ if mode != "none":
           obj.get("args.config.type") == "Config" and obj.get("args.items.type") == "list" and obj.get("args.items.length") == 3
           and obj.get("args.blob.type") == "bytes" and obj.get("args.big.type") == "int" and obj.get("args.text") == "ok"
           and obj.get("output.type") == "dict" and obj.get("output.length") == 1 and "args.config" not in obj)
+# Setting up a second time, with a logging handler that raises: no spare slot, then a set-up that fails.
+import logging as _logging
+class _BrokenAtSetUp(_logging.Handler):
+    def emit(self, record): raise RuntimeError("handler failed")
+_logging.getLogger(telemetry.__name__).addHandler(_BrokenAtSetUp())
+_taken = [slot for slot in (4, 3) if sys.monitoring.get_tool(slot) is None]
+for slot in _taken: sys.monitoring.use_tool_id(slot, "probe-other-tool")
+try: telemetry._record_own_functions(provider, env_file); _no_slot = "returned"
+except Exception as error: _no_slot = repr(error)
+for slot in _taken: sys.monitoring.free_tool_id(slot)
+_install = telemetry._install_function_hook
+class _NameFails(type):
+    @property
+    def __name__(cls): raise RuntimeError("exception name lookup failed")
+class _Odd(Exception, metaclass=_NameFails): pass
+def _fails(*arguments): raise _Odd()
+telemetry._install_function_hook = _fails  # fails with an exception whose class will not even give its name
+try: telemetry._record_own_functions(provider, env_file); _broken = "returned"
+except Exception as error: _broken = repr(error)
+telemetry._install_function_hook = _install
+check("setting up never raises: no spare slot, or a set-up that fails, each with a log line that cannot be written",
+      _no_slot == "returned" and _broken == "returned" and len(_taken) == 1, f"{_no_slot} | {_broken} | free slots before={len(_taken)}")
 print("ALL PASS" if ok else "SOME FAILED", "| mode", mode)

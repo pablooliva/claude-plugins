@@ -1,6 +1,6 @@
 # Tracing and Evals for Applications Built with sdd-flow
 
-**Status:** Build step 1 shipped in agent-engineering 3.7.0 (2026-10-06): the `observability-init` skill and the tracing standard. Run on the trial application on 2026-10-07 (3.7.1), sending to Opik, with every proof seen; four gaps that run found were fixed in 3.7.2. The Langfuse swap test is deferred by decision (see "Step 1 as built" below). Steps 2 to 4 are not built. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
+**Status:** Build step 1 shipped in agent-engineering 3.7.0 (2026-10-06): the `observability-init` skill and the tracing standard. Run on the trial application on 2026-10-07 (3.7.1), sending to Opik, with every proof seen; four gaps that run found were fixed in 3.7.2. The Langfuse swap test is deferred by decision (see "Step 1 as built" below). Build step 2 shipped in 3.8.0 (2026-10-08): tracing inside `sdd-flow`, and automatic recording of an application's own functions (see "Step 2 as built"); it has not yet been used to build a feature end to end. Steps 3 and 4 are not built. Revised on 2026-10-04 after five Codex review passes of earlier drafts (35 findings in all, the last two passes covering the companion picture too; each is addressed).
 **Date:** 2026-10-04
 **Affects:** `agent-engineering/` plugin — two new skills (`observability-init`, `eval-harvest`), one new reference file, one new script, and the `sdd-flow` skill (bodies, phase files, `SKILL.md`, `references/enforcement-sites.md`). The `sdd/` plugin is frozen at 2.2.0 and is not touched.
 **Author of intent:** Pablo Oliva. Drafted with Claude.
@@ -261,6 +261,36 @@ That run found four gaps, fixed in 3.7.2 (`CLAUDEPLUG-14`): spans of the last se
 
 Nothing remains to do for step 1.
 
+## Step 2 as built (2026-10-08)
+
+Shipped in agent-engineering 3.8.0 (`CLAUDEPLUG-9`). The flow's files are the source of truth for §3, §4, §6 and §7 as far as tracing goes; where they and those sections differ, the files hold. Everything those sections say about evals is still a plan.
+
+**Built as proposed:** the Step 0 record (TRACING, and whether `SDD/OBSERVABILITY.md` exists); the `tracing:` field and its resolution at 3c into `## Gates - tracing: on|off`; `### Planned call graph` and each slice's `Traced nodes:` line; the check of the graph in the spec's critical review; the implementer's tracing step; the trace check in the slice review and the code review; `scripts/trace-tree.py`; the final check at 4e.5; the paragraph in the enforcement-site standard.
+
+**Where it differs from this proposal:**
+
+1. **The Tracing Lens is one file**, `skills/sdd-flow/references/tracing-lens.md`, passed to reviews by path — not a copy in two bodies (Appendix C). Three reviews run it: the slice review, the code review, and the 4e.5 verification.
+2. **Its findings table has more rows than Appendix C.** A trace run that cannot be read is HIGH. The LOW row also covers a span written by hand into a function the application already records, and a backend, exporter, or instrumentation library named outside the bootstrap module.
+3. **A MEDIUM difference between plan and trace may be recorded as a deviation** in the IMPLEMENTATION-PLAN, with its reason; a HIGH is always fixed. Appendix C allowed recording for any difference.
+4. **A model call is matched to its planned node by the function that made it** — the nearest function span above it in the tree — which step 1's spans could not do. By count beneath the entry point only for a tree with no function spans. Where the tree cannot tell two nodes apart, the review writes that in its table; it is neither a pass nor a finding.
+5. **`tracing: true` without the foundation, or an invalid value, is a stop**, `## Awaiting Tracing Decision`, with a resume rule and a diagram row — §3 called it a planning failure. This proposal said no stop is added; this is one.
+6. **The design brief is untouched.** §3's first reading of the gate in the brief waits for step 3, where the brief also gains the decision on how quality is judged.
+7. **At the final check each verification writes its own tree**, `TRACE-TREE-FEATURE-[feature]-iter<k>-[date].md`, so a later round never overwrites the tree an earlier review judged.
+8. **The 4e.5 verification runs the full test suite before the lens.** A suite that does not pass is a HIGH finding of its own, and the lens is not run in that round.
+9. **With the gate on, completion (4f) changes no code and no test.** §6 says it "runs nothing new"; as built it also may not fix a failing test or write a missing one, because that would land after the last trace comparison. Such an item makes the flow stop on the existing `## Awaiting Site-Count Resolution` block, and resuming re-runs the final check first.
+10. **One resume rule applies with the gate off too:** an approved 4e.5 verification with nothing left to fix and no closing `## Final Recount - Complete` line writes the line and goes to completion. No rule covered that state before.
+
+**Added to step 1's skill and standard in this release**, decided with the user on 2026-10-07 and 2026-10-08 after rereading the source note, which asks for internal calls to be recorded by default:
+
+- **Every call to the application's own functions is recorded automatically.** The bootstrap module switches on Python's call-monitoring hook (`sys.monitoring`, Python 3.12 or later) for the application's own directories. Each call is a span named `<module>.<function>` with its file and line; the functions themselves are not changed; libraries and the framework are left out. The standard keeps its three traced kinds — entry point, LLM call, external call — and treats own functions as a separate automatic layer nobody marks.
+- **Values are a separate switch, off by default:** `TRACE_FUNCTION_VALUES`, unset, `all`, or a list of module names. A parameter named like a secret or a header is never recorded. With the switch on, keeping headers and secrets out is as good as the matching, and the standard lists what the matching misses (transformed values, values under four characters, secrets set after start, a framework with no header reader).
+- **A cap on repeats:** after ten calls of one function from one caller, further calls get no span, and the caller's span carries `calls.<function>.not_recorded` and `calls.<function>.not_recorded_failed`. The cap is a constant in the bootstrap module.
+- **Measured** on a scratch copy of the trial application, 2,000 requests per setting against a local stand-in for the model, with a browser's twelve request headers: 5 records per request and a median of 1,176 µs without function recording; 34 records and +42% median (+78% mean) with it at cap 10; 48 records and +53% (+104%) with no cap; +59% with values recorded for every function. The cost is fixed per call — about 1 µs for the hook and about 25 µs to make and send a span — so against a 20 ms model call the median rose 1.5% in the trial.
+
+**Not proven yet.** No feature has been built end to end with 3.8.0. The done-condition of `CLAUDEPLUG-9` is the trial application's next piece built with it. That application's own bootstrap module predates the hook and needs `/observability-init` run again in audit mode to get it.
+
+**Left open on purpose:** the template's test recognises a hook-made span by its name, file, and line; a hand-made span copying all three would pass it. A marker written by the trace run's file writer would close that. And a slice's trace-tree file has no round number in its name, so after a failed trace run an older tree of the same slice and day can still be at that path.
+
 ## Open
 
 Deliberately left to the build step that needs the answer:
@@ -332,6 +362,8 @@ And in each slice entry:
 ```
 
 ## Appendix C — draft of the Tracing Lens (for `bodies/code-review.md` and `bodies/slice-review.md`)
+
+*Superseded by `agent-engineering/skills/sdd-flow/references/tracing-lens.md` (3.8.0); kept as the draft it was. See "Step 2 as built".*
 
 ```markdown
 **Tracing Lens (conditional).** Your prompt carries the resolved gate: `tracing: off` → skip, and say so

@@ -89,6 +89,7 @@ def load_scan() -> Any:
     spec = importlib.util.spec_from_file_location("check_span_file", SCAN_SCRIPT)
     try:
         module = importlib.util.module_from_spec(spec)
+        sys.dont_write_bytecode = True  # leave no __pycache__ beside the other skill's script
         spec.loader.exec_module(module)
     except (OSError, AttributeError) as exc:
         raise Unreadable(f"the capture-policy scan is missing ({type(exc).__name__}): expected "

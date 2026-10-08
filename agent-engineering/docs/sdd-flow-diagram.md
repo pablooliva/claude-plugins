@@ -1,6 +1,6 @@
 # sdd-flow — the development cycle at a glance
 
-A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.7.2. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
+A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 3.8.0. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
 
 **How to read it.** Rounded boxes are work done by a spawned subagent. Red boxes are places the flow **stops and waits for you**. Grey boxes are things the orchestrator (the main conversation) does itself: commits, running a script, recording state.
 
@@ -73,9 +73,9 @@ flowchart TD
     dev --> s4
     s3g -- "no" --> s4{"Step 4 — Implementation<br/>route on delivery mode"}
     s4 -- "per-slice" --> slices("Per-slice cycle<br/>see the next diagram")
-    s4 -- "whole-feature" --> wf("4a implement<br/>4a.5 blind site count and diff<br/>4b code review, 4c fix")
+    s4 -- "whole-feature" --> wf("4a implement<br/>4a.5 blind site count and diff<br/>4b code review, 4c fix<br/>tracing on: 4b also compares a real run with the planned calls")
     slices --> eof
-    wf --> eof("4d critical review of the code, 4e fix<br/>4e.5 final blind recount<br/>4f completion: summary, tier plan updated")
+    wf --> eof("4d critical review of the code, 4e fix<br/>4e.5 final blind recount<br/>tracing on: and the trace check, once more<br/>4f completion: summary, tier plan updated")
     eof --> m2["Mirror: tier in review"]:::orch
     m2 --> s4h["4h — STOP, supervised mode only<br/>ready to commit?<br/>waits until you say yes"]:::stop
     s4h --> c4["4i commit implementation"]:::orch
@@ -95,7 +95,7 @@ flowchart TD
     scaffold("4a.0 — create the slice progress table<br/>once per feature") --> impl("4a — implement one slice<br/>code, tests, list of enforcement sites")
     impl --> count("4a.5 — blind site count<br/>a fresh subagent that never sees the implementer's list")
     count --> diff["diff the two lists<br/>scripts/site-diff.py"]:::orch
-    diff --> review("4b — slice review<br/>includes the design brief check")
+    diff --> review("4b — slice review<br/>includes the design brief check<br/>tracing on: and the trace check")
     review -- "any finding" --> fix("4c — fix all of them, then recount<br/>and re-review, at most 3 rounds")
     fix --> count
     fix -- "no progress, or 3 rounds used" --> halt["STOP in every mode — slice halted<br/>findings go to the ledger<br/>you fix them, then continue re-reviews"]:::stop
@@ -113,6 +113,8 @@ flowchart TD
 ```
 
 ## What happens at each stage
+
+**Tracing.** In an application that has the tracing foundation (`/observability-init` was run on it), a cycle also plans which calls the feature makes and checks them against a real run: the spec draws a planned call graph (3a), the gate is settled at 3c, the implementer follows the tracing standard (4a), and the slice review, the code review, and the final recount's verification each compare the call tree a real run recorded with the plan, writing `reviews/TRACE-TREE-*`. With the gate on, the final recount's verification always runs and every finding it raises is fixed before completion. Without the foundation none of this happens. `observability-diagram.md`, beside this file, draws it.
 
 | Stage | What is done | Who does it | What it writes (under `SDD/`) | Where it can stop |
 |---|---|---|---|---|

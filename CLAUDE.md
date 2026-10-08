@@ -36,7 +36,7 @@ agent-engineering/
 │                                   #   8× sdd-spec-*-specialist (sonnet)
 ├── hooks/log_subagent_call.py      # logs subagent transcripts
 ├── docs/sdd-flow-diagram.md        # human-facing picture of the sdd-flow cycle — update it when a step or a stop changes
-├── docs/observability-diagram.md    # picture of the tracing-and-evals proposal (proposals/observability-and-evals-2026-10-04.md) — only build step 1 (observability-init) exists; update it as each build step ships
+├── docs/observability-diagram.md    # picture of the tracing-and-evals proposal (proposals/observability-and-evals-2026-10-04.md) — build steps 1 (observability-init) and 2 (tracing in sdd-flow) exist, evals and eval-harvest do not; update it as each build step ships
 ├── commands/                       # interactive (depth-0) commands the user runs:
 │                                   #   adr-capture, prompt-doctor, research-clarify,
 │                                   #   critical-review, continue, commit, and four compact commands
@@ -51,9 +51,13 @@ agent-engineering/
 │   │   │                           #   implementation-whole-feature, implementation-per-slice, protocols)
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
 │   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
-│   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard
+│   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard;
+│   │   │                           #   tracing-lens.md — the ONE definition of the reviews' trace check (slice review,
+│   │   │                           #   code review, and the 4e.5 verification read it; never restate it in a body)
 │   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff;
-│   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI
+│   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
+│   │                               #   trace-tree.py — renders a trace run's span file as call trees and call counts
+│   │                               #   (loads observability-init/scripts/check-span-file.py by path — keep both in step)
 │   │                               #   (tests: python3 -m unittest discover -s scripts/tests)
 │   ├── ai-agent-security-review/   # OWASP AI-agent control catalog (vendored) +
 │   │                       #   standalone review; sdd-flow reads the same catalog
@@ -67,8 +71,12 @@ agent-engineering/
 │   │                       #   (sdd-flow panel-specialist §4.5 + planning.md mirror it — change together)
 │   ├── observability-init/ # user-invoked, once per application, never during an sdd-flow cycle: installs the tracing
 │   │                       #   foundation from templates/ (Python only) and proves it on the app;
-│   │                       #   references/tracing.md is the plugin's ONE tracing standard — sdd-flow does not read it yet
-│   │                       #   (tests: python3 -m unittest discover -s scripts/tests)
+│   │                       #   foundation includes a hook that records every call to the app's own functions (Python 3.12+);
+│   │                       #   references/tracing.md is the plugin's ONE tracing standard — sdd-flow reads it when a
+│   │                       #   cycle's `tracing` gate is on, never restates it
+│   │                       #   (tests: python3 -m unittest discover -s scripts/tests — the hook test is skipped without
+│   │                       #   Python 3.12 + opentelemetry-sdk; to run it, from the skill's directory:
+│   │                       #   uv run --python 3.12 --with opentelemetry-sdk python -m unittest discover -s scripts/tests)
 │   ├── retro/              # user-invoked development-cycle retrospective (environment, not code);
 │   │                       #   scripts/session-digest.py reads session transcripts across /clear
 │   │                       #   (tests: python3 -m unittest discover -s scripts/tests)
@@ -76,7 +84,7 @@ agent-engineering/
 │   │                       #   bb-worktree-init/, worktree-merge/
 └── README.md
 ```
-`sdd-flow` is the flow's single source of truth: the orchestrator (main conversation) spawns one subagent per step, passing each its body file BY PATH (never embedding content). `SKILL.md` states three rules that every edit to a body or phase file is checked against: a body's only inputs are the paths in its prompt (it never lists a folder to find them, never commits, never writes a stop note beyond the two it is allowed); only the orchestrator declares a phase done, and every stop that waits for an answer has a halt block, a resume rule in `phases/protocols.md`, and a row in the diagram; and every slice state change, stop, and commit has an owner in `phases/implementation-per-slice.md`'s owner table. Spawned subagents must not themselves spawn or invoke slash commands/skills (one-level nesting) — every body is pre-adapted for inline execution. NOTE: this was a platform limit on Claude Code ≤2.1.171; since 2.1.172 (2026-06-09) the platform allows nesting to depth 5, but the flat design is retained deliberately — do not refactor toward nesting without reading `proposals/nested-subagents-analysis-2026-06-12.md`. The other skills are invoked by the user (or `sdd-flow`) at decision points. `ai-agent-security-review` is dual-use: a standalone review, and the canonical control catalog that `sdd-flow` reads at two `agent_security:`-gated hook points (Step 3c panel value, Step 4b code-review lens).
+`sdd-flow` is the flow's single source of truth: the orchestrator (main conversation) spawns one subagent per step, passing each its body file BY PATH (never embedding content). `SKILL.md` states three rules that every edit to a body or phase file is checked against: a body's only inputs are the paths in its prompt (it never lists a folder to find them, never commits, never writes a stop note beyond the two it is allowed); only the orchestrator declares a phase done, and every stop that waits for an answer has a halt block, a resume rule in `phases/protocols.md`, and a row in the diagram; and every slice state change, stop, and commit has an owner in `phases/implementation-per-slice.md`'s owner table. Spawned subagents must not themselves spawn or invoke slash commands/skills (one-level nesting) — every body is pre-adapted for inline execution. NOTE: this was a platform limit on Claude Code ≤2.1.171; since 2.1.172 (2026-06-09) the platform allows nesting to depth 5, but the flat design is retained deliberately — do not refactor toward nesting without reading `proposals/nested-subagents-analysis-2026-06-12.md`. The other skills are invoked by the user (or `sdd-flow`) at decision points. `ai-agent-security-review` is dual-use: a standalone review, and the canonical control catalog that `sdd-flow` reads at two `agent_security:`-gated hook points (Step 3c panel value, Step 4b code-review lens). `observability-init` is tied to `sdd-flow` the same way: its tracing standard and the `SDD/OBSERVABILITY.md` it leaves in an application are what a cycle's `tracing` gate (decided once at 3c, recorded as `## Gates - tracing: on|off`) switches on — the planned call graph in the spec, the implementer's tracing step, and the Tracing Lens in the slice review, the code review, and the 4e.5 verification. With the gate off a cycle must behave exactly as it did before 3.8.0.
 
 ## How It Works
 
