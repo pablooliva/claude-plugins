@@ -72,13 +72,17 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.10.0.
+Version 3.10.1.
+
+### What's new in 3.10.1
+
+- **`sdd-flow` reminds you of `worth-building` at the two moments it is useful.** The design gate's message gains one line, before the reply instructions: `/worth-building` on the brief asks whether this should be built as planned at all. The pause after a plan's first slice gains one line: `/worth-building recheck`, with the number of review rounds that slice took. Both are reminders only — the flow never runs the skill, never waits for it, and records nothing about it. Its verdict reaches the flow as your reply at the gate, or as your decision at the pause.
 
 ### What's new in 3.10.0
 
 - **New skill: `worth-building`.** Everything else that reviews a plan asks whether it is correct, complete, or too large. Nothing asked whether the work should be done in this order, or at all. The skill came out of a cycle that built seven slices of measurement tooling before running the one forty-minute test of the idea the tooling was for; the test showed the idea did not work. `worth-building` asks six questions of a plan and gives one verdict — proceed, reorder, shrink, or stop — with the kill test spelled out, a budget, and a tripwire: an observable condition at which to stop and look again.
 - **Two moments to run it.** At a design gate, where cost is an estimate; and with `recheck` after the first slice or milestone, where it is a measurement. On a recheck it separates the two causes of cost — the number of things being built, and the rounds each one takes — because they need different answers: the first is shrunk, the second is a process to lighten.
-- **Where it sits.** Before `simplicity-challenge` (which trims a plan it accepts as worth doing) and before `/critical-review` (which looks for what is missing, and so tends to add). It is user-invoked and is not wired into `sdd-flow`.
+- **Where it sits.** Before `simplicity-challenge` (which trims a plan it accepts as worth doing) and before `/critical-review` (which looks for what is missing, and so tends to add). It is user-invoked. (From 3.10.1 `sdd-flow` reminds you of it at the design gate and after the first slice; it still never runs it.)
 
 ### What's new in 3.9.0
 

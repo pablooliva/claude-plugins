@@ -57,7 +57,7 @@ flowchart TD
     s15 --> s2("Step 2 — Research<br/>2a research and completeness check<br/>2b ADR candidates listed for the design gate<br/>2c critical review, 2d fix findings")
     s2 --> c2["2e commit research"]:::orch
     c2 --> s25a("Step 2.5a — Design brief<br/>at most 150 lines, plain language<br/>proposes three tiers, writes the tier plan")
-    s25a --> gate["Step 2.5b — Design gate<br/>STOP in both modes<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve"]:::stop
+    s25a --> gate["Step 2.5b — Design gate<br/>STOP in both modes<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve<br/>reminds you of /worth-building"]:::stop
     gate -- "answers or changes" --> s25c("2.5c — Revise the brief")
     s25c --> gate
     gate -- "approve" --> m1["Write the accepted ADRs<br/>Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
@@ -104,7 +104,7 @@ flowchart TD
     retro -- "recommends re-planning" --> replan["STOP in every mode<br/>--replan commits the slice, revises<br/>the brief, then the spec"]:::stop
     replan -- "--override-replan" --> commit
     retro --> commit["4c.6 — mark the slice complete<br/>and commit it"]:::orch
-    commit --> pause["STOP — slice pause<br/>unless --skip-slice-checkpoints<br/>shows the brief check line"]:::stop
+    commit --> pause["STOP — slice pause<br/>unless --skip-slice-checkpoints<br/>shows the brief check line<br/>after the first slice: reminds you<br/>of /worth-building recheck"]:::stop
     pause -- "more slices" --> impl
     pause -- "last slice done" --> eof(["end-of-feature steps"])
 

@@ -45,9 +45,12 @@ Re-plan: <no | yes — triggering retrospective: <retro-path>; from-slice: <SLIC
 > **ADR candidates:** [title — chosen option] · [title — chosen option] — written as decision records when you approve; name any you want dropped. [Both modes. Only when the latest `## ADR Candidates` entry lists any and no `## ADR Capture - Done` line follows it. Otherwise omit this line.]
 > Brief ([N] lines): `SDD/requirements/DESIGN-[###]-[feature-name].md`
 > Research: `SDD/research/RESEARCH-[###]-[feature-name].md`
+> **Before you approve:** `/worth-building SDD/requirements/DESIGN-[###]-[feature-name].md` asks whether this should be built as planned at all — the cheapest test that could show the idea does not work, and whether the plan runs it first. Optional; the flow does not run it for you.
 > Reply with your answers and any changes — including `tier 2` or `tier 3` to build more now. `approve` accepts the brief as written, and is available once every question above has an answer. `stop` halts here.
 
 If the brief's first line under its title is `Too large for one brief — recommend decomposition`, show that line and the seams it names in place of the summary, and offer only a change request or `stop` — there is nothing to approve.
+
+**The `Before you approve` line is a reminder, not a step.** It is shown at every gate, in both modes — a revision round and a re-plan's gate included. The orchestrator never invokes the `worth-building` skill itself, the gate does not wait for it, and nothing is recorded about whether it was run. If the user runs it, its verdict reaches the flow only as their reply: a change request (2.5c), a different tier, or `stop`. Omit the line in the `Too large for one brief` case — there is no plan to judge yet.
 
 Act on the reply:
 

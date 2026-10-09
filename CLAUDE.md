@@ -74,7 +74,8 @@ agent-engineering/
 │   ├── worth-building/     # user-invoked: asks whether the work should be built as planned at all — six questions
 │   │                       #   (kill test, ceiling, ratio, what a user sees, rule or code, budget and tripwire) and one
 │   │                       #   verdict (proceed / reorder / shrink / stop); references/questions.md is the standard,
-│   │                       #   references/worked-example.md the case it came from. Run before simplicity-challenge
+│   │                       #   references/worked-example.md the case it came from. Run before simplicity-challenge;
+│   │                       #   sdd-flow names it at the design gate and after a plan's first slice — a reminder, it never runs it
 │   ├── improve-codebase-architecture/  # user-invoked survey of existing code for deepening candidates;
 │   │                       #   references/codebase-design.md is the plugin's ONE depth standard
 │   │                       #   (sdd-flow panel-specialist §4.5 + planning.md mirror it — change together)
