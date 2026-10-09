@@ -24,7 +24,7 @@ Every control ships with a test that drives the **real entry point** with the ad
 
 1. Delete (or neutralise) exactly one enforcement site.
 2. Run the tests. At least one test MUST fail.
-3. Restore the site. Confirm `git diff -- <file>` shows no residue.
+3. Restore the site. Confirm the file is exactly what it was before the deletion (keep a copy, or compare `git diff -- <file>` taken before and after — the work is uncommitted, so that diff is not empty to begin with).
 
 N sites need N mutations. **Mutating shared machinery proves nothing about any single site** — a mutation of a helper every site calls shows the helper is tested, not that each call site is. Mutations are manual, per site, and recorded; no automated mutation-testing tool is used.
 

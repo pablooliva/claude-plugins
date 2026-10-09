@@ -52,9 +52,14 @@ agent-engineering/
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
 │   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
 │   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard;
+│   │   │                           #   second-model-review.md — the ONE definition of who runs a review (a second model family via
+│   │   │                           #   its CLI, marked fallback to the Claude reviewer agents); phase chapters point to it, never restate it;
+│   │   │                           #   test-integrity.md — the ONE definition of a real test and of the reviews' Test Integrity Lens
+│   │   │                           #   (implementer bodies read §1; code review, slice review, impl critical review run it; fixers follow §7);
 │   │   │                           #   tracing-lens.md — the ONE definition of the reviews' trace check (slice review,
 │   │   │                           #   code review, and the 4e.5 verification read it; never restate it in a body)
 │   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff;
+│   │                               #   second-model-review.py — settles the cycle's reviewer and runs one review step on codex/opencode;
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
 │   │                               #   trace-tree.py — renders a trace run's span file as call trees and call counts
 │   │                               #   (loads observability-init/scripts/check-span-file.py by path — keep both in step)
@@ -91,7 +96,7 @@ agent-engineering/
 1. Commands are markdown files containing prompts; users invoke them via `/command-name`.
 2. Skills are invoked through the Skill tool when their description matches the task.
 3. SDD, PACE, and agent-engineering each register a `SubagentStop` hook that runs `hooks/log_subagent_call.py` to capture subagent transcripts. (If both `sdd` and `agent-engineering` are installed, subagent stops are logged twice — harmless duplicates.)
-4. Model routing (sdd commands): Research uses Opus; Planning/Implementation use Sonnet. pace's `continue` only recommends a model by work type. In `agent-engineering`'s `sdd-flow`, routing is carried by shipped agent frontmatter — `sdd-workhorse` and the `sdd-spec-*-specialist` agents are Sonnet; `sdd-critical-reviewer` is Opus. One exception: the design brief (Step 2.5) is written by `sdd-workhorse` with a per-spawn `opus` override.
+4. Model routing (sdd commands): Research uses Opus; Planning/Implementation use Sonnet. pace's `continue` only recommends a model by work type. In `agent-engineering`'s `sdd-flow`, routing is carried by shipped agent frontmatter — `sdd-workhorse` and the `sdd-spec-*-specialist` agents are Sonnet; `sdd-critical-reviewer` is Opus. One exception: the design brief (Step 2.5) is written by `sdd-workhorse` with a per-spawn `opus` override. As of 3.9.0 the review steps do not use that routing first: each is run on a second model family through its CLI (`skills/sdd-flow/references/second-model-review.md`), and the reviewer agents are the marked fallback.
 
 ## Development
 

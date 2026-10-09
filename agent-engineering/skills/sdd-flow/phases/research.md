@@ -39,7 +39,7 @@ If no cross-cutting decisions are detected, the entry is appended with `none`. C
 
 ## 2c. Research Critical Review Subagent
 
-Spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus by frontmatter):
+Run this review by the cycle's **review route** (`references/second-model-review.md`). On the Claude route, spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus by frontmatter). Either route is given:
 - **Body:** `bodies/critical-review.md` — apply its **Research Phase** section.
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present, for the Design Concept Fidelity check), `SDD/UBIQUITOUS_LANGUAGE.md` (if present, for vocabulary-alignment).
 - **Outputs:** `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`.

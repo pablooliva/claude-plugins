@@ -141,6 +141,10 @@ Create the implementation tracking document using this enhanced template. **The 
 - Target Coverage: [As specified in SPEC]
 - Coverage Gaps: [Areas needing additional tests]
 
+### Test Changes
+[One line per pre-existing test that was changed, skipped, or removed — `None.` when there is none]
+- [test file::name]: [what changed] — required by [REQ-XXX]
+
 ## Technical Decisions Log
 
 ### Architecture Decisions
@@ -227,8 +231,10 @@ Create the implementation tracking document using this enhanced template. **The 
    - Start with core functionality (primary success path)
    - Implement one requirement at a time
    - Write tests alongside every component — do not defer test writing
+   - **Read the test integrity standard at the `TEST_INTEGRITY` path in your prompt, §1, before writing the first test.** Every test you write is held to it: its expected value comes from the SPEC, it fails when the behaviour is broken, it runs the code that holds the logic, and it checks an outcome the spec names. The review that follows breaks your code to see whether your tests notice, and probes it with inputs your tests do not use
+   - **A failing test is never made to pass by weakening it, and the code is never taught about the tests' inputs** (§1). Where the SPEC requires a pre-existing test to change or go, change it and add its line under `### Test Changes` in the IMPLEMENTATION-PLAN
    - For every feature, consider all three test types:
-     - **Unit tests** (always required): isolated logic with mocked dependencies
+     - **Unit tests** (always required): isolated logic, with stand-ins only for what lies outside the application
      - **Integration tests** (required if API endpoints are involved): test via API test client with mocked external services
      - **E2E tests** (required if web-facing behavior exists): Playwright browser tests against the real running stack, in the project's E2E test directory (check CLAUDE.md or equivalent for the project-specific path)
    - If the feature is web-facing, E2E tests are **mandatory**, not optional
@@ -242,7 +248,7 @@ Create the implementation tracking document using this enhanced template. **The 
 6. **Record Enforcement Sites and Per-Site Mutation Evidence (whole-feature):**
    - Read the enforcement-site standard at the `STANDARD` path in your prompt (`references/enforcement-sites.md`) — it defines **control**, **enforcement site**, **gap**, the **per-site mutation standard**, and the **three dispositions**.
    - For every control in the SPEC (any rule that must hold on every path — guards, refusals, write controls, output contracts, invariants, security controls; not only `SEC-xxx`), record every site in `SDD/implementation/sites/SITES-IMPL-[feature-name].md` under `## Site Inventory`, in the exact table shape of the standard §4 (`Slice` = `—`; File and Symbol written plain, e.g. `<module>`). If `SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` exists, file and key every site by its rules (standard §4.2). If you are one implementation chunk of several, add and update rows for your chunk; do not delete earlier chunks' rows unless the site no longer exists in the working tree.
-   - Run one mutation per site: delete exactly that site, run the tests, confirm at least one fails, restore, confirm `git diff -- <file>` is clean. Record `(i)` with the failing test; where the site genuinely cannot be proven alone, record `(ii)` with the argument written as a comment AT the site, or `(iii)` with a named owner and follow-up. Never mutate shared machinery as a stand-in for its call sites.
+   - Run one mutation per site: delete exactly that site, run the tests, confirm at least one fails, restore, confirm the file is exactly what it was before the deletion (keep a copy, or compare `git diff -- <file>` taken before and after — the work is uncommitted, so that diff is not empty to begin with). Record `(i)` with the failing test; where the site genuinely cannot be proven alone, record `(ii)` with the argument written as a comment AT the site, or `(iii)` with a named owner and follow-up. Never mutate shared machinery as a stand-in for its call sites.
    - For output / stream contracts (stdout, stderr, exit codes), write at least one **real-subprocess** test per path class asserting on the actual bytes — `CliRunner` / `capsys` tests do not count toward this.
    - Fill `Implementer sites` in `## Control Site Status`; leave `Status` at `Partial`.
    - **Do not leak the list.** Site comments carry no counts, indices, or greppable site tags; your `progress.md` entry names the inventory path only. A blind, independent count (Step 4a.5) runs after you and is diffed against your inventory — every site it finds that you did not list becomes a HIGH finding.
@@ -270,7 +276,8 @@ During implementation, continuously verify:
 
 - [ ] Each requirement from SPEC is being addressed
 - [ ] Tests are written for each component/requirement — not deferred
-- [ ] Unit tests exist for all logic with isolated, mocked dependencies
+- [ ] Unit tests exist for all logic, with stand-ins only for what lies outside the application
+- [ ] Every test meets TEST_INTEGRITY §1; no test was weakened, and no code branches on a test's inputs
 - [ ] Integration tests exist for all API endpoints (via test client)
 - [ ] Web-facing behavior identified (yes/no) — recorded in IMPLEMENTATION-PLAN document
 - [ ] If web-facing: Playwright E2E tests written in the project's E2E test directory

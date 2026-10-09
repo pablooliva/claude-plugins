@@ -262,6 +262,10 @@ If reviewing implementation work (spec files, prompts, or actual code):
 - [ ] **Missing negative tests** - What failure paths aren't tested?
 - [ ] **Integration gaps** - What cross-component behaviors aren't verified?
 
+### Test Integrity (the lens, by reading)
+
+The four questions above ask what is not tested. This block asks whether what *is* tested is real, and whether a test or the code was bent to get a green run. When your prompt gives a `TEST_INTEGRITY` path, read that standard and run its lens **by reading**, as its §5 defines — every check but the sampled mutations and probes, which you run only where your reading gives you a reason to doubt a specific test. Use `BASE` and the IMPLEMENTATION-PLAN path from your prompt. Look hardest at what the earlier review could not see: **tests changed since that review by a fix** (was a finding answered by weakening the test that exposed it?), and tests that agree with the code about something the SPEC never said. Each finding is a finding of this review, at the severity the standard gives. With no `TEST_INTEGRITY` path in your prompt, skip the block and say so in one line.
+
 ### Critical Questions
 
 1. How would you break this implementation?
@@ -291,6 +295,9 @@ If reviewing implementation work (spec files, prompts, or actual code):
 ### Test Gaps
 1. **[Untested scenario]**: [What's not covered]
    - Risk: [What could slip through]
+
+### Test Integrity
+[The table TEST_INTEGRITY §6 gives, with T4 and T6 marked "by reading" and any mutation or probe you did run listed under it — or `Test integrity: skipped — no TEST_INTEGRITY path in the prompt.`]
 
 ### Recommended Actions Before Merge
 1. [Specific action with priority]

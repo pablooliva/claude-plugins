@@ -102,7 +102,7 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 
 #### Test Type Coverage
 
-- [ ] **Unit tests** present — isolated logic, mocked dependencies
+- [ ] **Unit tests** present — isolated logic, stand-ins only for what lies outside the application
 - [ ] **Integration tests** present for all API endpoints (or N/A with justification)
 - [ ] **E2E/Playwright tests** present for all web-facing behavior (or N/A with justification)
 - [ ] Test type breakdown (unit / integration / E2E counts) recorded in IMPLEMENTATION-PLAN document
@@ -129,6 +129,12 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 - [ ] Test names clearly indicate what specification they verify
 - [ ] Test data reflects real-world scenarios from research
 - [ ] No trivial tests that don't validate specifications
+
+#### Test Integrity Lens (mandatory, every cycle)
+
+The checks above ask whether tests exist and pass. This lens asks whether they are real — and whether the tests or the code were bent to get the green run. Read the standard at the `TEST_INTEGRITY` path in your prompt and run it **as written**: checks T1–T7 (§3), at the depth §4 gives for each module's `Risk:` tier, with `BASE` from your prompt and `### Test Changes` from the IMPLEMENTATION-PLAN. It is an overlay on the 70/20/10 split, not a slice of it, and it runs after the test suite has passed. Restore every mutation and delete every probe before you go on. Write the `## Test Integrity` section in the shape §6 gives, and number its findings with the review's others, each tagged `[needs-code-or-test]`. **A HIGH lens finding is a rejection criterion.** If your prompt has no `TEST_INTEGRITY` path, return a failure to the orchestrator naming it.
+
+**In `MODE: site-verification-only`, run only its last-look checks,** as the Enforcement-Site Verification section says under *Test Integrity in site-verification-only mode*.
 
 ### 4. CODE QUALITY (ONLY IF ABOVE CRITERIA MET)
 
@@ -225,7 +231,7 @@ Your prompt provides `STANDARD` (`references/enforcement-sites.md`), `CONVENTION
 1b. **Adjudicate every `UNCOUNTED`:** not a control / out of scope → fix is "delete its inventory rows"; a real control → record `ALSO INVENTORY for next recount: <IDs>` in the review (IDs only).
 1c. **Classify every site-count HIGH `[row-only]` or `[needs-code-or-test]`** exactly as `bodies/slice-review.md` Step 5.6 item 1c defines: row-only only when you re-ran the missed site's mutation in this pass and a test failed; a mutation that left tests green at a `CROSS-FILED` key (step 2) or a row-count key (step 2b) is `needs-code-or-test`. The fix loop's stall check ignores row-only HIGH; any open HIGH still rejects.
 1d. **Record filing conventions — count-free**, exactly as `bodies/slice-review.md` Step 5.6 item 1d defines (the `Added` cell is `FEATURE iter <N>`): a ruling on which control and which symbol both sides key the same real site to — never on how many rows a statement is — appended to `CONVENTIONS` only after checking it against `STANDARD` §4.2's count-free rule.
-2. **Resolve every `EXTRA` and every `CROSS-FILED` — by mutation:** re-run the extra site's mutation (delete the site, run the tests, restore, confirm `git diff -- <file>` is clean). A test fails → `CONFIRMED-EXTRA` (resolved). None fails → HIGH. For a `CROSS-FILED` key (the blind count lists the function under one control, the implementer only under another), re-run the mutation of each site the blind count names there: a test fails → `CONFIRMED-CROSS-FILED` (resolved; record the keying per step 1d); none fails → HIGH `[needs-code-or-test]`. Only the mutation decides, exactly as `bodies/slice-review.md` Step 5.6 item 2 defines.
+2. **Resolve every `EXTRA` and every `CROSS-FILED` — by mutation:** re-run the extra site's mutation (delete the site, run the tests, restore, confirm the file is exactly what it was before the deletion (keep a copy, or compare `git diff -- <file>` taken before and after — the work is uncommitted, so that diff is not empty to begin with)). A test fails → `CONFIRMED-EXTRA` (resolved). None fails → HIGH. For a `CROSS-FILED` key (the blind count lists the function under one control, the implementer only under another), re-run the mutation of each site the blind count names there: a test fails → `CONFIRMED-CROSS-FILED` (resolved; record the keying per step 1d); none fails → HIGH `[needs-code-or-test]`. Only the mutation decides, exactly as `bodies/slice-review.md` Step 5.6 item 2 defines.
 2b. **Check every row-count key where the blind count has more rows** (marked in the diff's `## Row Counts Differ` section), exactly as `bodies/slice-review.md` Step 5.6 item 2b defines: re-run the mutation of every blind row there that no implementer row describes — every one, not a sample. A test fails → nothing is owed. None fails → HIGH `[needs-code-or-test]`. Record one line per key.
 3. **Re-run a sample of mutations (beyond steps 2 and 2b):** at least one site per control and at least 25% (rounded up) of all disposition-`(i)` sites. A recorded `(i)` whose mutation leaves every test green is HIGH.
 4. **Dispositions (ii)/(iii) must be argued, not asserted:** each (ii) comment AT the site names which other site or test covers the path and why deleting this one alone is unobservable; each (iii) names an owner and a follow-up. Missing → MEDIUM. A (ii)/(iii) site deleted as dead code → HIGH.
@@ -243,6 +249,8 @@ Record results in the review document's `## Enforcement-Site Verification` secti
 3. With the suite passing, read LENS and run it as written at `SCOPE = FEATURE`, against every marked node of the spec's `### Planned call graph`. *The code the scope changed* (LENS §4) is what changed since `BASE`; a plan-versus-trace difference already under `### Implementation Deviations` in the IMPLEMENTATION-PLAN is listed as recorded and not raised again (LENS §6).
 4. Add the `## Tracing Lens` section to the document, in the shape LENS §7 gives, and number its findings in the document's one `## Findings` list with the site findings.
 5. **Report LOW findings.** List every LOW finding of this pass in `## Findings` and write the count in the marker (below). The decision rule does not change — an open HIGH or MEDIUM rejects, a LOW does not — but the flow sends any count above zero to the fix step, so a LOW left out of the list is a finding nobody fixes.
+
+**Test Integrity in site-verification-only mode.** This pass is the only review after the last fix round, and a fix is where a failing test is most cheaply made to pass — by loosening it, skipping it, or leaving it out of the run. So in this mode, with `tracing` on or off, you also run the last-look checks of the Test Integrity Lens. Your prompt gives **TEST_INTEGRITY**, the IMPLEMENTATION-PLAN path, and `BASE`; if one is missing, return a failure to the orchestrator naming it. After steps 1–6, with every mutation restored, read that standard and run its **last-look checks** (§5) as written: **T1** (existing tests not weakened or removed) and **T2** (nothing kept out of the run) over everything changed since `BASE`, and **T3** (expected values come from the SPEC) and the reading half of **T4** (no assertion that cannot be false) over the tests this feature added — no other check of the lens, and no mutation or probe. Add a `## Test Integrity` section with the T1–T4 rows of the table its §6 gives (T4 marked "by reading"), and number any finding in the document's one `## Findings` list, tagged `[needs-code-or-test]`. An open HIGH or MEDIUM of these rejects, like any other.
 
 **Progress marker (both modes).** When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH [<r> row-only], <m> MEDIUM)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one; `<r>` = HIGH tagged `[row-only]` in step 1c; omit the bracket when it is 0). In `MODE: site-verification-only` with `tracing: on`, add the LOW count inside the parentheses — `(<h> HIGH [<r> row-only], <m> MEDIUM, <l> LOW)` — and always write it, zero included; in every other case write no LOW count. It is a phase-detection marker; do not paraphrase it.
 
@@ -412,6 +420,7 @@ Run the **Tracing Lens** section above, once the test suite has passed. Every fi
 8. E2E/Playwright tests are missing for a web-facing feature (N/A requires explicit justification)
 9. The Agentic-Surface Lens ran and produced a HIGH finding
 10. The Tracing Lens ran and produced a HIGH finding
+11. The Test Integrity Lens produced a HIGH finding
 
 (An input artifact that is missing altogether never reaches this list — it is a returned failure, per Pre-Review Artifact Verification.)
 
@@ -546,6 +555,9 @@ A control is **Complete-eligible** only if its diff is `MATCH` (or only `CONFIRM
 - Every REQ-XXX has a test: Yes / No (list uncovered)
 - Every EDGE-XXX has a test: Yes / No (list uncovered)
 - Every FAIL-XXX has a test: Yes / No (list uncovered)
+
+## Test Integrity
+[The table, the mutation list, and the probe list, in the shape TEST_INTEGRITY §6 gives. Findings are numbered with the review's others.]
 
 ## Decision: [APPROVED/REJECTED]
 

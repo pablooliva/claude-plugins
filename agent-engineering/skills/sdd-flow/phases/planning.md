@@ -160,7 +160,7 @@ The `agent_security:` value also gates Step 4b's agentic-surface code-review len
 
 ### Stage 1 — specialists in parallel
 
-Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, multiple spawns). The agent type depends on the value:
+Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, multiple spawns). The panel is always Claude subagents — it is not on the second-model review route (`references/second-model-review.md` §1); the spec's second-model review is 3d. The agent type depends on the value:
 
 - **Values with a shipped specialist agent** — `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity` → `agent-engineering:sdd-spec-<panel-value>-specialist`.
 - **Every other allowed value** — today `accessibility`, `privacy`, `cost` → `agent-engineering:sdd-workhorse`, with the same body and the panel value in its prompt. No specialist agent ships for these; the body's Section 4.6 defines them. Never spawn an agent type that is not in the list above.
@@ -230,7 +230,7 @@ Each iteration:
 
 ## 3d. Spec Critical Review Subagent
 
-Spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus):
+Run this review by the cycle's **review route** (`references/second-model-review.md`). On the Claude route, spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus). Either route is given:
 - **Body:** `bodies/critical-review.md` — apply its **Planning Phase** section.
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, and **TRACING** when it is `on`.
 - **Outputs:** `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`.
