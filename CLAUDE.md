@@ -51,14 +51,15 @@ agent-engineering/
 │   │   │                           #   implementation-whole-feature, implementation-per-slice, protocols)
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
 │   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
-│   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard;
+│   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard, incl. the spec's control register (§1.1:
+│   │   │                           #   bodies/planning.md writes it, planning-complete + spec critical review check it, site-diff.py applies it — change together);
 │   │   │                           #   second-model-review.md — the ONE definition of who runs a review (a second model family via
 │   │   │                           #   its CLI, marked fallback to the Claude reviewer agents); phase chapters point to it, never restate it;
 │   │   │                           #   test-integrity.md — the ONE definition of a real test and of the reviews' Test Integrity Lens
 │   │   │                           #   (implementer bodies read §1; code review, slice review, impl critical review run it; fixers follow §7);
 │   │   │                           #   tracing-lens.md — the ONE definition of the reviews' trace check (slice review,
 │   │   │                           #   code review, and the 4e.5 verification read it; never restate it in a body)
-│   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff;
+│   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff (places before labels; --register folds restating IDs);
 │   │                               #   second-model-review.py — settles the cycle's reviewer and runs one review step on codex/opencode;
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
 │   │                               #   trace-tree.py — renders a trace run's span file as call trees and call counts

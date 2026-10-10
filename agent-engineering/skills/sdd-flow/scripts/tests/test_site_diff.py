@@ -90,13 +90,25 @@ class Repo:
         self._tmp.cleanup()
 
 
+def spec(rows: list[tuple[str, str]] | None) -> str:
+    """A SPEC; `rows` are (ID, Filed under) register rows, or None for a SPEC with no register."""
+    text = "# SPEC-001\n\n## Success Criteria\n\n- REQ-005: a rule\n"
+    if rows is not None:
+        text += "\n## Control Register\n\n| ID | Filed under | Reason |\n|---|---|---|\n"
+        text += "".join(f"| {i} | {target} | why |\n" for i, target in rows)
+    return text + "\n## Modules\n\n| not | a | register |\n|---|---|---|\n| EDGE-009 | REQ-005 | x |\n"
+
+
 def run_diff(cwd: Path, impl: str, blind: str, scope: str, base: str | None = None,
-             script: Path = SCRIPT) -> tuple[int, str, str]:
+             script: Path = SCRIPT, register: str | None = None) -> tuple[int, str, str]:
     (cwd / "impl.md").write_text(impl, encoding="utf-8")
     (cwd / "blind.md").write_text(blind, encoding="utf-8")
     cmd = [sys.executable, str(script), "impl.md", "blind.md", "out.md", "--scope", scope]
     if base:
         cmd += ["--base", base]
+    if register is not None:
+        (cwd / "spec.md").write_text(register, encoding="utf-8")
+        cmd += ["--register", "spec.md"]
     r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     out = (cwd / "out.md").read_text(encoding="utf-8") if (cwd / "out.md").exists() else ""
     return r.returncode, r.stdout.strip() + r.stderr.strip(), out
@@ -206,13 +218,63 @@ class NoGitCases(unittest.TestCase):
         blind = inventory([blind_row("FAIL-001", "a.py", "load"), blind_row("FAIL-001", "a.py", "check")])
         self.assertEqual(run_diff(self.dir, impl, blind, "SLICE-003")[1], "Result: MISMATCH (0 HIGH, 1 MEDIUM)")
 
-    def test_unlisted_control_is_missed_even_at_a_listed_symbol(self) -> None:
+    # --- Places before labels: a control the implementer lists nowhere ------------------------
+
+    def test_unlisted_control_at_a_listed_symbol_is_cross_filed_medium(self) -> None:
         impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003")])
         blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("FAIL-001", "a.py", "check")])
         code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
-        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 0 MEDIUM)"))
-        self.assertIn("HIGH — MISSED control `FAIL-001`", out)
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("| FAIL-001 | 0 | 1 | CROSS-FILED |", out)
+        self.assertIn("MEDIUM — CROSS-FILED `FAIL-001` at `a.py` `check`**: blind count 1; the implementer lists "
+                      "this symbol under `REQ-005` only. The implementer lists this control nowhere.", out)
+        self.assertNotIn("MISSED", out)
+
+    def test_unlisted_control_at_an_unlisted_symbol_is_high_per_key(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("FAIL-001", "a.py", "load"),
+                           blind_row("FAIL-001", "b.py", "save")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (2 HIGH, 0 MEDIUM)"))
+        self.assertIn("| FAIL-001 | 0 | 2 | MISSED |", out)
+        self.assertIn("HIGH — MISSED `FAIL-001` at `a.py` `load`**: blind count 1, implementer 0; the implementer "
+                      "lists this symbol under no control. The implementer lists this control nowhere.", out)
+        self.assertIn("HIGH — MISSED `FAIL-001` at `b.py` `save`", out)
+        self.assertNotIn("MISSED control", out)
         self.assertNotIn("CROSS-FILED", out)
+
+    def test_unlisted_control_at_listed_and_unlisted_symbols_is_split_per_key(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("FAIL-001", "a.py", "check"),
+                           blind_row("FAIL-001", "a.py", "load")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 1 MEDIUM)"))
+        self.assertIn("| FAIL-001 | 0 | 2 | MISSED+CROSS-FILED |", out)
+        self.assertIn("HIGH — MISSED `FAIL-001` at `a.py` `load`", out)
+        self.assertIn("MEDIUM — CROSS-FILED `FAIL-001` at `a.py` `check`", out)
+
+    def test_unlisted_control_reads_implementer_rows_of_any_slice(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-001")])
+        blind = inventory([blind_row("FAIL-001", "a.py", "check")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("| FAIL-001 | 0 | 1 | CROSS-FILED |", out)
+
+    def test_unlisted_control_at_feature_scope_is_cross_filed_or_missed_by_place(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "—")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("FAIL-001", "a.py", "check"),
+                           blind_row("SEC-002", "a.py", "load")])
+        code, line, out = run_diff(self.dir, impl, blind, "FEATURE")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 1 MEDIUM)"))
+        self.assertIn("| FAIL-001 | 0 | 1 | CROSS-FILED |", out)
+        self.assertIn("| SEC-002 | 0 | 1 | MISSED |", out)
+
+    def test_listed_control_at_an_unlisted_symbol_names_no_unlisted_control(self) -> None:
+        impl = inventory([impl_row("D-10", "a.py", "run", "SLICE-003")])
+        blind = inventory([blind_row("D-10", "a.py", "run"), blind_row("D-10", "a.py", "other")])
+        out = run_diff(self.dir, impl, blind, "SLICE-003")[2]
+        self.assertIn("CONFIRMED-MISSED", out)
+        self.assertNotIn("lists this control nowhere", out)
 
     def test_missed_cross_filed_and_extra_in_one_control(self) -> None:
         impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003"),
@@ -222,6 +284,77 @@ class NoGitCases(unittest.TestCase):
         code, line, out = run_diff(self.dir, impl, blind, "SLICE-003")
         self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 2 MEDIUM)"))
         self.assertIn("| FAIL-001 | 1 | 2 | MISSED+CROSS-FILED+EXTRA |", out)
+
+    # --- The control register ---------------------------------------------------------------
+
+    REGISTER = [("REQ-005", "REQ-005"), ("EDGE-009", "REQ-005"), ("SEC-005", "SEC-005")]
+
+    def test_restating_id_on_the_blind_side_is_compared_under_its_control(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003")])
+        blind = inventory([blind_row("EDGE-009", "a.py", "check")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003", register=spec(self.REGISTER))
+        self.assertEqual((code, line), (0, "Result: MATCH"))
+        self.assertIn("| REQ-005 | 1 | 1 | MATCH |", out)
+        self.assertNotIn("| EDGE-009 |", out)
+        self.assertIn("1 row(s) compared under the control their ID is filed under:", out)
+        self.assertIn("`EDGE-009` → `REQ-005`: 1 blind count row(s)", out)
+
+    def test_restating_id_on_the_implementer_side_is_not_uncounted(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003"),
+                          impl_row("EDGE-009", "a.py", "check", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003", register=spec(self.REGISTER))
+        self.assertEqual((code, line), (0, "Result: MATCH (1 LOW row counts differ)"))
+        self.assertNotIn("UNCOUNTED", out)
+        self.assertIn("`EDGE-009` → `REQ-005`: 1 implementer row(s)", out)
+
+    def test_registered_control_and_unregistered_id_are_compared_as_written(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("SEC-005", "a.py", "check"),
+                           blind_row("UX-001", "a.py", "check")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003", register=spec(self.REGISTER))
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 2 MEDIUM)"))
+        self.assertIn("| SEC-005 | 0 | 1 | CROSS-FILED |", out)
+        self.assertIn("| UX-001 | 0 | 1 | CROSS-FILED |", out)
+        self.assertIn("0 row(s) compared under the control their ID is filed under", out)
+
+    def test_register_folds_at_feature_scope_and_in_a_declared_scope(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "—")])
+        blind = inventory([blind_row("EDGE-009", "a.py", "check")])
+        self.assertEqual(run_diff(self.dir, impl, blind, "FEATURE", register=spec(self.REGISTER))[:2],
+                         (0, "Result: MATCH"))
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003"),
+                          impl_row("REQ-005", "a.py", "other", "SLICE-003")])
+        blind = inventory([blind_row("EDGE-009", "a.py", "check")], declared=[("EDGE-009", "a.py", "check")])
+        out = run_diff(self.dir, impl, blind, "SLICE-003", register=spec(self.REGISTER))[2]
+        self.assertIn("| REQ-005 | 1 | 1 | OUT-OF-SCOPE-BY-DECLARED-SCOPE |", out)
+
+    def test_register_row_filed_under_a_restating_or_unknown_id_is_ignored_and_reported(self) -> None:
+        rows = self.REGISTER + [("FAIL-002", "EDGE-009"), ("FAIL-003", "REQ-777")]
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("FAIL-002", "a.py", "check")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003", register=spec(rows))
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("| FAIL-002 | 0 | 1 | CROSS-FILED |", out)
+        self.assertIn("Register rows ignored (`Filed under` does not name a control filed under itself): "
+                      "`FAIL-002`, `FAIL-003`", out)
+
+    def test_spec_with_no_register_compares_controls_as_written(self) -> None:
+        impl = inventory([impl_row("REQ-005", "a.py", "check", "SLICE-003")])
+        blind = inventory([blind_row("REQ-005", "a.py", "check"), blind_row("EDGE-009", "a.py", "check")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-003", register=spec(None))
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("has no `## Control Register` — controls compared as written", out)
+        plain = run_diff(self.dir, impl, blind, "SLICE-003")[2]
+        self.assertNotIn("**Register:**", plain)
+
+    def test_missing_spec_is_input_error(self) -> None:
+        inv = inventory([])
+        (self.dir / "impl.md").write_text(inv, encoding="utf-8")
+        (self.dir / "blind.md").write_text(inv, encoding="utf-8")
+        r = subprocess.run([sys.executable, str(SCRIPT), "impl.md", "blind.md", "out.md", "--scope", "SLICE-003",
+                            "--register", "no-such-spec.md"], cwd=self.dir, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 2)
 
     # --- Gaps and uncounted controls --------------------------------------------------------
 

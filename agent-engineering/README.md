@@ -72,7 +72,28 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.10.1.
+Version 3.11.0.
+
+### What's new in 3.11.0
+
+The blind enforcement-site count no longer produces new list differences every review round.
+
+**Why.** On a per-slice run (eduKate cycle 002, SLICE-001, on 3.8.1) four blind counts of the same code used 15, 26, 28, and 30 controls, and none found a gap. A spec gives one behaviour several IDs — a `REQ`, and `EDGE`, `FAIL`, `SEC`, and `UX` entries that restate one path of it — and each fresh counter picked a different set. The fix loop matched the previous count; the next count filed a few sites differently; the slice was rejected again. It stopped at the 3-round cap with only three inventory rows owed, for sites the reviewer had already deleted and seen a test fail for. From the second count on, every place only the blind count listed was a place the implementer had listed too, under another ID. Proposal and replay: `proposals/site-count-convergence-2026-10-10.md`.
+
+**What changed.**
+
+- **A control register in the spec.** Planning writes `## Control Register` (`ID | Filed under | Reason`): each ID that states a rule holding on every path is filed under itself, and each ID that only restates one path of another rule is filed under that rule. Both sides key by it, so neither picks. The planning-complete check and the spec critical review verify it — a rule hidden under an ID it does not merely restate is a HIGH there. It names no file, function, or count, so the blind counter reads it with the rest of the spec. A filing convention no longer settles which control a site belongs to, only which function it is filed at.
+- **The diff applies the register.** `site-diff.py --register <SPEC>` compares a row either side keyed by a restating ID under the control the register files it under, and lists every row it moved in the diff's header.
+- **Places before labels.** A place only the blind count lists under some ID is HIGH (`MISSED`) only when the implementer lists that file and function under no control at all. Where the implementer lists the place under any control it is MEDIUM (`CROSS-FILED`) — also when the implementer lists that control nowhere, which used to be a HIGH `MISSED control`. The reviewer still re-runs the mutation of every site the blind rows name there, so a second, forgotten check inside a listed function is still caught, and a green one is still HIGH.
+- **A missed site a test already proves closes inside the review.** When the reviewer deletes a missed site and a test fails, it appends the inventory row itself, with its own mutation as evidence (`CONFIRMED-MISSED`). It is not a finding: no fix spawn, no recount, no re-review. The reviewer changes no code — on the second-model route the runner script enforces that — so the count it read still describes the code. Review markers no longer carry `[r row-only]`.
+- **The (iii) reading is settled.** A mutation that stays green at an extra, cross-filed, or row-count place is HIGH only when no argued (ii)/(iii) row describes that statement, or the row is recorded as proven. Where an argued row covers it — under any ID — green is what the row claims, and it is resolved by the argument. Three reviewers in a row had flagged that the rule could be read either way.
+- **Unchanged.** A gap is HIGH. A site with no failing mutation and no argued (ii)/(iii) row still blocks. The blind counter is given nothing new: no inventory, no earlier count, diff, or review, no site counts. No marker, halt block, or resume rule was added.
+
+**What it would have done on that slice.** Replayed against the slice's four real counts: approved at the third review instead of stopping, with fix round 1 adding none of its 118 inventory rows. The number of rounds does not fall on that evidence, because every round also had a real finding. The register is the one change that could lower it, by putting the controls the first count skipped into the first count; that part cannot be replayed.
+
+**Not shipped.** Recounting only the code a fix touched: a fix that changes which paths reach an unchanged function would hide its miss until the final recount, and a changed non-Python file counts as wholly changed anyway. A separate "pass on substance" exit: with the rules above no filing-only finding is left, so the existing exit already is that rule.
+
+**Runs started before 3.11.0.** A spec with no register keeps the old keying and its conventions still settle controls. A marker with `[r row-only]` is read as it was written. A slice stopped at `## Awaiting Slice Resolution`, or a final recount stopped at `## Awaiting Site-Count Resolution`, resumes by the existing rule — a fresh count, the new diff, a review under the new rules. **Not yet exercised on a real cycle:** the diff script is unit-tested and was replayed on the eduKate counts; no cycle has yet planned a register or run a review under the new rules.
 
 ### What's new in 3.10.1
 

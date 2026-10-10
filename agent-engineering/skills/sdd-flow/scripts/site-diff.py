@@ -3,25 +3,33 @@
 
 Usage:
     site-diff.py <impl-inventory.md> <blind-count.md> <out.md> --scope <SLICE-XXX|FEATURE>
-                 [--base <commit|none>]
+                 [--base <commit|none>] [--register <SPEC.md>]
 
 Both inputs carry a `## Site Inventory` table in the shape defined by
 `references/enforcement-sites.md` §4. Rows of Kind `site` are grouped per
 Control + File + Symbol on each side (Markdown backslash-escapes and wrapping
 backticks are normalised away first) and the two sides are compared on which
-keys they have, not on how many rows a key has: a key only the blind count has
-is MISSED (HIGH) — or CROSS-FILED (MEDIUM) when the implementer lists that
-File + Symbol under another control — and a key only the implementer has is
-EXTRA (MEDIUM). A key both sides have with different row counts is not a
-finding: it is listed LOW under `## Row Counts Differ`. Blind-count `gap` rows
-are reported as findings. The result is written to <out.md> and its first line
-is echoed.
+keys they have, not on how many rows a key has. Places are compared before
+labels: a key only the blind count has is CROSS-FILED (MEDIUM) when the
+implementer lists that File + Symbol under any control — whether or not it
+lists the blind key's control anywhere — and MISSED (HIGH) only when it lists
+that File + Symbol under none. A key only the implementer has is EXTRA
+(MEDIUM). A key both sides have with different row counts is not a finding: it
+is listed LOW under `## Row Counts Differ`. Blind-count `gap` rows are reported
+as findings. The result is written to <out.md> and its first line is echoed.
 
 --base (SLICE scope only): the slice's base commit. A key whose code the slice
 did not change (per `git diff <base>` of the working tree, untracked files
 counting as changed) is *carried*: a disagreement there is reported LOW in its
 own section, owed to the FEATURE recount, never as MISSED/EXTRA. Anything the
 script cannot place with certainty is treated as changed.
+
+--register: the SPEC. When it has a `## Control Register` table (ID | Filed
+under | Reason — `references/enforcement-sites.md` §1.1), every row of either
+side keyed by an ID the register files under another control is compared under
+that control, so a restating ID never makes a difference by itself. An ID the
+register does not list is compared as written. A SPEC with no register, or no
+--register, compares every control as written.
 
 A blind count may declare partial scope for a control in an optional
 `## Declared Scope` table (Control | File | Symbol, `*` = whole file). At SLICE
@@ -45,6 +53,7 @@ from typing import Any
 
 HEADER = "## Site Inventory"
 SCOPE_HEADER = "## Declared Scope"
+REGISTER_HEADER = "## Control Register"
 COLUMNS = ["control", "file", "symbol", "kind", "path class",
            "site description", "disposition", "evidence", "slice"]
 SCOPE_COLUMNS = ["control", "file", "symbol"]
@@ -112,6 +121,39 @@ def parse_inventory(path: Path) -> list[dict[str, Any]]:
         if row["kind"] not in ("site", "gap"):
             fail(f"{path}: Kind must be `site` or `gap`: {row}")
     return rows
+
+
+def read_register(path: Path) -> tuple[dict[str, str], list[str]] | None:
+    """(ID -> the control it is filed under, rows ignored), or None when the SPEC has no register.
+
+    Lenient on purpose: a register row this cannot use is reported and skipped, never an
+    input error — the diff must still run on a SPEC whose register a reviewer has yet to fix.
+    """
+    if not path.is_file():
+        fail(f"SPEC not found: {path}")
+    filed: dict[str, str] = {}
+    in_section = seen_header = False
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line == REGISTER_HEADER:
+            in_section = True
+            continue
+        if in_section and line.startswith("## "):
+            break
+        if not in_section or not line.startswith("|"):
+            continue
+        cells = [norm(c) for c in CELL_SPLIT.split(line.strip("|"))]
+        if not seen_header:
+            seen_header = True
+            continue
+        if all(set(c) <= set("-: ") for c in cells) or len(cells) < 2 or not cells[0]:
+            continue
+        filed[cells[0]] = cells[1] or cells[0]
+    if not seen_header:
+        return None
+    # `Filed under` must name a control filed under itself: no chains, no unknown targets.
+    ignored = sorted(i for i, target in filed.items() if filed.get(target) != target)
+    return {i: target for i, target in filed.items() if i not in ignored}, ignored
 
 
 def key(row: dict[str, Any]) -> Key:
@@ -212,6 +254,7 @@ def main() -> None:
     ap.add_argument("out")
     ap.add_argument("--scope", required=True)
     ap.add_argument("--base")
+    ap.add_argument("--register")
     a = ap.parse_args()
     if not SCOPE_RE.match(a.scope):
         fail(f"--scope must match SLICE-### (optionally one lowercase letter) or FEATURE, got {a.scope!r}")
@@ -222,6 +265,16 @@ def main() -> None:
     impl = parse_inventory(Path(a.impl))
     blind = parse_inventory(Path(a.blind))
     declared_rows = read_table(Path(a.blind), SCOPE_HEADER, SCOPE_COLUMNS, required=False)
+    register = read_register(Path(a.register)) if a.register else None
+    folded: Counter[tuple[str, str, str]] = Counter()  # (side, ID as written, control compared under)
+    if register:
+        for side, rows in (("implementer", impl), ("blind count", blind), ("blind count", declared_rows)):
+            for r in rows:
+                target = register[0].get(r["control"], r["control"])
+                if target != r["control"]:
+                    if rows is not declared_rows:
+                        folded[(side, r["control"], target)] += 1
+                    r["control"] = target
     declared: dict[str, list[dict[str, Any]]] = {}
     for d in declared_rows:
         declared.setdefault(d["control"], []).append(d)
@@ -274,7 +327,8 @@ def main() -> None:
             pc["rows"].append((k, i, b))  # both sides have the key: not a finding
         elif i:
             pc["extra"].append((k, i, b))
-        elif k[0] in impl_controls and impl_filed.get(k[1:], set()) - {k[0]}:
+        elif impl_filed.get(k[1:], set()) - {k[0]}:
+            # The place is listed, under whatever label: never HIGH before its mutation is run (§6).
             pc["cross"].append((k, sorted(impl_filed[k[1:]] - {k[0]}), b))
         else:
             pc["missed"].append((k, i, b))
@@ -295,9 +349,6 @@ def main() -> None:
         if c not in blind_controls:
             outcome = "UNCOUNTED"
             medium += 1
-        elif c not in impl_controls and pc["missed"]:
-            outcome = "MISSED"
-            high += 1
         elif differing:
             outcome = "+".join({"missed": "MISSED", "cross": "CROSS-FILED", "extra": "EXTRA"}[d] for d in differing)
             high += len(pc["missed"])
@@ -332,6 +383,18 @@ def main() -> None:
         # Legitimate for a slice/feature with no controls, but also what a mis-tagged
         # inventory plus an empty blind count looks like — make it visible to the reviewer.
         result += " (no controls in scope)"
+    if not a.register:
+        register_lines = []
+    elif register is None:
+        register_lines = [f"- **Register:** `{a.register}` has no `{REGISTER_HEADER}` — controls compared as written"]
+    else:
+        register_lines = [f"- **Register:** `{a.register}` — {sum(folded.values())} row(s) compared under the "
+                          "control their ID is filed under" + (":" if folded else "")]
+        register_lines += [f"  - `{src}` → `{target}`: {n} {side} row(s)"
+                           for (side, src, target), n in sorted(folded.items())]
+        if register[1]:
+            register_lines.append("  - Register rows ignored (`Filed under` does not name a control filed under "
+                                  "itself): " + ", ".join(f"`{i}`" for i in register[1]))
     out = [
         f"Result: {result}",
         "",
@@ -340,6 +403,7 @@ def main() -> None:
         f"- **Implementer inventory:** `{a.impl}`",
         f"- **Blind count:** `{a.blind}`",
         f"- **Base:** `{a.base}`" if a.base else "- **Base:** none given — every key compared as owned",
+        *register_lines,
         "- **Rules:** `references/enforcement-sites.md` §6",
         "",
         "## Per-Control Outcome",
@@ -362,21 +426,19 @@ def main() -> None:
             out.append(f"{n}. **MEDIUM — UNCOUNTED `{c}`**: in the implementer inventory for "
                        f"{a.scope} but absent from the blind count. Stays Partial until independently counted.")
             continue
-        if c not in impl_controls and pc["missed"]:
+        unlisted = "" if c in impl_controls else " The implementer lists this control nowhere."
+        for (ctl, f, s), i, b in pc["missed"]:
             n += 1
-            out.append(f"{n}. **HIGH — MISSED control `{c}`**: the blind count found {pc['blind']} "
-                       f"site(s); the implementer inventory does not list this control.")
-        else:
-            for (ctl, f, s), i, b in pc["missed"]:
-                n += 1
-                out.append(f"{n}. **HIGH — MISSED `{ctl}` at `{f}` `{s}`**: blind count {b}, implementer {i}. "
-                           "Add the missing site(s) to the inventory with a disposition and mutation evidence.")
+            out.append(f"{n}. **HIGH — MISSED `{ctl}` at `{f}` `{s}`**: blind count {b}, implementer {i}; the "
+                       f"implementer lists this symbol under no control.{unlisted} Reviewer re-runs the mutation of "
+                       "each site the blind count names here: a test fails → CONFIRMED-MISSED (the reviewer adds the "
+                       "row); none fails → needs code or a test.")
         for (ctl, f, s), others, b in pc["cross"]:
             n += 1
             filed = ", ".join(f"`{o}`" for o in others)
             out.append(f"{n}. **MEDIUM — CROSS-FILED `{ctl}` at `{f}` `{s}`**: blind count {b}; the implementer lists "
-                       f"this symbol under {filed} only. Reviewer re-runs the mutation of each site the blind count "
-                       "names here: a test fails → CONFIRMED-CROSS-FILED; none fails → HIGH.")
+                       f"this symbol under {filed} only.{unlisted} Reviewer re-runs the mutation of each site the "
+                       "blind count names here: a test fails → CONFIRMED-CROSS-FILED; none fails → HIGH.")
         for (ctl, f, s), i, b in pc["extra"]:
             n += 1
             out.append(f"{n}. **MEDIUM — EXTRA `{ctl}` at `{f}` `{s}`**: implementer {i}, blind count {b}. "

@@ -63,6 +63,17 @@ Read the design brief at the path in your prompt (skip this block if your prompt
 - [ ] User communication/error messages defined
 - [ ] Recovery approaches documented
 
+### Control Register
+
+Your prompt gives **STANDARD** (`references/enforcement-sites.md`); read its §1 and §1.1 before this check. The register decides which ID every enforcement site is filed under for the whole of implementation, on both sides of a blind count, so a wrong row here misleads both sides the same way and nothing later catches it by comparison. Check it against the spec's own text and correct it in place:
+
+- [ ] `## Control Register` exists, with the columns `ID | Filed under | Reason`
+- [ ] Every ID in the spec (`REQ` / `PERF` / `SEC` / `UX` / `EDGE` / `FAIL`, and any other family the spec uses) was considered: each one that states or restates a rule that must hold on every path has exactly one row; each one with no row describes a single behaviour, a document, or a test — not a rule on every path. Output and stream contracts are in.
+- [ ] Every row whose `Filed under` is another ID passes the deletion test: with that entry deleted, the system would be allowed nothing it was not allowed before. An entry that adds a clause of its own is filed under itself.
+- [ ] Every `Filed under` cell names an ID that exists in the spec and is filed under itself (no chains, no ID from another spec)
+- [ ] No row names a file, a function, a module, a slice, or a number of places
+- [ ] No ID appears in two rows, and no row is for an ID the spec no longer has
+
 ### Implementation Constraints
 
 - [ ] Context requirements specified (<40% target)
@@ -249,6 +260,7 @@ Before marking the planning phase as complete:
 - [ ] Implementation readiness verified
 - [ ] Progress file updated with transition information
 - [ ] Quality verification passed
+- [ ] Control register checked against every ID in the spec
 - [ ] Implementation priorities clearly defined
 
 ## Phase Transition

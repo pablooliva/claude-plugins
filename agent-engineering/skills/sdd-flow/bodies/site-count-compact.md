@@ -16,6 +16,7 @@ Write `SDD/orchestration/compacted/site-count-compacted-[YYYY-MM-DD_HH-MM-SS].md
 - **OUTPUT (not yet written):** <OUTPUT path>
 - **SPEC / glossary / standard paths:** <paths>
 - **CONVENTIONS path:** <the path from your prompt, or `none given`>
+- **Control register:** <`in the SPEC` — your successor keys by it (`bodies/site-count.md` step 1) — or `none in the SPEC`>
 - **ALSO INVENTORY:** <the SPEC IDs from your prompt, or `none given`>
 - **Modules touched:** <from your prompt — `SLICE-XXX` scope only; `n/a` at `FEATURE` scope>
 

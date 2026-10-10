@@ -61,7 +61,7 @@ flowchart TD
     gate -- "answers or changes" --> s25c("2.5c — Revise the brief")
     s25c --> gate
     gate -- "approve" --> m1["Write the accepted ADRs<br/>Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
-    m1 --> s3a("Step 3a — Specification<br/>covers the approved tier only<br/>lists what is deferred")
+    m1 --> s3a("Step 3a — Specification<br/>covers the approved tier only<br/>lists what is deferred<br/>control register: one ID per rule")
     s3a --> s3c("3b capture ADRs<br/>3c specialist panel, in parallel<br/>then one synthesis")
     s3c -- "findings" --> fix3("fix the spec, re-run the panel<br/>at most 3 rounds")
     fix3 --> s3c
@@ -94,8 +94,8 @@ When the spec says `delivery_mode: per-slice` (the default for new specs), this 
 flowchart TD
     scaffold("4a.0 — create the slice progress table<br/>once per feature") --> impl("4a — implement one slice<br/>code, tests, list of enforcement sites")
     impl --> count("4a.5 — blind site count<br/>a fresh subagent that never sees the implementer's list")
-    count --> diff["diff the two lists<br/>scripts/site-diff.py"]:::orch
-    diff --> review("4b — slice review<br/>includes the design brief check<br/>tracing on: and the trace check")
+    count --> diff["diff the two lists, places before labels<br/>scripts/site-diff.py"]:::orch
+    diff --> review("4b — slice review<br/>includes the design brief check<br/>adds the list row of a missed site a test already proves<br/>tracing on: and the trace check")
     review -- "any finding" --> fix("4c — fix all of them, then recount<br/>and re-review, at most 3 rounds")
     fix --> count
     fix -- "no progress, or 3 rounds used" --> halt["STOP in every mode — slice halted<br/>findings go to the ledger<br/>you fix them, then continue re-reviews"]:::stop
@@ -127,8 +127,8 @@ flowchart TD
 | 1.5 Clarification | An interview that gets your design concept written down. On a next-tier cycle it is a feedback interview instead | You, with `/research-clarify` | `research/CLARIFICATION-*` | Both modes, unless `--skip-clarify` or the file exists |
 | 2 Research | Investigates the codebase; finds cross-cutting decisions and lists them as ADR candidates for the design gate; adversarial review; fixes | Sonnet subagents; a second model for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*` | — |
 | 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. It also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*`, `adr/*` (on approval) | **Both modes, every time the brief is written or rewritten.** `approve` is refused while a question is open |
-| 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief | Sonnet subagents for the spec and the panel, Opus for the panel's synthesis; a second model for the adversarial review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, both modes, when the spec departs from the brief** |
-| 4 Implementation | Builds the feature (whole, or slice by slice). Every control's enforcement sites are listed twice — by the implementer and by a blind subagent — and the two lists are compared for places only one of them found. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; a second model for the reviews (the blind count stays a Sonnet subagent) | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Slice fix-loop halt and re-planning halt (every mode). Recount halt. 4h before the final commit (supervised only) |
+| 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief, and carries a control register: for each rule that must hold on every path, the one ID its enforcement sites are filed under | Sonnet subagents for the spec and the panel, Opus for the panel's synthesis; a second model for the adversarial review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, both modes, when the spec departs from the brief** |
+| 4 Implementation | Builds the feature (whole, or slice by slice). Every control's enforcement sites are listed twice — by the implementer and by a blind subagent — and the two lists are compared for places only one of them found. A place both found under different IDs is settled by a test, not by a fix round, and a missed place a test already proves gets its row from the reviewer. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; a second model for the reviews (the blind count stays a Sonnet subagent) | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Slice fix-loop halt and re-planning halt (every mode). Recount halt. 4h before the final commit (supervised only) |
 | Done | Tier marked shipped in the tier plan; task set to done; announcement names what shipped and what is left | Orchestrator | updated `flow/TIERS-*` | — |
 
 ## What the stops are for
@@ -142,7 +142,7 @@ flowchart TD
 | Tracing asked for and not possible (3c) | stops | stops | The spec says `tracing: true` and the application had no tracing foundation when the cycle started, or the field holds a value other than `auto`, `true`, `false`. You change the field in the spec; nothing is reviewed until you do. It cannot fire with the field left at `auto` |
 | Panel halt (3c) | stops | stops | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
 | Deviation check (3g) | stops if deviations | stops if deviations | The spec is no longer what you approved |
-| Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. You resolve the findings; `continue` re-counts and re-reviews the slice |
+| Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. A difference in how a site is filed, or a missed site a test already proves, is not a finding and cannot cause this stop. You resolve the findings; `continue` re-counts and re-reviews the slice |
 | Slice pause | stops | stops | Review each slice while it is small. Off with `--skip-slice-checkpoints` |
 | Re-planning halt (4c.5) | stops | stops | A slice showed the plan is wrong. `--replan` or `--override-replan`; either one commits the slice first |
 | Final recount halt (4e.5) | stops | stops | The final recount's verification review still has open findings after 3 fix rounds, or a round made no progress. That covers the two lists of enforcement sites disagreeing on which places enforce a rule, and matching lists where a site's justification for having no proof of its own has not been accepted. With tracing on it also covers a difference between the calls the spec planned and the calls a real run recorded, and the completion step finding something that needs code or tests changed after that check. You resolve the findings; `continue` starts from a fresh recount |
