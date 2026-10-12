@@ -145,7 +145,7 @@ Two additions to `observability-init` and the tracing standard, made in this rel
 - **A cap on repeats.** After ten calls of one function from one caller, further calls get no span; the caller's span counts them (`calls.<function>.not_recorded`) and how many of those ended in an exception (`calls.<function>.not_recorded_failed`).
 - **What it costs.** Measured on the trial application against a local stand-in for the model (a request of about 1.2 ms): 34 records per request instead of 5, and a median request about 0.5 ms (42%) slower. The cost is a fixed amount per call, so against a real model call of tens of milliseconds it is a few percent. The kill switch removes all of it.
 
-Not in this release: evals (build step 3) and `/eval-harvest` (step 4). The design brief does not mention tracing yet. An application set up with 3.7.x keeps working; it gets function recording only when `/observability-init` is run on it again in audit mode. No feature has been built end to end with this release yet — that is the next piece of the trial application.
+Not in this release: evals (build step 3) and `/eval-harvest` (step 4). The design brief does not mention tracing yet. An application set up with 3.7.x keeps working; it gets function recording only when `/observability-init` is run on it again in audit mode. No feature had been built end to end with this release when it shipped; the trial application's next piece has been since (2026-10-09 to 2026-10-12, the trace check run in all twenty completed flow reviews, no gap found — see the proposal's "Step 2 as built").
 
 ### What's new in 3.7.2
 
