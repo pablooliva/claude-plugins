@@ -1,0 +1,37 @@
+"""The application's side of the eval run: how one case's input becomes one output, for real.
+
+evals/run.py calls the three functions below and nothing else of the application. The rules are the agent-engineering
+plugin's eval standard (`skills/sdd-flow/references/evals.md`, "The task").
+"""
+
+@@IMPORTS@@
+
+
+class Unavailable(Exception):
+    """The model could not be reached, or the run is not set up: no answer was given, so nothing can be checked.
+
+    Raise it with one of these reasons, exactly: "model unreachable", "key rejected", "rate limited", "timed out",
+    "not set up". Any other text is reported as "another reason" — what an exception says can hold an address or a
+    key, so none of it is printed. The eval run then stops and reports no result, which is a different thing from a
+    case that failed.
+    """
+
+
+def models():
+    """The name of the model the application calls and of the model that judges, for the results document."""
+    @@MODELS@@
+
+
+async def answer(case_input):
+    """Put one case's input to the application the way a real request does, and return what it gave back.
+
+    The model call is real. The code that builds the request to the model is the application's own, called here and
+    never copied here. Returns text or any JSON value. An answer the application gives on purpose in place of the
+    model's — a refusal — is returned like any other answer; a model that could not be reached raises `Unavailable`.
+    """
+    @@ANSWER@@
+
+
+async def judge(system, user):
+    """One call to the judge model with these two messages; returns its reply as text."""
+    @@JUDGE@@

@@ -1,0 +1,21 @@
+"""The eval cases and their checks, tested against their own examples: every check rejects each known-bad answer of
+its case and accepts each known-good one. No model is called, so this runs with the ordinary tests; the eval run
+itself (`@@EVAL_COMMAND@@`) does not."""
+
+import importlib.util
+from pathlib import Path
+
+RUNNER = @@ROOT@@ / "evals" / "run.py"
+
+
+def _runner():
+    spec = importlib.util.spec_from_file_location("evals_run", RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_eval_cases_and_checks_are_sound():
+    runner = _runner()
+    cases, problems = runner.load_cases()
+    assert runner.self_test(cases, problems) == []
