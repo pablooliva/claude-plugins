@@ -28,6 +28,7 @@ Starting planning phase based on completed research.
 5. **Read the Tracing Inputs:**
    - Your prompt carries the line `Observability record: present` or `Observability record: absent` — whether this application has the tracing foundation. A prompt with no such line (a flow that began before tracing was part of the flow) is read as `absent`.
    - When it is `present`, your prompt also gives the path of the tracing standard (**TRACING**). Read its sections *What gets a span — the three traced kinds* and *Adding code to a traced application*: they define the three kinds of call you will mark in the planned call graph (Planning Process → *Planned call graph rules*).
+   - When it is `present`, your prompt also gives the path of the evals reference (**EVALS**). Read it only when evals are on for this spec (the table under `evals:`, Specification Frontmatter Fields) — then its §1, §2, and §6: the two kinds of eval, how a case is written, and what binds a case once it is written (Planning Process → *Eval rules*).
 
    **Read the Enforcement-Site Standard, §1 only:**
    - Your prompt gives **STANDARD** (`references/enforcement-sites.md` of this skill). Read its §1 and §1.1: what a **control** is (a rule the SPEC says must hold on every path — as opposed to a single happy-path behaviour), and the **control register** you write into the spec. Nothing else in that file concerns planning.
@@ -79,6 +80,7 @@ cross_cutting_decisions: []
 delivery_mode: per-slice
 agent_security: auto
 tracing: auto
+evals: auto
 tier: 1
 ---
 
@@ -267,6 +269,7 @@ handle_upload(req)                              [entry: POST /uploads]
 - **REQs satisfied:** [REQ-XXX references — full or partial. A slice may partially satisfy a REQ; later slices fill it in. Mark partial coverage explicitly, e.g., "REQ-003 (partial: happy path only)".]
 - **Modules touched:** [MODULE-XXX entries this slice cuts through. Use the `Spec refs:` field on each module as the raw material for this list.]
 - **Traced nodes:** [Only when tracing is on; omit the line otherwise. The marked nodes of `### Planned call graph` that this slice brings into existence, each with its kind — e.g. `handle_upload [entry], store_blob [external]` — or `none`.]
+- **Evals:** [Only when evals are on; omit the line otherwise. The cases of `### Evals` this slice is the first to be able to pass — e.g. `EVAL-001, EVAL-003 (case 1)` — or `none`.]
 - **Acceptance check:** [a single, focused test that proves the slice works end-to-end. Ideally an automated test name; manual verification step otherwise.]
 - **Sequence rationale:** [why this slice is at this position. SLICE-001 = thinnest end-to-end happy path; subsequent slices add depth, edge cases, and additional concentrated functions.]
 
@@ -288,10 +291,31 @@ handle_upload(req)                              [entry: POST /uploads]
   - [ ] Test for EDGE-001
   - [ ] Test for EDGE-002
 
+### Evals
+
+> **Only when evals are on for this spec** (`evals:` under Specification Frontmatter Fields). Otherwise omit this sub-section entirely.
+
+| ID | Requirement | Behaviour checked | Kind | How the requirement is met |
+|---|---|---|---|---|
+| EVAL-001 | REQ-004 | Every required field of the extraction is present | hard | by this eval: it blocks |
+| EVAL-002 | REQ-005 | The summary names the source's figure and no other | hard | by this eval, for the figure; the rest by sign-off |
+| EVAL-003 | REQ-005 | The summary is faithful to the source | judged | by sign-off (Manual Verification) — the score informs it |
+
+#### EVAL-001 cases
+1. **Input** — [each part of the input by name, written out in full: an invented example, never a real user's text]
+   **Must contain:** [phrase, field, or pattern] · **Must not contain:** [phrase or pattern]
+2. **Input** — [an input the feature must refuse]
+   **Must contain:** [the refusal, as the application words it]
+
+#### EVAL-003 cases
+1. **Input** — [written out in full]
+   **Rubric:** 5 — [what the best output looks like]. 3 — [a middling one]. 1 — [the worst].
+
 ### Manual Verification
 - [ ] [User flow to verify]
 - [ ] [Admin functionality to check]
 - [ ] [Error handling to validate]
+- [ ] **Sign-off: REQ-005** — accepted by the user at the final commit checkpoint, on the scores and outputs of EVAL-003. [Only when evals are on: one line per sign-off requirement, in exactly this form. Otherwise no such line.]
 
 ### Performance Validation
 - [ ] [Metric to measure with target value]
@@ -367,6 +391,23 @@ The spec template includes these YAML frontmatter fields, consumed by sdd-flow a
 
   **On:** the spec carries `### Planned call graph` under `## Modules` and, in per-slice mode, a `Traced nodes:` line in every slice (Planning Process → *Planned call graph rules*). **Off:** it carries neither, and says nothing about tracing. The orchestrator makes the binding decision from this field at Step 3c and records it; nothing after that reads the field again.
 
+- **`evals:`** — `auto` (default), `true`, or `false`. Decides whether the flow checks what the model really answers — written examples put to the running application — against cases this spec states. A test cannot do that: it gets the model's answer from a stand-in. Evals need the same foundation tracing does, and they are independent of `tracing:`: either can be on without the other.
+
+  | `evals:` | `Observability record:` in your prompt | The feature has a model in it | Evals for this spec |
+  |---|---|---|---|
+  | `false` | — | — | off |
+  | `auto` | `absent` | — | off |
+  | `auto` | `present` | no | off |
+  | `auto` | `present` | yes | on |
+  | `true` | `present` | — | on |
+  | `true` | `absent` | — | off for what you write — the orchestrator stops the flow at Step 3c and asks the user to change the field |
+
+  **"Has a model in it"** is the agentic-surface detection under `agent_security:` above — one detection, used for both fields. Apply it here whatever value `agent_security:` ends up with.
+
+  **Write `auto`** unless the task description in your prompt, the research, or the approved brief says to force evals on or off; the user's word wins over the default in both directions. Write the value in lowercase; any value outside the three is rejected at Step 3c. **Absent means `auto`.**
+
+  **On:** the spec carries `### Evals` under `## Validation Strategy`, a `Sign-off:` line under `### Manual Verification` for each sign-off requirement, and, in per-slice mode, an `Evals:` line in every slice (Planning Process → *Eval rules*). **Off:** it carries none of the three, and says nothing about evals. The orchestrator makes the binding decision from this field at Step 3c and records it; nothing after that reads the field again.
+
 - **`tier:`** — `1`, `2`, or `3`: the delivery tier this spec covers, copied from the approved tier in your prompt. A tier says how much of the feature to build; slices say in what order to build it. Omit the field when the approved tier is `none` (the brief said tiers are not applicable). **Absent means untiered:** every rule applies as it did before tiers existed, so specs written before this field behave unchanged. A `tier:` value is never a reason to lower rigour — the same panel, reviews, tests, and site counts apply to whatever the tier builds.
 
 - **`delivery_mode:`** — `whole-feature` (default) or `per-slice`. Controls whether the spec must include a `## Delivery Slices` section and whether downstream phases route through per-slice behavior.
@@ -409,6 +450,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - Create specific test scenarios for each requirement
    - Include performance benchmarks where applicable
    - Define acceptance criteria for stakeholder sign-off
+   - **With evals on, write `### Evals`** and the `Sign-off:` lines, following *Eval rules* at the end of this list.
 
 6. **Plan for Implementation:**
    - Identify which files need to be loaded during implementation
@@ -435,6 +477,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - REQs may be split across slices; mark partial coverage explicitly (e.g., `REQ-003 (partial: happy path only)`) so later slices can complete them.
    - Every REQ-XXX / EDGE-XXX / FAIL-XXX should be reachable through some slice in the sequence by the time the last slice lands.
    - **With tracing on, give every slice its `Traced nodes:` line** (*Planned call graph rules* → per-slice mode).
+   - **With evals on, give every slice its `Evals:` line** (*Eval rules* → per-slice mode).
 
 9. **Validate `delivery_mode:` value (spec ingestion gate):**
    - Read the `delivery_mode:` field from the spec frontmatter being created (or, when this body runs against an existing spec, the field already on disk).
@@ -454,7 +497,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
      - Replace the populated `## Delivery Slices` section with the single line: `Slicing not applicable: <reason citing the firing heuristic or "Qualitative judgment: <specific concern>">`.
      - Append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` mirroring the `## Awaiting Clarification` shape exactly. The block names the spec, the firing heuristic (or qualitative judgment text), and the two options: (a) fall back to `whole-feature` for this feature only — `/sdd-flow continue --fall-back-to-whole-feature` [recommended]; (b) point at a slice boundary that was missed and retry — `/sdd-flow continue --retry-slicing "<hint>"`. This header is this gate's alone; nothing else writes it.
      - **In both modes, return** a bounded message (≤200 words) saying the gate fired, with the SPEC path and `SDD/orchestration/progress.md` as artifact paths. You cannot ask the user anything; the orchestrator shows the options (supervised) or stops (autonomous), and either answer brings the flow back into planning — the spec is checked and reviewed before any code is written.
-   - **Retry run.** When your prompt carries the line `RETRY SLICING: <hint>`, the spec already exists and the gate fired on it once: redo step 8 using the hint as the slice boundary to start from — its `Traced nodes:` lines included when tracing is on — then steps 9–10. Change nothing else in the spec. If the gate fires again, write a new block as above.
+   - **Retry run.** When your prompt carries the line `RETRY SLICING: <hint>`, the spec already exists and the gate fired on it once: redo step 8 using the hint as the slice boundary to start from — its `Traced nodes:` lines included when tracing is on, and its `Evals:` lines when evals are on — then steps 9–10. Change nothing else in the spec. If the gate fires again, write a new block as above.
    - When none of the heuristics fire and qualitative judgment is that slicing is meaningful, proceed with the populated `## Delivery Slices` section — no halt, no annotation.
 
 11. **Run the Feasibility Arithmetic Self-Check:**
@@ -488,6 +531,20 @@ Steps 7 and 8 apply these when tracing is on for this spec (the table under `tra
 - **Per-slice mode — assign every marked node to a slice** (step 8). Each `SLICE-XXX` entry gets a `Traced nodes:` line listing the marked nodes that slice brings into existence, each with its kind. Every marked node appears in exactly one slice's line: the slice whose code first makes that call — whether or not a test can drive it, so a `not exercised in tests` node is assigned like any other. A slice that brings none writes `none`. A slice is later reviewed against its own nodes and those of the slices before it, so a node assigned too early is a finding against a slice that could not have built it.
 - **Whole-feature mode** has no slices and no `Traced nodes:` lines; the whole graph is checked in the one code review.
 - A feature that adds or changes no entry point, model call, or external call still gets the sub-section, with the single line `No entry point, LLM call, or external call is added or changed.`
+
+### Eval rules (evals on only)
+
+Steps 5 and 8 apply these when evals are on for this spec (the table under `evals:` above). When they are off, write no `### Evals`, no `Sign-off:` line, and no `Evals:` line. EVALS is the definition — what an eval is, the two kinds, what a case must be; this section says only where each thing goes in the spec.
+
+- **Find the requirements about what the model says.** Go through every entry with an ID — `REQ`, `PERF`, `SEC`, `UX`, `EDGE`, `FAIL`, and any other family the spec uses — and ask whether it can be shown true or false only by reading a real answer of the model: what the answer contains or leaves out, its form, its length, its language, a refusal, which tool the model chose. The family does not decide it: `PERF-001: an answer has at most 100 words` is one. A requirement about what the code does with an answer is an ordinary requirement with an ordinary test.
+- **Each one is met in one of the two ways EVALS §1 gives — all of it:** at least one hard eval, or a sign-off requirement with a judged eval, and between them every part of what the requirement promises. A hard eval on one part leaves the rest unmet until something checks it. Prefer hard, and split a requirement that is part rule and part judgement into a hard eval for the part and a judged one for the rest — the template's `REQ-005` is that case.
+- **The brief's decision is binding.** When the design brief has a Key decision on how quality is judged, a behaviour it says is checked by rule gets a hard eval, and one it leaves for the user to accept is a sign-off requirement. Departing from it is a deviation like any other (`## Deviations from Design Brief`).
+- **One row per eval in the table, and its cases beneath** (step 5), by EVALS §2. Number evals `EVAL-001` upward and an eval's cases from 1. Write each input by the names the entry point takes it under, in full. A hard case states what the output must contain and must not contain in words a rule can apply; when only code can decide it, say exactly what that code computes. A judged case states its rubric. Write no known-bad or known-good answers: the implementer writes those beside the case, and the review checks them.
+- **A sign-off requirement gets its line** under `### Manual Verification`, in the template's exact form, starting `- [ ] **Sign-off: <ID>**`: the flow finds these lines by that start, and stops at the final commit for each. Name there the judged eval whose scores and outputs the user will read. A requirement with a hard eval for every part of it gets no line.
+- **Per-slice mode — assign every case to a slice** (step 8). Each `SLICE-XXX` entry gets an `Evals:` line. Every case of every eval is in exactly one slice's line: the first slice after which the application can pass it. Name a whole eval by its ID and part of one with its cases (`EVAL-003 (case 1)`). A slice that brings none writes `none`. From that slice on, every review runs the case again, so a case assigned too early fails a slice that could not have passed it.
+- **Whole-feature mode** has no slices and no `Evals:` lines; every case is run in the one code review.
+- **Tiered spec:** evals cover what this tier specifies. A deferred behaviour gets none.
+- A feature with a model in it and no requirement about what the model says still gets the sub-section, with the single line `No requirement of this feature is about what the model says.`
 
 ## Deliverable Expectations
 
@@ -532,6 +589,10 @@ Before considering the specification complete:
 - [ ] Tracing on: `### Planned call graph` has one tree per entry point the feature adds or changes; every entry point, LLM call, and external call in it is marked in the form *Planned call graph rules* gives; every LLM node states its maximum; a `not exercised in tests` mark carries its reason
 - [ ] Tracing on, `delivery_mode: per-slice`: every slice has a `Traced nodes:` line, and every marked node is in exactly one of them
 - [ ] Tracing off: the spec has no `### Planned call graph` and no `Traced nodes:` line
+- [ ] `evals:` is `auto`, `true`, or `false`
+- [ ] Evals on: `### Evals` exists; every requirement about what the model says has a hard eval, or a judged eval and a `Sign-off:` line in the template's form; every case has its input written out in full; every hard case says what the output must and must not contain; every judged case has a rubric
+- [ ] Evals on, `delivery_mode: per-slice`: every slice has an `Evals:` line, and every case is in exactly one of them
+- [ ] Evals off: the spec has no `### Evals`, no `Sign-off:` line, and no `Evals:` line
 
 ---
 

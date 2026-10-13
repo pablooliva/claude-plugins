@@ -98,6 +98,16 @@ Your prompt gives **STANDARD** (`references/enforcement-sites.md`); read its §1
 - [ ] Performance validation metrics specified
 - [ ] Manual verification steps documented
 
+### Evals
+
+Only when the spec carries an `### Evals` sub-section under `## Validation Strategy`; skip this block otherwise. Your prompt then gives **EVALS** (`references/evals.md`); read its §1 and §2 first. If the sub-section is there and your prompt gives no such path, leave it as it is and say so in your return. Check, and correct in place:
+
+- [ ] Every eval in the table has an ID, the one requirement it checks, a kind (`hard` or `judged`), and at least one numbered case beneath — or the sub-section is the single line `No requirement of this feature is about what the model says.`
+- [ ] Every case has its input written out in full; every hard case says what the output must contain or must not contain; every judged case has a rubric
+- [ ] Every requirement the table names — of any family, `PERF` included — is met in one of the two ways EVALS §1 gives: a hard eval, or a judged eval together with a line under `### Manual Verification` that starts `- [ ] **Sign-off: <ID>**` and names that eval
+- [ ] No `Sign-off:` line names a requirement that has no judged eval, and none names an ID the spec does not have
+- [ ] `delivery_mode: per-slice`: every slice has an `Evals:` line, and every case is in exactly one of them
+
 ### Dependencies and Risks
 
 - [ ] External dependencies identified

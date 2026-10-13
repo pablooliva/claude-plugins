@@ -179,6 +179,30 @@ Your prompt carries the line `tracing: on` or `tracing: off` — whether the flo
 - [ ] **The graph and the modules describe one design** — a call that crosses into a module is named as that module's `Public Interface` names it; one that is not is a MEDIUM finding. A step inside a module needs no interface entry — the model and external calls are usually what a module hides — but each belongs to a `MODULE-XXX`, and a marked node no module accounts for is a MEDIUM finding.
 - [ ] **Slice assignment (per-slice mode only)** — every slice has a `Traced nodes:` line; every marked node is in exactly one of them; and each is assigned to the slice whose code first makes that call, judged by the slices' `REQs satisfied` and `Modules touched` — a node marked `not exercised in tests` included. A node unassigned, assigned twice, or assigned to a slice that could not have built it is a MEDIUM finding — a slice is reviewed against its own nodes and those of the slices before it.
 
+### Evals (by the evals gate in your prompt)
+
+Your prompt carries the line `evals: on` or `evals: off` — whether the flow will later put the spec's written cases to the running application and check what the model really answers. With no such line (a spec reviewed outside the flow, or a flow begun before evals were part of it), skip this sub-section silently.
+
+**`evals: off`** — the spec must carry no `### Evals` sub-section, no `Sign-off:` line under `### Manual Verification`, and no `Evals:` line in a slice. One that is there is a LOW finding: nothing will run it, and a reader will assume something does. Record one line and move on.
+
+**`evals: on`** — read the evals reference at the **EVALS** path in your prompt, §1, §2, and §6. The cases you are reading are the only ones the feature will ever be held to: the implementer may not write its own, and may not weaken these. A requirement left without a case here is checked by nobody. Verify:
+
+- [ ] **Section present** — `### Evals` exists under `## Validation Strategy`. Absent is a HIGH finding.
+- [ ] **Every requirement about what the model says is met in one of the two ways** — read every entry with an ID yourself — `REQ`, `PERF`, `SEC`, `UX`, `EDGE`, `FAIL`, and any other family the spec uses; do not start from the table, and do not go by the family. One that can be shown true or false only by reading a real answer of the model — what it contains or leaves out, its form, its length, its language, a refusal, the tool chosen — needs, for every part of what it promises, a hard eval, or a judged eval and a `Sign-off:` line naming it. One with neither is a HIGH finding. So is one covered by a judged eval alone with no `Sign-off:` line: a score never meets a requirement.
+- [ ] **"No requirement is about what the model says" is true** — when the sub-section is that single line, the check above still runs. One such requirement makes the line false: HIGH.
+- [ ] **Hard where a rule can decide** — a judged eval, or a sign-off, for a behaviour a rule could check (a field that must be present, a format, a phrase that must or must not appear, a refusal) is a MEDIUM finding. Where part of a requirement is a rule, that part has a hard eval.
+- [ ] **Sign-off is only for what the model says** — a `Sign-off:` line for a requirement an ordinary test could prove takes that requirement out of the tests. HIGH.
+- [ ] **Every sign-off line can be acted on** — it has the form `- [ ] **Sign-off: <ID>**`, names a requirement that exists, and names a judged eval that checks that requirement. A line in another form will not be found at the final commit; a line with no judged eval leaves the user nothing to read. Either is a HIGH finding.
+- [ ] **A rule can apply every hard case as written** — what the output must contain and must not contain is a phrase, a pattern, a field, a refusal, or a named tool, or the spec says exactly what a coded check computes. "Is correct", "answers the question", "is well formed" are not cases: MEDIUM.
+- [ ] **Each case follows from the part of the requirement its eval checks** — the table's `Behaviour checked` says which part. For that part the case asks what the requirement's text promises: it fails no output the requirement allows, and it passes none that breaks that part. A case that does either is a MEDIUM finding. A hard case need not catch a fault in another part of the requirement — another eval has that part.
+- [ ] **The evals of a requirement add up to all of it** — for every requirement found in the second check above, whether it has one eval or several, read their `Behaviour checked` cells together against the whole of its text. One hard eval on one part does not cover the rest: a requirement that promises the right figure and a faithful summary, with a hard eval for the figure and nothing else, leaves faithfulness checked by nobody. A part no eval checks, or a part only a judged eval checks in a requirement with no `Sign-off:` line, is the HIGH finding of that second check.
+- [ ] **The input forces the behaviour** — the right output cannot be reached without doing what the requirement says. A question the model can answer from what it already knows does not show that it read the material: MEDIUM.
+- [ ] **Every input is written out in full, and invented** — "a typical question", "a long document" is a MEDIUM finding. Text that reads as taken from a real person — a name with an address, an account, a medical or financial detail — is a HIGH finding: it would be stored in the repository and sent to a model at every review.
+- [ ] **Every judged case has a rubric** that says what the best, a middling, and the worst output look like. Missing or one-sided is a MEDIUM finding.
+- [ ] **No case is there twice** — two cases that would fail for the same reason and pass for the same reason are one case paid for twice at every review. LOW.
+- [ ] **Slice assignment (per-slice mode only)** — every slice has an `Evals:` line; every case is in exactly one of them; and each is assigned to the first slice after which the application can pass it, judged by the slices' `REQs satisfied` and `Modules touched`. A case unassigned, assigned twice, or assigned to a slice that could not pass it is a MEDIUM finding.
+- [ ] **The evals match the brief** — when the design brief has a Key decision on how quality is judged, a behaviour it says a rule checks has a hard eval, and one it leaves to the user is a sign-off requirement. A difference not recorded under `## Deviations from Design Brief` is a finding under Design Brief Fidelity, at that block's severity.
+
 ### Research Alignment Issues
 
 - [ ] **Dropped findings** - What research insights didn't make it into the spec? (In a tiered spec, a finding recorded under `## Deferred to Later Tiers` is accounted for, not dropped.)
@@ -238,6 +262,9 @@ Your prompt carries the line `tracing: on` or `tracing: off` — whether the flo
 
 ### Planned Call Graph
 [Omit when your prompt carries no tracing gate. `tracing: off`: one line. `tracing: on`: each finding with its severity, the node or slice it concerns, and the correction — or "Graph covers N entry point(s); every LLM and external call marked and assigned."]
+
+### Evals
+[Omit when your prompt carries no evals gate. `evals: off`: one line. `evals: on`: each finding with its severity, the requirement, eval, or case it concerns, and the correction — or "N requirement(s) about what the model says: H with a hard eval, S by sign-off; every case checked."]
 
 ### Research Disconnects
 - Research finding "[X]" not addressed in spec

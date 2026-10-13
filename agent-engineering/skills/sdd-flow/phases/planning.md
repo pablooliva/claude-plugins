@@ -8,6 +8,8 @@ Three resolved paths recur below. **BRIEF** = `SDD/requirements/DESIGN-[###]-[fe
 
 Two more come from the Step 0 record. **TRACING** = the tracing standard. **The observability line** = `Observability record: present` or `Observability record: absent` — whether the application has the tracing foundation (`phases/setup.md` → Step 0). A Step 0 record with no such line (a flow started before tracing was part of the flow) is read as `absent`. From 3c on, the **tracing gate** is `on` or `off`, as the latest `## Gates - ` line says; a spawn after 3c in a cycle that has no such line (it was planned before tracing was part of the flow) is passed `tracing: off`.
 
+**EVALS** = the evals reference (`SKILL_ROOT/references/evals.md`, `SKILL.md` → SKILL_ROOT resolution): what an eval is, its two kinds, and how its cases are written. It is passed to the design-brief and planning spawns when the observability line says `present`. From 3c on, the **evals gate** is `on` or `off`, as the `evals:` part of that same `## Gates - ` line says; a line with no `evals:` part (a cycle that passed 3c before evals were part of the flow), or no line at all, is `evals: off`.
+
 ---
 
 ## Step 2.5: Design Gate
@@ -18,9 +20,9 @@ Runs after 2e and before 3a. The brief is the human's review surface for plannin
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent **with the per-spawn model override `opus`** (the workhorse's instructions and tools, Opus's judgment — `sdd-critical-reviewer` is also Opus but carries an adversarial reviewer's persona, which is wrong for an author):
 - **Body:** `bodies/design-brief.md`
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), existing `SDD/adr/`, **TIERS**, **TIER_PLAN** (the path, whether or not the file exists yet), `TIER: N` if the user passed `--tier N` or this is a next-tier cycle, and on a next-tier cycle the previous tier's research document.
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), existing `SDD/adr/`, **TIERS**, **TIER_PLAN** (the path, whether or not the file exists yet), `TIER: N` if the user passed `--tier N` or this is a next-tier cycle, **the observability line** copied verbatim, **EVALS** when that line says `present`, and on a next-tier cycle the previous tier's research document.
 - **Outputs:** **BRIEF**, **TIER_PLAN** (none when the brief says tiers are not applicable), append `progress.md`.
-- **Task:** Write the design brief. Carries the Safety-Net Rule, a fresh counter (`Reads: 0/15`), and `planning-compact.md` as the compact body.
+- **Task:** Write the design brief. The body's **quality rule** applies: when the observability line says `present` and the feature has a model in it, one Key decision says how the quality of what the model says will be judged. Carries the Safety-Net Rule, a fresh counter (`Reads: 0/15`), and `planning-compact.md` as the compact body.
 
 ### 2.5b. Gate
 
@@ -96,15 +98,15 @@ Then return to 2.5b. The loop has no cap — every round is requested by the use
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning.md`
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/orchestration/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **STANDARD**, **the observability line** copied verbatim, **TRACING** when that line says `present`, and on a next-tier cycle the previous tier's research document.
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/orchestration/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **STANDARD**, **the observability line** copied verbatim, **TRACING** and **EVALS** when that line says `present`, and on a next-tier cycle the previous tier's research document.
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, append `progress.md`.
-- **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force. The body's **tracing rule** applies: the spec carries `tracing:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when the observability line says `present` and the field is not `false` — a `### Planned call graph` under `## Modules` with every entry point, LLM call, and external call marked, plus a `Traced nodes:` line per slice in per-slice mode; otherwise neither.
+- **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force. The body's **tracing rule** applies: the spec carries `tracing:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when the observability line says `present` and the field is not `false` — a `### Planned call graph` under `## Modules` with every entry point, LLM call, and external call marked, plus a `Traced nodes:` line per slice in per-slice mode; otherwise neither. The body's **evals rule** applies: the spec carries `evals:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when evals are on for this spec by the table under `evals:` in the body — an `### Evals` sub-section under `## Validation Strategy` with every case written out, a `Sign-off:` line under `### Manual Verification` for each requirement only a person can accept, and an `Evals:` line per slice in per-slice mode; otherwise none of the three.
 
 **If the practicality gate fired** — the subagent's return says so, and an `## Awaiting Slicing Decision` block is the latest in `progress.md` — do not go on: the spec asked for slices and no meaningful ones exist. Show the block's two options and stop, in both modes (in supervised mode the user may answer in the same session). The answer is handled by `phases/protocols.md` → `## Awaiting Slicing Decision`, and both answers come back here: falling back to whole-feature continues with the completion spawn below, and a retry re-runs the spawn above with `RETRY SLICING: <hint>`. Neither skips 3b–3g.
 
 Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning-complete.md`
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** (when the approved tier is not `none`), **STANDARD** (the body's Control Register check), `SDD/UBIQUITOUS_LANGUAGE.md` (if present).
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** (when the approved tier is not `none`), **STANDARD** (the body's Control Register check), **EVALS** when the observability line says `present` (the body's Evals check), `SDD/UBIQUITOUS_LANGUAGE.md` (if present).
 - **Outputs:** updated SPEC (if gaps found), updated `SDD/UBIQUITOUS_LANGUAGE.md` (incremental — only if the spec introduced new domain terms), append `progress.md`.
 - **Task:** Validate completeness against the checklist (including the Modules-section verification and the design-brief and tier checks), ensure every research finding is incorporated or recorded as deferred, verify frontmatter fields are populated, and capture any glossary deltas the spec introduced (execute inline).
 
@@ -134,7 +136,7 @@ Panel composition comes from the spec's `review_panel:` frontmatter. If absent o
 
 The `agent_security:` value also gates Step 4b's agentic-surface code-review lens, so it must be resolved even when `review_panel:` was authored by hand.
 
-**`tracing` gate — the binding decision.** Whether this feature's real call tree is checked against the planned one is decided here, once per planning run, before any panel spawn. It is decided when no `## Gates - ` line follows the latest `Planning Phase - COMPLETE` line in `progress.md` — so on the first entry to 3c after a spec is written or rewritten, and not again when the fix loop below re-runs the panel. Read the spec's `tracing:` frontmatter (absent means `auto`) and the observability line:
+**The `tracing` and `evals` gates — the binding decision.** Two things are decided here, once per planning run, before any panel spawn: whether this feature's real call tree is checked against the planned one (`tracing`), and whether what the model really answers is checked against the spec's cases (`evals`). They are decided when no `## Gates - ` line follows the latest `Planning Phase - COMPLETE` line in `progress.md` — so on the first entry to 3c after a spec is written or rewritten, and not again when the fix loop below re-runs the panel. Read the spec's `tracing:` and `evals:` frontmatter (for each, absent means `auto`) and the observability line. The two gates are independent: neither needs the other to be on.
 
 | `tracing:` | Observability line | Gate |
 |---|---|---|
@@ -145,23 +147,39 @@ The `agent_security:` value also gates Step 4b's agentic-surface code-review len
 | `true` | `absent` | none — halt (below) |
 | any other value | — | none — halt (below) |
 
-- **Record it.** Append `## Gates - tracing: on` or `## Gates - tracing: off` to `progress.md`. The latest such line is the gate for the rest of this cycle: every later spawn that needs it is passed exactly `tracing: on` or `tracing: off`, and no subagent reads the field to decide for itself. An edit to the field after this point — by a fix subagent or by hand — changes nothing until Step 3 runs again (a re-plan writes a new spec, a new `Planning Phase - COMPLETE`, and so a new line here).
-- **No specialist is given the gate.** The panel does not review the planned call graph; the spec critical review (3d) does.
-- **`true` with no foundation, or a value outside the three → halt, in both modes, and spawn nothing.** Append this block to `progress.md`, then tell the user which of the two it is:
+| `evals:` | Observability line | The spec has a model in it | Gate |
+|---|---|---|---|
+| `false` | — | — | `off` |
+| `auto` | `absent` | — | `off` |
+| `auto` | `present` | no | `off` |
+| `auto` | `present` | yes | `on` |
+| `true` | `present` | — | `on` |
+| `true` | `absent` | — | none — halt (below) |
+| any other value | — | — | none — halt (below) |
+
+- **"The spec has a model in it"** is asked only for `evals: auto` with the record `present`. It is yes when the spec carries an `### Evals` sub-section — the planning subagent judged so — or when the spec describes an agentic surface by the test of the `agent-security` gate above. Apply that test to the spec's text whatever its `agent_security:` field says, and whether or not CATALOG exists: the two gates share a test and nothing else.
+- **Record it.** Append one line to `progress.md`: `## Gates - tracing: <on|off>, evals: <on|off>`. The latest such line holds both gates for the rest of this cycle: every later spawn that needs one is passed exactly `tracing: on` or `tracing: off`, and exactly `evals: on` or `evals: off`, and no subagent reads a field to decide for itself. An edit to either field after this point — by a fix subagent or by hand — changes nothing until Step 3 runs again (a re-plan writes a new spec, a new `Planning Phase - COMPLETE`, and so a new line here).
+- **No specialist is given either gate.** The panel reviews neither the planned call graph nor the evals; the spec critical review (3d) does.
+- **`true` with no foundation, or a value outside the three — in either field → halt, in both modes, and spawn nothing.** Append this block to `progress.md`, then tell the user what cannot be decided, with one of the messages below for each field named:
 
   ```markdown
-  ## Awaiting Tracing Decision
+  ## Awaiting Gate Decision
 
   SPEC: SDD/requirements/SPEC-[###]-[feature-name].md
-  tracing: <the value, verbatim>   Observability record: <present|absent>
-  Set `tracing:` in the spec to a value this cycle can honour, then run `/sdd-flow continue`.
+  tracing: <the value, verbatim>   evals: <the value, verbatim>   Observability record: <present|absent>
+  Cannot be decided: <tracing | evals | tracing, evals>
+  Set each field named above to a value this cycle can honour, then run `/sdd-flow continue`.
   ```
 
   > **The spec asks for tracing, and this application has no tracing foundation.** `tracing: true` in `SDD/requirements/SPEC-[###]-[feature-name].md` needs `SDD/OBSERVABILITY.md`, which was absent when this cycle started. A cycle keeps the answer it started with, so tracing cannot be switched on in this one. Set `tracing:` to `auto` or `false` in the spec and run `/sdd-flow continue`; run `/observability-init` once this cycle is finished, and the next cycle is traced.
 
   > **Invalid `tracing` value '[value]' in `SDD/requirements/SPEC-[###]-[feature-name].md`.** Allowed values: `auto`, `true`, `false`. Edit the spec frontmatter and run `/sdd-flow continue`.
 
-  No gate line is written. `/sdd-flow continue` — or the user's reply in the same session — comes back to this decision and reads the field again (`phases/protocols.md` → `## Awaiting Tracing Decision`). When it resolves, the `## Gates - ` line written then is what ends the halt.
+  > **The spec asks for evals, and this application has no tracing foundation.** `evals: true` in `SDD/requirements/SPEC-[###]-[feature-name].md` needs `SDD/OBSERVABILITY.md` — the eval run is set up from what that record says, and its command is written into it — which was absent when this cycle started. A cycle keeps the answer it started with, so evals cannot be switched on in this one. Set `evals:` to `auto` or `false` in the spec and run `/sdd-flow continue`; run `/observability-init` once this cycle is finished, and the next cycle can check what the model says.
+
+  > **Invalid `evals` value '[value]' in `SDD/requirements/SPEC-[###]-[feature-name].md`.** Allowed values: `auto`, `true`, `false`. Edit the spec frontmatter and run `/sdd-flow continue`.
+
+  No gate line is written — not for the field that could be decided either: the line is written whole or not at all. `/sdd-flow continue` — or the user's reply in the same session — comes back to this decision and reads both fields again (`phases/protocols.md` → `## Awaiting Gate Decision`). When both resolve, the `## Gates - ` line written then is what ends the halt.
 
 ### Stage 1 — specialists in parallel
 
@@ -196,9 +214,9 @@ Each iteration:
 
 1. **Record iteration state** in `progress.md` under `## Panel Review Iterations`: iteration number, HIGH/MEDIUM/LOW counts, verdict, timestamp.
 2. **Spawn a fix subagent** (`agent-engineering:sdd-workhorse`):
-   - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, **STANDARD**, the tracing gate as the line `tracing: on` or `tracing: off`, and **TRACING** when it is `on`.
+   - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, **STANDARD**, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
    - **Outputs:** updated spec (in place), "Findings Addressed" appended to the panel review.
-   - **Task:** Resolve every HIGH and MEDIUM finding; each resolution cites the specific spec change made. Do NOT claim resolution without an actual edit. Embed the **Brief and tier rules for spec fixes** (below) verbatim, then the **Register rule for spec fixes**, and with `tracing: on` the **Call-graph rule for spec fixes** beneath them.
+   - **Task:** Resolve every HIGH and MEDIUM finding; each resolution cites the specific spec change made. Do NOT claim resolution without an actual edit. Embed the **Brief and tier rules for spec fixes** (below) verbatim, then the **Register rule for spec fixes**, and beneath them the **Call-graph rule for spec fixes** with `tracing: on` and the **Evals rule for spec fixes** with `evals: on`.
 3. **Re-run Step 3c** (both stages — fresh PANEL-FINDINGS + a fresh synthesis) over the updated spec, producing a new/overwritten `PANEL-SPEC-*`.
 4. **Act on the new verdict, in this order:**
    - **The panel now returns `PROCEED`** → exit the loop and continue to 3d — at any iteration, the third included. A passing verdict is never a halt.
@@ -219,6 +237,10 @@ Each iteration:
 ### Call-graph rule for spec fixes (embed verbatim in the 3c and 3e fix prompts when the gate is `tracing: on`)
 
 > **Keep the planned call graph true to the spec.** A fix that adds, removes, renames, or moves an entry point, a call to a model, a call to an external system, or a delivery slice updates `### Planned call graph` and the slices' `Traced nodes:` lines in the same edit: every such call is a marked node, every LLM node states its maximum, and in per-slice mode every marked node is in exactly one slice's line. Marks follow the tracing standard at the path in your prompt. Never change the spec's `tracing:` field.
+
+### Evals rule for spec fixes (embed verbatim in the 3c and 3e fix prompts when the gate is `evals: on`)
+
+> **Keep the evals true to the spec.** A fix that adds, removes, renumbers, or changes a requirement about what a model says, or a delivery slice, updates `### Evals`, the `Sign-off:` lines under `### Manual Verification`, and the slices' `Evals:` lines in the same edit: every part of what such a requirement promises is checked by a hard eval, or by a judged eval of a sign-off requirement — one hard eval on one part does not cover the rest; every case is written out in full; and in per-slice mode every case is in exactly one slice's line. Kinds and cases follow the standard at the EVALS path in your prompt (§1, §2). Moving a behaviour between checked-by-rule and judged departs from what the design brief told the user about how quality is judged: record it under `## Deviations from Design Brief`. Never change the spec's `evals:` field.
 
 ### On halt (cap exhausted or progress stall)
 
@@ -241,18 +263,18 @@ Each iteration:
 
 Run this review by the cycle's **review route** (`references/second-model-review.md`). On the Claude route, spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus). Either route is given:
 - **Body:** `bodies/critical-review.md` — apply its **Planning Phase** section.
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, **STANDARD** (the body's **Control Register** block), the tracing gate as the line `tracing: on` or `tracing: off`, and **TRACING** when it is `on`.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, **STANDARD** (the body's **Control Register** block), the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
 - **Outputs:** `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`.
-- **Task:** Adversarial review of the spec — the Design Brief Fidelity block (is the spec what the user approved?), ambiguities, untestable criteria, dropped research findings, contradictions, the feasibility-arithmetic gate over the spec's `### Quantitative Ledger` (do the spec's own numeric constraints permit its own numeric goals?), the body's **Control Register** block (is every rule that must hold on every path in the register, and is any rule hidden under an ID it does not merely restate?), and the body's **Planned Call Graph** block (with `tracing: on`: is every entry point, LLM call, and external call the spec describes a marked node, and assigned to a slice? with `tracing: off`: is the spec free of one?). Complementary to the panel: critical-review is generalist/adversarial; the panel was domain-specialist.
+- **Task:** Adversarial review of the spec — the Design Brief Fidelity block (is the spec what the user approved?), ambiguities, untestable criteria, dropped research findings, contradictions, the feasibility-arithmetic gate over the spec's `### Quantitative Ledger` (do the spec's own numeric constraints permit its own numeric goals?), the body's **Control Register** block (is every rule that must hold on every path in the register, and is any rule hidden under an ID it does not merely restate?), and the body's **Planned Call Graph** block (with `tracing: on`: is every entry point, LLM call, and external call the spec describes a marked node, and assigned to a slice? with `tracing: off`: is the spec free of one?), and the body's **Evals** block (with `evals: on`: does every requirement about what the model says have a hard eval, or a judged eval and a sign-off line, and can each case be applied as written? with `evals: off`: is the spec free of evals?). Complementary to the panel: critical-review is generalist/adversarial; the panel was domain-specialist.
 
 ---
 
 ## 3e. Address Spec Review Findings (panel + critical, combined)
 
 Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, **STANDARD**, the tracing gate as the line `tracing: on` or `tracing: off`, and **TRACING** when it is `on`.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, **STANDARD**, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
 - **Outputs:** updated SPEC, append `progress.md`.
-- **Task:** Resolve ALL findings from BOTH reviews — clarify ambiguous requirements, make criteria testable, add missing edge cases or record them as deferred, resolve contradictions, address panel anti-patterns, incorporate dropped research findings. Append "Findings Addressed" sections to both review documents. Embed the **Brief and tier rules for spec fixes** (3c) verbatim, then the **Register rule for spec fixes** (3c), and with `tracing: on` the **Call-graph rule for spec fixes** (3c).
+- **Task:** Resolve ALL findings from BOTH reviews — clarify ambiguous requirements, make criteria testable, add missing edge cases or record them as deferred, resolve contradictions, address panel anti-patterns, incorporate dropped research findings. Append "Findings Addressed" sections to both review documents. Embed the **Brief and tier rules for spec fixes** (3c) verbatim, then the **Register rule for spec fixes** (3c), and beneath them the **Call-graph rule for spec fixes** (3c) with `tracing: on` and the **Evals rule for spec fixes** (3c) with `evals: on`.
 
 ---
 
