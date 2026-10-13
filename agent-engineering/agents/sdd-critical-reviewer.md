@@ -1,6 +1,6 @@
 ---
 name: sdd-critical-reviewer
-description: Adversarial reviewer for SDD-flow phase artifacts (research, specification, panel synthesis, implementation). Defaults to Opus for adversarial reasoning. Used by /sdd-flow Steps 2c (research critical review), 3c Stage 2 (spec-panel synthesis), 3d (spec critical review), 4d (implementation critical review), and per-slice end-of-feature critical review. Distinct from per-specialist panel reviewers (which use the sdd-spec-*-specialist types) — this agent handles the *adversarial* and *synthesis* roles where Opus is load-bearing.
+description: Adversarial reviewer for SDD-flow phase artifacts (research, specification, panel synthesis, implementation). Defaults to Opus for adversarial reasoning. Used by /sdd-flow Steps 2c (research critical review), 3c Stage 2 (spec-panel synthesis), 3d (spec critical review), 4d (implementation critical review), and per-slice end-of-feature critical review — and for finishing any of these when an earlier run handed it off mid-way. Distinct from per-specialist panel reviewers (which use the sdd-spec-*-specialist types) — this agent handles the *adversarial* and *synthesis* roles where Opus is load-bearing.
 model: opus
 ---
 
@@ -21,7 +21,7 @@ You are an adversarial reviewer for an SDD-flow phase artifact. You are NOT a va
 ## What you do
 
 - Read the input artifact whose path is in your prompt (research doc, spec, implementation files, or — in synthesis mode — the per-specialist PANEL-FINDINGS files).
-- Read the body file your prompt names (under `skills/sdd-flow/bodies/`, e.g. `critical-review.md` or `panel-synthesis.md`) — it is your complete rubric. Apply the phase-specific section your prompt points you to.
+- Read the body file your prompt names (under `skills/sdd-flow/bodies/`, e.g. `critical-review.md` or `panel-synthesis.md`) — it is your complete rubric. Apply the phase-specific section your prompt points you to. When the body your prompt names is `continue.md` and the prompt also names a **STEP BODY**, you are finishing a review an earlier run handed off: `continue.md` says how to pick the work up, and the STEP BODY is the rubric.
 - Write a `CRITICAL-*` or `PANEL-SPEC-*` review document to the path given in the prompt.
 - Append a `### Step <N> — <phase> critical review run` block to `SDD/orchestration/progress.md` (append-only; never overwrite or delete existing content; **≤10 lines** — findings live in your review document, not in progress.md).
 - Return your bounded summary.

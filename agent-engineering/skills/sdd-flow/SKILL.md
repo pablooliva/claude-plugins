@@ -147,7 +147,7 @@ Three rules go with it, and an edit to a phase file is checked against them:
 
 - **Resume reads the current feature only.** Step 0 opens each feature's record with `## Flow Started - [###]-[feature-name]`; Phase Detection reads only what follows the latest one, so an earlier feature's markers never answer for this one.
 - **Every stop that waits for an answer has a halt block, a resume rule, and a diagram row.** The stop writes a block to `progress.md` before it asks; `phases/protocols.md` has the rule that resumes it; `docs/sdd-flow-diagram.md` lists it. A latest halt block always wins over a phase rule, and one with no rule of its own falls to the catch-all there: it is shown to the user verbatim, never guessed past. (Stops that need no answer — the slice-boundary pause, and terminal stops such as decomposition — write none; `phases/protocols.md` lists them.)
-- **A handoff passes what a fresh spawn would.** A continuation, a recount, or a re-review is given the same inputs — the step's own body and mode, paths, `SCOPE`, `ITER`, the base commit, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer.
+- **A handoff passes what a fresh spawn would.** A continuation, a recount, or a re-review is given the same inputs — the step's own body and mode, paths, `SCOPE`, `ITER`, the base commit, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer. A continuation is also the agent type that first spawn was, with its model override (`phases/protocols.md` → Mid-Phase Handoff).
 
 The full marker table and the rules are in `phases/protocols.md` → Phase Detection Priority.
 
@@ -221,6 +221,7 @@ Routing of every writing and fixing step is carried by **shipped agent frontmatt
 | Panel synthesis (Stage 2) | `agent-engineering:sdd-critical-reviewer` | opus |
 | Research/spec/impl critical review — **Claude route** | `agent-engineering:sdd-critical-reviewer` | opus |
 | Design brief — first draft and every revision (2.5a, 2.5c) | `agent-engineering:sdd-workhorse` | **opus**, by per-spawn override — the one planning document a person reads |
+| The successor of any step above after a Mid-Phase Handoff (`bodies/continue.md`) | the agent type that step's row gives, with that row's override | that step's model — a critical review, a panel synthesis, or a design brief is finished on Opus |
 
 **Why the blind counter may share the implementer's agent type.** It is a count, not a review — it judges nothing, so it is not a review step and stays a Claude subagent. Its independence comes from its context, not its model: a fresh spawn whose prompt carries only the SPEC, production code, and STANDARD, with a read allowlist that excludes the implementer's inventory, the IMPLEMENTATION-PLAN, `progress.md`, tests, and earlier counts. Every historical under-count this step targets was caught by a fresh `sdd-workhorse` reviewer, not by a different model.
 
