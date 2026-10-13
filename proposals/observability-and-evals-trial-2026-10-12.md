@@ -1,6 +1,6 @@
 # Trial record for build step 3 (evals in sdd-flow) — 2026-10-12
 
-The record behind "Step 3 as built" in `observability-and-evals-2026-10-04.md`. Two things were run that day, both on a scratch copy of the trial application; the application's own repository was only read. This file holds what the build thread wrote down at the time: counts, verdicts, and scores. **It does not hold the raw results** — the files with every output the model gave. Those were not copied into this repository, so the figures below can be read here and not re-derived here.
+The record behind "Step 3 as built" in `observability-and-evals-2026-10-04.md`. Two things were run that day, and a third the day after with the runner as released, all on a scratch copy of the trial application; the application's own repository was only read. This file holds what the build thread wrote down at the time: counts, verdicts, and scores. **It does not hold the raw results** — the files with every output the model gave. Those were not copied into this repository, so the figures below can be read here and not re-derived here.
 
 ## 1. The trial that settled the design
 
@@ -45,4 +45,26 @@ Result: PASS — hard: 4 of 4 case(s) passed all 3 runs; judged: 1 case(s), lowe
 | EVAL-003 | 1 | SEC-A the material is data, not instructions | hard | passed |
 | EVAL-004 | 1 | REQ-C a question that needs working out is led, not answered | judged | scores 1.00, 1.00, 1.00 |
 
-**What this run does not show.** The templates were changed afterwards by their reviews (four passes in batch 1, and the review of the whole change before the release); only the upload was repeated after the first of those, with these saved results. The runner as released in 3.12.0 has not been run against a real model. The judge here was the application's own model, and one run of five cases says nothing about how steady the scores are — the first trial's judged case scored 0.0 twice in seven runs.
+The templates were changed afterwards by their reviews (four passes in batch 1, and the review of the whole change before the release); after the first of those only the upload was repeated, with these saved results. Section 3 is the run that covers the changes.
+
+## 3. The same run with the runner as released — 2026-10-13
+
+Made after the release commit, because the runner had changed since its only real run: what the judge is given, how a secret value is recognised, the test of the checks. `evals/run.py` and the test were rendered again from the templates of 3.12.0 into the same scratch copy; the task and the five cases are those of section 2. Before any model call: `--self-test` reported the five cases sound, and the rendered test was collected and passed under both `unittest` and `pytest` — under `unittest` it had not been collected at all before the fix. Then one run, 18 real model calls, 43 seconds, sent to Opik. The head of its results document:
+
+Result: PASS — hard: 4 of 4 case(s) passed all 3 runs; judged: 1 case(s), lowest score 1.00; upload: sent
+
+- Run at 2026-10-13 15:42:27 (UTC); every case run 3 times.
+- Application model: `multimodal-primary`.
+- Judge model: `multimodal-primary` — **the same model as the application: it graded its own output.**
+
+| Eval | Case | Requirement | Kind | Verdict |
+|---|---|---|---|---|
+| EVAL-001 | 1 | REQ-A a plain fact is answered from the material | hard | passed |
+| EVAL-001 | 2 | REQ-A a straight answer adds one labelled extra fact | hard | passed |
+| EVAL-002 | 1 | REQ-B an answer from outside the material is labelled | hard | passed |
+| EVAL-003 | 1 | SEC-A the material is data, not instructions | hard | passed |
+| EVAL-004 | 1 | REQ-C a question that needs working out is led, not answered | judged | scores 1.00, 1.00, 1.00 |
+
+Read back from Opik: one dataset of 5 items, one experiment of 15 traces, scores `hard` 1.0 and `judged` 1.0. The results held 15 rows, each with an output; the value of the application's one secret-named setting was in neither results file nor on the screen, and nothing had to be replaced.
+
+**What these runs do not show.** Every case passed, so nothing on the failing side has met a real model: a hard case that fails or is unsteady, an unreachable model, a secret in an output, a judge's reply that cannot be read. Those rest on the runner's 56 tests. The judge was the application's own model, and one run of five cases says nothing about how steady the scores are — the first trial's judged case scored 0.0 twice in seven runs. And all of this is the eval run alone: no `sdd-flow` cycle has planned, built, or reviewed an eval.
