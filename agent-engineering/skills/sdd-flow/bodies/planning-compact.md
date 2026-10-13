@@ -181,6 +181,6 @@ Before compacting, ensure:
 
 ## Handoff
 
-After writing the compaction file and updating `SDD/orchestration/progress.md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` recording the compaction file path and where you left off. Then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
+After writing the compaction file and updating `SDD/orchestration/progress.md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` recording the compaction file path and where you left off. When you are a subagent of the flow — your prompt named a body file or a step — the block also carries one line that names the step you were running: `Step: <the body file your prompt told you to read first — when that was the continue body, the STEP BODY your prompt named; when your prompt named no body of the step's own — a fix, or the continuation of one — the step's name as your prompt gives it>`, followed on the same line by the `MODE`, `SCOPE`, and `ITER` your prompt gave, each only if it gave one. A later session finds the step to continue by this line. A compaction a person runs by hand, through a compact command, writes no such line. Then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
 
 Planning phase is incomplete — the orchestrator will spawn a continuation agent to resume from the compaction record.

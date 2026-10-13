@@ -147,7 +147,7 @@ Three rules go with it, and an edit to a phase file is checked against them:
 
 - **Resume reads the current feature only.** Step 0 opens each feature's record with `## Flow Started - [###]-[feature-name]`; Phase Detection reads only what follows the latest one, so an earlier feature's markers never answer for this one.
 - **Every stop that waits for an answer has a halt block, a resume rule, and a diagram row.** The stop writes a block to `progress.md` before it asks; `phases/protocols.md` has the rule that resumes it; `docs/sdd-flow-diagram.md` lists it. A latest halt block always wins over a phase rule, and one with no rule of its own falls to the catch-all there: it is shown to the user verbatim, never guessed past. (Stops that need no answer — the slice-boundary pause, and terminal stops such as decomposition — write none; `phases/protocols.md` lists them.)
-- **A handoff passes what a fresh spawn would.** A continuation, a recount, or a re-review is given the same inputs — paths, `SCOPE`, `ITER`, the base commit, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer.
+- **A handoff passes what a fresh spawn would.** A continuation, a recount, or a re-review is given the same inputs — the step's own body and mode, paths, `SCOPE`, `ITER`, the base commit, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer.
 
 The full marker table and the rules are in `phases/protocols.md` → Phase Detection Priority.
 

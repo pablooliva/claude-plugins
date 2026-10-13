@@ -334,7 +334,7 @@ Shipped in agent-engineering 3.12.0 (`CLAUDEPLUG-10`). `agent-engineering/skills
 
 **Not proven: no cycle has used evals.** The done-condition of `CLAUDEPLUG-10` — a feature with a model in it, built with `sdd-flow`, has rule-based evals that block and judged scores shown at the commit checkpoint, with the run visible in Opik — is not met yet. No spec has planned an eval, no implementer has built one from the templates, no review has run the eval check, and the flow has never stopped for a sign-off or for an unreachable model. Everything the flow does with evals rests on the review of its wording (twenty-four passes by Codex over five batches) until the trial application's next cycle carries a requirement about what its model says. The trial's own finding — a stated result in 2 answers of 7, against its own rule — would be a natural first case.
 
-**Left open on purpose:** a review cut short and handed to a successor is not told which review body, mode, scope, and iteration it was continuing — true of every review handoff since before evals, noticed in this step's review, not changed here.
+**Left open in 3.12.0, fixed in 3.12.1** (`CLAUDEPLUG-15`): a review cut short and handed to a successor was not told which review body, mode, scope, and iteration it was continuing — true of every handoff since before evals, noticed in this step's review.
 
 ## Open
 

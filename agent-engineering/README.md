@@ -72,7 +72,16 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.12.0.
+Version 3.12.1.
+
+### What's new in 3.12.1
+
+One fix to `sdd-flow`, found by the review of 3.12.0 and present since handoffs existed.
+
+- **A step that is handed off mid-way is told which step it was.** A subagent that has read too many files stops, writes a handoff note, and the flow starts a successor to finish its step. The successor's instruction file is a general one, and the rule that starts it did not say to pass the instruction file the first one was following, nor its mode, scope, and iteration. The successor of the final verification, say, was not told that this was the review it was finishing, so it could leave out a check that review requires, or write the wrong marker. Now the first spawn's prompt is the rule: the successor is given that step's own body by path (as `STEP BODY`), its task and embedded rules, its mode, scope, iteration, and base commit, and every input and output. The continue body says how to pick the work up; the step's body says what must still be produced. The handoff note's entry in `progress.md` gains a `Step:` line, so a later session can do the same.
+- **Unchanged:** the blind site count's handoff, which always named its own body and has a closed list of what it may be given.
+
+A run handed off before 3.12.1 has no `Step:` line: a resumed session works the step out from where the note says the work stopped, and asks when that leaves two candidates. **Not exercised on a real cycle:** no handoff has been made under the new rule; the wording was reviewed by a second model.
 
 ### What's new in 3.12.0
 

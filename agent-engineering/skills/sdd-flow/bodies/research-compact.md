@@ -107,7 +107,7 @@ Also update `SDD/orchestration/progress.md` with:
 - Continuation point
 - Reference to this compaction file
 
-Append a `## PARTIAL: needs continuation` block that includes the compaction file path and the exact point where work stopped. Do not overwrite existing entries — append only.
+Append a `## PARTIAL: needs continuation` block that includes the compaction file path and the exact point where work stopped. When you are a subagent of the flow — your prompt named a body file or a step — the block also carries one line that names the step you were running: `Step: <the body file your prompt told you to read first — when that was the continue body, the STEP BODY your prompt named; when your prompt named no body of the step's own — a fix, or the continuation of one — the step's name as your prompt gives it>`, followed on the same line by the `MODE`, `SCOPE`, and `ITER` your prompt gave, each only if it gave one. A later session finds the step to continue by this line. A compaction a person runs by hand, through a compact command, writes no such line. Do not overwrite existing entries — append only.
 
 ---
 
