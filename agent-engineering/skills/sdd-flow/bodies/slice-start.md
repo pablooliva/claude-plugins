@@ -178,6 +178,21 @@ With `tracing: on`, your prompt also gives **TRACING** (the tracing standard), *
 5. **The entry-point test passes and the trace run completes** when you hand the work over.
 6. **Where the plan cannot be followed** — a marked call turned out not to be needed, or one the plan does not show is — do not edit `### Planned call graph`, a `Traced nodes:` line, or the `tracing:` field. Record the difference and its reason under `### Implementation Deviations` in the IMPLEMENTATION-PLAN; the review reads it there. This is for a call that differs from the plan, never for a request that makes more model calls than its node's maximum.
 
+## Step 11.6: Build the slice's evals (by the gate in your prompt)
+
+Your prompt carries the line `evals: on` or `evals: off`. With `evals: off`, or no such line, this step does not apply: the flow checks nothing about what the model answers in this work, and you are given no evals paths. If the application already has an `evals/` directory, its test of the cases and checks is part of the test suite and has to pass like any other test; you add no case and make no eval run.
+
+With `evals: on`, your prompt also gives **EVALS** (the evals reference), **EVAL_TEMPLATES** (the directory the eval run is rendered from), and **OBS_RECORD** (the application's observability record — it names the env file, shows how the application runs Python, and holds the `Eval command` row). Read EVALS §2 to §6 and do what they say for the cases that are yours, and nothing more. In this flow that means:
+
+1. **Your cases.** For a slice that is the cases on this slice's `Evals:` line — not those of later slices, which are not yours to build. Only when that line says `none` is there nothing to build, and then one of two things: if `evals/run.py` does not exist either — no earlier work built a case — this step ends here, with nothing set up and nothing run, and your return says `no eval in scope`; if it exists, skip to point 4, because the cases built before this slice still have to pass. A line that names any case takes every point below, starting with point 2. Build those, each exactly as the spec states it — the same input, a check that asks everything its "must contain" and "must not contain" ask, the same requirement and kind — and write no case of your own.
+2. **Set up, if nothing is there yet.** When `evals/run.py` does not exist, render the three templates and fill the `Eval command` row of OBS_RECORD, as EVALS §3 (*Setting it up*) says. When it exists, render nothing: add your cases to `evals/cases.jsonl`, and extend `evals/task.py` only where a case needs an input it cannot take yet.
+3. **Give every hard case its examples** — at least one known-bad and one known-good answer, written as EVALS §3 says. They are yours to write; the spec has none.
+4. **Run what calls no model first.** The eval command with `--self-test`, then the application's tests: the test of the cases and checks is among them and has to pass.
+5. **Then make your own eval run,** as EVALS §4 (*Who makes which run*) says: no `--experiment`, `--out` a file outside the repository. Every hard case of yours — and every one built before yours — should pass all its runs when you hand the work over. A case that fails is fixed in the application: its prompt, the code around the call. Never in the case (EVALS §6). Make at most three eval runs: if a hard case still fails after the third, stop, and say in your return which cases fail and what the last `Result:` line was — the review takes it from there.
+6. **If the run ends `UNAVAILABLE`,** the model could not be reached from where you run: say so in your return, with the `Result:` line, and claim nothing about the cases. That is not a failure of your work, and it is not a result either.
+7. **Record it.** Under `## Test Implementation` in the IMPLEMENTATION-PLAN, one line: `Evals built: <cases> — own run: <the Result: line>`.
+8. **Never edit** the spec's `### Evals`, an `Evals:` line, a `Sign-off:` line, or the `evals:` field. If a case cannot be built as the spec states it, record why under `### Implementation Deviations` and build it as near as the application allows; the review reads it there and raises the difference.
+
 ## Step 12: Append the `Implemented` entry to `progress.md`
 
 ```markdown
@@ -198,6 +213,7 @@ Return a bounded result (≤200 words + artifact paths) summarizing:
 - The ledger summary (if loaded): one line per ledger section with entry counts.
 - The site-inventory path and the number of controls you inventoried (not per-control counts).
 - With `tracing: on`: whether every node on the slice's `Traced nodes:` line showed in the trace run's tree, and any difference you recorded under `### Implementation Deviations`.
+- With `evals: on`: the cases you built, and the `Result:` line of your own eval run — or that it ended `UNAVAILABLE`, or that the slice's `Evals:` line is `none`.
 - Next step: blind site count, then `slice-review` for SLICE-XXX.
 
 ## Flag Inventory (REQ-025 — applies to `slice-start`)

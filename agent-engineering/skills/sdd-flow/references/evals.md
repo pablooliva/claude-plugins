@@ -1,6 +1,6 @@
 # Evals — checking what the model really answered
 
-The one definition of evals in `sdd-flow`: what an eval is, how its cases are written, what the application holds for them, what the eval run does, and what its results mean. Every body and phase chapter that deals with evals reads this file and never restates it. The path reaches them as **EVALS** in their prompt. The templates it speaks of are in `templates/evals/` beside this folder — Python only, so far.
+The one definition of evals in `sdd-flow`: what an eval is, how its cases are written, what the application holds for them, what the eval run does, what its results mean, and how a review checks them. Every body and phase chapter that deals with evals reads this file and never restates it. The path reaches them as **EVALS** in their prompt. The templates it speaks of are in `templates/evals/` beside this folder — Python only, so far.
 
 It applies to a cycle whose `evals` gate is on. With the gate off none of it happens, and nothing here is read.
 
@@ -31,6 +31,7 @@ A requirement covered by a judged eval alone, and not listed there, is not cover
 A case is one input and what must be true of the output. The cases are written **in the spec, at planning time** (`### Evals` under `## Validation Strategy`), and reviewed with the spec before any code exists. An implementer that wrote its own cases would write the ones its code passes.
 
 - **An eval has an ID, `EVAL-XXX`, names the one requirement it checks, and has numbered cases.** A case is cited as `EVAL-003 case 2`.
+- **An eval's ID is used once in an application, not once in a spec.** Every feature's cases go into the same `evals/cases.jsonl` (§3), and the eval run refuses a file that lists a case twice. A spec numbers its evals on from the highest `EVAL-` number already in that file; with no file yet, from `EVAL-001`.
 - **The input is an invented example, written out in full.** Never text taken from a real user.
 - **A hard case says what the output must contain or must not contain,** in words a rule can apply: "contains `312`", "does not contain `12 hours`", "is JSON with a `title` field". "Is correct" is not a case.
 - **Choose an input whose right output cannot be reached without the behaviour.** A fact the model knows anyway does not show that it read the material; a made-up fact does.
@@ -51,6 +52,20 @@ A case is one input and what must be true of the output. The cases are written *
 | the `Eval command` row of `SDD/OBSERVABILITY.md` | The command that makes the eval run in this application | the first slice with an eval |
 
 Nothing of this exists before a slice needs it. `/observability-init` writes none of it.
+
+### Setting it up — once, by the first work that builds an eval
+
+The implementer whose work is the first to carry a case — the first slice with one on its `Evals:` line; in whole-feature mode, the first chunk — renders the templates at **EVAL_TEMPLATES**`/python/`. Templates exist for Python only: in an application in another language, build nothing and return that to the orchestrator as a failure.
+
+| Template | Becomes | Fill in |
+|---|---|---|
+| `run.py.template` | `evals/run.py` | `@@ROOT@@` — a Python expression for the repository root, written from `HERE`, the `evals/` directory: `HERE.parent`. `@@ENV_FILE@@` — an expression for the env file `SDD/OBSERVABILITY.md` names (`ROOT / ".env"`), or `None` when the application has none. `@@EVAL_COMMAND@@` — the eval command, in the three places it stands |
+| `task.py.template` | `evals/task.py` | `@@IMPORTS@@`, `@@MODELS@@`, `@@ANSWER@@`, `@@JUDGE@@` — by the three rules of *The task*, below |
+| `test_eval_checks.py.template` | one test file in the application's test directory | `@@ROOT@@` — an expression for the repository root, written from that file (`Path(__file__).resolve().parent.parent`); `@@EVAL_COMMAND@@` |
+
+- **`evals/run.py` is the template with its three placeholders filled, and nothing else.** A review compares the two. What an application needs to do differently goes into `evals/task.py` or `evals/checks.py`.
+- **The eval command** is `evals/run.py` run the way this application runs Python, typed from the repository root — `uv run python evals/run.py`, `python evals/run.py`. The trace run's command in `SDD/OBSERVABILITY.md` shows which. Write it into that file's `Eval command` row: the one line of the observability record that a subagent of the flow writes.
+- Later work adds cases, and extends `evals/task.py` when a case needs an input the task cannot take yet. It renders nothing again.
 
 ### The task
 
@@ -93,7 +108,7 @@ One command, recorded in `SDD/OBSERVABILITY.md`. In order:
 
 1. **It tests the cases and checks against their own examples, and calls no model if they are not sound.** A malformed case, a hard case with no examples, a check that accepts a known-bad answer or rejects a known-good one — each is named, and the run ends there. The same test runs with the application's ordinary tests, so an unsound check is a red test long before a review.
 2. **It runs every case three times.** A hard case **passed** when its check held on all three; otherwise it failed as `unsteady` (it held on one or two) or `never passed`. The two are different faults: one is behaviour that is not dependable, the other behaviour that is not there. A judged case gets a score on each run, shown lowest first.
-3. **It writes the results** to the path given with `--out`: a document, and beside it a `.json` file with every output of every run. (`--out` itself may not end in `.json` or `.part`: the run writes those names.) An older result at that path is removed first, so a result is always from the run that names it.
+3. **It writes the results** to the path given with `--out`: a document, and beside it a `.json` file with every output of every run. (`--out` itself may not end in `.json` or `.part`: the run writes those names.) An older result at that path is removed first, so a result is always from the run that names it — and a run made again for the same review replaces the first one's files.
 4. **Its last printed line starts with `Result:`**, and its exit status says which kind:
 
 | Exit | `Result:` | Meaning |
@@ -111,6 +126,12 @@ Exit 1 means one thing only: a hard case failed. Every other way of not finishin
 **A secret never reaches the results.** Before anything is stored, sent, or printed, the run replaces every value of a secret-named setting — a name containing `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, or `CREDENTIAL`, as the tracing standard defines it — and of a tracing header with `[redacted: <the setting's name>]`. That covers the outputs (text, numbers, and the keys and values of an object), the judge's sentences, the requirement text, the cases as they are sent, and the experiment and dataset names. It does not cover what the application itself prints while it runs: that is the application's own logging, under the application's own rules. The checks have already run on the real output by then, so a verdict is never changed by it. The `Result:` line says how many were replaced. Any number above zero is a defect to raise whatever the cases say: the application put a secret into an answer, or a case in the repository holds one. Values shorter than eight characters are left alone: they are too likely to be an ordinary word of an output.
 
 **The eval run is not part of the ordinary tests and not part of the trace run.** It calls a model, so it runs only where this file says it does. It writes no span file.
+
+**Who makes which run.**
+
+- **The implementer and every fixer make their own**, to see their work pass before they hand it over: without `--experiment`, and with `--out` naming a file outside the repository — in the system's temporary directory — so nothing of it is left behind. Make it when the eval files are complete, and again after a change that can change what the model says: a prompt, the code around the call, a case, a check. Not after every edit — each run is real calls to a model. **At most three runs in one piece of work, each given ten minutes.** A run still going after ten minutes is stopped, counts as one of the three, and is reported as what it is — no result, the run did not finish — never as a pass or a failed case. When a hard case still fails after the third, stop changing things: hand the work over as it is, and say in your return which cases fail and what the last `Result:` line was. The review raises it, and the loop it belongs to is bounded. The command with `--self-test` calls no model; use it freely.
+- **The run a review reads — the run of record — is made by the flow's main session**, immediately before that review, with `--experiment` and `--dataset` (§5), writing to the path the review is then given. A reviewer never makes it. A review may run on a second model, in a place from which no model can be reached, and a run made there would report `UNAVAILABLE` and remove the results it was meant to read. A reviewer may run the command with `--self-test`.
+- **When the run of record ends `UNAVAILABLE`, nothing is reviewed.** No review can say anything about what the model answers, and no fixer can repair a network. The flow stops and asks the user to make the model reachable (`## Awaiting Eval Run`).
 
 **Never report an eval run you did not make,** and never one made before the last edit.
 
@@ -132,3 +153,103 @@ A hard eval is a test, and `references/test-integrity.md` §1 binds it as it bin
 - **A failing case is never weakened.** No removing it, no loosening its check, no changing its input to one the application handles, no moving a requirement from hard to judged. When the spec really changes, the case changes with it and the change is recorded under `### Test Changes` in the IMPLEMENTATION-PLAN, citing the requirement.
 - **The application is never taught the cases.** No branch on a case's input, no instruction to the model that names one.
 - **Evals are not controls** under `references/enforcement-sites.md`: an eval has no enforcement site, and nothing here is counted or mutated. A requirement that is a control keeps its sites and its mutations whether or not an eval also checks it.
+
+## 7. The review's eval check
+
+Run by the per-slice review (`bodies/slice-review.md`) and the whole-feature code review (`bodies/code-review.md`), each at the scope its prompt gives, when the prompt carries the line `evals: on`. With `evals: off`, or no such line, do not run it: write the one line `Eval check skipped — evals: off` in the review and move on.
+
+It checks what no test checks: that the run of record says what it must, and that the cases and checks in the application are the spec's and can tell a good answer from a bad one. It is not a second look at whether the spec's cases are the right ones — the spec review settled that, and here the spec's cases are the reference.
+
+### Inputs — all from your prompt
+
+| Name | What it is |
+|---|---|
+| `SCOPE` | `SLICE-XXX` or `FEATURE` |
+| the SPEC | holds `### Evals`, the `Sign-off:` lines under `### Manual Verification`, and, in per-slice mode, each slice's `Evals:` line |
+| **EVALS** | this file |
+| **EVAL_TEMPLATES** | the directory `evals/run.py` was rendered from |
+| **OBS_RECORD** | the application's observability record, `SDD/OBSERVABILITY.md`: its `Eval command` row |
+| the eval run line | `Eval run: ` followed by the last line the run of record printed, or by `not made — …` with the reason |
+| **EVAL_RESULTS** | the results document of the run of record, with a `.json` file of the same name beside it. Given only when the run wrote one; your prompt says so in one line when it did not |
+| `BASE` | the commit the work under review started from |
+
+If the gate line says `on` and EVALS, the eval run line, or the SPEC is missing from your prompt, return a failure to the orchestrator naming it. Do not look for a substitute, and **never run the eval command yourself** except with `--self-test` (§4, *Who makes which run*).
+
+### The cases in scope
+
+Two groups of cases are in scope, and "a case in scope" below means a case of either.
+
+- **This spec's cases.** At `SLICE-XXX`: the cases on this slice's `Evals:` line and on those of every slice before it — an earlier slice's case that fails now is this slice's finding, because this slice broke it. At `FEATURE`: every case of `### Evals`. A case of a later slice is not in scope and not missing.
+- **Older cases.** `evals/cases.jsonl` may hold cases an earlier feature built: their IDs are not in this spec's `### Evals`, and they were in the file at `BASE`. Every run puts them to the application too, and this work can break or weaken them like any other.
+- **A case removed with good reason is in neither group.** Settle this first, before anything is counted as missing: for every case that was in the file at `BASE` and is not there now, look for its line under `### Test Changes` and check it as step 3 says. A removal that passes — the cited requirement of this spec really ends what the case promised — takes the case out of scope: it need not be in the file, in the results, or in any run. A removal that does not pass leaves the case in scope, where it is finding 5 and, being absent, finding 2.
+
+**What differs for an older case:** it cannot be compared with this spec, which does not state it. So the comparison with the spec in step 3, the whole of step 4, and findings 4, 6, 13, and 14 are about this spec's cases alone. Everything else below holds for an older case exactly as for one of this spec's: it has a row in the results, a hard one passed, a judged one has its scores, it was not removed or made easier since `BASE`, the task goes through the application for it, and the application was not taught it. Whether an older case was the right one to write was another review's question and is not asked again.
+
+**Nothing in scope** needs both of these to be true, and only then is the whole check the line `Eval check: no eval in scope.`, with nothing below applying:
+
+1. **This spec has no case in scope** — every `Evals:` line so far says `none`, or `### Evals` is the single line that no requirement is about what the model says.
+2. **There is no older case in scope** — `evals/cases.jsonl` holds none now, and it held none at `BASE` or every one it held was removed with good reason. Look at the file as it was at `BASE` to know: cases that were there and are gone without a removal that passes — the file, the directory, or the command row emptied — are still in scope. Each is finding 5, and the run that was not made for them is finding 1.
+
+### What to check
+
+1. **The run was made.** With a case in scope, the eval run line reads `Eval run: Result: PASS …` or `Eval run: Result: FAIL …` and EVAL_RESULTS is in your prompt. Anything else is finding 1, and you go on with what can be checked without results (steps 3, 5, 6, 7).
+2. **Every case in scope ran, and every hard one passed.** Each has a row in the results document — this spec's and the older ones alike. A hard case with any verdict but `passed` is finding 3; say which fault it is, `unsteady` or `never passed`, and where the results show the failed output. A judged case needs a score on every one of its runs — the results document counts a run the judge gave no readable score for as unscored, and the `.json` file shows which. A missing score is finding 11; a score is never a finding, whatever it is.
+3. **The cases in the file are the spec's, and none was weakened.** Read `evals/cases.jsonl` beside `### Evals`. For each of this spec's cases in scope: the input is the spec's; a hard case's check asks everything the spec's "must contain" and "must not contain" ask, and where the check is an `fn`, the function in `evals/checks.py` computes what the spec says it computes; a judged case's rubric is the spec's rubric, with nothing softened or left out; the requirement and the kind are the spec's. Then compare `evals/cases.jsonl` and `evals/checks.py` with `BASE`, for every case that was there — this spec's and the older ones alike: a case removed, or changed so that it is easier to pass — another input, a check that asks less than it did, a function in `evals/checks.py` that now accepts what it rejected, a rubric made easier — needs a line under `### Test Changes` in the IMPLEMENTATION-PLAN that cites the requirement (§6). **Open the requirement that line cites, in this spec, and confirm that it changes what the case promised** — that the old behaviour is no longer required, or is required differently. A line that cites a requirement which does not say so is no line: the citation is checked, not counted. A coded check can be loosened with its case's line left untouched, so read the functions' changes and not only the cases'.
+4. **The checks can tell good from bad** (this spec's cases). Read each hard case's outputs in the `.json` file against the part of its requirement that its eval checks — the `Behaviour checked` cell of its row in the spec's table. An output the check passed that breaks that part is finding 6. A fault in another part of the requirement is not: another eval has that part, and where that eval is judged, its score is never a finding. Then read the case's examples: the known-good ones are phrased as a model would phrase them, and the known-bad ones include the wrong answer a model is most likely to give.
+5. **The task goes through the application.** Read `evals/task.py`: `answer()` calls the function the entry point calls, or the entry point itself; it builds no request to the model of its own, puts no stand-in in the model's place, and raises `Unavailable` — with one of the five reasons — when the model could not be reached, instead of returning text.
+6. **The application was not taught the cases.** Search the application's code and prompts — everything outside `evals/` and the tests — for the distinctive phrases of each case's input and expected output.
+7. **The pieces are in place.** `evals/run.py` is its template with the three placeholders filled: every other line is a line of `EVAL_TEMPLATES/python/run.py.template`. The test rendered from `test_eval_checks.py.template` is in the application's test directory and passed in the test run you made for this review. The `Eval command` row of OBS_RECORD holds the command.
+8. **No secret was replaced.** The eval run line says how many values were replaced; any number above zero is finding 10 (§4).
+
+### Findings — the whole list
+
+| # | Finding | Severity |
+|---|---|---|
+| 1 | A case is in scope and there is no result: the run of record was not made because no eval command is recorded, or it ended `UNSOUND` or `BROKEN`, or printed no `Result:` line | HIGH |
+| 2 | A case in scope is not in `evals/cases.jsonl`, or has no row in the results | HIGH |
+| 3 | A hard case in scope failed, as `unsteady` or as `never passed` | HIGH |
+| 4 | One of this spec's cases is not, in the file, the case the spec states: another input, a check that asks less than the spec's case asks, another rubric, another requirement, or another kind | HIGH |
+| 5 | Since `BASE` a case was removed, or made easier to pass — its input changed, its check loosened in `evals/cases.jsonl` or in the function it names in `evals/checks.py`, or its rubric made easier — with no `### Test Changes` line — or with one whose cited requirement does not change what the case promised | HIGH |
+| 6 | The check passed an output that breaks the part of the requirement its eval checks | HIGH |
+| 7 | `evals/task.py` does not go through the application's own code, replaces the model, or turns an unreachable model into an answer | HIGH |
+| 8 | The application was taught a case: a branch on a case's input, or an instruction to the model that names one | HIGH |
+| 9 | `evals/run.py` differs from its template in more than the three placeholders | HIGH |
+| 10 | The eval run line counts one or more replaced secrets | HIGH |
+| 11 | A judged case in scope has a run with no score — the person who accepts its requirement would be reading less than the run was meant to give | HIGH |
+| 12 | The test of the cases and checks against their own examples is not among the application's ordinary tests, or does not pass | HIGH |
+| 13 | A hard case's examples prove little: a known-good answer that is only the phrase the check looks for, or known-bad answers that leave out the likeliest wrong answer | MEDIUM |
+| 14 | A case was added to `evals/cases.jsonl` since `BASE` that the spec does not have | MEDIUM |
+| 15 | The `Eval command` row of OBS_RECORD is empty or is not the command | MEDIUM |
+
+Nothing else is an eval finding. In particular: a judged score, however low; a model that graded its own output (the results say so; copy it into the review); a failed upload; a case of a later slice that is not built yet.
+
+### What goes in the review document
+
+A `## Eval Check` section:
+
+```markdown
+## Eval Check
+
+**Eval run:** <the eval run line, verbatim>
+**Results:** <EVAL_RESULTS path, or `none`>
+**Scope:** <SLICE-XXX | FEATURE> — <n> hard case(s), <n> judged case(s)
+
+| Case | Kind | Requirement | In the run | In the file as the spec states it |
+|------|------|-------------|------------|-----------------------------------|
+| EVAL-001 case 1 | hard | REQ-004 | passed, 3 of 3 | yes |
+| EVAL-002 case 1 | hard | REQ-005 | FAILED — unsteady, 2 of 3 | yes |
+| EVAL-003 case 1 | judged | REQ-005 (sign-off) | 0.50, 0.75, 1.00 | yes |
+
+**Judge:** <the judge model as the results name it> — <the application's own model | another model>
+
+[Each finding, numbered with the review's other findings: severity, its number in the table above, the case or file, and the fix.]
+```
+
+Eval findings are ordinary review findings: they count in the review's verdict and its progress marker like any other, and a HIGH rejects.
+
+## 8. How an eval finding is resolved
+
+- **By changing the application** — its prompt, the code around the model call — or by building what is missing: a case, a check, an example, the task.
+- **Never by weakening a case** (§6), and never by editing the spec's `### Evals`, an `Evals:` line, a `Sign-off:` line, or its `evals:` field.
+- **There is no recording it instead.** A hard case that cannot be made to pass is a requirement the application does not meet. The fix loop's cap brings that to the user, who decides whether the behaviour is made dependable or the promise changed (§2).
+- **The fixer makes its own run before it returns** (§4, *Who makes which run*) — at most three, like an implementer — and leaves the test of the cases and checks passing. A hard case it could not bring to pass goes back in its return, named, with the last `Result:` line; it is never reported as fixed.

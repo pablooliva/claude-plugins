@@ -266,6 +266,21 @@ Create the implementation tracking document using this enhanced template. **The 
    5. **The entry-point test passes and the trace run completes** when you hand the work over.
    6. **Where the plan cannot be followed** — a marked call turned out not to be needed, or one the plan does not show is — do not edit `### Planned call graph`, a `Traced nodes:` line, or the `tracing:` field. Record the difference and its reason under `### Implementation Deviations` in the IMPLEMENTATION-PLAN; the review reads it there. This is for a call that differs from the plan, never for a request that makes more model calls than its node's maximum.
 
+8. **Build the Evals (whole-feature, by the gate in your prompt):**
+
+   Your prompt carries the line `evals: on` or `evals: off`. With `evals: off`, or no such line, this step does not apply: the flow checks nothing about what the model answers in this work, and you are given no evals paths. If the application already has an `evals/` directory, its test of the cases and checks is part of the test suite and has to pass like any other test; you add no case and make no eval run.
+
+   With `evals: on`, your prompt also gives **EVALS** (the evals reference), **EVAL_TEMPLATES** (the directory the eval run is rendered from), and **OBS_RECORD** (the application's observability record — it names the env file, shows how the application runs Python, and holds the `Eval command` row). Read EVALS §2 to §6 and do what they say for the cases that are yours, and nothing more. In this flow that means:
+
+   1. **Your cases.** In whole-feature mode that is every case of the spec's `### Evals` whose requirement is among the requirements given to you — all of them when you implement the whole feature, and when the work is split into chunks, those of your chunk; a case of a later chunk's requirement is not yours, and is not missing. When none of the spec's cases is yours and `evals/run.py` does not exist — no earlier work built a case — this step ends here: set nothing up and run nothing. When none is yours and it exists, skip to point 4: the cases built before your work still have to pass. Build those, each exactly as the spec states it — the same input, a check that asks everything its "must contain" and "must not contain" ask, the same requirement and kind — and write no case of your own.
+   2. **Set up, if nothing is there yet.** When `evals/run.py` does not exist, render the three templates and fill the `Eval command` row of OBS_RECORD, as EVALS §3 (*Setting it up*) says. When it exists, render nothing: add your cases to `evals/cases.jsonl`, and extend `evals/task.py` only where a case needs an input it cannot take yet.
+   3. **Give every hard case its examples** — at least one known-bad and one known-good answer, written as EVALS §3 says. They are yours to write; the spec has none.
+   4. **Run what calls no model first.** The eval command with `--self-test`, then the application's tests: the test of the cases and checks is among them and has to pass.
+   5. **Then make your own eval run,** as EVALS §4 (*Who makes which run*) says: no `--experiment`, `--out` a file outside the repository. Every hard case of yours — and every one built before yours — should pass all its runs when you hand the work over. A case that fails is fixed in the application: its prompt, the code around the call. Never in the case (EVALS §6). Make at most three eval runs: if a hard case still fails after the third, stop, and say in your return which cases fail and what the last `Result:` line was — the review takes it from there.
+   6. **If the run ends `UNAVAILABLE`,** the model could not be reached from where you run: say so in your return, with the `Result:` line, and claim nothing about the cases. That is not a failure of your work, and it is not a result either.
+   7. **Record it.** Under `## Test Implementation` in the IMPLEMENTATION-PLAN, one line: `Evals built: <cases> — own run: <the Result: line>`.
+   8. **Never edit** the spec's `### Evals`, an `Evals:` line, a `Sign-off:` line, or the `evals:` field. If a case cannot be built as the spec states it, record why under `### Implementation Deviations` and build it as near as the application allows; the review reads it there and raises the difference.
+
 ## Implementation Approach
 
 Do all investigation and research inline using your available tools (Read, Bash, Edit, Write). When you need to find implementation examples, locate test files, or discover utilities, use Read and Bash directly with grep/find. When you need to understand existing patterns or find reusable components, search inline. Document all findings directly in the IMPLEMENTATION-PLAN's Session Notes as you go.
@@ -288,6 +303,7 @@ During implementation, continuously verify:
 - [ ] Every control's sites are recorded in `SITES-IMPL-[feature-name].md`, each with a disposition and evidence
 - [ ] Output / stream contracts have a real-subprocess test per path class
 - [ ] `tracing: on` only: every marked node of the planned call graph that your requirements build shows in the trace run's tree (or is marked `not exercised in tests`); no other span was added; the entry-point test passes
+- [ ] `evals: on` only: every case of the spec's `### Evals` that your requirements carry is in `evals/cases.jsonl` as the spec states it, each hard case with a known-bad and a known-good answer; the test of the cases and checks passes; your own eval run passed every hard case — or it ended `UNAVAILABLE`, or a hard case still failed after three runs, and your return says which
 - [ ] Code follows existing project patterns (discovered via inline search)
 - [ ] Documentation is updated as needed
 

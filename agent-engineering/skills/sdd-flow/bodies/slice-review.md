@@ -158,6 +158,15 @@ Your prompt carries the line `tracing: on` or `tracing: off` — the decision th
 
 The spec planned which entry points, model calls, and external calls each slice brings into existence; this step checks that plan against what a real run recorded. Its findings come only from the fixed table in LENS, at the severities given there. They are ordinary findings of this review: number them with the others, count them in the progress marker, and let a HIGH reject the slice.
 
+## Step 5.9: Eval Check (conditional)
+
+Your prompt carries the line `evals: on` or `evals: off` — the decision the orchestrator recorded when the spec was planned. Do not read the spec's `evals:` field to decide for yourself.
+
+- **`evals: off`, or no such line** → skip this step and write the one line `Eval check skipped — evals: off` as the body of the review document's `## Eval Check` section.
+- **`evals: on`** → your prompt also gives **EVALS** (`references/evals.md` of this skill), **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and — when the run wrote results — **EVAL_RESULTS**. Read EVALS and run its §7 as written, at `SCOPE = SLICE-XXX`: the cases on this slice's `Evals:` line and on those of every slice before it are in scope. A later slice's cases are never held against this one.
+
+The spec states cases — written examples, and what must be true of what the model answers to them — and assigns each to a slice. Before this review the flow's main session put the cases built so far to the running application, and that run's last line and results are in your prompt. This step reads the run and the eval files against the spec. **You do not make an eval run yourself;** the one command of it you may run is `--self-test`, which calls no model (EVALS §4). Its findings come only from the fixed table in EVALS §7, at the severities given there. They are ordinary findings of this review: number them with the others, count them in the progress marker, and let a HIGH reject the slice.
+
 ## Step 6: Write the per-slice review document
 
 Write the review output to:
@@ -228,6 +237,10 @@ A control is **Complete-eligible** only if its per-control diff outcome is `MATC
 
 [When the lens ran: the section in the shape LENS §7 gives — trace-tree path with its `Result:` line, the table of marked nodes compared, recorded deviations, spans in no request, and the findings. When it was skipped, the one line: "Tracing lens skipped — tracing: off".]
 
+## Eval Check
+
+[When the check ran: the section in the shape EVALS §7 gives — the eval run line, the results path, the table of cases in scope, the judge, and the findings. When it was skipped, the one line: "Eval check skipped — evals: off".]
+
 ## Module Review Log (Risk-Tiered Depth Applied)
 
 | Module | Declared Risk | Depth Applied | Notes |
@@ -243,7 +256,7 @@ A control is **Complete-eligible** only if its per-control diff outcome is `MATC
 
 ## Decision: [APPROVED / REJECTED]
 
-[Standard review decision rationale. Any open HIGH — including a site-count `GAP`, a `MISSED` or other site whose mutation left every test green with no argued row covering it, or a failed mutation re-run, and any HIGH of the Test Integrity Lens — rejects the slice. A difference in row counts, or in which control a site is filed under, is not a finding and rejects nothing; neither is a `CONFIRMED-MISSED` site whose row you added.]
+[Standard review decision rationale. Any open HIGH — including a site-count `GAP`, a `MISSED` or other site whose mutation left every test green with no argued row covering it, or a failed mutation re-run, and any HIGH of the Test Integrity Lens, the Tracing Lens, or the Eval Check — rejects the slice. A difference in row counts, or in which control a site is filed under, is not a finding and rejects nothing; neither is a `CONFIRMED-MISSED` site whose row you added.]
 ```
 
 ## Per-Slice Review Iteration Cap (REQ-013, reference — enforced elsewhere)

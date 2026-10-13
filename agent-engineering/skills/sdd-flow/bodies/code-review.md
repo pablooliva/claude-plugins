@@ -223,6 +223,19 @@ If your prompt gives a catalog path but no gate value, read `agent_security:` fr
 
 **In `MODE: site-verification-only`** the lens runs too when your prompt says `tracing: on` — that mode's paragraph, below, says when and what it adds to the document and the marker.
 
+## Eval Check (conditional)
+
+**Gate:** your spawn prompt carries the line `evals: on` or `evals: off` — the decision the orchestrator recorded when the spec was planned. Do not read the spec's `evals:` field to decide for yourself.
+
+- `evals: off`, or no such line in your prompt → skip the check and record the one line `Eval check skipped — evals: off` in the review document.
+- `evals: on` → your prompt also gives **EVALS** (`references/evals.md` of this skill), **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and — when the run wrote results — **EVAL_RESULTS**. Read EVALS and run its §7 as written, at `SCOPE = FEATURE`: every case of the spec's `### Evals` is in scope.
+
+**What it is.** The spec states cases: written examples, and what must be true of what the model answers to them. Before this review the flow's main session put those cases to the running application — the run of record — and its last line and its results are in your prompt. The check reads that run and the eval files against the spec. **You do not make an eval run yourself;** the one command of it you may run is `--self-test`, which calls no model (EVALS §4). Its findings come only from the fixed table in EVALS §7, at the severities given there.
+
+**How it interacts with the review budget.** Like the two lenses above, it is an overlay on the 70/20/10 split, not a slice of it. It runs after the test suite has passed (Step 6), because the test of the cases and checks is one of those tests. Its findings are reported in their own section and count in the decision like any other; a HIGH is a rejection criterion.
+
+**In `MODE: site-verification-only`** this section is not run.
+
 ## Enforcement-Site Verification (mandatory)
 
 Your prompt provides `STANDARD` (`references/enforcement-sites.md`), `CONVENTIONS` (`SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` — may not exist yet), the implementer's inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, the latest blind count `SDD/reviews/SITE-COUNT-FEATURE-…-iter<N>-….md`, and the orchestrator's diff `SDD/reviews/SITE-DIFF-FEATURE-…-iter<N>-….md`. Read the standard first — it defines control, the control register, enforcement site, gap, the per-site mutation standard, and the three dispositions. You are not blind; the blind count was a separate spawn before you. Turn the diff into findings and verify the implementer's evidence. The inventory is also one of your outputs, for one thing only: appending the row of a missed site you proved yourself (step 1c):
@@ -344,6 +357,10 @@ Run the **Design Brief Check** section above. It produces no findings.
 
 Run the **Tracing Lens** section above, once the test suite has passed. Every finding it raises goes into the review's findings at the severity LENS gives it.
 
+### Step 6c: Run the Eval Check
+
+Run the **Eval Check** section above, once the test suite has passed. Every finding it raises goes into the review's findings at the severity EVALS §7 gives it.
+
 ## Feedback Templates
 
 ### For Specification Misalignment
@@ -421,6 +438,7 @@ Run the **Tracing Lens** section above, once the test suite has passed. Every fi
 9. The Agentic-Surface Lens ran and produced a HIGH finding
 10. The Tracing Lens ran and produced a HIGH finding
 11. The Test Integrity Lens produced a HIGH finding
+12. The Eval Check ran and produced a HIGH finding
 
 (An input artifact that is missing altogether never reaches this list — it is a returned failure, per Pre-Review Artifact Verification.)
 
@@ -517,6 +535,10 @@ Include this section only when the lens ran. When it was skipped, replace it wit
 ## Tracing Lens (conditional)
 
 [When the lens ran: the section in the shape LENS §7 gives — trace-tree path with its `Result:` line, the table of marked nodes compared, recorded deviations, spans in no request, and the findings. When it was skipped, the one line: "Tracing lens skipped — tracing: off".]
+
+## Eval Check (conditional)
+
+[When the check ran: the section in the shape EVALS §7 gives — the eval run line, the results path, the table of cases in scope, the judge, and the findings. When it was skipped, the one line: "Eval check skipped — evals: off".]
 
 ## Enforcement-Site Verification
 
