@@ -72,7 +72,33 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.11.0.
+Version 3.12.0.
+
+### What's new in 3.12.0
+
+Evals inside `sdd-flow` — the third of four build steps of the tracing-and-evals proposal (`proposals/observability-and-evals-2026-10-04.md`). A test checks what the code does with a model's answer, and gets that answer from a stand-in; nothing in a cycle looked at what the model really says. An eval puts a written example to the running application and checks what comes back. An application without the tracing foundation, and a feature with no model in it, are unaffected: the gate is off and the cycle runs as it did in 3.11.0.
+
+- **Two kinds.** A *hard* eval applies a rule to the output — a phrase is there, a phrase is not, a field, a refusal — and blocks like a failing test. A *judged* eval is scored by a second model call and only informs: no score is ever compared with a threshold, because the same output can be scored differently twice. One definition: `skills/sdd-flow/references/evals.md`.
+- **A second gate, settled with the first.** The spec gains `evals: auto | true | false`. At 3c it resolves to on with `true`, or with `auto` when the application has the tracing foundation and the spec has a model in it. One line records both gates: `## Gates - tracing: <on|off>, evals: <on|off>`. The stop for a gate that cannot be decided is now `## Awaiting Gate Decision`; a block under the old header is the same stop.
+- **You decide how quality is judged, at the design gate.** The design brief gains one Key decision, `How answer quality is judged`: which behaviours a rule checks, and which are left for you to accept.
+- **The cases are written in the spec, before any code.** `### Evals` under `## Validation Strategy`: each eval names one requirement and writes its cases out in full — an invented input, and what the output must and must not contain, or a rubric for the judge. Each slice names the evals it must pass. The spec's critical review checks that every requirement about what the model says has a hard eval, or is listed for you to accept and has a judged one. An implementer that wrote its own cases would write the ones its code passes.
+- **The implementer builds them.** The first work with an eval renders the eval run from templates (`skills/sdd-flow/templates/evals/`, Python only, standard library only): `evals/run.py`, `evals/task.py` — which calls the application's own code, with the real model — `evals/cases.jsonl`, and a test of the checks. Every hard case carries an answer its check must reject and one it must accept, and the run calls no model until each check does both.
+- **Every case is run three times.** A hard case passes only when its check holds on all three, so a behaviour the model shows only some of the time fails — as `unsteady`, told apart from `never passed`. In a trial on a scratch copy of the trial application, it stated a result it is meant to lead a student to in 2 answers of 7.
+- **The flow makes the run a review reads.** Before each slice review, the code review, and each verification of the final check, the orchestrator runs the application's eval command and hands the review the results (`SDD/reviews/EVAL-RESULTS-*`). The review's Eval Check reads that run and the eval files against the spec, from a fixed list of fifteen findings — among them a hard case that failed, a case weakened or removed, a check that passed a bad answer, an application taught its cases, and an eval task that does not go through the application's own code. A reviewer never makes the run: a review on a second model may sit where no model can be reached.
+- **Runs go to Opik,** one experiment per review, by plain HTTP requests — no SDK and no new dependency in the application. A failed upload is a warning; the results files in the repository are the record.
+- **The last check comes after the last fix.** The final check (4e.5) puts every case to the application again before each of its verifications, and an eval finding counts toward its three-round cap and its stop. Completion reads the final results for the summary and changes no code or test.
+- **A person accepts what only a judge can score.** A requirement no rule can check is a *sign-off requirement*. With one in the spec, the commit checkpoint (4h) stops in autonomous mode too: it shows each such requirement with its judged scores and the path to the outputs, and yes both commits and accepts. In per-slice mode each slice pause shows the last line of the slice's eval run.
+- **One new stop:** `## Awaiting Eval Run`, when the application's model cannot be reached twice in a row before a review. Nothing is reviewed until it can be, and it costs no fix round. A run that reaches no model is "no result", never a list of failed cases.
+
+**What it costs.** With the gate on, every review makes real model calls: every case the application holds — an earlier feature's included — three times, and twice that for a judged case, whose every answer is also scored. In the trial, five cases took about 20 seconds for one run of each.
+
+**Where it differs from the proposal** is listed in the proposal's "Step 3 as built". The largest: the flow's main session, not the reviewer, makes the eval run; one stop was added; the templates live in `sdd-flow`, not `observability-init`; there is no eval library; and the eval run is separate from the trace run.
+
+**Runs started before 3.12.0.** A cycle that passed 3c earlier has a gate line with no `evals:` part: evals stay off for it to its end.
+
+**Not in this release:** `/eval-harvest` (build step 4), and templates for a language other than Python.
+
+**Not yet exercised on a real cycle.** The eval run's templates have 56 tests against a stand-in task and a stand-in for Opik. They were run once against a real model on a scratch copy of the trial application — four hard cases passed all three runs, one judged case was scored, the run was sent to Opik and read back. The record is `proposals/observability-and-evals-trial-2026-10-12.md` (counts, verdicts, and scores; the raw results were not copied into this repository). That run was also before the review fixes to the runner: since then only the upload has been repeated, and the runner as released has not met a real model. No cycle has yet planned an eval, built one, had one reviewed, or stopped for a sign-off: everything the flow does with evals rests on the review of its wording until the trial application's next cycle.
 
 ### What's new in 3.11.0
 

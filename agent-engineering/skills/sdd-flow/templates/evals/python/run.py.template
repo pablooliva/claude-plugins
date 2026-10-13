@@ -136,21 +136,21 @@ def check(output, case, checks_module):
     folded = text.casefold()
     for phrase in rule.get("contains", ()):
         if phrase.casefold() not in folded:
-            return False, f"does not contain {phrase!r}"
+            return False, f"does not contain '{phrase}'"
     for phrase in rule.get("lacks", ()):
         if phrase.casefold() in folded:
-            return False, f"contains {phrase!r}"
+            return False, f"contains '{phrase}'"
     for pattern in rule.get("matches", ()):
         if not re.search(pattern, text):
-            return False, f"does not match {pattern!r}"
+            return False, f"does not match '{pattern}'"
     if "fn" in rule:
         function = getattr(checks_module, str(rule["fn"]), None)
         if function is None:
-            raise Unsound(f'{case["eval"]} case {case["case"]}: evals/checks.py has no function {rule["fn"]!r}')
+            raise Unsound(f'{case["eval"]} case {case["case"]}: evals/checks.py has no function \'{rule["fn"]}\'')
         verdict = function(output, case)
         passed, reason = verdict if isinstance(verdict, tuple) else (verdict, "")
         if not passed:
-            return False, str(reason)[:200] or f"{rule['fn']} says no"
+            return False, str(reason) or f"{rule['fn']} says no"
     return True, ""
 
 
@@ -199,10 +199,10 @@ def read_judgement(reply):
             return None, "the judge's score was not a whole number from 1 to 5"
     except Exception:
         return None, "the judge's reply could not be read"
-    return (score - 1) / 4, str(verdict.get("reason", ""))[:300]
+    return (score - 1) / 4, str(verdict.get("reason", ""))
 
 
-async def run_cases(cases, task, checks_module):
+async def run_cases(cases, task, checks_module, known=()):
     unavailable = getattr(task, "Unavailable", None) or ()
     rows = []
     for case in cases:
@@ -230,8 +230,11 @@ async def run_cases(cases, task, checks_module):
                     row["score"] = 1.0 if row["passed"] else 0.0
                 else:
                     row["passed"] = None
-                    asked = (f"RUBRIC\n{case['rubric']}\n\nINPUT\n{as_text(case['input'])}\n\n"
-                             f"OUTPUT TO GRADE\n{as_text(row['output'])}")
+                    # A secret is not handed to a second model: the judge is given copies with every known value
+                    # replaced before they are written out as text, where JSON would spell some of them differently.
+                    # Not counted here — the output and the case are each counted once, when they are stored.
+                    rubric, given, graded = scrub([case["rubric"], case["input"], row["output"]], known, [0])
+                    asked = f"RUBRIC\n{rubric}\n\nINPUT\n{as_text(given)}\n\nOUTPUT TO GRADE\n{as_text(graded)}"
                     try:
                         row["score"], row["reason"] = read_judgement(await _call(task.judge, JUDGE_SYSTEM, asked))
                     except unavailable:
@@ -277,7 +280,7 @@ def document(title, result, table, rows, models, started):
         lines.append(f"- Judge model: `{models.get('judge', 'not given')}`"
                      + (" — **the same model as the application: it graded its own output.**" if same else "."))
     lines += ["", "| Eval | Case | Requirement | Kind | Verdict |", "|---|---|---|---|---|"]
-    lines += [f"| {e['eval']} | {e['case']} | {e['requirement'].replace('|', '/')} | {e['kind']} | {e['verdict']} |"
+    lines += [f"| {e['eval']} | {e['case']} | {e['requirement'].replace('|', chr(92) + '|')} | {e['kind']} | {e['verdict']} |"
               for e in table]
 
     def outputs(entry, only_failed):
@@ -305,7 +308,7 @@ def document(title, result, table, rows, models, started):
     return "\n".join(lines) + "\n"
 
 
-# ---- Sending the run to Opik: five plain HTTP requests, no SDK. A failure here never changes the result. ----
+# ---- Sending the run to Opik: six plain HTTP requests (five when no run has a score), no SDK. A failure here never changes the result. ----
 
 def _settings():
     values = {}
@@ -321,19 +324,30 @@ def _settings():
     return values
 
 
+def _spellings(value):
+    """A value as it is, and as JSON text, a Python repr, or a regular expression for it spells it — a quote, a
+    backslash, or a dot is written differently there, and a case, a reason, or a message that holds such a spelling
+    must not carry the value past the replacing. A net for accidents, not a barrier: a value someone encodes some
+    other way is not recognised (references/evals.md §4)."""
+    return (value, json.dumps(value)[1:-1], json.dumps(value, ensure_ascii=False)[1:-1], repr(value)[1:-1],
+            value.replace("\\", "\\\\"), re.escape(value))
+
+
 def secret_values():
     """Values that must not reach a results file, Opik, or the screen: those of secret-named settings and of the
-    tracing headers. Longest first, each with the name to show in its place."""
+    tracing headers, in every spelling. Longest first, each with the name to show in its place."""
     values, found = _settings(), {}
     for name, value in values.items():
         if any(word in name.upper() for word in SECRET_WORDS) and len(value) >= SECRET_LENGTH:
-            found.setdefault(value, name)
+            for form in _spellings(value):
+                found.setdefault(form, name)
     for part in values.get("OTEL_EXPORTER_OTLP_HEADERS", "").split(","):
         key, _, value = part.partition("=")
         if key.strip().lower() != "projectname":
             for form in (value.strip(), urllib.parse.unquote(value.strip())):
                 if len(form) >= SECRET_LENGTH:
-                    found.setdefault(form, "a tracing header")
+                    for spelling in _spellings(form):
+                        found.setdefault(spelling, "a tracing header")
     def marker(name):  # what is shown in place of a value must not itself hold one of the values
         for text in (f"[redacted: {name}]", "[redacted: a secret setting]", "[removed]", "[…]"):
             if not any(value in text for value in found):
@@ -541,7 +555,7 @@ def _run(options, out, files):
     problems = self_test(cases, problems)
     if options.self_test or problems:
         for problem in problems[:40]:
-            print(scrub(problem, known, [0]))
+            print(scrub(problem, known, [0])[:400])
         print(f"Result: UNSOUND — {len(problems)} problem(s) in the cases or the checks; no model was called"
               if problems else f"Result: SOUND — {len(cases)} case(s), every check rejects its bad answers and accepts its good ones")
         return 2 if problems else 0
@@ -560,7 +574,7 @@ def _run(options, out, files):
                    if not callable(getattr(task, name, None))]
         if missing:
             raise Unsound(f"evals/task.py has no {', '.join(missing)}")
-        rows = asyncio.run(run_cases(cases, task, _load("checks")))
+        rows = asyncio.run(run_cases(cases, task, _load("checks"), known))
         models = {str(key): str(value) for key, value in dict(task.models()).items()}
     except Unsound as error:
         print(f"Result: UNSOUND — {scrub(str(error), known, [0])}; no result was written")
@@ -571,8 +585,11 @@ def _run(options, out, files):
         return 2
 
     # Every check has already run on what the application really gave back; only what is stored is changed.
-    table = scrub(verdicts(cases, rows), known, redacted)
+    table = scrub(verdicts(cases, rows), known, [0])  # made from the cases, which are counted once, below
     rows, models = scrub(rows, known, redacted), scrub(models, known, redacted)
+    for row in rows:  # cut to size only now: a cut made earlier could leave half a secret that nothing recognises
+        if isinstance(row.get("reason"), str):
+            row["reason"] = row["reason"][:300]
     hard = [entry for entry in table if entry["kind"] == "hard"]
     judged = [entry for entry in table if entry["kind"] == "judged"]
     passed = sum(1 for entry in hard if entry["passed"])
@@ -584,9 +601,10 @@ def _run(options, out, files):
         result += f", lowest score {min(scores):.2f}" if scores else ""
         result += f", {unscored} without any score" if unscored else ""
     note = "; upload: not asked for"
+    cases = scrub(cases, known, redacted)  # counted whether or not the run is sent: a case that holds a secret is a defect
     if experiment:
         try:
-            problem = upload(scrub(cases, known, redacted), rows, experiment, dataset, known, redacted)
+            problem = upload(cases, rows, experiment, dataset, known, redacted)
         except Exception as error:
             problem = type(error).__name__
         note = "; upload: sent" if problem is None else f"; upload: FAILED ({problem})"
@@ -595,7 +613,8 @@ def _run(options, out, files):
     result += note
 
     title = experiment or "a run that was not sent anywhere"
-    texts = (document(title, result, table, rows, models, started),
+    # The document once more, as text: laying a value out for a table must never be what writes a secret.
+    texts = (scrub(document(title, result, table, rows, models, started), known, [0]),
              json.dumps({"result": result, "started": started, "runs": RUNS, "models": models, "cases": table,
                          "rows": rows}, ensure_ascii=False, indent=1))
     out.parent.mkdir(parents=True, exist_ok=True)

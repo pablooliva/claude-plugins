@@ -3,6 +3,7 @@ its case and accepts each known-good one. No model is called, so this runs with 
 itself (`@@EVAL_COMMAND@@`) does not."""
 
 import importlib.util
+import unittest
 from pathlib import Path
 
 RUNNER = @@ROOT@@ / "evals" / "run.py"
@@ -15,7 +16,8 @@ def _runner():
     return module
 
 
-def test_the_eval_cases_and_checks_are_sound():
-    runner = _runner()
-    cases, problems = runner.load_cases()
-    assert runner.self_test(cases, problems) == []
+class EvalCasesAndChecks(unittest.TestCase):  # a TestCase, so that unittest and pytest both collect it
+    def test_the_eval_cases_and_checks_are_sound(self):
+        runner = _runner()
+        cases, problems = runner.load_cases()
+        self.assertEqual(runner.self_test(cases, problems), [])

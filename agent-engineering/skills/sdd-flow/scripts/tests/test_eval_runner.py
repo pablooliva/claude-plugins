@@ -4,6 +4,7 @@
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -23,6 +24,7 @@ FILLS = {
 # The stand-in application: a case's input says what each run gives back, so a test decides the "model's" behaviour.
 TASK = '''
 import json
+import os
 from pathlib import Path
 
 CALLS = Path(__file__).resolve().parent / "calls.txt"
@@ -63,8 +65,11 @@ async def answer(case_input):
 
 
 def judge(system, user):
+    with (Path(__file__).resolve().parent / "asked.txt").open("a") as handle:
+        handle.write(user + "\\n")
     case_input = json.loads(user.split("\\n\\nINPUT\\n", 1)[1].split("\\n\\nOUTPUT TO GRADE\\n", 1)[0])
-    return _next("judge" + json.dumps(case_input, sort_keys=True), case_input["judge"])
+    reply = _next("judge" + json.dumps(case_input, sort_keys=True), case_input["judge"])
+    return reply.replace("LEAK-HERE", os.environ.get("MY_API_KEY", ""))  # a judge that repeats a secret it knows
 '''
 
 
@@ -469,11 +474,15 @@ class EvalRunner(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("rendered_eval_test", target)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
+        def collected():  # as the application's test run would find it, not by calling the function
+            suite, result = unittest.defaultTestLoader.loadTestsFromModule(module), unittest.TestResult()
+            suite.run(result)
+            return suite.countTestCases(), len(result.failures), len(result.errors)
+
         self.cases(hard())
-        module.test_the_eval_cases_and_checks_are_sound()
+        self.assertEqual(collected(), (1, 0, 0))
         self.cases(hard(bad=("ok",)))
-        with self.assertRaises(AssertionError):
-            module.test_the_eval_cases_and_checks_are_sound()
+        self.assertEqual(collected(), (1, 1, 0))
         self.assertEqual(self.calls(), 0)
 
     def test_the_task_template_has_the_three_functions_the_runner_calls(self):
@@ -618,14 +627,15 @@ class EvalRunner(unittest.TestCase):
         secret, header = "sk-sentinel-12345678", "Basic hdr-sentinel-87654321"
         self.cases(hard(say=(f"ok, the key is {secret} and the header {header}; pin 1234",),
                         check={"contains": [secret]}, bad=["ok"], good=[f"it is {secret}"]),
-                   judged(say=(f"fine {secret}",), replies=('{"score": 4, "reason": "it shows ' + secret + '"}',)))
+                   judged(say=(f"fine {secret}",), replies=('{"score": 4, "reason": "it shows LEAK-HERE"}',)))
         status, result, done = self.run_it(
             "--out", str(self.out), "--experiment", "x", "--dataset", "feat",
             env={"EVAL_OPIK_URL": base, "MY_API_KEY": secret, "SHORT_TOKEN": "1234",
                  "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=" + header.replace(" ", "%20")})
         self.assertEqual(status, 0, done.stdout)  # the check saw the real output
-        # 12 in the six outputs and the three judge sentences, 6 more in the two cases as they are sent
-        self.assertIn("; 18 secret value(s) replaced in what was stored or sent;", result)
+        # 9 in the six outputs, 3 in the judge's sentences, 5 more in the two cases as they are sent; what the
+        # judge is given is replaced too, and not counted a second time
+        self.assertIn("; 17 secret value(s) replaced in what was stored or sent;", result)
         sent = json.dumps([body for _, _, body, _ in server.seen])
         stored = self.out.read_text(encoding="utf-8") + self.out.with_suffix(".json").read_text(encoding="utf-8")
         for text in (sent, stored, done.stdout, done.stderr):
@@ -634,6 +644,92 @@ class EvalRunner(unittest.TestCase):
         self.assertIn("[redacted: a tracing header]", stored)
         self.assertIn("pin 1234", stored)  # too short to be taken for a secret
         self.assertIn("[redacted: MY_API_KEY]", sent)
+        asked = (self.root / "evals" / "asked.txt").read_text(encoding="utf-8")  # what the judge was given
+        self.assertNotIn("sentinel", asked)
+        self.assertEqual(asked.count("OUTPUT TO GRADE\nfine [redacted: MY_API_KEY]"), 3)
+
+    def test_a_secret_never_reaches_the_judge_however_json_spells_it(self):
+        secret = 'sk-"sentinel"\\path-12345678'  # a quote and a backslash: JSON text spells this value differently
+        case = judged(say=("RETURN-OBJECT",))
+        case["input"]["object"] = {"note": secret}
+        case["rubric"] = f"Reads well, unlike {secret}."
+        self.cases(case)
+        status, result, done = self.run_it("--out", str(self.out), env={"MY_API_KEY": secret})
+        self.assertEqual(status, 0, done.stdout)
+        asked = (self.root / "evals" / "asked.txt").read_text(encoding="utf-8")
+        self.assertEqual(asked.count("RUBRIC\nReads well, unlike [redacted: MY_API_KEY]."), 3)
+        self.assertEqual(asked.count('"note": "[redacted: MY_API_KEY]"'), 6)  # the input and the output, three times
+        self.assertNotIn("sentinel", asked)
+        # 3 in the outputs, 2 in the case — its input and its rubric — though nothing was sent anywhere
+        self.assertIn("; 5 secret value(s) replaced in what was stored or sent; upload: not asked for", result)
+        stored = self.out.read_text(encoding="utf-8") + self.out.with_suffix(".json").read_text(encoding="utf-8")
+        self.assertNotIn("sentinel", stored + done.stdout + done.stderr)
+
+    def test_a_secret_in_a_checks_reason_is_replaced_however_the_reason_spells_it(self):
+        secret = 'sk-"sentinel"\\path-12345678'  # a reason quotes the phrase it looked for, as a repr
+        self.cases(hard(say=("nope",), check={"contains": [secret]}, bad=["ok"], good=[f"it is {secret}"]))
+        status, result, done = self.run_it("--out", str(self.out), env={"MY_API_KEY": secret})
+        self.assertEqual(status, 1, done.stdout)
+        # 3 in the reasons of the three failed runs, 2 in the case: its check and its known-good answer
+        self.assertIn("; 5 secret value(s) replaced in what was stored or sent; upload: not asked for", result)
+        stored = self.out.read_text(encoding="utf-8") + self.out.with_suffix(".json").read_text(encoding="utf-8")
+        self.assertNotIn("sentinel", stored + done.stdout + done.stderr)
+        self.assertIn("does not contain '[redacted: MY_API_KEY]'", stored)
+        # the same reason, printed by the self-test for a known-good answer the check rejects
+        self.cases(hard(check={"contains": [secret]}, bad=["ok"], good=["it is not there"]))
+        status, _, done = self.run_it("--self-test", env={"MY_API_KEY": secret})
+        self.assertEqual(status, 2)
+        self.assertIn("rejects known-good answer 1 (does not contain '[redacted: MY_API_KEY]')", done.stdout)
+        self.assertNotIn("sentinel", done.stdout + done.stderr)
+
+    def test_a_secret_a_case_spells_another_way_is_replaced_in_the_case_and_in_its_reasons(self):
+        def stored_after(secret, check, good):
+            self.cases(hard(say=("nope",), check=check, bad=["ok"], good=[good]))
+            status, _, done = self.run_it("--out", str(self.out), env={"MY_API_KEY": secret})
+            self.assertEqual(status, 1, done.stdout)
+            return (self.out.read_text(encoding="utf-8") + self.out.with_suffix(".json").read_text(encoding="utf-8")
+                    + done.stdout + done.stderr)
+
+        quoted = 'sk-"sentinel"\\path-12345678'
+        as_json = json.dumps(quoted)[1:-1]  # the phrase is the value as JSON text spells it
+        stored = stored_after(quoted, {"contains": [as_json]}, as_json)
+        self.assertNotIn("sentinel", stored)
+        self.assertIn("does not contain '[redacted: MY_API_KEY]'", stored)
+        dotted = "sk-sentinel.12345678"  # the pattern is the value as a regular expression spells it
+        stored = stored_after(dotted, {"matches": [re.escape(dotted)]}, dotted)
+        self.assertNotIn("sentinel", stored)
+        self.assertIn("does not match '[redacted: MY_API_KEY]'", stored)
+
+    def test_laying_a_requirement_out_in_the_table_never_writes_a_secret(self):
+        secret = "sk/sentinel/12345678"  # a bar in a table cell must not be turned into the stroke that makes this
+        self.cases(hard(requirement="REQ-001 sk|sentinel|12345678"))
+        status, result, done = self.run_it("--out", str(self.out), env={"MY_API_KEY": secret})
+        self.assertEqual(status, 0, done.stdout)
+        document = self.out.read_text(encoding="utf-8")
+        self.assertNotIn(secret, document)
+        self.assertIn("| REQ-001 sk\\|sentinel\\|12345678 | hard |", document)
+        self.assertNotIn("secret value(s) replaced", result)
+
+    def test_a_reason_is_cut_to_size_after_its_secrets_are_replaced(self):
+        secret = "sk-sentinel-12345678"  # the judge's sentence puts it across the place where a reason is cut
+        self.cases(judged(replies=('{"score": 4, "reason": "' + "x" * 295 + ' LEAK-HERE"}',)))
+        status, result, done = self.run_it("--out", str(self.out), env={"MY_API_KEY": secret})
+        self.assertEqual(status, 0, done.stdout)
+        self.assertIn("; 3 secret value(s) replaced in what was stored or sent;", result)
+        stored = self.out.read_text(encoding="utf-8") + self.out.with_suffix(".json").read_text(encoding="utf-8")
+        self.assertNotIn("sk-s", stored)
+        self.assertTrue(all(len(row["reason"]) == 300 for row in self.results()["rows"]))
+
+    def test_a_secret_in_a_case_is_counted_once_sent_or_not(self):
+        server, base = self.server()
+        secret = "sk-sentinel-12345678"
+        self.cases(hard(requirement=f"REQ-001 it says ok, unlike {secret}"))
+        for arguments in ((), ("--experiment", "x", "--dataset", "feat")):
+            _, result, done = self.run_it("--out", str(self.out), *arguments,
+                                          env={"EVAL_OPIK_URL": base, "MY_API_KEY": secret})
+            self.assertIn("; 1 secret value(s) replaced in what was stored or sent; upload: ", result, arguments)
+            self.assertNotIn("sentinel", self.out.read_text(encoding="utf-8") + done.stdout)
+        self.assertNotIn("sentinel", json.dumps([body for _, _, body, _ in server.seen]))
 
     def test_a_secret_is_replaced_wherever_it_sits(self):
         server, base = self.server()

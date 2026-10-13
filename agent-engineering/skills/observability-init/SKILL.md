@@ -75,7 +75,7 @@ tail -40 SDD/orchestration/progress.md 2>/dev/null
 
 - **A cycle is running** when `progress.md` names a feature in progress, or its latest block is a pending `## Awaiting …`. Stop and tell the user.
 - **Mode = create** when there is no `SDD/OBSERVABILITY.md`.
-- **Mode = audit** when there is one. Read it and the files it names, compare them with the standard and the current templates, and make Step 3's plan a list of proposed edits. Never overwrite (Anti-Pattern 10).
+- **Mode = audit** when there is one. Read it and the files it names, compare them with the standard and the current templates, and make Step 3's plan a list of proposed edits. Never overwrite (Anti-Pattern 10). One row of the record is not this skill's: a filled `Eval command` row was written by `/sdd-flow` when it built the application's first eval — leave it as it is, and never propose emptying it because the template's is empty.
 
 ### Step 2: Discover
 
