@@ -70,6 +70,13 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
    - **Run nothing for tracing** — no trace run, no script, no reading of a span file. You report what the final verification found; you do not repeat it.
    - **Change no code and no test in this run.** The tree in your prompt is of the code and the tests as they stood at the final verification; a change made after it would be completed without that check. Wherever this body tells you to fix a failing test, write a missing test, or complete an implementation, with `tracing: on` list the item as incomplete instead and return it (Error Recovery → Save Progress), saying in the return that it needs code or tests changed. Completion documents — the plan, the spec's summary, the tier plan, the glossary, the implementation summary — are yours to write as before.
 
+8. **Final Eval Results (only when your prompt says `evals: on`):**
+   - Your prompt carries the line `evals: on` or `evals: off` — the decision recorded when the spec was planned. Do not read the spec's `evals:` field to decide for yourself. With `evals: off`, or no such line, skip everything this body says about evals.
+   - With `evals: on` your prompt also provides **EVALS** (`references/evals.md` of this skill — read its §1 and §9), the eval run line (`Eval run: …`) of the run the final verification read, and **EVAL_RESULTS** — that run's results document — when the run wrote one; your prompt says so in one line when it did not. The site review named in step 5 is that verification: its `## Eval Check` section holds the check of that run and of the eval files against the spec. If EVALS or the eval run line is missing from your prompt, a file it names cannot be read, or that review has no `## Eval Check` section, return a failure to the orchestrator naming it.
+   - **Run nothing for evals** — no eval run, and not the command with `--self-test` either. You report what the final verification found; you do not repeat it.
+   - **Change no code and no test in this run** — step 7's rule, and with `evals: on` it holds whether or not tracing is on. The results in your prompt are of the application as it stood at the final verification; a change made after it would be completed on answers the application no longer gives. List the item as incomplete and return it (Error Recovery → Save Progress), saying in the return that it needs code or tests changed.
+   - **A sign-off requirement** — one the SPEC lists under `### Manual Verification` with a line that starts `- [ ] **Sign-off: ` — shows `Complete` when it is implemented, every case of the judged eval its line names has a row in EVAL_RESULTS with a score on every run, and the final verification raised no finding about it (EVALS §9). Otherwise it is an incomplete item. Its acceptance is the user's, at the commit checkpoint that follows this run: do not wait for it, do not record it as given, and do not edit the line or tick its box.
+
 ### 2. Pre-Completion Verification
 
 **Per-slice specs — fill the requirement rows first.** When the SPEC's frontmatter says `delivery_mode: per-slice`, the IMPLEMENTATION-PLAN was scaffolded only: no slice step updates its per-requirement rows, so they still read as not started. They are yours to fill, from two sources:
@@ -93,6 +100,9 @@ COMPLETION READINESS CHECKLIST
 □ Every control in "## Control Site Status" is "Complete" (independently counted, diff matched)
 □ With `tracing: on` — the final verification review ran the Tracing Lens and lists no finding of any severity
   (a "Tracing lens skipped" or "Tracing Lens not run" line there, or an open HIGH, MEDIUM, or LOW, is an incomplete item)
+□ With `evals: on` — the final verification review ran the Eval Check and lists no finding of it
+  (no `## Eval Check` section there, or an open eval finding, is an incomplete item)
+□ With `evals: on` — every sign-off requirement's judged eval has a score on every run in the final eval results
 □ Test coverage meets or exceeds target from specification
 □ No "Blocked/Pending" items remain in IMPLEMENTATION-PLAN document
 □ All delegations have been completed and documented
@@ -472,6 +482,31 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 - **Planned calls the trace run did not prove:** [each marked node the review lists as `not exercised in tests`, `not shown in the shapes drawn`, `not told apart by function`, or `not distinguishable by count`, with the reason it gives — or "None."]
 - **Recorded differences from the planned call graph:** [each plan-versus-trace difference under `### Implementation Deviations`, or "None."]
 - **Own-function calls the repeat cap left without a record:** [per entry point, the range the tree's *Own-function calls not recorded in one request* line gives — or "None cut."]
+
+### Evals
+
+[Only with `evals: on` in your prompt — with `evals: off`, or no such line, leave this whole subsection out, heading included. Fill it from the final eval results and the final verification review's `## Eval Check` section — IDs, verdicts, and scores only, never a word of what the model answered: the outputs stay in the results. When that section is the one line `Eval check: no eval in scope.`, write that line here and nothing else.]
+
+- **Eval command:** see the `Eval command` row of `SDD/OBSERVABILITY.md`
+- **Final eval run:** [EVAL_RESULTS path] — [the eval run line, verbatim]
+- **Cases built by earlier features:** [how many the final run also put to the application, and that each hard one passed — or "None."]
+
+| Eval | Requirement | Kind | Cases | In the final run |
+|------|-------------|------|-------|------------------|
+| [EVAL-001] | [REQ-004] | [hard] | [2] | [each passed 3 of 3 runs] |
+| [EVAL-003] | [REQ-005] | [judged] | [1] | [scores 0.50, 0.75, 1.00] |
+
+**Sign-off requirements**
+
+[Only when the SPEC has a line starting `- [ ] **Sign-off: ` — otherwise leave out everything from this heading to the end of the subsection. The commit checkpoint shows the user this table and the `Judge:` line exactly as you write them: one row per case of the judged eval each such line names, the row with the lowest score first.]
+
+| Requirement | Judged eval and case | Scores of its runs, lowest first |
+|-------------|----------------------|----------------------------------|
+| [REQ-005] | [EVAL-003 case 1] | [0.50, 0.75, 1.00] |
+
+**Judge:** [the judge model as the results name it] — [another model than the application's | the application's own model: it graded its own output]
+
+Accepted by the user at the commit checkpoint — not yet asked when this summary was written.
 
 ## Rollback Plan
 

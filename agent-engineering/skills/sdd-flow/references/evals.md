@@ -1,6 +1,6 @@
 # Evals — checking what the model really answered
 
-The one definition of evals in `sdd-flow`: what an eval is, how its cases are written, what the application holds for them, what the eval run does, what its results mean, and how a review checks them. Every body and phase chapter that deals with evals reads this file and never restates it. The path reaches them as **EVALS** in their prompt. The templates it speaks of are in `templates/evals/` beside this folder — Python only, so far.
+The one definition of evals in `sdd-flow`: what an eval is, how its cases are written, what the application holds for them, what the eval run does, what its results mean, how a review checks them, and how a person accepts what no rule can check. Every body and phase chapter that deals with evals reads this file and never restates it. The path reaches them as **EVALS** in their prompt. The templates it speaks of are in `templates/evals/` beside this folder — Python only, so far.
 
 It applies to a cycle whose `evals` gate is on. With the gate off none of it happens, and nothing here is read.
 
@@ -20,7 +20,7 @@ A judged score is a measurement that moves. The same output can be scored differ
 **A requirement about what the model says is met in one of two ways:**
 
 - **At least one hard eval checks it**, or
-- **it is a sign-off requirement:** the spec lists it under `### Manual Verification` as accepted by the user at the commit checkpoint, and a judged eval gives that person scores and real outputs to read. The person's answer is what meets it.
+- **it is a sign-off requirement:** the spec lists it under `### Manual Verification` as accepted by the user at the commit checkpoint, and a judged eval gives that person scores and real outputs to read. The person's answer is what meets it. §9 has the rules.
 
 A requirement covered by a judged eval alone, and not listed there, is not covered.
 
@@ -156,7 +156,7 @@ A hard eval is a test, and `references/test-integrity.md` §1 binds it as it bin
 
 ## 7. The review's eval check
 
-Run by the per-slice review (`bodies/slice-review.md`) and the whole-feature code review (`bodies/code-review.md`), each at the scope its prompt gives, when the prompt carries the line `evals: on`. With `evals: off`, or no such line, do not run it: write the one line `Eval check skipped — evals: off` in the review and move on.
+Run by the per-slice review (`bodies/slice-review.md`), the whole-feature code review (`bodies/code-review.md`), and every verification of the final check (that same body in `MODE: site-verification-only`, at `FEATURE`), each at the scope its prompt gives, when the prompt carries the line `evals: on`. With `evals: off`, or no such line, do not run it: write the one line `Eval check skipped — evals: off` in the review and move on (a verification of the final check writes nothing about evals then).
 
 It checks what no test checks: that the run of record says what it must, and that the cases and checks in the application are the spec's and can tell a good answer from a bad one. It is not a second look at whether the spec's cases are the right ones — the spec review settled that, and here the spec's cases are the reference.
 
@@ -221,7 +221,7 @@ Two groups of cases are in scope, and "a case in scope" below means a case of ei
 | 14 | A case was added to `evals/cases.jsonl` since `BASE` that the spec does not have | MEDIUM |
 | 15 | The `Eval command` row of OBS_RECORD is empty or is not the command | MEDIUM |
 
-Nothing else is an eval finding. In particular: a judged score, however low; a model that graded its own output (the results say so; copy it into the review); a failed upload; a case of a later slice that is not built yet.
+Nothing else is an eval finding. In particular: a judged score, however low; a model that graded its own output (the results say so; copy it into the review); a failed upload; a case of a later slice that is not built yet; a sign-off requirement the user has not accepted yet (§9).
 
 ### What goes in the review document
 
@@ -251,5 +251,17 @@ Eval findings are ordinary review findings: they count in the review's verdict a
 
 - **By changing the application** — its prompt, the code around the model call — or by building what is missing: a case, a check, an example, the task.
 - **Never by weakening a case** (§6), and never by editing the spec's `### Evals`, an `Evals:` line, a `Sign-off:` line, or its `evals:` field.
-- **There is no recording it instead.** A hard case that cannot be made to pass is a requirement the application does not meet. The fix loop's cap brings that to the user, who decides whether the behaviour is made dependable or the promise changed (§2).
+- **There is no recording it instead.** A hard case that cannot be made to pass is a requirement the application does not meet. The fix loop's cap brings that to the user, who decides whether the behaviour is made dependable or the promise changed (§2) — the slice's loop for a finding of a slice review, the final check's loop for a finding of the whole-feature code review or of a final verification.
+- **A fix is checked by a new run of record, never by the fixer's own.** In a slice, that is the run made before the re-review; for the whole feature, the run made before each verification of the final check. Until a review has read that run, the finding is open.
 - **The fixer makes its own run before it returns** (§4, *Who makes which run*) — at most three, like an implementer — and leaves the test of the cases and checks passing. A hard case it could not bring to pass goes back in its return, named, with the last `Result:` line; it is never reported as fixed.
+
+## 9. Sign-off — what a person accepts
+
+A sign-off requirement (§1) is one the spec lists under `### Manual Verification` with a line that starts `- [ ] **Sign-off: <ID>**` and names the judged eval that informs it. The flow finds these lines by that start.
+
+- **Until it is accepted, it counts as done when three things are true:** it is implemented; every case of its judged eval ran in the run of record and has a score on every run; and those scores and the outputs are in the results. A review counts it as met and the completion step as `Complete` on those three, and both say that its acceptance is still to come. That nobody has accepted it yet is never a finding, in any part of a review.
+- **One person accepts it, in one place: whoever answers the commit checkpoint.** With a sign-off requirement in the spec that checkpoint is shown in both modes — a run that is otherwise unattended stops there too. It shows each sign-off requirement with the scores of its judged cases, lowest first, and the path to the results, where every run's output and the judge's sentence are. Yes commits the work and accepts every requirement listed, and the flow records it: `## Sign-off - <IDs> accepted at 4h`. No commits nothing and accepts nothing.
+- **Nothing else accepts it.** Not a score, however high; not a review; not a subagent; not a run that finished with nobody there. And no score refuses it: a low score is shown, never acted on (§1).
+- **No subagent edits the line or ticks its box.** The record of the acceptance is the flow's line and the commit that follows it.
+- **The scores a person is shown are those of the last run of record** — the final check's. Nothing is run after the commit checkpoint: what is changed after it is not scored unless the person runs the eval command themselves.
+- **In per-slice mode the slices are committed before that point.** Each pause between slices shows the last line of that slice's run of record — the judged cases built so far and their lowest score — and the path to its results, so a poor answer can be read while the slice is small. The pause accepts nothing.
