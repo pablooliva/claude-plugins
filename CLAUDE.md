@@ -36,7 +36,7 @@ agent-engineering/
 │                                   #   8× sdd-spec-*-specialist (sonnet)
 ├── hooks/log_subagent_call.py      # logs subagent transcripts
 ├── docs/sdd-flow-diagram.md        # human-facing picture of the sdd-flow cycle — update it when a step or a stop changes
-├── docs/observability-diagram.md    # picture of the tracing-and-evals proposal (proposals/observability-and-evals-2026-10-04.md) — build steps 1 (observability-init), 2 (tracing in sdd-flow) and 3 (evals in sdd-flow) exist, eval-harvest does not; update it as each build step ships
+├── docs/observability-diagram.md    # picture of the tracing-and-evals proposal (proposals/observability-and-evals-2026-10-04.md) — all four build steps exist: 1 (observability-init), 2 (tracing in sdd-flow), 3 (evals in sdd-flow), 4 (the trace lookup and eval-harvest, 3.13.0); update it when one of them changes
 ├── commands/                       # interactive (depth-0) commands the user runs:
 │                                   #   adr-capture, prompt-doctor, research-clarify,
 │                                   #   critical-review, continue, commit, and four compact commands
@@ -88,12 +88,17 @@ agent-engineering/
 │   │                       #   (sdd-flow panel-specialist §4.5 + planning.md mirror it — change together)
 │   ├── observability-init/ # user-invoked, once per application, never during an sdd-flow cycle: installs the tracing
 │   │                       #   foundation from templates/ (Python only) and proves it on the app;
-│   │                       #   foundation includes a hook that records every call to the app's own functions (Python 3.12+);
+│   │                       #   foundation includes a hook that records every call to the app's own functions (Python 3.12+),
+│   │                       #   the arguments of a call that failed (off with TRACE_FAILURE_VALUES=off), and a trace lookup
+│   │                       #   (scripts/trace_lookup.py in the app: a real request's trace from Opik as a call tree — eval-harvest reads through it);
 │   │                       #   references/tracing.md is the plugin's ONE tracing standard — sdd-flow reads it when a
 │   │                       #   cycle's `tracing` gate is on, never restates it
 │   │                       #   (tests: python3 -m unittest discover -s scripts/tests — the hook test is skipped without
 │   │                       #   Python 3.12 + opentelemetry-sdk; to run it, from the skill's directory:
 │   │                       #   uv run --python 3.12 --with opentelemetry-sdk python -m unittest discover -s scripts/tests)
+│   ├── eval-harvest/       # user-invoked, after a tier is used: answers marked wrong in Opik → invented, user-approved eval cases in
+│   │                       #   SDD/flow/HARVEST-*.md + a tier-plan Feedback line; never writes evals/ or code. How the next cycle settles each case
+│   │                       #   (adopt / defer / drop, per case) is evals.md §2 — phases/planning.md derives HARVEST, design-brief.md rule 12 decides
 │   ├── retro/              # user-invoked development-cycle retrospective (environment, not code);
 │   │                       #   scripts/session-digest.py reads session transcripts across /clear
 │   │                       #   (tests: python3 -m unittest discover -s scripts/tests)

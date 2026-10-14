@@ -34,9 +34,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v3.12.1
+### 3. Agent Engineering — v3.13.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
+
+**v3.13.0 highlights:** from real use back into the next cycle. `observability-init` adds a trace lookup — find a real request's trace in Opik and print it as a call tree that ends where the failure started — and records the arguments of a call that failed. `/eval-harvest` turns answers you marked wrong in Opik into invented eval cases that fail the same way; you approve each, and the next cycle's design brief adopts it, defers it to a later tier, or drops it.
 
 **v3.12.0 highlights:** evals inside `sdd-flow`. In an application that has the tracing foundation, a feature with a model in it is checked on what the model really answers: the spec writes the cases out before any code, the implementer builds them, and before each review the flow puts every case to the running application three times. A case checked by rule blocks like a failing test; a case scored by a judge model blocks nothing — you accept it at the final commit, which then stops in autonomous mode too. Runs go to Opik, one experiment per review.
 
