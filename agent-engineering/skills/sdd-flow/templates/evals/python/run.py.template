@@ -310,16 +310,30 @@ def document(title, result, table, rows, models, started):
 
 # ---- Sending the run to Opik: six plain HTTP requests (five when no run has a score), no SDK. A failure here never changes the result. ----
 
+def _env_value(raw):
+    """The value of one env-file line, read as the application's bootstrap module reads it: the text inside quotes,
+    or the text up to a ` #` comment. Read any other way, `KEY=value # note` would be looked for as `value # note`,
+    and the value itself would not be replaced."""
+    raw = raw.strip()
+    if raw[:1] in ("'", '"'):
+        end = raw.find(raw[0], 1)
+        if end != -1:
+            return raw[1:end]
+    if raw.startswith("#"):
+        return ""
+    return re.split(r"\s+#", raw, maxsplit=1)[0].strip()
+
+
 def _settings():
     values = {}
     if ENV_FILE is not None and Path(ENV_FILE).exists():
         for line in Path(ENV_FILE).read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if line.startswith("export "):
-                line = line[7:]
-            if line and not line.startswith("#") and "=" in line:
-                key, _, value = line.partition("=")
-                values[key.strip()] = value.strip().strip('"').strip("'")
+                line = line[7:].lstrip()
+            name, equals, value = line.partition("=")
+            if equals and name.strip() and not name.strip().startswith("#"):
+                values.setdefault(name.strip(), _env_value(value))  # the first line wins, as in the bootstrap module
     values.update(os.environ)  # the environment wins, as it does for the application
     return values
 

@@ -731,6 +731,31 @@ class EvalRunner(unittest.TestCase):
             self.assertNotIn("sentinel", self.out.read_text(encoding="utf-8") + done.stdout)
         self.assertNotIn("sentinel", json.dumps([body for _, _, body, _ in server.seen]))
 
+    def test_a_secret_in_the_env_file_is_read_as_the_application_reads_it(self):
+        # An inline comment, quotes, `export`, and a second line for one name: each secret below is the value the
+        # application reads, and each must be replaced. Read the old way, the first one was looked for with its
+        # comment attached, and the real value went through.
+        secrets = ("sk-inline-11111111", "sk-quoted-22222222", "sk-export-33333333", "sk-first-44444444",
+                   "sk-hash #66666666", "sk-mixed-77777777\"")
+        (self.root / "app.env").write_text(
+            f"ONE_API_KEY={secrets[0]}  # the production key\n"
+            f'TWO_API_KEY="{secrets[1]}" # quoted, then a comment\n'
+            f"export THREE_API_KEY={secrets[2]}\n"
+            f"FOUR_API_KEY={secrets[3]}\n"
+            "FOUR_API_KEY=sk-second-55555555\n"
+            "# FIVE_API_KEY=sk-commented-66666666\n"
+            f'SIX_API_KEY="{secrets[4]}"\n'  # a quoted value that holds " #": the whole of it is the value
+            f"SEVEN_API_KEY='{secrets[5]}'\n", encoding="utf-8")  # the other quote inside, at its end
+        self.cases(hard(say=(" ".join(secrets) + " ok",), check={"contains": ["ok"]}, bad=["no"], good=["ok"]))
+        status, result, done = self.run_it("--out", str(self.out))
+        self.assertEqual(status, 0, done.stdout)
+        stored = self.out.read_text(encoding="utf-8") + self.out.with_suffix(".json").read_text(encoding="utf-8")
+        for secret in secrets:
+            for text in (stored, done.stdout, done.stderr):
+                self.assertNotIn(secret, text)
+        for name in ("ONE_API_KEY", "TWO_API_KEY", "THREE_API_KEY", "FOUR_API_KEY", "SIX_API_KEY", "SEVEN_API_KEY"):
+            self.assertIn(f"[redacted: {name}]", stored)
+
     def test_a_secret_is_replaced_wherever_it_sits(self):
         server, base = self.server()
         secret = "sk-sentinel-12345678"
