@@ -39,7 +39,7 @@ The three kinds above say where a request left the application's own code. What 
 
 - **Own function** — a function or method defined in a file beneath one of the application's own code directories; the observability record names them. The bootstrap module itself is left out. So is everything that is not the application's: the framework, libraries, the standard library. The body of a module or a class, a lambda, and a comprehension are not functions and get no span.
 - **Only inside a request that is being recorded.** A function span is made only beneath a span that already exists and is being kept. Nothing is recorded at import or at startup, and nothing for a request the sampling setting left out.
-- **What its span always holds:** its name, `<module>.<qualified name>`; its timing; `code.function.name`, `code.file.path` (from the code directory down) and `code.line.number`; and its status. No argument and no return value — see *Values of own functions*.
+- **What its span always holds:** its name, `<module>.<qualified name>`; its timing; `code.function.name`, `code.file.path` (from the code directory down) and `code.line.number`; and its status. No argument and no return value, except the arguments of a call an exception left — see *Values of own functions*.
 - **Its status is error when an exception leaves the function,** with `error.type` set to the exception's class name. Never the exception's text, which can carry what a user sent. An exception the application raises on purpose and turns into an answer — a refusal that becomes a 400 — marks the function's span the same way. Read a function's status as "an exception left it", not as "the request failed"; the entry point's own status says whether it did.
 - **Where it sits in the tree.** Beneath the function that called it, or beneath the framework span it was called from. A span a library opens inside a function — the LLM call, an external call — sits beneath that function's span, so the tree says which function made each call. This holds when requests run at the same time, and across `await`, generators, and the worker threads a framework hands a request to.
 - **Repeated calls are capped.** A helper called in a loop would otherwise make one span per call — ten thousand for a loop over ten thousand rows. The **caller** of a call is the nearest own function above it in the trace that has a span: for a plain call, the function that made it; for a call that arrives through a library or a background task, the function that started that work. The first 10 calls of one function from one caller get a span each. Further ones get none.
@@ -49,7 +49,7 @@ The three kinds above say where a request left the application's own code. What 
 - **A failure inside the hook stays inside it.** The call it was recording runs as if the hook were not there, and the span for that call is skipped. The first failure in a process is logged once, as a warning: the exception's class name when it is one of Python's own, and the line numbers in the bootstrap module where it happened. Never the exception's text or a traceback, for the reason a span never carries it — and no class, file, or function name from outside the bootstrap module, since code made at run time can put anything in one.
 - **The number is `REPEAT_CAP` in the bootstrap module.** An application that changes it says so in its observability record.
 - **Its time includes the time spent recording the calls it made.** A function that makes many small calls reads slower than it is, most of all in the trace run, which writes each span to its file as the span ends. Use function timings to see where a request's time went, not to measure a small function.
-- **What it costs** — measured in 2026-10 on one FastAPI application, Python 3.12, with the repeat cap at 10. The hook itself takes about 1 microsecond per call; making and sending a span takes about 25 more. With 29 function spans per request, the median request took about 0.5 ms longer and the mean request about 1 ms longer. Spans are sent in batches, and sending a batch holds the process for a few milliseconds; with seven times the spans that fell on roughly 1 request in 10 instead of 1 in 50. The cost is a fixed amount per call. It does not grow with how long the request waits for a model.
+- **What it costs** — measured in 2026-10 on one FastAPI application, Python 3.12, with the repeat cap at 10. The hook itself takes about 1 microsecond per call; making and sending a span takes about 25 more. With 29 function spans per request, the median request took about 0.5 ms longer and the mean request about 1 ms longer. Spans are sent in batches, and sending a batch holds the process for a few milliseconds; with seven times the spans that fell on roughly 1 request in 10 instead of 1 in 50. The cost is a fixed amount per call. It does not grow with how long the request waits for a model. Values on failure (*Values of own functions*), measured on Python 3.12 against the hook without it: about 3 microseconds more per request whose calls all succeed — the header reader, which runs once per request — and about 7 more per call that fails.
 - **An application on a Python older than 3.12 has no function spans.** Its observability record says so. The rest of this standard applies to it unchanged.
 
 ## Capture policy
@@ -70,14 +70,15 @@ A span existing costs little (*What it costs*, above). Storing values on it cost
 | Other environment values | Allowed (the application version on every trace is one) |
 | Own function: name, file, line, timing, status, and the class name of an exception that left it | Always, for the first 10 calls of one function from one caller. Never the exception's text |
 | Own function: calls beyond those 10 | Counted on the caller's span — how many, and how many ended in an exception. Nothing else |
-| Own function: arguments and return value | **Off.** On only for the modules the values switch names (see Switches), and then only as *Values of own functions* allows |
+| Own function an exception left: its arguments | **On — values on failure**, as they stand when the exception leaves it, and only as *Values of own functions* allows. Off with its switch (see Switches), and off by default where the application takes requests and has no header reader. Never its return value, never the exception's text |
+| Own function: arguments and return value of a call that did not fail | **Off.** On only for the modules the values switch names (see Switches), and then only as *Values of own functions* allows |
 
 - **Secret-named** means the variable's name contains `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, or `CREDENTIAL`, in any letter case. In `OTEL_EXPORTER_OTLP_HEADERS`, the value of each header that carries a credential (an authorization header, an API key, a token) is a secret too; a header that only names a project is not.
 - **An application's own rule overrides this policy when it is stricter.** If the application's spec or a decision record forbids recording something this policy records, the application's rule holds. The bootstrap module applies it — with a switch below where one fits, by removing the value before it is recorded where none does — and the observability record says so.
 
 ## Values of own functions
 
-With the values switch unset — the default — no argument and no return value of an own function is recorded, and the two **Never** rows above hold without exception.
+With the values switch unset — the default — no return value of an own function is recorded, and no argument either, except on a call an exception left (*Values on failure*, below); the two **Never** rows above hold without exception.
 
 The values switch turns them on, for every own function or for the modules it names, to find a fault. Each function span of those modules then carries the function's arguments as `args.<parameter>` and its return value as `output`:
 
@@ -104,6 +105,18 @@ The values switch turns them on, for every own function or for the modules it na
   - any header at all, when the bootstrap module has no reader for the application's framework.
 - **So the values switch is for finding a fault, and stays on only as long as that takes.** Name the module you are looking at in preference to `all`. Where the application takes requests and the bootstrap module has no header reader for its framework, the switch is not used.
 
+### Values on failure
+
+When an exception leaves an own function, the hook records that call's arguments on its span, as `args.<parameter>`, under every rule above — the table, what is left out, what is replaced, what the matching cannot see. A call that returns records nothing, and so does a call to a function the values switch already records. So the calls that failed carry their inputs, and nothing else does. It is on by default and has its own switch (*Switches*).
+
+- **The values are as they stand when the exception leaves the function.** An argument the function reassigned shows its new value; one it deleted is left out.
+- **Each own function the exception passes through records its own arguments**, from the one that raised it up to the one that caught it. The one that caught it did not fail and records none.
+- **Never the return value, and never the exception's text** — only its class, as for every call.
+- **A call the repeat cap left without a span has nowhere to record them.** Only its failure is counted on the caller's span.
+- **A generator or coroutine closed early has not failed**, and records nothing.
+- **On a failure, a user's text can reach the backend** — a question handed to the function that failed: each text argument of each call the exception leaves, cut at 200 characters. That is the price of seeing the input behind a fault. An application whose own rule forbids it switches values on failure off, and its observability record says so (*Capture policy*: the stricter rule holds).
+- **Off by default where the application takes requests and has no header reader**, because then a header value handed to an own function could not be kept out. The bootstrap module carries that default, and the record says which applies.
+
 ## Attribute rules
 
 These apply to attributes the application's own code sets. An attribute an instrumentation library writes is left as that library writes it: the GenAI message attributes below, for one, are JSON strings by their own convention.
@@ -112,7 +125,7 @@ These apply to attributes the application's own code sets. An attribute an instr
 - **A span's name never carries a value.** An instrumentation library names a span by its convention — the method and the route template, `chat` and the model — and a hand-written span is named for the operation, never for the data it handles. The hook names a function span after the function. This is what lets the trace lookup print names by default.
 - **Names mirror the code:** `args.<param>` for an input, `output.<field>` for a result, dotted for nested fields. For a large value, record a derived number (`args.prompt.length`) instead of the value.
 - **LLM spans use OpenTelemetry's GenAI naming conventions**, so a backend can recognise them: `gen_ai.request.model`, `gen_ai.response.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, and — when content is recorded — `gen_ai.input.messages` and `gen_ai.output.messages`. A hand-written LLM span sets the same names.
-- **Function spans are written by the bootstrap module's hook, under fixed names:** `code.function.name`, `code.file.path`, `code.line.number`, `error.type`; on a caller's span, `calls.<function>.not_recorded` and `calls.<function>.not_recorded_failed` (whole numbers, present only for a function the repeat cap cut short); and — with the values switch on — `args.<parameter>` and `output`, with `.type` and `.length` beside them as *Values of own functions* says. They follow the rules above: typed, flat, never a JSON string.
+- **Function spans are written by the bootstrap module's hook, under fixed names:** `code.function.name`, `code.file.path`, `code.line.number`, `error.type`; on a caller's span, `calls.<function>.not_recorded` and `calls.<function>.not_recorded_failed` (whole numbers, present only for a function the repeat cap cut short); and — with the values switch on — `args.<parameter>` and `output`, or on a call that failed, with values on failure on, `args.<parameter>` alone, with `.type` and `.length` beside them as *Values of own functions* says. They follow the rules above: typed, flat, never a JSON string.
 - **Every trace carries the application's name and version.** The bootstrap module sets them once, as the `service.name` and `service.version` of the process, and also puts both on the first span of each trace, because a backend may drop what is recorded once for the whole process.
 
 ## What makes a trace usable for evals
@@ -129,7 +142,7 @@ With the content switch off, traces still show the shape of each request, but no
 Traces are written so that a real request can be looked at afterwards: when something went wrong, which of the application's functions ran, in what order, how long each took, and where the failure started. The trace lookup is how a person or a coding agent reads them. It lists the newest traces (`--failed`, `--marked` for those a person marked in the backend, `--at "<YYYY-MM-DD HH:MM>"` for those within ten minutes of a local time), and prints one trace, given its ID, as a call tree that ends with the call where the failure started.
 
 - **By default it prints nothing a user wrote:** span names (a name never carries a value — *Attribute rules*), files and lines, timings, whether each call failed and the error's class, how many calls the repeat cap counted, and the marks a person left in the backend (scores, tags, comments — that person's words). The text that was recorded — what was sent to the model and what it answered, values recorded under the values switch, error messages — is printed only with `--content`, on one trace, and its error messages and settings problems are reported by class, never with their text. `--model-call --out <file>` writes the model call's messages and answer to a file instead, so the request can be sent again; put the file under `.traces/`, which is git-ignored.
-- **It shows only what was recorded.** A value that was not recorded cannot be recovered. A request that reached the model can be sent again from its model call. One that failed before the model call cannot: its input is not in the trace — set the values switch for the modules involved and make the request fail again.
+- **It shows only what was recorded.** A value that was not recorded cannot be recovered. A request that reached the model can be sent again from its model call. One that failed before the model call has, with values on failure on, the arguments of each call the exception left, as they stood then — often enough to see what it was given. Where that is off, or not enough, set the values switch for the modules involved and make the request fail again.
 - **Opik keeps times to the millisecond.** Calls that started in the same millisecond are printed in the order they ended.
 - **It reads Opik only.** With another backend it says so and stops. It reads the address, the project, and the headers from the application's own tracing settings, sends the headers only to that address, and follows no redirect.
 
@@ -146,13 +159,14 @@ Standard OpenTelemetry environment variables, and one of this standard's own (th
 | Switch tracing off entirely — the kill switch | `OTEL_SDK_DISABLED=true`. Every tracing call does nothing; no span is created or sent |
 | Keep spans, drop LLM inputs and outputs — the content switch | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false`. Instrumentation libraries record no LLM content unless told to, and differ in the values they accept; the bootstrap module turns recording on by default and turns `false` into whatever its library takes as off |
 | Record a fraction of requests | `OTEL_TRACES_SAMPLER=parentbased_traceidratio`, `OTEL_TRACES_SAMPLER_ARG=0.1` |
+| Record the arguments of a call an exception left — values on failure | On unless the application takes requests and has no header reader. `TRACE_FAILURE_VALUES=off` (or `false`, `0`, `no`) switches it off, `on` switches it on |
 | Record arguments and return values of own functions — the values switch | `TRACE_FUNCTION_VALUES=all` for every own function, or module names separated by commas (`app.billing,app.llm`) for those modules and the ones beneath them. Unset or empty: none |
 | Choose the backend | `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` |
 
-- **With none of them set:** tracing is on, LLM inputs and outputs are recorded, own functions are recorded without their arguments and return values, and every request the application starts a trace for is kept. No endpoint is set, so the bootstrap module installs no exporter and nothing is sent anywhere.
+- **With none of them set:** tracing is on, LLM inputs and outputs are recorded, own functions are recorded without their arguments and return values — apart from the arguments of a call that failed — and every request the application starts a trace for is kept. No endpoint is set, so the bootstrap module installs no exporter and nothing is sent anywhere.
 - **Swapping the backend changes those two variables and no file.** This is shown on an application the first time it needs a second backend; until then its observability record says the swap has not been shown.
 - **The switches are read when the process starts.** Changing one takes effect at the next start.
-- **The trace run overrides the kill switch and the sampling settings** for its one run, in a fresh process, so its span file does not depend on either. It leaves the content switch and the values switch as it finds them: an application that keeps LLM content out of its traces keeps it out of that file too.
+- **The trace run overrides the kill switch and the sampling settings** for its one run, in a fresh process, so its span file does not depend on either. It leaves the content switch, the values switch, and values on failure as it finds them: an application that keeps LLM content out of its traces keeps it out of that file too.
 
 ## Adding code to a traced application
 
@@ -162,7 +176,7 @@ What an implementer does for the code it adds, and nothing more:
 2. **A new LLM call or external call** has a span. Check by running the trace run and finding it in the span file. Only if no instrumentation produced one, add a hand-written span that follows the capture policy and the attribute rules. If no test can drive the call for real — no test instance of the other system exists — say so when handing the work over; do not fake the span.
 3. **No other span is written into the code.** An own function needs none: the hook records every call to it. Name a parameter that carries a secret or a header for what it is (`api_key`, `auth_header`), so that the values rules leave it out.
 4. **Nothing outside the bootstrap module names a backend, an exporter, or an instrumentation library** — apart from the tests and the trace lookup, as *The foundation* says.
-5. **The entry-point test passes and the trace run still completes.** The same test file checks that own functions are recorded and that none carries a value while the values switch is unset.
+5. **The entry-point test passes and the trace run still completes.** The same test file checks that own functions are recorded and that, while the values switch is unset, none that succeeded carries a value.
 
 ## These rules and the enforcement-site standard
 

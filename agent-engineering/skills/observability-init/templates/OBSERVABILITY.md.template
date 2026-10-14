@@ -11,6 +11,7 @@ Where each part of this application's tracing foundation lives. Written by `/obs
 | Own functions recorded from | @@OWN_CODE@@ |
 | Repeat cap | The first 10 calls of one function from one caller get a span; the rest are counted on the caller's span (`REPEAT_CAP` in the bootstrap module) |
 | Header reader, for the values switch | @@HEADER_READER@@ |
+| Values on failure — the arguments of a call an exception left | @@FAILURE_VALUES@@ |
 | Trace run | `@@TRACE_RUN_COMMAND@@` — writes @@SPAN_FILE@@ |
 | Trace lookup | `@@TRACE_LOOKUP_COMMAND@@` — finds a request's trace in the backend and prints its call tree; `--help` for the rest |
 | Tracing backend now | @@BACKEND@@ |
@@ -25,6 +26,7 @@ Set in `@@ENV_FILE_NAME@@`, or in the environment, which wins. Read when the pro
 | Switch tracing off entirely | `OTEL_SDK_DISABLED=true` |
 | Keep spans, drop LLM inputs and outputs | `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=false` |
 | Record a fraction of requests | `OTEL_TRACES_SAMPLER=parentbased_traceidratio`, `OTEL_TRACES_SAMPLER_ARG=0.1` |
+| Stop recording the arguments of a call that failed | `TRACE_FAILURE_VALUES=off` |
 | Record arguments and return values of own functions, to find a fault | `TRACE_FUNCTION_VALUES=all`, or module names separated by commas. Unset: none. Take it out again afterwards |
 | Choose the backend | `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` |
 

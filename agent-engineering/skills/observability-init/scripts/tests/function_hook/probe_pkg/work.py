@@ -186,3 +186,41 @@ async def a_starts_background(coroutine):
 async def a_worker(started, n):
     await started.wait()
     return [leaf(i) for i in range(n)]
+
+
+def reassigns_then_fails(value, count=3):
+    value = "changed"
+    raise ValueError("after reassigning")
+
+
+def fails_with_text(value):
+    raise ValueError("fails")
+
+
+def fails_with_key(api_key, plain):
+    raise ValueError("fails")
+
+
+def generator_fails(value):
+    yield 1
+    raise ValueError("in a generator, after a yield")
+
+
+async def a_fails(value):
+    await asyncio.sleep(0)
+    raise ValueError("after an await")
+
+
+def deletes_then_fails(value, other):
+    del value
+    raise ValueError("after deleting")
+
+
+def captured_then_fails(value):
+    def inner():
+        return value
+    raise ValueError("with its argument captured")
+
+
+def kinds_fail(a, *rest, named_only, **more):
+    raise ValueError("every kind of parameter")

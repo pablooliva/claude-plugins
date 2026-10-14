@@ -37,6 +37,13 @@ TRACE_RUN_FILE = "TRACE_RUN_FILE"
 # every own function; module names separated by commas record them for those modules and the ones beneath them.
 VALUES_SWITCH = "TRACE_FUNCTION_VALUES"
 
+# Values on failure: when an exception leaves an own function, its arguments are recorded on its span, as they
+# stand at that moment - so the calls that failed carry their inputs, and the calls that succeeded carry none.
+# `off` (or `false`, `0`, `no`) switches it off, `on` switches it on; unset, the default below holds. The default
+# is off only for an application that takes requests and has no header reader (`SDD/OBSERVABILITY.md`).
+FAILURE_VALUES_SWITCH = "TRACE_FAILURE_VALUES"
+FAILURE_VALUES_DEFAULT = @@FAILURE_VALUES_DEFAULT@@
+
 # The repeat cap: how many calls of one function from one caller get a span of their own. Further ones get
 # none, and the caller's span says how many there were and how many of them ended in an exception.
 REPEAT_CAP = 10
@@ -152,7 +159,8 @@ def traced(fn):
 
 
 def _read_env_file(path: Path) -> None:
-    """Copy the OTEL_* settings and the values switch from the env file into the environment. A name already
+    """Copy the OTEL_* settings, the values switch and the values-on-failure switch from the env file into the
+    environment. A name already
     set there wins."""
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
@@ -162,7 +170,7 @@ def _read_env_file(path: Path) -> None:
         line = line.strip().removeprefix("export ").lstrip()
         name, equals, value = line.partition("=")
         name = name.strip()
-        if equals and (name.startswith("OTEL_") or name == VALUES_SWITCH) and not name.startswith(_HEADER_CAPTURE):
+        if equals and (name.startswith("OTEL_") or name in (VALUES_SWITCH, FAILURE_VALUES_SWITCH)) and not name.startswith(_HEADER_CAPTURE):
             os.environ.setdefault(name, _env_value(value))
 
 
@@ -234,8 +242,8 @@ def _span_file_exporter(path: str):
 def _header_source():
     """Where the framework hands a request to the application: the code object of that framework function, and a
     reader that takes the function's local variables and returns the request's header values as text (or None
-    when the call carries no request). Used only while the values switch is on, so that a header value an own
-    function was given is never recorded. (None, None) for an application that receives no requests."""
+    when the call carries no request). Used while the values switch or values on failure is on, so that a header
+    value an own function was given is never recorded. (None, None) for an application that receives no requests."""
 @@HEADER_SOURCE@@
 
 
@@ -302,16 +310,20 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
     every_module = asked.lower() == "all"
     value_modules = () if every_module else tuple(part.strip() for part in asked.split(",") if part.strip())
     values_on = every_module or bool(value_modules)
+    failure_switch = os.environ.get(FAILURE_VALUES_SWITCH, "").strip().lower()
+    failure_values = FAILURE_VALUES_DEFAULT if not failure_switch else failure_switch not in ("off", "false", "0", "no")
     secrets = _secret_values(env_file)  # also with the switch off: an exception's class name is always recorded
     long_secrets = {secret for secret in secrets if len(secret) >= _SHORTEST_INSIDE}
     secret_reach = max(map(len, long_secrets), default=0)
-    header_code, read_headers = _header_source() if values_on else (None, None)
+    header_code, read_headers = _header_source() if values_on or failure_values else (None, None)
     # (every header value joined, the long ones, all of them, the longest one's length) for the request under way
     request_headers = contextvars.ContextVar("request_headers", default=None)
 
     tracer = provider.get_tracer(SERVICE_NAME + ".functions")
     # id(code) -> (span name, attributes, ((parameter, attribute name), ...) or None, record the result,
-    #              whether it is a generator or a coroutine, which can be left and entered again)
+    #              whether it is a generator or a coroutine, which can be left and entered again,
+    #              the parameters to record if an exception leaves it, or None - when the values switch already
+    #              records them at the start, or values on failure is off)
     own = {}
     kept = []  # the code objects themselves, so that an id is never given to another one
     # The calls that are open, by id(frame). One of three things:
@@ -344,17 +356,21 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
         relative = path[len(os.path.dirname(root.rstrip(os.sep))) + 1 :]
         module = relative.rsplit(".", 1)[0].replace(os.sep, ".").removesuffix(".__init__")
         name = f"{module}.{code.co_qualname}"
-        parameters, result = None, False
-        if every_module or any(module == asked_for or module.startswith(asked_for + ".") for asked_for in value_modules):
+        parameters, result, on_failure = None, False, None
+        valued = every_module or any(module == asked_for or module.startswith(asked_for + ".") for asked_for in value_modules)
+        if valued or failure_values:
             count = code.co_argcount + code.co_kwonlyargcount + bool(code.co_flags & 4) + bool(code.co_flags & 8)
-            parameters = tuple(
+            listed = tuple(
                 (parameter, "args." + parameter)
                 for parameter in code.co_varnames[:count]
                 if parameter not in ("self", "cls") and not _NEVER_NAMED.search(parameter)
             )
-            result = not _NEVER_NAMED.search(code.co_name)
+            if valued:
+                parameters, result = listed, not _NEVER_NAMED.search(code.co_name)
+            else:
+                on_failure = listed or None
         attributes = {"code.function.name": name, "code.file.path": relative, "code.line.number": code.co_firstlineno}
-        own[id(code)] = info = (name, attributes, parameters, result, bool(code.co_flags & 0x2A0))
+        own[id(code)] = info = (name, attributes, parameters, result, bool(code.co_flags & 0x2A0), on_failure)
         kept.append(code)
         return info
 
@@ -552,6 +568,15 @@ def _install_function_hook(provider, env_file: Path, monitoring, slot: int) -> N
                     if not closing:
                         entry[0].set_status(error)
                         entry[0].set_attribute("error.type", clean_name(type(exception)))
+                        on_failure = own[id(code)][5]
+                        if on_failure:
+                            # The frame is still alive here: its arguments as they stand now, the moment of failure.
+                            # Only this path reads them, so a call that returns pays nothing for it.
+                            recorded, local = {}, get_frame(1).f_locals
+                            for parameter, key in on_failure:
+                                if parameter in local:
+                                    render(recorded, key, local[parameter])
+                            entry[0].set_attributes(recorded)
                     finish(entry)
         except Exception:
             failed()

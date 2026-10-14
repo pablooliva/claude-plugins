@@ -44,6 +44,7 @@ Goes beside the application's other modules (`src/<package>/telemetry.py`).
 | `@@INSTRUMENTATION@@` | The import and instrument lines from the table above, indented four spaces. With nothing to instrument: `    pass` |
 | `@@OWN_DIRECTORIES@@` | A tuple of the directories that hold the application's own code — see Own functions |
 | `@@HEADER_SOURCE@@` | The body of `_header_source()`, indented four spaces — see Own functions |
+| `@@FAILURE_VALUES_DEFAULT@@` | `True`, or `False` for an application that takes requests and has no header reader — see Own functions |
 
 **Where `setup_tracing()` is called.** Once, where the application loads its configuration at startup — not at import. Pass the env file path through if the application lets a caller choose one, so that a test which supplies its own env file never reads the developer's. For FastAPI that is the lifespan function, next to the configuration load. For a command-line program it is the first line of `main()`.
 
@@ -69,7 +70,7 @@ The bootstrap module records every call to a function defined beneath `OWN_DIREC
 - Do not use `Path(...).resolve()` here. A directory is compared with the file names Python's import system gave the code, and those are not resolved through symlinks (`/tmp` on macOS is one).
 - Leave out a directory of vendored or generated code inside the package only by moving it out of the package; there is no exclude list.
 
-**`@@HEADER_SOURCE@@`.** Used only while the values switch is on. It names the framework function that first receives a request, and reads the request's header values from that function's local variables, so that a header value handed to an own function is replaced by `[redacted]`.
+**`@@HEADER_SOURCE@@`.** Used while the values switch or values on failure is on. It names the framework function that first receives a request, and reads the request's header values from that function's local variables, so that a header value handed to an own function is replaced by `[redacted]`.
 
 Starlette and FastAPI, any ASGI server (proven, 2026-10: FastAPI 0.142, Starlette 1.7):
 
@@ -102,7 +103,8 @@ A WSGI framework — Flask, Django under WSGI (unproven; use `Flask.wsgi_app` or
 An application that receives no requests (a command-line program, a job runner): `    return None, None`.
 
 - **For another framework**, name the function of the framework that every request passes through first and that has the headers in a local variable, and write a reader for it. It is unproven until Step 6 has shown a made-up header value missing from the span file.
-- **An application that takes requests and has no reader** records headers handed to its functions when the values switch is on. Say so in the plan and in the record's *Header reader* row, and tell the user not to use the switch until there is one.
+- **An application that takes requests and has no reader** records headers handed to its functions when the values switch is on, or when values on failure is. Say so in the plan and in the record's *Header reader* row, tell the user not to use the switch until there is one, and render `@@FAILURE_VALUES_DEFAULT@@` as `False`.
+- **`@@FAILURE_VALUES_DEFAULT@@`** — `True`, unless the application takes requests and has no header reader: then `False`. It is the default only; `TRACE_FAILURE_VALUES` overrides it either way. An application rule against storing what a user sent does not change it: that rule is applied with the switch, in the env file, and written in the record.
 - **The reader runs once per request, and only while the switch is on.** It must not raise and must not read the body.
 
 **`REPEAT_CAP`** is a constant near the top of the bootstrap module, not a placeholder. Leave it at 10. An application with a reason for another number changes that one line, and the *Repeat cap* row of its record with it.
@@ -153,7 +155,7 @@ Goes with the application's other tests.
 - A route with a typed path parameter (`{id:int}`) is not matched by the literal text the test sends. Give `_drive` a sample path for it.
 - **A mounted app or a WebSocket route makes the test fail by name** (`Entry points this test cannot check yet`), because the template only knows how to send a plain request. Do not delete the check. Extend `_drive` and `_routes` for that application — a sample request under the mount, a WebSocket handshake — and show in Step 6 that the extended test fails when tracing is taken off it. Until then the plan names that entry point as outside the test.
 - Under the trace run the test copies the spans it collected into the trace run's file, so its requests are in that file too.
-- **The second test in the file, `test_own_functions_are_recorded_without_values`,** reads the same spans. It fails when no call to an own function was recorded, and when one carries an argument or a return value although the values switch is unset — the fresh process is started with the switch removed from its environment, and `_client()` gives the application a made-up env file, so a developer's setting cannot reach it. It needs at least one request above to reach the application's own code; a framework that answers every bare request by itself needs a sample request that gets further. On a Python older than 3.12 the test skips itself.
+- **The second test in the file, `test_own_functions_are_recorded_without_values`,** reads the same spans. It fails when no call to an own function was recorded, when one that did not fail carries an argument or a return value although the values switch is unset, and when one that failed carries a return value — the fresh process is started with the switch removed from its environment, and `_client()` gives the application a made-up env file, so a developer's setting cannot reach it. It needs at least one request above to reach the application's own code; a framework that answers every bare request by itself needs a sample request that gets further. On a Python older than 3.12 the test skips itself.
 - **An application with no web framework** drops `_client`, `HEADERS`, `_routes`, `_drive`, the `run` fixture, both tests that use it, and the `__main__` block, and keeps only registry tests. Whether its own functions are recorded is then shown once, in Step 6, from the trace run's file.
 
 **A registry test**, for jobs, consumers, or commands kept in a table the application owns:
@@ -214,6 +216,7 @@ Rendered to `SDD/OBSERVABILITY.md`. Create `SDD/` if the repository has none.
 | `@@TRACE_LOOKUP_COMMAND@@` | As rendered above |
 | `@@OWN_CODE@@` | The directories of `OWN_DIRECTORIES`, repository-relative (`src/app/`). On a Python older than 3.12: `none — own functions are recorded from Python 3.12 on` |
 | `@@HEADER_READER@@` | The framework the reader was written for and whether Step 6 proved it (`Starlette / FastAPI — proven`), `none needed — the application receives no requests`, or `none — do not use the values switch` |
+| `@@FAILURE_VALUES@@` | `on` — or `off by default: no header reader`, or `off: <the application's rule, quoted with its source>` when its env file sets `TRACE_FAILURE_VALUES=off` |
 | `@@BACKEND@@` | `Opik, project <name>`, `Langfuse`, or `none set` — never an address with credentials in it |
 | `@@ENV_FILE_NAME@@` | The env file's name, e.g. `.env` |
 | `@@TRACED@@` | One bullet per traced kind: what gives each its span here (the framework option, the instrumentation line, the wrapper), and any kind this application does not have. One more bullet for own functions: recorded by the bootstrap module's hook, and how many function spans one typical request made in Step 6 |

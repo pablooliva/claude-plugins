@@ -100,10 +100,22 @@ def test_own_functions_are_recorded_without_values(run):
         "No call to one of the application's own functions was recorded. Either the hook in the bootstrap module "
         "is not installed, or no request above reaches the application's own code."
     )
+    # Values on failure: a call an exception left carries its arguments. No other call carries a value, and none
+    # carries a return value.
     with_values = sorted(
-        {span["name"] for span in functions if any(key == "output" or key.startswith(("args.", "output.")) for key in span["attributes"])}
+        {
+            span["name"]
+            for span in functions
+            for key in span["attributes"]
+            if key == "output"
+            or key.startswith("output.")
+            or (key.startswith("args.") and (span.get("status") or {}).get("status_code") != "ERROR")
+        }
     )
-    assert not with_values, f"Recorded with an argument or a return value although the values switch is unset: {with_values}"
+    assert not with_values, (
+        f"Recorded with an argument on a call that did not fail, or with a return value, although the values switch "
+        f"is unset: {with_values}"
+    )
 
 
 @@REGISTRY_TEST@@

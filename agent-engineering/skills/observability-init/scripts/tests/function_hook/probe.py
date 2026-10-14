@@ -1,9 +1,13 @@
 """Drives the bootstrap template's own-function hook and prints one PASS or FAIL line per check.
 
-    python probe.py <none | all | probe_pkg.work> <directory holding the rendered template as bootstrap.py>
+    python probe.py <none | none-off | none-quiet | all | probe_pkg.work> <directory holding the rendered template as bootstrap.py> [switch]
 
 Run in a process of its own by test_function_hook.py: the hook stays switched on for the life of the process.
-`none` leaves the values switch unset; the other two set it. Every value here is made up.
+`none` leaves the values switch unset, so values on failure is on by default; `none-off` also switches values on
+failure off; `none-quiet` sets neither switch and expects what `none-off` does - it is run against a bootstrap
+module whose default is off; the other two set the values switch. A third argument, when given, is put in TRACE_FAILURE_VALUES
+as it is: `none` with `on` checks that it switches values on failure on over a default of off, `none-off` with
+`false`, `0` or `no` that each of those switches it off. Every value here is made up.
 """
 import asyncio, gc, os, sys, tempfile
 from collections import Counter
@@ -13,8 +17,15 @@ here = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [here, sys.argv[2]]
 mode = sys.argv[1]
 os.environ.pop("TRACE_FUNCTION_VALUES", None)  # whatever the machine has set
-if mode != "none":
+os.environ.pop("TRACE_FAILURE_VALUES", None)
+values_switch = mode not in ("none", "none-off", "none-quiet")
+if values_switch:
     os.environ["TRACE_FUNCTION_VALUES"] = mode
+if mode == "none-off":
+    os.environ["TRACE_FAILURE_VALUES"] = "off"
+quiet = mode in ("none-off", "none-quiet")  # values on failure is expected off
+if len(sys.argv) > 3:
+    os.environ["TRACE_FAILURE_VALUES"] = sys.argv[3]
 os.environ["PROBE_API_KEY"] = "env-canary-9f3k2"
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -90,8 +101,14 @@ check("abandoned generator: its span is ended, later call hangs off the caller",
 check("own function called from library code hangs off the surrounding span", e[(P+"leaf", "root")] == 1)
 check("library and framework functions have no span", not any("probe_fw" in x.name for x in s))
 check("every span has file and line", all(x.attributes.get("code.file.path") == "probe_pkg/work.py" and x.attributes.get("code.line.number") for x in s if x.name != "root"))
-if mode == "none":
+if quiet:
     check("no argument or result attribute", not any(k.startswith(("args.", "output")) for x in s for k in x.attributes))
+if mode == "none":
+    check("values on failure: only the call that failed carries its arguments - not its caller that caught it, not a "
+          "generator closed early, and no result anywhere",
+          sorted(k for x in s for k in x.attributes if k.startswith(("args.", "output"))) == ["args.i"]
+          and [x.name for x in s if any(k.startswith("args.") for k in x.attributes)] == [P+"fails"],
+          str(sorted((x.name, k) for x in s for k in x.attributes if k.startswith(("args.", "output")))))
 
 async def one(i):
     with tracer.start_as_current_span("request", attributes={"rid": i}):
@@ -108,7 +125,7 @@ shape = dict(Counter(next(iter(shapes))))
 expected = {("request", None): 1, (P+"a_outer", "request"): 1, (P+"a_inner", P+"a_outer"): 1, (P+"a_leaf", P+"a_inner"): 1,
             (P+"leaf", P+"a_leaf"): 1, (P+"leaf", P+"a_inner"): 1}
 check("the shape is the call chain (thread hop included)", shape == expected, str(len(shape)))
-if mode != "none":
+if values_switch:
     wrong = 0
     for v in by_trace.values():
         rid = next(x.attributes["rid"] for x in v if x.name == "request")
@@ -211,10 +228,74 @@ check("own background work with no library span around it is recorded beneath th
       and len(worker) == 1 and capped(worker[0]).get(P+"leaf"+NOT) == 3,
       str(sorted((k, v) for k, v in e.items() if k[0] in (P+"leaf", P+"a_worker"))))
 gc.collect()
+if not values_switch:
+    async def failing_with_headers():
+        scope = {"type": "http", "headers": [(b"authorization", b"Bearer header-canary-55")]}
+        async def then():
+            with tracer.start_as_current_span("root"):
+                for call in (lambda: work.reassigns_then_fails("given"), lambda: work.fails_with_text("Bearer header-canary-55"),
+                             lambda: work.fails_with_text("see env-canary-9f3k2 here"), lambda: work.fails_with_text("x" * 5000),
+                             lambda: work.fails_with_key("s3cr3t-value-1", "kept")):
+                    try: call()
+                    except ValueError: pass
+                work.loops(8, failing=(1, 5, 6))
+        await probe_fw.framework_entry(scope, then)
+    asyncio.run(failing_with_headers()); s = spans()
+    if mode == "none":
+        moved = next(x for x in s if x.name == P+"reassigns_then_fails").attributes
+        check("values on failure: arguments as they stand when the exception leaves - a reassigned one shows its new value",
+              moved.get("args.value") == "changed" and moved.get("args.count") == 3 and "output" not in moved, str(sorted(moved)))
+        texts = [x.attributes.get("args.value") for x in s if x.name == P+"fails_with_text"]
+        keyed = next(x for x in s if x.name == P+"fails_with_key").attributes
+        check("values on failure: header and secret values are kept out and long text is cut, as with the values switch",
+              texts[0] == "[redacted]" and texts[1] == "[redacted]" and len(texts[2]) == 200
+              and keyed.get("args.plain") == "kept" and not any("api_key" in k for k in keyed), str(texts[:2]))
+        steps = [x for x in s if x.name == P+"step"]
+        check("values on failure: in a capped loop the recorded call that failed carries its arguments, the others none; "
+              "the capped failures have no span to carry any",
+              [sorted(k for k in x.attributes if k.startswith("args.")) for x in steps if x.status.status_code.name == "ERROR"]
+              == [["args.fail", "args.i"]]
+              and not any(k.startswith("args.") for x in steps if x.status.status_code.name != "ERROR" for k in x.attributes)
+              and len(steps) == 3, str(len(steps)))
+    else:
+        check("values on failure switched off: a call that failed carries no argument either",
+              not any(k.startswith(("args.", "output")) for x in s for k in x.attributes))
+def failing_shapes():
+    with tracer.start_as_current_span("root"):
+        for call in (lambda: list(work.generator_fails("g")), lambda: work.deletes_then_fails("gone", "kept"),
+                     lambda: work.captured_then_fails("held"), lambda: work.kinds_fail(1, 2, 3, named_only="k", extra=4),
+                     lambda: work.reassigns_then_fails("given")):
+            try: call()
+            except ValueError: pass
+    async def awaited():
+        with tracer.start_as_current_span("root"):
+            try: await work.a_fails("awaited")
+            except ValueError: pass
+    asyncio.run(awaited())
+    return {x.name[len(P):]: {k: v for k, v in x.attributes.items() if k.startswith("args.")} for x in spans()}
+shapes = failing_shapes()
+if mode == "none":
+    check("values on failure: a generator after a yield, a coroutine after an await, a deleted argument, a captured one, "
+          "and every kind of parameter",
+          shapes["generator_fails"] == {"args.value": "g"} and shapes["a_fails"] == {"args.value": "awaited"}
+          and shapes["deletes_then_fails"] == {"args.other": "kept"} and shapes["captured_then_fails"] == {"args.value": "held"}
+          and shapes["kinds_fail"] == {"args.a": 1, "args.rest.type": "tuple", "args.rest.length": 2, "args.named_only": "k",
+                                       "args.more.type": "dict", "args.more.length": 1}, str(shapes))
+elif quiet:
+    check("values on failure switched off: no failing shape carries an argument", not any(shapes.values()), str(shapes))
+else:
+    check("with the values switch on, a failed call keeps the arguments it started with - unwinding does not overwrite them",
+          shapes["reassigns_then_fails"].get("args.value") == "given", str(shapes["reassigns_then_fails"]))
+# The env file is read with the bootstrap module's own reader; the environment is put back afterwards.
+_saved = os.environ.pop("TRACE_FAILURE_VALUES", None)
+_env = Path(tempfile.mkdtemp()) / "switch.env"; _env.write_text("TRACE_FAILURE_VALUES=off # the application's rule\n")
+telemetry._read_env_file(_env); _read = os.environ.pop("TRACE_FAILURE_VALUES", None)
+if _saved is not None: os.environ["TRACE_FAILURE_VALUES"] = _saved
+check("the values-on-failure switch is read from the env file like the other switches", _read == "off", repr(_read))
 check("nothing left open", len(state["open"]) == 0, f"open={len(state['open'])}")
 check("no callback failed", state["failures"] == 0, f"failures={state['failures']}")
 
-if mode != "none":
+if values_switch:
     # The header reader runs only with the values switch on; it is the one callback step a test can make fail.
     import logging
     class _Kept(logging.Handler):
