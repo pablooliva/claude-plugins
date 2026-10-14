@@ -12,6 +12,7 @@ Where each part of this application's tracing foundation lives. Written by `/obs
 | Repeat cap | The first 10 calls of one function from one caller get a span; the rest are counted on the caller's span (`REPEAT_CAP` in the bootstrap module) |
 | Header reader, for the values switch | @@HEADER_READER@@ |
 | Trace run | `@@TRACE_RUN_COMMAND@@` — writes @@SPAN_FILE@@ |
+| Trace lookup | `@@TRACE_LOOKUP_COMMAND@@` — finds a request's trace in the backend and prints its call tree; `--help` for the rest |
 | Tracing backend now | @@BACKEND@@ |
 | Eval command | — |
 

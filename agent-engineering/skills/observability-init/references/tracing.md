@@ -8,15 +8,16 @@ Two words used throughout: a **span** is one timed record of one operation — i
 
 ## The foundation
 
-The tracing foundation is five parts. `observability-init` writes them once per application.
+The tracing foundation is six parts. `observability-init` writes them once per application.
 
-1. **One bootstrap module.** The only file of the application's own code that names a tracing backend, an exporter, or an instrumentation library; tests may name them too. It switches on the framework instrumentation for what the application uses (web framework, HTTP client, database driver, LLM SDK), so the common calls are traced without anyone remembering to. It also sends the spans still waiting when the application shuts down, so that the last requests before a stop are not lost. It also switches on the recording of the application's own functions (*Own functions*, below). The rest of the application uses the OpenTelemetry API — the vendor-neutral tracing interface — and nothing else.
+1. **One bootstrap module.** The only file of the application's own code that names a tracing backend, an exporter, or an instrumentation library; tests may name them too, and the trace lookup (part 5) reads the backend's address to read traces back from it. It switches on the framework instrumentation for what the application uses (web framework, HTTP client, database driver, LLM SDK), so the common calls are traced without anyone remembering to. It also sends the spans still waiting when the application shuts down, so that the last requests before a stop are not lost. It also switches on the recording of the application's own functions (*Own functions*, below). The rest of the application uses the OpenTelemetry API — the vendor-neutral tracing interface — and nothing else.
 2. **One wrapper** for entry points the framework instrumentation does not see.
 3. **One entry-point test.** It lists the application's entry points from the application's own registries — the framework's route table, the job registry, the command table — never from a hand-kept list, and fails naming every entry point that is not traced. An entry point of a kind that has no registry is outside this test; whoever reviews the code has to catch it.
 4. **One trace run.** A single command that runs the tests which drive real entry points and writes every span to a fresh local file that is complete before the command exits. It sends nothing to a backend, and the file is git-ignored.
-5. **`SDD/OBSERVABILITY.md`**, the observability record: one row each for the language, the bootstrap module, the wrapper, the entry-point test, the trace run and the file it writes, the directories own functions are recorded from, the backend traces go to now, and the eval command (empty until the application has one). Its presence is the sign that the foundation exists.
+5. **One trace lookup.** A single command that finds a real request's trace in the backend and prints it as a call tree, for whoever is debugging that request (*Reading a trace back*, below). It reads the backend and changes nothing there.
+6. **`SDD/OBSERVABILITY.md`**, the observability record: one row each for the language, the bootstrap module, the wrapper, the entry-point test, the trace run and the file it writes, the trace lookup, the directories own functions are recorded from, the backend traces go to now, and the eval command (empty until the application has one). Its presence is the sign that the foundation exists.
 
-**The foundation is not installed until it has been shown to work** on the application itself: a span sent from the application arrives in the backend; with the kill switch set nothing is sent; the trace run produces its file; the entry-point test fails when tracing is taken off one entry point, and passes again when it is put back; and, where the language version allows it, a function of the application's own shows beneath an entry point in the trace run's file with no argument and no return value on it.
+**The foundation is not installed until it has been shown to work** on the application itself: a span sent from the application arrives in the backend, and the trace lookup finds its trace and prints it; with the kill switch set nothing is sent; the trace run produces its file; the entry-point test fails when tracing is taken off one entry point, and passes again when it is put back; and, where the language version allows it, a function of the application's own shows beneath an entry point in the trace run's file with no argument and no return value on it.
 
 ## What gets a span — the three traced kinds
 
@@ -108,6 +109,7 @@ The values switch turns them on, for every own function or for the modules it na
 These apply to attributes the application's own code sets. An attribute an instrumentation library writes is left as that library writes it: the GenAI message attributes below, for one, are JSON strings by their own convention.
 
 - **Typed and flat.** A value is a string, a boolean, an integer, a decimal number, or a list of one of those. A structured value is flattened into one attribute per field worth querying. It is never stored as a JSON string, because a backend cannot filter on a field inside one.
+- **A span's name never carries a value.** An instrumentation library names a span by its convention — the method and the route template, `chat` and the model — and a hand-written span is named for the operation, never for the data it handles. The hook names a function span after the function. This is what lets the trace lookup print names by default.
 - **Names mirror the code:** `args.<param>` for an input, `output.<field>` for a result, dotted for nested fields. For a large value, record a derived number (`args.prompt.length`) instead of the value.
 - **LLM spans use OpenTelemetry's GenAI naming conventions**, so a backend can recognise them: `gen_ai.request.model`, `gen_ai.response.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, and — when content is recorded — `gen_ai.input.messages` and `gen_ai.output.messages`. A hand-written LLM span sets the same names.
 - **Function spans are written by the bootstrap module's hook, under fixed names:** `code.function.name`, `code.file.path`, `code.line.number`, `error.type`; on a caller's span, `calls.<function>.not_recorded` and `calls.<function>.not_recorded_failed` (whole numbers, present only for a function the repeat cap cut short); and — with the values switch on — `args.<parameter>` and `output`, with `.type` and `.length` beside them as *Values of own functions* says. They follow the rules above: typed, flat, never a JSON string.
@@ -122,9 +124,22 @@ A trace can become an eval case later only when:
 
 With the content switch off, traces still show the shape of each request, but none of them can become an eval case.
 
+## Reading a trace back — the trace lookup
+
+Traces are written so that a real request can be looked at afterwards: when something went wrong, which of the application's functions ran, in what order, how long each took, and where the failure started. The trace lookup is how a person or a coding agent reads them. It lists the newest traces (`--failed`, `--marked` for those a person marked in the backend, `--at "<YYYY-MM-DD HH:MM>"` for those within ten minutes of a local time), and prints one trace, given its ID, as a call tree that ends with the call where the failure started.
+
+- **By default it prints nothing a user wrote:** span names (a name never carries a value — *Attribute rules*), files and lines, timings, whether each call failed and the error's class, how many calls the repeat cap counted, and the marks a person left in the backend (scores, tags, comments — that person's words). The text that was recorded — what was sent to the model and what it answered, values recorded under the values switch, error messages — is printed only with `--content`, on one trace, and its error messages and settings problems are reported by class, never with their text. `--model-call --out <file>` writes the model call's messages and answer to a file instead, so the request can be sent again; put the file under `.traces/`, which is git-ignored.
+- **It shows only what was recorded.** A value that was not recorded cannot be recovered. A request that reached the model can be sent again from its model call. One that failed before the model call cannot: its input is not in the trace — set the values switch for the modules involved and make the request fail again.
+- **Opik keeps times to the millisecond.** Calls that started in the same millisecond are printed in the order they ended.
+- **It reads Opik only.** With another backend it says so and stops. It reads the address, the project, and the headers from the application's own tracing settings, sends the headers only to that address, and follows no redirect.
+
+**For the coding agents that work on the application,** its agent instructions file (`CLAUDE.md`, or `AGENTS.md` when that is the one it has) carries this paragraph, with the application's own command in place of `<the lookup command>`:
+
+> **Debugging with traces.** Every request this application handles is traced (`SDD/OBSERVABILITY.md`). When a bug is reported, find its request with `<the lookup command> --failed` or `<the lookup command> --at "<YYYY-MM-DD HH:MM>"`, then print it with `<the lookup command> <trace id>`: the call tree ends with the call where the failure started. Add `--content` only when the text sent to the model is needed: it prints what a user wrote.
+
 ## Switches
 
-Standard OpenTelemetry environment variables, and one of this standard's own (the values switch), set in the application's one env file. The bootstrap module is responsible for those values reaching the tracing library, whatever the application does with the rest of the file. No application code outside the bootstrap module reads them.
+Standard OpenTelemetry environment variables, and one of this standard's own (the values switch), set in the application's one env file. The bootstrap module is responsible for those values reaching the tracing library, whatever the application does with the rest of the file. No application code outside the bootstrap module reads them. The trace lookup is the one exception, and reads only the two backend settings, to read traces back; it changes no switch.
 
 | To do this | Set |
 |---|---|
@@ -146,7 +161,7 @@ What an implementer does for the code it adds, and nothing more:
 1. **A new entry point** is traced: by the framework instrumentation if the framework sees it, otherwise through the wrapper — and, where its kind has a registry, it is in the registry the entry-point test reads.
 2. **A new LLM call or external call** has a span. Check by running the trace run and finding it in the span file. Only if no instrumentation produced one, add a hand-written span that follows the capture policy and the attribute rules. If no test can drive the call for real — no test instance of the other system exists — say so when handing the work over; do not fake the span.
 3. **No other span is written into the code.** An own function needs none: the hook records every call to it. Name a parameter that carries a secret or a header for what it is (`api_key`, `auth_header`), so that the values rules leave it out.
-4. **Nothing outside the bootstrap module names a backend, an exporter, or an instrumentation library.**
+4. **Nothing outside the bootstrap module names a backend, an exporter, or an instrumentation library** — apart from the tests and the trace lookup, as *The foundation* says.
 5. **The entry-point test passes and the trace run still completes.** The same test file checks that own functions are recorded and that none carries a value while the values switch is unset.
 
 ## These rules and the enforcement-site standard

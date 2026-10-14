@@ -1,0 +1,370 @@
+"""The trace lookup: find one request's trace in Opik and print what ran, how long each call took, and where it failed.
+It reads the backend the application's tracing sends to and changes nothing there. See SDD/OBSERVABILITY.md.
+
+    @@TRACE_LOOKUP_COMMAND@@                       the newest traces, one line each
+    @@TRACE_LOOKUP_COMMAND@@ --failed              only those that failed
+    @@TRACE_LOOKUP_COMMAND@@ --marked              only those a person marked in Opik: a score, a tag, or a comment
+    @@TRACE_LOOKUP_COMMAND@@ --at "2026-10-12 14:03"   those that started within ten minutes of that local time
+    @@TRACE_LOOKUP_COMMAND@@ <trace id>            one trace as a call tree, with the call that failed first
+    @@TRACE_LOOKUP_COMMAND@@ <trace id> --content  the same, with the text that was recorded: what was sent to the model
+                                                   and what it answered, recorded values, error messages
+    @@TRACE_LOOKUP_COMMAND@@ <trace id> --model-call --out <file>
+                                                   the model call's messages and answer, written to a file to replay it
+
+Without --content nothing a user wrote is printed: the names of the calls (the tracing standard keeps values out of
+names), timings, error classes, and the marks a person left in Opik.
+"""
+
+import argparse
+import datetime
+import json
+import os
+import re
+import sys
+import traceback
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+ROOT = @@ROOT@@
+ENV_FILE = @@ENV_FILE@@
+PAGE = 100
+WINDOW = datetime.timedelta(minutes=10)
+
+
+def _env_value(raw):
+    """The value of one env-file line, read as the bootstrap module reads it: the text inside quotes, or the text up to
+    a ` #` comment."""
+    raw = raw.strip()
+    if raw[:1] in ("'", '"'):
+        end = raw.find(raw[0], 1)
+        if end != -1:
+            return raw[1:end]
+    if raw.startswith("#"):
+        return ""
+    return re.split(r"\s+#", raw, maxsplit=1)[0].strip()
+
+
+def _settings():
+    values = {}
+    if ENV_FILE is not None and Path(ENV_FILE).exists():
+        for line in Path(ENV_FILE).read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith("export "):
+                line = line[7:].lstrip()
+            name, equals, value = line.partition("=")
+            if equals and name.strip() and not name.strip().startswith("#"):
+                values.setdefault(name.strip(), _env_value(value))  # the first line wins, as in the bootstrap module
+    values.update(os.environ)  # the environment wins, as it does for the application
+    return values
+
+
+class Stop(Exception):
+    """A reason to stop that the user can act on, printed without a traceback."""
+
+
+def opik_source():
+    """Opik's API address, the headers to send it, and the project — all from the application's own tracing settings."""
+    values = _settings()
+    endpoint, marker = values.get("OTEL_EXPORTER_OTLP_ENDPOINT", ""), "/v1/private/otel"
+    if not endpoint:
+        raise Stop("No tracing backend is set (OTEL_EXPORTER_OTLP_ENDPOINT), so there are no traces to read.")
+    if marker not in endpoint:
+        raise Stop("Traces go to a backend that is not Opik. This lookup reads Opik only; SDD/OBSERVABILITY.md names the backend.")
+    headers, project = {}, ""
+    for part in values.get("OTEL_EXPORTER_OTLP_HEADERS", "").split(","):
+        key, _, value = part.partition("=")
+        if key.strip().lower() == "projectname":
+            project = urllib.parse.unquote(value.strip())
+        elif key.strip():
+            # The tracing headers, sent to the server they were written for: the API is on the same address.
+            headers[key.strip()] = urllib.parse.unquote(value.strip())
+            if any(character in headers[key.strip()] + key for character in "\r\n\0"):
+                raise Stop(f"The tracing header {key.strip()!r} holds a line break and cannot be sent. Its value is not shown.")
+    return endpoint[: endpoint.index(marker)], headers, project or "Default Project"
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """A redirect is refused, not followed: following one would carry the headers to a server nobody chose."""
+
+    def redirect_request(self, *arguments, **named):
+        return None
+
+
+def _address(base):
+    """Scheme, host and port only: an address in a settings file can carry a user name and a password."""
+    parts = urllib.parse.urlsplit(base)
+    return f"{parts.scheme}://{parts.hostname}" + (f":{parts.port}" if parts.port else "")
+
+
+def _get(source, path, **query):
+    base, headers, _ = source
+    request = urllib.request.Request(base + path + "?" + urllib.parse.urlencode(query), headers=headers)
+    # Only fixed words and class names are printed from here: an error's own text can repeat a header or a value.
+    try:
+        with urllib.request.build_opener(_NoRedirect).open(request, timeout=30) as response:
+            return json.loads(response.read() or b"null")
+    except urllib.error.HTTPError as error:
+        raise Stop(f"Opik answered {error.code} to {path}.")
+    except urllib.error.URLError as error:
+        raise Stop(f"Opik cannot be reached at {_address(base)} ({type(error.reason).__name__}).")
+    except ValueError as error:
+        raise Stop(f"Opik's answer to {path} could not be read, or the request could not be made ({type(error).__name__}).")
+    except Exception as error:
+        raise Stop(f"Opik cannot be reached at {_address(base)} ({type(error).__name__}).")
+
+
+def _when(stamp):
+    """Opik's UTC time stamp as an aware datetime. Its fraction can have more digits than Python reads: cut to six."""
+    if not stamp:
+        return None
+    match = re.fullmatch(r"(.+?:\d\d)(?:\.(\d+))?(Z|[+-]\d\d:\d\d)?", stamp)
+    if not match:
+        return None
+    whole, fraction, zone = match.groups()
+    zone = "+00:00" if zone in (None, "Z") else zone
+    return datetime.datetime.fromisoformat(whole + (f".{fraction[:6].ljust(6, '0')}" if fraction else "") + zone)
+
+
+def _order(item):
+    """By start, then by end: Opik keeps milliseconds, and a call that ended first in a tied millisecond came first."""
+    never = datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+    return _when(item.get("start_time")) or never, _when(item.get("end_time")) or never
+
+
+def _local(stamp):
+    moment = _when(stamp)
+    return moment.astimezone().strftime("%Y-%m-%d %H:%M:%S") if moment else "?"
+
+
+def traces(source, scan):
+    """The project's newest traces, newest first, at most `scan` of them."""
+    found = _pages(source, "/v1/private/traces", scan, project_name=source[2])
+    found.sort(key=_order, reverse=True)
+    return found[:scan]
+
+
+def spans(source, trace_id):
+    return _pages(source, "/v1/private/spans", None, project_name=source[2], trace_id=trace_id)
+
+
+def _pages(source, path, most, **query):
+    """Every item of a paged list, or the first `most`. A page that brings nothing new ends the reading, so a server
+    that repeats a page cannot keep it going."""
+    found, seen, page = [], set(), 1
+    while most is None or len(found) < most:
+        batch = (_get(source, path, page=page, size=PAGE, **query) or {}).get("content") or []
+        new = [item for item in batch if item.get("id") not in seen]
+        seen.update(item.get("id") for item in new)
+        found += new
+        if len(batch) < PAGE or not new:
+            return found
+        page += 1
+    return found
+
+
+def _status(trace):
+    code = (trace.get("input") or {}).get("http.response.status_code")
+    return code if isinstance(code, int) else None
+
+
+def failed(trace):
+    status = _status(trace)
+    return bool(trace.get("error_info")) or (status is not None and status >= 500)
+
+
+def marked(trace):
+    return bool(trace.get("feedback_scores") or trace.get("tags") or trace.get("comments"))
+
+
+def _marks(trace):
+    counts = [(len(trace.get(key) or []), word) for key, word in (("feedback_scores", "score"), ("tags", "tag"), ("comments", "comment"))]
+    return ", ".join(f"{count} {word}{'s' if count > 1 else ''}" for count, word in counts if count) or "-"
+
+
+def list_line(trace):
+    status = _status(trace)
+    state = "FAILED" if failed(trace) else "ok"
+    error = (trace.get("error_info") or {}).get("exception_type")
+    return "  ".join([
+        _local(trace.get("start_time")),
+        f"{trace.get('name', '?')}",
+        f"{status if status is not None else '-'}",
+        f"{round(trace.get('duration') or 0)} ms",
+        state + (f" ({error})" if error else ""),
+        f"model calls {trace.get('llm_span_count', 0)}",
+        f"marks {_marks(trace)}",
+        trace.get("id", "?"),
+    ])
+
+
+def _place(span):
+    meta = span.get("metadata") or {}
+    path, line = meta.get("file.path"), meta.get("line.number")
+    return f"{path}:{line}" if path and line else (path or "")
+
+
+def _span_line(span, content):
+    error = span.get("error_info") or {}
+    parts = [span.get("name", "?")]
+    if span.get("type") == "llm":
+        usage = span.get("usage") or {}
+        parts.append(f"[model call: {span.get('model') or '?'}, {usage.get('prompt_tokens', '?')} in / {usage.get('completion_tokens', '?')} out]")
+    else:
+        parts.append(_place(span))
+    parts.append(f"{round(span.get('duration') or 0)} ms")
+    if error:
+        parts.append(f"FAILED ({error.get('exception_type') or 'error'})")
+    skipped = sum(value for key, value in (span.get("input") or {}).items()
+                  if key.startswith("calls.") and key.endswith(".not_recorded") and isinstance(value, int))
+    if skipped:
+        parts.append(f"(+{skipped} further calls counted, not shown)")
+    line = "  ".join(part for part in parts if part)
+    if content and error.get("message"):
+        line += "\n" + _indent(f"error message: {error['message']}", 4)
+    if content and span.get("type") != "llm":
+        # With the values switch on, a function span carries its arguments as args.<parameter> and its return value as output.
+        recorded = {key: value for key, value in (span.get("input") or {}).items() if key.startswith("args.")}
+        if span.get("output"):
+            recorded["output"] = span["output"]
+        if recorded:
+            line += "\n" + _indent("recorded values: " + json.dumps(recorded, ensure_ascii=False), 4)
+    return line
+
+
+def _indent(text, width):
+    return "\n".join(" " * width + row for row in text.splitlines())
+
+
+def first_failure(found):
+    """Where the failure started: a failed span with no failed span anywhere beneath it, the earliest if there are several."""
+    by_id = {span["id"]: span for span in found}
+    above_a_failure = set()
+    for span in found:
+        if span.get("error_info"):
+            parent = span.get("parent_span_id")
+            while parent in by_id and parent not in above_a_failure:
+                above_a_failure.add(parent)
+                parent = by_id[parent].get("parent_span_id")
+    starts = [span for span in found if span.get("error_info") and span["id"] not in above_a_failure]
+    # Spans whose parents loop are each above the other; then the earliest failed span is the best that can be said.
+    starts = starts or [span for span in found if span.get("error_info")]
+    return min(starts, key=_order) if starts else None
+
+
+def tree(found, content):
+    children, ids = {}, {span["id"] for span in found}
+    for span in found:
+        parent = span.get("parent_span_id")
+        children.setdefault(parent if parent in ids else None, []).append(span)
+    for group in children.values():
+        group.sort(key=_order)
+    rows, shown = [], set()
+
+    def walk(span, depth):
+        if span["id"] in shown:
+            return
+        shown.add(span["id"])
+        rows.append(_indent(_span_line(span, content), 2 * depth))
+        for child in children.get(span["id"], []):
+            walk(child, depth + 1)
+
+    for root in children.get(None, []):
+        walk(root, 0)
+    left = [span for span in sorted(found, key=_order) if span["id"] not in shown]
+    if left:
+        # Spans whose parents point at each other in a loop have no root to hang from; they are shown, not dropped.
+        rows.append(f"{len(left)} span(s) whose parents form a loop:")
+        for span in left:
+            walk(span, 1)
+    return rows
+
+
+def model_call(found):
+    calls = [span for span in found if span.get("type") == "llm"]
+    return [{"model": span.get("model"), "messages": (span.get("input") or {}).get("messages"),
+             "answer": (span.get("output") or {}).get("messages"), "failed": bool(span.get("error_info"))} for span in calls]
+
+
+def show_trace(source, trace_id, content, want_model_call, out):
+    found = spans(source, trace_id)
+    if not found:
+        raise Stop(f"No trace {trace_id} in project {source[2]}.")
+    root = next((span for span in found if not span.get("parent_span_id")), found[0])
+    print(f"trace {trace_id}  started {_local(root.get('start_time'))}  {len(found)} spans")
+    print("\n".join(tree(found, content)))
+    first = first_failure(found)
+    if first:
+        where = "the model call" if first.get("type") == "llm" else _place(first)
+        error = (first.get("error_info") or {}).get("exception_type") or "error"
+        print("\nfailed first in: " + "  ".join(part for part in (first.get("name"), where, f"({error})") if part))
+    header = _get(source, f"/v1/private/traces/{trace_id}") or {}
+    for score in header.get("feedback_scores") or []:
+        print(f"score: {score.get('name')} = {score.get('value')}" + (f" — {score['reason']}" if score.get("reason") else ""))
+    for tag in header.get("tags") or []:
+        print(f"tag: {tag}")
+    for comment in header.get("comments") or []:
+        print(f"comment: {comment.get('text', '')}")
+    if want_model_call or content:
+        calls = model_call(found)
+        if not calls:
+            print("\nNo model call in this trace.")
+        elif out:
+            try:
+                Path(out).write_text(json.dumps({"trace": trace_id, "calls": calls}, ensure_ascii=False, indent=2), encoding="utf-8")
+            except OSError as error:
+                raise Stop(f"The file given to --out cannot be written ({type(error).__name__}).")
+            print(f"\n{len(calls)} model call(s) written to {out}")
+        elif content:
+            print("\n" + json.dumps(calls, ensure_ascii=False, indent=2))
+        else:
+            print("\nThe model call's text is printed only with --content, or written to a file with --out.")
+
+
+def main(arguments=None):
+    parser = argparse.ArgumentParser(description="Find a request's trace in Opik.")
+    parser.add_argument("trace", nargs="?", help="a trace id: print that trace as a call tree")
+    parser.add_argument("--failed", action="store_true", help="only traces that failed")
+    parser.add_argument("--marked", action="store_true", help="only traces a person marked in Opik")
+    parser.add_argument("--at", help='only traces that started within ten minutes of this local time, "YYYY-MM-DD HH:MM"')
+    parser.add_argument("--limit", type=int, default=20, help="how many traces to list (default 20)")
+    parser.add_argument("--scan", type=int, default=500, help="how many of the newest traces to search (default 500)")
+    parser.add_argument("--content", action="store_true", help="also print the text that was recorded")
+    parser.add_argument("--model-call", action="store_true", help="the model call's messages and answer")
+    parser.add_argument("--out", help="with --model-call: write them to this file instead of printing them")
+    options = parser.parse_args(arguments)
+    try:
+        source = opik_source()
+        if options.trace:
+            show_trace(source, options.trace, options.content, options.model_call or bool(options.out), options.out)
+            return 0
+        if options.content or options.model_call or options.out:
+            raise Stop("--content, --model-call and --out work on one trace: give its id.")
+        found = traces(source, options.scan)
+        if options.at:
+            try:
+                moment = datetime.datetime.strptime(options.at, "%Y-%m-%d %H:%M").astimezone()
+            except ValueError:
+                raise Stop(f'--at takes a local time as "YYYY-MM-DD HH:MM", not {options.at!r}.')
+            found = [trace for trace in found if _when(trace.get("start_time")) and abs(_when(trace["start_time"]) - moment) <= WINDOW]
+        if options.failed:
+            found = [trace for trace in found if failed(trace)]
+        if options.marked:
+            found = [trace for trace in found if marked(trace)]
+        print(f"project {source[2]}: {len(found)} trace(s) match; newest first")
+        for trace in found[: options.limit]:
+            print(list_line(trace))
+        return 0
+    except Stop as reason:
+        print(f"trace lookup: {reason}", file=sys.stderr)
+        return 2
+    except Exception as error:
+        # No traceback: its text can carry a recorded value or a header. The class and the line are enough to look.
+        line = traceback.extract_tb(error.__traceback__)[-1].lineno
+        print(f"trace lookup: unexpected {type(error).__name__} at line {line} of this script.", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

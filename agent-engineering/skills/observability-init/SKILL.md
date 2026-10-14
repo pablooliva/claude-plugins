@@ -1,19 +1,20 @@
 ---
 name: observability-init
-description: "INVOKE THIS SKILL when the user wants to give an application tracing — e.g. '/observability-init', 'add tracing to this app', 'set up observability here', 'instrument this application', 'send traces to Opik / Langfuse', 'install the tracing foundation'. Run once per application, at a moment when no `/sdd-flow` cycle is running. Inspects the repository (framework, entry points, LLM and external calls, where configuration is loaded, how the tests build the app, the application's own rules about what may be recorded), proposes a plan for the user to approve, then renders its bundled templates into one bootstrap module (which also records every call to the application's own functions, without their values, on Python 3.12 or later), an entry-point wrapper, an entry-point test, a trace run, and `SDD/OBSERVABILITY.md`. Proves the result on the application itself: a real trace arrives in the backend, the kill switch stops everything, the entry-point test fails when tracing is taken off one entry point. Applies the plugin's tracing standard (`references/tracing.md`). Python applications only for now. Never prints env values, never writes a credential into a file, never commits, builds nothing for evals."
+description: "INVOKE THIS SKILL when the user wants to give an application tracing — e.g. '/observability-init', 'add tracing to this app', 'set up observability here', 'instrument this application', 'send traces to Opik / Langfuse', 'install the tracing foundation'. Run once per application, at a moment when no `/sdd-flow` cycle is running. Inspects the repository (framework, entry points, LLM and external calls, where configuration is loaded, how the tests build the app, the application's own rules about what may be recorded), proposes a plan for the user to approve, then renders its bundled templates into one bootstrap module (which also records every call to the application's own functions, without their values, on Python 3.12 or later), an entry-point wrapper, an entry-point test, a trace run, a trace lookup (finds a real request's trace in Opik and prints it as a call tree, for debugging; one paragraph in the application's agent instructions tells coding agents to use it), and `SDD/OBSERVABILITY.md`. Proves the result on the application itself: a real trace arrives in the backend and the trace lookup prints it, the kill switch stops everything, the entry-point test fails when tracing is taken off one entry point. Applies the plugin's tracing standard (`references/tracing.md`). Python applications only for now. Never prints env values, never writes a credential into a file, never commits, builds nothing for evals."
 ---
 
 # Observability Init
 
 Installs the **tracing foundation** in an application, once, so that every request it handles leaves a record of what it called — and so that code added later is traced without anyone remembering to.
 
-The foundation is five parts, defined in `references/tracing.md` (the plugin's tracing standard — read it before Step 2; it is the rulebook for everything below):
+The foundation is six parts, defined in `references/tracing.md` (the plugin's tracing standard — read it before Step 2; it is the rulebook for everything below):
 
 1. **One bootstrap module** — the only file that knows a tracing backend exists. It also records every call to the application's own functions, with no change to them.
 2. **One wrapper** for entry points the framework does not see.
 3. **One entry-point test** that fails when an entry point is not traced.
 4. **One trace run** — a command that runs the tests and writes every span to a local file.
-5. **`SDD/OBSERVABILITY.md`** — the record of where the other four live.
+5. **One trace lookup** — a command that finds a real request's trace in the backend and prints it as a call tree.
+6. **`SDD/OBSERVABILITY.md`** — the record of where the other five live.
 
 When it is run:
 
@@ -28,6 +29,7 @@ Bundled files (read by path when needed):
 - `templates/python/telemetry.py.template` — bootstrap module and wrapper
 - `templates/python/test_entry_points_traced.py.template` — entry-point test
 - `templates/python/trace_run.py.template` — trace run
+- `templates/python/trace_lookup.py.template` — trace lookup
 - `templates/OBSERVABILITY.md.template` — the record
 - `scripts/check-span-file.py` — checks a span file for secret values and header attributes (tests: `python3 -m unittest discover -s scripts/tests`)
 
@@ -75,7 +77,7 @@ tail -40 SDD/orchestration/progress.md 2>/dev/null
 
 - **A cycle is running** when `progress.md` names a feature in progress, or its latest block is a pending `## Awaiting …`. Stop and tell the user.
 - **Mode = create** when there is no `SDD/OBSERVABILITY.md`.
-- **Mode = audit** when there is one. Read it and the files it names, compare them with the standard and the current templates, and make Step 3's plan a list of proposed edits. Never overwrite (Anti-Pattern 10). One row of the record is not this skill's: a filled `Eval command` row was written by `/sdd-flow` when it built the application's first eval — leave it as it is, and never propose emptying it because the template's is empty.
+- **Mode = audit** when there is one. Read it and the files it names, compare them with the standard and the current templates, and make Step 3's plan a list of proposed edits. Never overwrite (Anti-Pattern 10). One row of the record is not this skill's: a filled `Eval command` row was written by `/sdd-flow` when it built the application's first eval — leave it as it is, and never propose emptying it because the template's is empty. A record with no `Trace lookup` row was written before the lookup existed: propose rendering it, adding the row, and the agent-instructions paragraph (Step 3), and prove it on a trace the backend already holds (Step 6, check 5) — no new request is needed.
 
 ### Step 2: Discover
 
@@ -105,7 +107,8 @@ Find, by reading the code:
 One plan, in one message. Nothing is written before the user approves it.
 
 - **Packages** to add, with any pin and its reason.
-- **New files** — the four, with their paths.
+- **New files** — the five, with their paths.
+- **The agent-instructions paragraph** — the *Debugging with traces* paragraph from the standard (*Reading a trace back*), with this application's lookup command, and the file it goes into: the application's `CLAUDE.md`, or `AGENTS.md` when that is the one it has; neither → a new `CLAUDE.md`. In audit mode, a paragraph already there is compared, not added again.
 - **Edits to existing files** — each one: file, the line, what it becomes, and why. This always includes the call to `setup_tracing()`, the call to `flush_tracing()` at shutdown, and the framework's tracing switch.
 - **Own functions** — the directories they are recorded from, and the header reader the bootstrap module gets for the values switch (which framework, proven or not). On a Python older than 3.12: that none will be recorded, and why.
 - **The application's own decisions this touches** (Anti-Pattern 2) — each rule found in Step 2, quoted with its source, and what happens to it: kept and applied (how), or changed (which requirement text, test, and document change with it). A stricter rule is applied, not argued with.
@@ -123,15 +126,15 @@ Use `AskUserQuestion` only for a real fork. Everything else is in the plan for o
 Read the templates and `references/python-recipes.md`, then:
 
 1. Add the packages with the project's own tool.
-2. Write the bootstrap module, the entry-point test, and the trace run from their templates.
-3. Make the approved edits: the `setup_tracing()` call and the `flush_tracing()` call at shutdown, the framework switch, `.traces/` in `.gitignore`, and the application's own tests and documents listed in the plan.
+2. Write the bootstrap module, the entry-point test, the trace run, and the trace lookup from their templates.
+3. Make the approved edits: the `setup_tracing()` call and the `flush_tracing()` call at shutdown, the framework switch, `.traces/` in `.gitignore`, the agent-instructions paragraph, and the application's own tests and documents listed in the plan.
 
 Do not write `SDD/OBSERVABILITY.md` yet — it records Step 6's results.
 
 ### Step 5: Validate statically
 
 ```bash
-grep -rn '@@' <the three new files> && echo "LEFTOVER PLACEHOLDERS" || echo "no placeholders"
+grep -rn '@@' <the four new files> && echo "LEFTOVER PLACEHOLDERS" || echo "no placeholders"
 <run the full test suite>             # every test passes, the entry-point test among them
 <the trace run command>               # exits 0 and reports a span count above zero
 ```
@@ -154,9 +157,10 @@ The standard does not count the foundation as installed until these have been se
 2. **Own functions are recorded, and the test for it can fail** (Python 3.12 or later). Take the line `_record_own_functions(provider, env_file)` out of the bootstrap module, run the entry-point test file, and confirm `test_own_functions_are_recorded_without_values` fails. Put the line back; confirm it passes. Count the function spans one typical request made, for the record.
 3. **With values on, a header is not recorded.** Start the application in a fresh process under the trace-run setting, with `TRACE_FUNCTION_VALUES=all` in that one command's environment and nowhere else. Send one request that carries a made-up value in a header of its own (`X-Probe: <made-up value>`). Count, never print: the made-up value appears 0 times in the span file, and at least one span carries an `args.` attribute. This is what proves the header reader. An application that receives no requests does not run it.
 4. **A real trace arrives.** With the backend lines in the env file, send one real request through the application — the documented start command and one request, or a few lines that build the app with its real env file and call it through a test client. Stop the process the way a user would; the `flush_tracing()` call at shutdown is what sends the last spans, and this step is its proof — if the trace is missing, look there first. Then read the trace back from the backend (`references/python-recipes.md`, Backends) and confirm: the entry point is the first span, the model call is beneath it with its model, both token counts, and — unless the content switch is off — its input and output.
-5. **The kill switch stops everything.** Set `OTEL_SDK_DISABLED=true` for one more request and confirm the backend's trace count did not change.
-6. **The other backend, by changing two variables** — only when the user wants the application able to send to a second backend now. Change the two backend variables and nothing else, send one request, read it back from the other backend. Otherwise it is not run: say so, and record it as not run. The standard does not require it for the foundation to count as installed.
-7. **The trace run** already produced its file in Step 5.
+5. **The trace lookup finds it.** Run the lookup command with `--limit 5`: the request of check 4 is listed. Run it with that trace's ID: the entry point is the first line of the tree, and the model call is beneath it. Then count, never print: a phrase of the request you sent appears 0 times in that output, and at least once in the output of the same command with `--content` (`… | grep -c '<phrase>'`). In audit mode, use any trace the backend already holds that has a model call, and a phrase of its model call's text that you read from the backend's own page — or skip the count and say so. With a backend other than Opik this check is `NOT RUN — the trace lookup reads Opik only`; check 4 still proves the trace arrived.
+6. **The kill switch stops everything.** Set `OTEL_SDK_DISABLED=true` for one more request and confirm the backend's trace count did not change.
+7. **The other backend, by changing two variables** — only when the user wants the application able to send to a second backend now. Change the two backend variables and nothing else, send one request, read it back from the other backend. Otherwise it is not run: say so, and record it as not run. The standard does not require it for the foundation to count as installed.
+8. **The trace run** already produced its file in Step 5.
 
 Never print a credential while doing this. Run commands so that keys come from the environment or the env file.
 
@@ -174,10 +178,12 @@ Tracing foundation installed (create mode)
   src/app/telemetry.py                    bootstrap module + traced wrapper
   tests/test_entry_points_traced.py       6 routes checked
   scripts/trace_run.py                    uv run python scripts/trace_run.py → .traces/spans.jsonl
+  scripts/trace_lookup.py                 uv run python scripts/trace_lookup.py <trace id> → call tree
   SDD/OBSERVABILITY.md                    the record
 
   Also changed: src/app/app.py (setup_tracing and flush_tracing calls, framework tracing on), .gitignore,
-                tests/test_app.py (one test rewritten — plan item 4), README.md (one paragraph)
+                tests/test_app.py (one test rewritten — plan item 4), README.md (one paragraph),
+                CLAUDE.md (Debugging with traces)
   Packages:     opentelemetry-sdk, opentelemetry-exporter-otlp-proto-http,
                 opentelemetry-instrumentation-openai-v2, opentelemetry-util-genai<1 (pin: see recipes)
 
@@ -186,6 +192,7 @@ Tracing foundation installed (create mode)
           own functions: test fails without the hook ✓  31 function spans on one POST /ask, none with a value ✓
           values on: made-up header value 0 times in the span file ✓
           trace in Opik: POST /ask → chat <model>, 348 in / 70 out tokens, messages present ✓
+          trace lookup: listed, tree POST /ask → chat <model>, request text 0 times without --content, 1 with ✓
           kill switch: no new trace ✓
           Langfuse: NOT RUN — no second backend wanted yet
 
@@ -216,4 +223,4 @@ Adding `opik` to the dependencies and `@opik.track` to the route because the ven
 
 ## Scope Boundary
 
-This skill **installs and proves** an application's tracing foundation: the bootstrap module with its wrapper, the entry-point test, the trace run, and `SDD/OBSERVABILITY.md`, plus the few edits that wire them in. It inspects without printing env values, proposes a plan the user approves, renders its templates, and shows the result working on the real application. It does not commit, does not write credentials or backend addresses into any file, does not run while an `/sdd-flow` cycle is in progress, does not write spans into the application's functions, and builds nothing for evals. It does nothing inside an `/sdd-flow` cycle either: from 3.8.0 `sdd-flow` reads the record and the standard this skill leaves behind, and checks a feature's planned calls against a real run when the application has them.
+This skill **installs and proves** an application's tracing foundation: the bootstrap module with its wrapper, the entry-point test, the trace run, the trace lookup, and `SDD/OBSERVABILITY.md`, plus the few edits that wire them in and the paragraph that tells coding agents how to read a trace. It inspects without printing env values, proposes a plan the user approves, renders its templates, and shows the result working on the real application. It does not commit, does not write credentials or backend addresses into any file, does not run while an `/sdd-flow` cycle is in progress, does not write spans into the application's functions, and builds nothing for evals. It does nothing inside an `/sdd-flow` cycle either: from 3.8.0 `sdd-flow` reads the record and the standard this skill leaves behind, and checks a feature's planned calls against a real run when the application has them.

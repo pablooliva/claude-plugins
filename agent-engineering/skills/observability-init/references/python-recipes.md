@@ -188,6 +188,19 @@ Goes in the project's scripts folder (`scripts/trace_run.py`).
 - The span file is `.traces/spans.jsonl`. Add `.traces/` to `.gitignore`.
 - A test that swaps the model client for a stand-in produces no LLM span. That is expected: the trace run shows the calls its tests really make. The LLM span is shown once, by the real request in Step 6.
 
+## `trace_lookup.py.template` — the trace lookup
+
+Goes in the project's scripts folder (`scripts/trace_lookup.py`). It uses the standard library only.
+
+| Placeholder | Fill |
+|---|---|
+| `@@ROOT@@` | `Path(__file__).resolve().parents[1]` for `scripts/<file>` |
+| `@@ENV_FILE@@` | The env file the application reads its tracing settings from, as an expression from `ROOT`: `ROOT / ".env"`. `None` when it reads them from the environment only |
+| `@@TRACE_LOOKUP_COMMAND@@` | How to start it with the project's tool: `uv run python scripts/trace_lookup.py` |
+
+- It reads `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` from that file, then from the environment, which wins — as the bootstrap module does. The project is the header `projectName`.
+- Opik's REST API is at the address of its OTLP endpoint with `/v1/private/otel` taken off (Backends, below). A trace is `GET …/v1/private/traces/<id>`; its spans `GET …/v1/private/spans?project_name=<name>&trace_id=<id>`.
+
 ## `OBSERVABILITY.md.template` — the record
 
 Rendered to `SDD/OBSERVABILITY.md`. Create `SDD/` if the repository has none.
@@ -198,6 +211,7 @@ Rendered to `SDD/OBSERVABILITY.md`. Create `SDD/` if the repository has none.
 | `@@LANGUAGE@@` | `python` |
 | `@@BOOTSTRAP_PATH@@`, `@@ENTRY_POINT_TEST_PATH@@` | Repository-relative paths |
 | `@@TRACE_RUN_COMMAND@@`, `@@SPAN_FILE@@` | As rendered above; `.traces/spans.jsonl` |
+| `@@TRACE_LOOKUP_COMMAND@@` | As rendered above |
 | `@@OWN_CODE@@` | The directories of `OWN_DIRECTORIES`, repository-relative (`src/app/`). On a Python older than 3.12: `none — own functions are recorded from Python 3.12 on` |
 | `@@HEADER_READER@@` | The framework the reader was written for and whether Step 6 proved it (`Starlette / FastAPI — proven`), `none needed — the application receives no requests`, or `none — do not use the values switch` |
 | `@@BACKEND@@` | `Opik, project <name>`, `Langfuse`, or `none set` — never an address with credentials in it |
