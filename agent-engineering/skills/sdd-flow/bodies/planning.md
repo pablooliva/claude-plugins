@@ -28,7 +28,7 @@ Starting planning phase based on completed research.
 5. **Read the Tracing Inputs:**
    - Your prompt carries the line `Observability record: present` or `Observability record: absent` — whether this application has the tracing foundation. A prompt with no such line (a flow that began before tracing was part of the flow) is read as `absent`.
    - When it is `present`, your prompt also gives the path of the tracing standard (**TRACING**). Read its sections *What gets a span — the three traced kinds* and *Adding code to a traced application*: they define the three kinds of call you will mark in the planned call graph (Planning Process → *Planned call graph rules*).
-   - When it is `present`, your prompt also gives the path of the evals reference (**EVALS**). Read it only when evals are on for this spec (the table under `evals:`, Specification Frontmatter Fields) — then its §1, §2, and §6: the two kinds of eval, how a case is written, and what binds a case once it is written (Planning Process → *Eval rules*).
+   - When it is `present`, your prompt also gives the path of the evals reference (**EVALS**). Read it only when evals are on for this spec (the table under `evals:`, Specification Frontmatter Fields) — then its §1, §2, and §6: the two kinds of eval, how a case is written, and what binds a case once it is written (Planning Process → *Eval rules*). When your prompt has a `HARVEST:` line, read §2's *A case harvested from a real trace* whether evals are on or off (*Eval rules* → Harvested cases).
 
    **Read the Enforcement-Site Standard, §1 only:**
    - Your prompt gives **STANDARD** (`references/enforcement-sites.md` of this skill). Read its §1 and §1.1: what a **control** is (a rule the SPEC says must hold on every path — as opposed to a single happy-path behaviour), and the **control register** you write into the spec. Nothing else in that file concerns planning.
@@ -534,7 +534,7 @@ Steps 7 and 8 apply these when tracing is on for this spec (the table under `tra
 
 ### Eval rules (evals on only)
 
-Steps 5 and 8 apply these when evals are on for this spec (the table under `evals:` above). When they are off, write no `### Evals`, no `Sign-off:` line, and no `Evals:` line. EVALS is the definition — what an eval is, the two kinds, what a case must be; this section says only where each thing goes in the spec.
+Steps 5 and 8 apply these when evals are on for this spec (the table under `evals:` above). When they are off, write no `### Evals`, no `Sign-off:` line, and no `Evals:` line. One bullet applies either way: *Harvested cases*, whenever your prompt has a `HARVEST:` line. EVALS is the definition — what an eval is, the two kinds, what a case must be; this section says only where each thing goes in the spec.
 
 - **Find the requirements about what the model says.** Go through every entry with an ID — `REQ`, `PERF`, `SEC`, `UX`, `EDGE`, `FAIL`, and any other family the spec uses — and ask whether it can be shown true or false only by reading a real answer of the model: what the answer contains or leaves out, its form, its length, its language, a refusal, which tool the model chose. The family does not decide it: `PERF-001: an answer has at most 100 words` is one. A requirement about what the code does with an answer is an ordinary requirement with an ordinary test.
 - **Each one is met in one of the two ways EVALS §1 gives — all of it:** at least one hard eval, or a sign-off requirement with a judged eval, and between them every part of what the requirement promises. A hard eval on one part leaves the rest unmet until something checks it. Prefer hard, and split a requirement that is part rule and part judgement into a hard eval for the part and a judged one for the rest — the template's `REQ-005` is that case.
@@ -544,6 +544,7 @@ Steps 5 and 8 apply these when evals are on for this spec (the table under `eval
 - **Per-slice mode — assign every case to a slice** (step 8). Each `SLICE-XXX` entry gets an `Evals:` line. Every case of every eval is in exactly one slice's line: the first slice after which the application can pass it. Name a whole eval by its ID and part of one with its cases (`EVAL-003 (case 1)`). A slice that brings none writes `none`. From that slice on, every review runs the case again, so a case assigned too early fails a slice that could not have passed it.
 - **Whole-feature mode** has no slices and no `Evals:` lines; every case is run in the one code review.
 - **Tiered spec:** evals cover what this tier specifies. A deferred behaviour gets none.
+- **Harvested cases.** When your prompt has a `HARVEST:` line, it names harvest files (written by `/eval-harvest`) and the cases still open in each, by trace; the approved brief's `## Harvested eval cases` says what happens to each (EVALS §2, *A case harvested from a real trace*). **Adopt:** the case becomes a case of `### Evals` — its input, its "must contain" and "must not contain" or its rubric, and its kind exactly as the file has them. It goes under a requirement **of this spec** that states the behaviour the case's `Requirement` line describes — a requirement ID there belongs to the spec it names, not to this one, so go by the behaviour that line states in words, and when no requirement of this spec states it, state it as a new one first. Write `*(harvested: <the harvest file's path>, trace <id>)*` after the case's number. **Defer** or **drop**, and any case at all with evals off: write its line under `## Validation Strategy` in EVALS §2's form.
 - A feature with a model in it and no requirement about what the model says still gets the sub-section, with the single line `No requirement of this feature is about what the model says.`
 
 ## Deliverable Expectations
@@ -593,6 +594,7 @@ Before considering the specification complete:
 - [ ] Evals on: `### Evals` exists; every requirement about what the model says has a hard eval, or a judged eval and a `Sign-off:` line in the template's form; every case has its input written out in full; every hard case says what the output must and must not contain; every judged case has a rubric
 - [ ] Evals on, `delivery_mode: per-slice`: every slice has an `Evals:` line, and every case is in exactly one of them
 - [ ] Evals off: the spec has no `### Evals`, no `Sign-off:` line, and no `Evals:` line
+- [ ] Each case on the `HARVEST:` line: in `### Evals` marked `*(harvested: <path>, trace <id>)*` under a requirement of this spec, or a `deferred:`, `dropped:`, or `not adopted, evals off:` line under `## Validation Strategy` — as the brief's `## Harvested eval cases` says
 
 ---
 

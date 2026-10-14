@@ -253,36 +253,46 @@ def first_failure(found):
     return min(starts, key=_order) if starts else None
 
 
-def tree(found, content):
+def _in_tree_order(found):
+    """Every span once, as the call tree shows them: (span, depth), and how many come before the spans whose parents
+    form a loop."""
     children, ids = {}, {span["id"] for span in found}
     for span in found:
         parent = span.get("parent_span_id")
         children.setdefault(parent if parent in ids else None, []).append(span)
     for group in children.values():
         group.sort(key=_order)
-    rows, shown = [], set()
+    ordered, shown = [], set()
 
     def walk(span, depth):
         if span["id"] in shown:
             return
         shown.add(span["id"])
-        rows.append(_indent(_span_line(span, content), 2 * depth))
+        ordered.append((span, depth))
         for child in children.get(span["id"], []):
             walk(child, depth + 1)
 
     for root in children.get(None, []):
         walk(root, 0)
-    left = [span for span in sorted(found, key=_order) if span["id"] not in shown]
-    if left:
-        # Spans whose parents point at each other in a loop have no root to hang from; they are shown, not dropped.
-        rows.append(f"{len(left)} span(s) whose parents form a loop:")
-        for span in left:
-            walk(span, 1)
+    rooted = len(ordered)
+    # Spans whose parents point at each other in a loop have no root to hang from; they are shown, not dropped.
+    for span in sorted(found, key=_order):
+        walk(span, 1)
+    return ordered, rooted
+
+
+def tree(found, content):
+    ordered, rooted = _in_tree_order(found)
+    rows = [_indent(_span_line(span, content), 2 * depth) for span, depth in ordered[:rooted]]
+    if len(ordered) > rooted:
+        rows.append(f"{len(ordered) - rooted} span(s) whose parents form a loop:")
+        rows += [_indent(_span_line(span, content), 2 * depth) for span, depth in ordered[rooted:]]
     return rows
 
 
 def model_call(found):
-    calls = [span for span in found if span.get("type") == "llm"]
+    """The model calls in the order the call tree shows them, so the second one in the tree is the second one here."""
+    calls = [span for span, _ in _in_tree_order(found)[0] if span.get("type") == "llm"]
     return [{"model": span.get("model"), "messages": (span.get("input") or {}).get("messages"),
              "answer": (span.get("output") or {}).get("messages"), "failed": bool(span.get("error_info"))} for span in calls]
 

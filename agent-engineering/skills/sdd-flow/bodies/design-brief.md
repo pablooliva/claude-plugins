@@ -14,8 +14,9 @@ The design brief is the one planning document written for the human. They will r
 4. Accepted ADRs under `SDD/adr/` that the research cites — binding; cite them where they settle a decision.
 5. **TIERS** — the tier standard, at the path in your prompt. Read it before writing; it defines the tiers, the floor, the cut tests, and the tier plan's shape.
 6. **TIER_PLAN** — the tier plan, at the path in your prompt (`SDD/flow/TIERS-[feature-name].md`). If the file exists, this is a later-tier cycle: its Deferred table and Feedback notes are your starting point.
-7. **The observability line** — `Observability record: present` or `Observability record: absent` in your prompt: whether this application has the foundation that evals need. A prompt with no such line is read as `absent`. When it is `present`, your prompt also gives **EVALS**, the evals reference; read its §1 (the two kinds of eval) if rule 11 applies.
-8. **Revision runs:** inputs 1–7 again, plus the existing brief and the user's reply (verbatim in your prompt). On a re-plan, also the rolling ledger and the triggering retrospective.
+7. **The observability line** — `Observability record: present` or `Observability record: absent` in your prompt: whether this application has the foundation that evals need. A prompt with no such line is read as `absent`. When it is `present`, your prompt also gives **EVALS**, the evals reference; read its §1 (the two kinds of eval) if rule 11 applies, and §2's *A case harvested from a real trace* if rule 12 does.
+8. **HARVEST** — only when your prompt has a `HARVEST:` line: harvest files written by `/eval-harvest`, each with the cases still open in it, by trace. Read those cases only (rule 12).
+9. **Revision runs:** inputs 1–8 again, plus the existing brief and the user's reply (verbatim in your prompt). On a re-plan, also the rolling ledger and the triggering retrospective.
 
 ## Rules
 
@@ -30,6 +31,7 @@ The design brief is the one planning document written for the human. They will r
 9. **Later-tier cycles.** Open the brief with `## What we learned from Tier N`, from the tier plan's Feedback notes and the clarification document, and say which sketched or deferred items you kept, changed, or dropped. Everything else in the brief describes only what this tier adds.
 10. **Write the tier plan** at TIER_PLAN in the shape TIERS gives. On a first-tier cycle create it: the status table, `## Tier 1`, the Deferred table (one `DEFER-XXX` row per deferred behaviour, `Came from` = `proposal`), Removed, the sketches, and an empty Feedback section. On a later-tier cycle update it: this tier's row becomes `in progress`, its sketch is replaced by what it will do, rows this tier takes up leave the Deferred table, and the remaining rows and sketches are re-decided. Keep the status table exactly as TIERS shapes it — four columns, one row per tier, each row's first cell starting with the tier's number — because a script reads it to mirror the tiers to tasks. Leave the `Task` column as it is: that script fills it. Never delete Feedback notes.
 11. **Say how quality will be judged** — only when the observability line says `present` and the feature has a model in it: it adds or changes a call to a model, what a model is given, or what is done with a model's answer. Then the flow will check what the model really answers, and what counts as a good answer is the human's call. Write one Key decision, titled `How answer quality is judged`, in plain words: which behaviours a fixed rule will check on real answers — those block the work when they fail — and which need judgement — those are scored by a second model, and the scores and real answers are shown to the user at the final commit, where the user accepts or rejects them. Prefer a rule wherever one can decide (EVALS §1). Where the split turns on preference — how strict, what the user is willing to read and accept by hand — ask it as one of the five questions instead of deciding it. If the research or the clarification document says the user wants no such checks, write that under `## Not doing` and no decision. When the line says `absent`, or the feature has no model in it, the brief says nothing about any of this.
+12. **Settle every harvested case** — only when your prompt has a `HARVEST:` line. Each case it lists is adopted, deferred, or dropped by the rule in EVALS §2 (*A case harvested from a real trace*) — read it — and by no other reason: not cost, not effort, not doubt about the case; doubt is a question for the human (rule 4). A drop names the Key decision that changes the promise. Write `## Harvested eval cases` with one line per listed case, as the template shows, so the spec can follow it.
 
 ## Template
 
@@ -60,6 +62,12 @@ Based on: RESEARCH-[###]-[feature-name].md
 - **Instead of:** [the alternative rejected]
 - **Why:** [the evidence, citing research or an ADR]
 - **If this is wrong:** [cheap | moderate | expensive to reverse — and what reversing involves]
+
+## Harvested eval cases
+[Only when your prompt has a `HARVEST:` line; omit this section otherwise. One line per listed case — what went wrong, in a few words, then the outcome:]
+- [harvest file], trace [id] — [what went wrong]: **adopt**
+- [harvest file], trace [id] — [what went wrong]: **defer** to Tier [N] — [the behaviour it waits for]
+- [harvest file], trace [id] — [what went wrong]: **drop** — [the Key decision that changes the promise]
 
 ## What changes where
 | Area (path or path prefix) | New or changed | Size (S/M/L) | What changes |

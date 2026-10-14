@@ -2,7 +2,7 @@
 
 The one definition of evals in `sdd-flow`: what an eval is, how its cases are written, what the application holds for them, what the eval run does, what its results mean, how a review checks them, and how a person accepts what no rule can check. Every body and phase chapter that deals with evals reads this file and never restates it. The path reaches them as **EVALS** in their prompt. The templates it speaks of are in `templates/evals/` beside this folder — Python only, so far.
 
-It applies to a cycle whose `evals` gate is on. With the gate off none of it happens, and nothing here is read.
+It applies to a cycle whose `evals` gate is on. With the gate off none of it happens, and nothing here is read — except §2's *A case harvested from a real trace*, which planning reads whenever it is handed harvested cases, so that a case is not lost in a cycle that runs no eval.
 
 **Why this exists.** A test asks whether the code does the right thing with the model's answer. It gets that answer from a stand-in, because a test must be fast, free, and the same every time. So no test ever sees what the model really says — and "the summary is faithful to the source" or "the assistant leads the student to the result instead of stating it" is a requirement about exactly that. An eval puts a written example to the application for real and checks what comes back. It is slower than a test, it costs a model call, and it can come out differently twice running. Everything below follows from those three facts.
 
@@ -39,6 +39,21 @@ A case is one input and what must be true of the output. The cases are written *
 - **Few cases, each one earning its place.** Every case is run three times at every review (§4), and a judged case costs two model calls each time.
 
 **A behaviour the model shows only some of the time fails a hard case, and that is the point.** A hard case passes only when its check holds on every one of its runs. If the application leads the student to the result five times in seven and states it the other two, the case fails most reviews — correctly: the requirement is not met. The answer is to make the behaviour dependable or to change what is promised, never to loosen the check until it stops catching it.
+
+**A case harvested from a real trace.** `/eval-harvest` turns an answer a person marked as wrong in Opik into a proposed case: an invented stand-in with the same failure, approved by the user, written to `SDD/flow/HARVEST-[name]-[date].md` and named in the tier plan's `## Feedback`. Nothing runs it until a spec adopts it. Once adopted, it is a case like any other, with its harvest file and trace written after its number — `1. *(harvested: SDD/flow/HARVEST-….md, trace <id>)* **Input** — …` — under a requirement of the spec that adopts it.
+
+**Each harvested case is settled once, by the design brief of a cycle it is offered to.** The flow offers a cycle every harvested case that no other spec has adopted or dropped yet, case by case (`phases/planning.md`, **HARVEST**). The brief adopts each one, unless one of two reasons applies — and no other reason does:
+
+- **Defer it** — the behaviour it checks belongs to a later tier that this brief does not build. The spec writes `- deferred: <harvest file>, trace <id> — to Tier N` under `## Validation Strategy`, and the case is offered again to every later cycle until one adopts or drops it.
+- **Drop it** — this brief changes the promise the case checks, and names that change in one of its Key decisions, which the user approves at the design gate. The spec writes `- dropped: <harvest file>, trace <id> — <that decision, in a few words>` under `## Validation Strategy`, and the case is never offered again.
+
+An adopted case is settled by its marker. **When evals are off for the spec, nothing is adopted:** a case the brief would adopt gets `- not adopted, evals off: <harvest file>, trace <id>` under `## Validation Strategy` and stays open for a later cycle; a deferred or dropped one gets its line as above.
+
+One thing is still owed to it: nobody has seen it fail. A stand-in that the application passes without any change made for it does not reproduce what the person saw, and a fix "proven" by it proves nothing.
+
+- **The baseline run.** The work whose cases they are — a slice, a chunk, or the whole feature — builds its harvested cases first, as its evals step says (the cases, their examples, the set-up when nothing is there yet, `--self-test`, the tests), and makes one eval run before changing the application for any of them. That run is one of its three (§4).
+- **The record.** For each harvested case, one line under `## Test Implementation` in the IMPLEMENTATION-PLAN: `Harvested, before any change: EVAL-XXX case n failed` or `… passed` for a hard case; `… scored <the scores, lowest first>` for a judged one; `… not known — <the Result: line>` when the run gave no result.
+- **Only a hard case that `failed` is seen to fail.** A score never shows it (§1). Any other line is named in the cycle's completion announcement, and the user decides whether a later cycle rewrites the case or keeps it as a guard. The case itself is not changed or dropped for it: it is the spec's (§6).
 
 ## 3. What the application holds
 

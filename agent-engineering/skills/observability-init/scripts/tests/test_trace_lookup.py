@@ -224,6 +224,21 @@ class TraceLookupTest(unittest.TestCase):
         self.assertEqual(written["calls"][0]["answer"][0]["content"], "SECRET-ANSWER-TEXT")
         self.assertNotIn("SECRET", out)
 
+    def test_the_model_calls_are_written_in_the_order_the_tree_shows_them(self):
+        # Opik returns spans in no particular order; two calls to the same model can only be told apart by their place.
+        # The fake server reverses this list, so it serves the second call first.
+        def llm(span_id, start_ms, answer):
+            return dict(span(span_id, "chat demo-model", "t2-root", start_ms, start_ms + 10, kind="llm", model="demo-model",
+                             output={"messages": [{"role": "assistant", "content": answer}]}), trace_id="t-two")
+        SPANS["t-two"] = [llm("t2-first", 10, "FIRST"), dict(span("t2-root", "POST /ask", None, 0, 100), trace_id="t-two"),
+                          llm("t2-second", 50, "SECOND")]
+        self.addCleanup(SPANS.pop, "t-two")
+        target = self.root / "two.json"
+        code, out, _ = self.run_lookup("t-two", "--model-call", "--out", str(target))
+        self.assertEqual(code, 0)
+        answers = [call["answer"][0]["content"] for call in json.loads(target.read_text(encoding="utf-8"))["calls"]]
+        self.assertEqual(answers, ["FIRST", "SECOND"])
+
     def test_the_marks_a_person_left_are_printed_on_the_trace(self):
         SPANS["t-marked"] = [dict(span("m-root", "POST /ask"), trace_id="t-marked")]
         self.addCleanup(SPANS.pop, "t-marked")
