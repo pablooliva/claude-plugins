@@ -73,7 +73,11 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.13.1.
+Version 3.13.2.
+
+### What's new in 3.13.2
+
+- **The trace lookup reads the trace-specific backend settings.** The bootstrap module sends traces where `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and `OTEL_EXPORTER_OTLP_TRACES_HEADERS` say, when they are set, but the trace lookup read only the general `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS`. An application set up with only the trace-specific forms sent its traces, and the lookup then said no backend was set — or, with both forms set to different values, asked the wrong address or project. The lookup now reads the trace-specific form first, as the exporter does. An application installed earlier gets the fix when `/observability-init` is run on it again in audit mode, which compares `scripts/trace_lookup.py` with the current template and proposes the change.
 
 ### What's new in 3.13.1
 

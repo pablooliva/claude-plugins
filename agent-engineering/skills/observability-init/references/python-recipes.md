@@ -200,7 +200,7 @@ Goes in the project's scripts folder (`scripts/trace_lookup.py`). It uses the st
 | `@@ENV_FILE@@` | The env file the application reads its tracing settings from, as an expression from `ROOT`: `ROOT / ".env"`. `None` when it reads them from the environment only |
 | `@@TRACE_LOOKUP_COMMAND@@` | How to start it with the project's tool: `uv run python scripts/trace_lookup.py` |
 
-- It reads `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` from that file, then from the environment, which wins — as the bootstrap module does. The project is the header `projectName`.
+- It reads `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` from that file, then from the environment, which wins — as the bootstrap module does. Where `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` or `OTEL_EXPORTER_OTLP_TRACES_HEADERS` is set, it wins over the general one, as it does for the exporter. The project is the header `projectName`.
 - Opik's REST API is at the address of its OTLP endpoint with `/v1/private/otel` taken off (Backends, below). A trace is `GET …/v1/private/traces/<id>`; its spans `GET …/v1/private/spans?project_name=<name>&trace_id=<id>`.
 
 ## `OBSERVABILITY.md.template` — the record

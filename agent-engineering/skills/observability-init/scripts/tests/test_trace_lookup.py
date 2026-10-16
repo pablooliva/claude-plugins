@@ -383,6 +383,24 @@ class TraceLookupTest(unittest.TestCase):
         _, out, _ = self.run_lookup()
         self.assertIn("project demo:", out)
 
+    def test_the_trace_specific_settings_are_read_alone(self):
+        address = f"http://127.0.0.1:{self.server.server_port}/api/v1/private/otel/v1/traces"
+        (self.root / ".env").write_text(f"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT={address}\n"
+                                        "OTEL_EXPORTER_OTLP_TRACES_HEADERS=projectName=demo\n", encoding="utf-8")
+        code, out, _ = self.run_lookup()
+        self.assertEqual(code, 0)
+        self.assertIn("project demo:", out)
+
+    def test_the_trace_specific_settings_win_over_the_general_ones(self):
+        port = self.server.server_port
+        (self.root / ".env").write_text(f"OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:1/api/v1/private/otel\n"
+                                        "OTEL_EXPORTER_OTLP_HEADERS=projectName=other\n"
+                                        f"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:{port}/api/v1/private/otel/v1/traces\n"
+                                        "OTEL_EXPORTER_OTLP_TRACES_HEADERS=projectName=demo\n", encoding="utf-8")
+        code, out, _ = self.run_lookup()
+        self.assertEqual(code, 0)
+        self.assertIn("project demo:", out)
+
     def test_a_header_with_a_line_break_stops_without_its_value(self):
         self.env_file(f"http://127.0.0.1:{self.server.server_port}/api/v1/private/otel", "projectName=demo,Authorization=Bearer%0AKEY-12345")
         code, out, err = self.run_lookup()

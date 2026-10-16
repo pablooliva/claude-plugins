@@ -67,13 +67,16 @@ class Stop(Exception):
 def opik_source():
     """Opik's API address, the headers to send it, and the project — all from the application's own tracing settings."""
     values = _settings()
-    endpoint, marker = values.get("OTEL_EXPORTER_OTLP_ENDPOINT", ""), "/v1/private/otel"
+    # The trace-specific setting wins over the general one, as it does for the exporter that sends the traces.
+    endpoint = values.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or values.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    marker = "/v1/private/otel"
     if not endpoint:
-        raise Stop("No tracing backend is set (OTEL_EXPORTER_OTLP_ENDPOINT), so there are no traces to read.")
+        raise Stop("No tracing backend is set (OTEL_EXPORTER_OTLP_ENDPOINT or OTEL_EXPORTER_OTLP_TRACES_ENDPOINT), "
+                   "so there are no traces to read.")
     if marker not in endpoint:
         raise Stop("Traces go to a backend that is not Opik. This lookup reads Opik only; SDD/OBSERVABILITY.md names the backend.")
     headers, project = {}, ""
-    for part in values.get("OTEL_EXPORTER_OTLP_HEADERS", "").split(","):
+    for part in (values.get("OTEL_EXPORTER_OTLP_TRACES_HEADERS") or values.get("OTEL_EXPORTER_OTLP_HEADERS", "")).split(","):
         key, _, value = part.partition("=")
         if key.strip().lower() == "projectname":
             project = urllib.parse.unquote(value.strip())
