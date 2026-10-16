@@ -221,7 +221,7 @@ Rendered to `SDD/OBSERVABILITY.md`. Create `SDD/` if the repository has none.
 | `@@ENV_FILE_NAME@@` | The env file's name, e.g. `.env` |
 | `@@TRACED@@` | One bullet per traced kind: what gives each its span here (the framework option, the instrumentation line, the wrapper), and any kind this application does not have. One more bullet for own functions: recorded by the bootstrap module's hook, and how many function spans one typical request made in Step 6 |
 | `@@APPLICATION_RULES@@` | Each rule of the application's own that is stricter than the standard and how it is applied; each entry-point kind outside the entry-point test. `None.` when there are none |
-| `@@PROOF@@` | Step 6's results, one bullet each, including any that were not run and why |
+| `@@PROOF@@` | Step 6's results, one bullet each, including any that were not run and why. Name a check this skill ran from its own directory as the skill's — "the skill's span-file check (`observability-init/scripts/check-span-file.py`, in the agent-engineering plugin)" — never as a bare `scripts/…` path: later readers of the record look for that path in the application |
 
 ## Backends
 
@@ -234,7 +234,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://<host>:5173/api/v1/private/otel
 OTEL_EXPORTER_OTLP_HEADERS=projectName=<application>
 ```
 
-The project name is not a credential, and `scripts/check-span-file.py` does not treat it as one. To confirm a trace arrived, a few seconds after the process that sent it has exited:
+The project name is not a credential, and this skill's `scripts/check-span-file.py` does not treat it as one. To confirm a trace arrived, a few seconds after the process that sent it has exited:
 
 ```bash
 curl -s "http://<host>:5173/api/v1/private/traces?project_name=<application>&size=1"

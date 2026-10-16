@@ -73,7 +73,11 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.13.0.
+Version 3.13.1.
+
+### What's new in 3.13.1
+
+- **The observability record names the span-file check as the skill's.** `/observability-init` runs `check-span-file.py` from its own directory, but nothing said how to name it in the record's "Shown to work" lines, and the trial application's record named it `scripts/check-span-file.py`, as if it were in the application. A later `/sdd-flow` cycle then looked for it there, recorded it as missing, and the owner was asked to add a script that was never meant to exist. The record now names it as the skill's script, and audit mode proposes rewording such a line in a record written earlier — it never adds the script to the application.
 
 ### What's new in 3.13.0
 
