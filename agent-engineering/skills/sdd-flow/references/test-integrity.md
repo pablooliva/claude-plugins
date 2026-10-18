@@ -36,6 +36,8 @@ It has no gate: it runs in every cycle. Inputs, all from the prompt: **TEST_INTE
 
 Requirements that are **controls** are already proven site by site under the enforcement-site standard. T4 does not repeat that work for them; every other check applies to their tests as to any other.
 
+**The plugin's own files are not under this lens.** `evals/run.py` and the files `/observability-init` rendered are this plugin's code, tested where their templates are made (`references/enforcement-sites.md` §1, *Not sites*). No check here breaks a line of one or asks for a test of what it does by itself — that the eval run runs each case three times, reports an unreachable model, uploads, replaces secrets. The checks apply to the application's tests of the application's own code, `evals/task.py` and `evals/checks.py` included. A placeholder filled with code of the application's own is the application's code.
+
 ## 3. The checks
 
 Each check has an ID. Every finding names the test (`file::name`), the requirement, and the evidence.

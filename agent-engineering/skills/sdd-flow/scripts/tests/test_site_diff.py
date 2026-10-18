@@ -153,6 +153,56 @@ class NoGitCases(unittest.TestCase):
         self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
         self.assertIn("MEDIUM — EXTRA `D-10` at `src/cli/main.py` `main`", out)
 
+    # --- The plugin's own file (enforcement-sites.md §1) -------------------------------------
+
+    def test_rows_in_the_eval_run_are_set_aside_on_both_sides(self) -> None:
+        impl = inventory([impl_row("FAIL-002", "evals/task.py", "answer", "—"),
+                          impl_row("FAIL-002", "evals/run.py", "run_cases", "—"),
+                          impl_row("REQ-002", "evals/run.py", "upload", "—")])
+        blind = inventory([blind_row("FAIL-002", "evals/task.py", "answer"),
+                           blind_row("FAIL-002", "evals/run.py", "_broken"),
+                           blind_row("FAIL-002", "./evals/run.py", "main", kind="gap")])
+        code, line, out = run_diff(self.dir, impl, blind, "FEATURE")
+        self.assertEqual((code, line), (0, "Result: MATCH"))
+        self.assertIn("- **Set aside, the plugin's own file** (`references/enforcement-sites.md` §1): "
+                      "`evals/run.py` — 2 implementer row(s), 2 blind count row(s); not compared", out)
+        self.assertNotIn("REQ-002", out.split("## Per-Control Outcome")[1])
+        self.assertNotIn("GAP", out)
+
+    def test_a_control_counted_only_in_the_eval_run_is_still_counted(self) -> None:
+        """Not UNCOUNTED: the blind count did count it; it found no site in the application's own code."""
+        impl = inventory([impl_row("REQ-002", "evals/task.py", "judge", "—")])
+        blind = inventory([blind_row("REQ-002", "evals/run.py", "upload")])
+        code, line, out = run_diff(self.dir, impl, blind, "FEATURE")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("| REQ-002 | 1 | 0 | EXTRA |", out)
+        self.assertNotIn("UNCOUNTED", out)
+
+    def test_a_declared_scope_in_the_eval_run_is_dropped_at_feature_scope(self) -> None:
+        impl = inventory([impl_row("FAIL-002", "evals/task.py", "answer", "—")])
+        blind = inventory([blind_row("FAIL-002", "evals/task.py", "answer")],
+                          declared=[("FAIL-002", "evals/run.py", "*")])
+        code, line, out = run_diff(self.dir, impl, blind, "FEATURE")
+        self.assertEqual((code, line), (0, "Result: MATCH"))
+        self.assertNotIn("PARTIAL COUNT", out)
+
+    def test_a_declared_scope_in_the_eval_run_is_dropped_at_slice_scope(self) -> None:
+        """Only the eval run declared: the control counts as counted in full, not with its application rows set aside."""
+        impl = inventory([impl_row("FAIL-002", "evals/task.py", "answer", "SLICE-002")])
+        blind = inventory([], declared=[("FAIL-002", "evals/run.py", "*")])
+        code, line, out = run_diff(self.dir, impl, blind, "SLICE-002")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (0 HIGH, 1 MEDIUM)"))
+        self.assertIn("| FAIL-002 | 1 | 0 | EXTRA |", out)
+        self.assertNotIn("OUT-OF-SCOPE", out)
+        self.assertNotIn("UNCOUNTED", out)
+
+    def test_other_files_under_evals_are_compared(self) -> None:
+        impl = inventory([])
+        blind = inventory([blind_row("REQ-005", "evals/checks.py", "leaks")])
+        code, line, out = run_diff(self.dir, impl, blind, "FEATURE")
+        self.assertEqual((code, line), (1, "Result: MISMATCH (1 HIGH, 0 MEDIUM)"))
+        self.assertNotIn("Set aside", out)
+
     # --- Presence, not row count ------------------------------------------------------------
 
     def test_more_blind_rows_at_a_listed_key_is_not_a_finding(self) -> None:

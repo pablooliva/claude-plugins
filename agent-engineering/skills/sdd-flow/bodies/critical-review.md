@@ -282,6 +282,8 @@ Your prompt carries the line `evals: on` or `evals: off` — whether the flow wi
 
 If reviewing implementation work (spec files, prompts, or actual code):
 
+**Not this feature's code: the plugin's own files.** `evals/run.py` and the files `/observability-init` rendered are this plugin's, tested where their templates are made; the checks below are not asked of them, and a missing test of what one does by itself is no finding (TEST_INTEGRITY, *The plugin's own files*). If you believe one of them is wrong, that is a fault of the plugin, not of this feature: write it under Critical Questions for the user, with the file and line, never as a finding a fixer would act on. A plugin file changed beyond its placeholders is the exception — that change is this feature's, and a finding.
+
 ### Specification Deviation
 
 - [ ] **Unspecified behaviors** - What was implemented that isn't in the spec?

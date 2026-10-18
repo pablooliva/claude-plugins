@@ -228,7 +228,7 @@ Two groups of cases are in scope, and "a case in scope" below means a case of ei
 | 6 | The check passed an output that breaks the part of the requirement its eval checks | HIGH |
 | 7 | `evals/task.py` does not go through the application's own code, replaces the model, or turns an unreachable model into an answer | HIGH |
 | 8 | The application was taught a case: a branch on a case's input, or an instruction to the model that names one | HIGH |
-| 9 | `evals/run.py` differs from its template in more than the three placeholders | HIGH |
+| 9 | `evals/run.py` differs from its template in more than the three placeholders — resolved by restoring the template, never by testing the change (`references/enforcement-sites.md` §1, *Not sites*) | HIGH |
 | 10 | The eval run line counts one or more replaced secrets | HIGH |
 | 11 | A judged case in scope has a run with no score — the person who accepts its requirement would be reading less than the run was meant to give | HIGH |
 | 12 | The test of the cases and checks against their own examples is not among the application's ordinary tests, or does not pass | HIGH |

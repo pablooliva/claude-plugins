@@ -37,6 +37,12 @@ scope, implementer rows outside it are set aside as OUT-OF-SCOPE-BY-DECLARED-SCO
 (LOW if carried, MEDIUM otherwise). At FEATURE scope a declaration is itself a
 MEDIUM finding and the comparison stays complete.
 
+Rows of either side in `evals/run.py` are set aside before anything is compared:
+that file is the plugin's eval run, rendered from its template, and none of its
+lines is an enforcement site (`references/enforcement-sites.md` §1). The header
+says how many were set aside. A control the blind count counted only there is
+still a control it counted.
+
 Exit status: 0 = MATCH, 1 = MISMATCH, 2 = usage or input error.
 Deterministic: no judgment, no network, stdlib only (plus local `git` with --base).
 """
@@ -60,6 +66,7 @@ SCOPE_COLUMNS = ["control", "file", "symbol"]
 SCOPE_RE = re.compile(r"^(SLICE-\d{3}[a-z]?|FEATURE)$")
 CELL_SPLIT = re.compile(r"(?<!\\)\|")  # split on | not preceded by a backslash
 MD_ESCAPE = re.compile(r"\\([\\<>_*`\[\]#])")
+PLUGIN_FILES = ("evals/run.py",)  # enforcement-sites.md §1: the plugin's own files, never sites
 HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
 Key = tuple[str, str, str]
@@ -275,6 +282,13 @@ def main() -> None:
                     if rows is not declared_rows:
                         folded[(side, r["control"], target)] += 1
                     r["control"] = target
+    blind_counted = {r["control"] for r in blind} | {d["control"] for d in declared_rows}
+    set_aside: Counter[tuple[str, str]] = Counter()  # (side, file)
+    declared_rows = [d for d in declared_rows if d["file"] not in PLUGIN_FILES]  # never a scope worth declaring
+    for side, rows in (("implementer", impl), ("blind count", blind)):
+        for r in [r for r in rows if r["file"] in PLUGIN_FILES]:
+            set_aside[(side, r["file"])] += 1
+            rows.remove(r)
     declared: dict[str, list[dict[str, Any]]] = {}
     for d in declared_rows:
         declared.setdefault(d["control"], []).append(d)
@@ -283,7 +297,7 @@ def main() -> None:
     def carried(k: Key) -> bool:
         return changes is not None and not changes.changed(k[1], k[2])
 
-    blind_controls = {r["control"] for r in blind} | set(declared)
+    blind_controls = blind_counted
     if feature:
         in_scope = blind_controls | {r["control"] for r in impl}
     else:
@@ -395,6 +409,13 @@ def main() -> None:
         if register[1]:
             register_lines.append("  - Register rows ignored (`Filed under` does not name a control filed under "
                                   "itself): " + ", ".join(f"`{i}`" for i in register[1]))
+    set_aside_lines = [
+        f"- **Set aside, the plugin's own file** (`references/enforcement-sites.md` §1): `{f}` — "
+        + ", ".join(f"{set_aside[(side, f)]} {side} row(s)" for side in ("implementer", "blind count")
+                    if set_aside[(side, f)])
+        + "; not compared"
+        for f in PLUGIN_FILES if set_aside[("implementer", f)] or set_aside[("blind count", f)]
+    ]
     out = [
         f"Result: {result}",
         "",
@@ -404,6 +425,7 @@ def main() -> None:
         f"- **Blind count:** `{a.blind}`",
         f"- **Base:** `{a.base}`" if a.base else "- **Base:** none given — every key compared as owned",
         *register_lines,
+        *set_aside_lines,
         "- **Rules:** `references/enforcement-sites.md` §6",
         "",
         "## Per-Control Outcome",
