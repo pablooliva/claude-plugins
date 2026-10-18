@@ -14,6 +14,7 @@ The review steps that go to the second model are these — at least one for each
 |---|---|---|---|
 | 2c | Research critical review | `bodies/critical-review.md` | `sdd-critical-reviewer.md` |
 | 3d | Spec critical review | `bodies/critical-review.md` | `sdd-critical-reviewer.md` |
+| 3e.5 | Check of the spec fix | `bodies/critical-review.md`, `FIX CHECK` | `sdd-critical-reviewer.md` |
 | 4b | Code review (whole-feature) | `bodies/code-review.md` | `sdd-workhorse.md` |
 | per-slice 4b | Slice review | `bodies/slice-review.md` | `sdd-workhorse.md` |
 | 4d | Implementation critical review | `bodies/critical-review.md` | `sdd-critical-reviewer.md` |

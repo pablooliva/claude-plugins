@@ -73,7 +73,14 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.14.2.
+Version 3.14.3.
+
+### What's new in 3.14.3
+
+Two planning gaps found by the trial application's Tier 2 cycle.
+
+- **The spec fix is checked.** After the spec's critical review, a fix step (3e) changes the spec, and until now nothing read those changes before they were committed — in the trial, a fix that resolved a HIGH finding went in unreviewed. A new step, 3e.5, has the cycle's reviewer check each HIGH and MEDIUM finding against the fix and read the changed passages for anything the fix broke. Anything still open gets one more fix and one more check; if it is still open then, the flow stops for you to fix the spec by hand.
+- **A design brief never promises an acceptance with no judged eval.** In the trial the brief promised that the owner would read and accept the new hints, with no judged eval behind it; the spec review rated that HIGH only after the brief was approved, which forced the stop at the deviation check. The brief's rule now says what you read and accept always has a judged eval behind it, and a reading by hand with nothing scoring it is a manual check, not an acceptance.
 
 ### What's new in 3.14.2
 

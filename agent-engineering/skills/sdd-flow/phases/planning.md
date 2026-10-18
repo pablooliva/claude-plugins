@@ -279,6 +279,21 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 
 ---
 
+## 3e.5. Check the Spec Fix
+
+3e changed the spec after both reviews read it, and nothing has read those changes. Run one check by the cycle's **review route** (`references/second-model-review.md`; on the Claude route an **`agent-engineering:sdd-critical-reviewer`** subagent, Opus):
+- **Body:** `bodies/critical-review.md` — its **Fix Check** section, with the line `FIX CHECK` in the prompt.
+- **Inputs:** the same as 3d, plus `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md` and the PANEL-SPEC, each with its `Findings Addressed`.
+- **Outputs:** a `## Fix Check` section appended to the CRITICAL-SPEC document.
+- **Then** the orchestrator appends `## Spec Fix Check - CONFIRMED` or `## Spec Fix Check - OPEN (<h> HIGH, <m> MEDIUM)` to `progress.md`, from the section's first line (on the second-model route only after the run's `## Review Route` line).
+  - **`CONFIRMED`** → 3f.
+  - **`OPEN`, first time** → one more 3e fix spawn, given the `## Fix Check` section as its findings, then this check once more.
+  - **`OPEN` again** → halt as 3c does on halt: leave everything in place, append `### Spec Fix Check Halt` with the open counts to `progress.md`, do not commit, and tell the user (both modes) that the spec fix left [h] HIGH / [m] MEDIUM open, with the CRITICAL-SPEC path, and that `/sdd-flow continue` re-runs this check over the spec as they left it.
+
+A LOW finding of the check is recorded in the section and does not hold the spec.
+
+---
+
 ## 3f. Commit Planning Artifacts
 
 The **orchestrator** runs the commit per `commands/commit.md` — no co-author attribution. Include the design brief, the tier plan, and every ADR change made since the research commit — the records written on approval at the design gate (2.5b) and those written in 3b, with the `SDD/adr/README.md` index and any superseded record edited along the way.
@@ -289,7 +304,7 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Pr
 
 ## 3g. Deviation Check and Transition
 
-The spec was rewritten up to three times after the brief was approved (3a, the 3c loop, 3e). Before any code is written, check whether it is still what the user agreed to.
+The spec was rewritten up to four times after the brief was approved (3a, the 3c loop, 3e, and 3e.5's one further fix). Before any code is written, check whether it is still what the user agreed to.
 
 Read the spec's `## Deviations from Design Brief` with the same body contract the re-planning matcher uses (`phases/implementation-per-slice.md` → 4c.5): take the first non-empty line of the section's body.
 

@@ -66,7 +66,8 @@ flowchart TD
     s3c -- "findings" --> fix3("fix the spec, re-run the panel<br/>at most 3 rounds")
     fix3 --> s3c
     fix3 -- "no progress" --> halt3["STOP — panel halt<br/>you fix the spec by hand"]:::stop
-    s3c -- "proceed" --> s3d("3d critical review of the spec<br/>3e fix all findings")
+    s3c -- "proceed" --> s3d("3d critical review of the spec<br/>3e fix all findings<br/>3e.5 check the fix")
+    s3d -- "still open after one more fix" --> halt3e["STOP — fix-check halt<br/>you fix the spec by hand"]:::stop
     s3d --> c3["3f commit planning"]:::orch
     c3 --> s3g{"3g — does the spec depart<br/>from the approved brief?"}
     s3g -- "yes" --> dev["STOP in both modes<br/>deviations shown, you accept or edit"]:::stop
@@ -146,6 +147,7 @@ flowchart TD
 | Slicing not practical (3a) | stops | stops | The spec asked for slices, and no meaningful ones exist. Fall back to building it whole, or point at a slice boundary and retry — either way planning carries on from the spec check, with every review |
 | Tracing or evals asked for and not possible (3c) | stops | stops | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the cycle started, or one of the two fields holds a value other than `auto`, `true`, `false`. You change the field in the spec; nothing is reviewed until you do. It cannot fire with both fields left at `auto` |
 | Panel halt (3c) | stops | stops | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
+| Fix-check halt (3e.5) | stops | stops | The check after the spec fix still found a HIGH or MEDIUM finding open after one more fix. You fix the spec by hand |
 | Deviation check (3g) | stops if deviations | stops if deviations | The spec is no longer what you approved |
 | Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. A difference in how a site is filed, a missed site a test already proves, or a site of a rule that is not a security rule that no test proves (recorded for you instead), is not a finding and cannot cause this stop. You resolve the findings; `continue` re-counts and re-reviews the slice |
 | Slice pause | stops | stops | Review each slice while it is small. Off with `--skip-slice-checkpoints` |

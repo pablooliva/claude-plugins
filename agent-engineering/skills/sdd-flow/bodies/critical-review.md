@@ -218,6 +218,12 @@ Your prompt carries the line `evals: on` or `evals: off` — whether the flow wi
 - [ ] **Unclear dependencies** - What external factors could block this?
 - [ ] **Risk underestimation** - Which RISK-XXX items are more severe than stated?
 
+### Fix Check (only when your prompt says `FIX CHECK`)
+
+The spec was fixed after the reviews you are given. Do not review the whole spec again. For every HIGH and MEDIUM finding in the CRITICAL-SPEC and PANEL-SPEC documents, read its `Findings Addressed` entry and the spec text it cites, and decide: **resolved** (the spec now says what the finding asked for, and the change is a real edit — or, for a finding that something is *missing*, a deferral to a later tier that the brief and tier rules for spec fixes allow: the scope was absent, nothing the floor protects is deferred, and a case this tier can reach has its `FAIL-` entry), or **open** (no edit, an edit that does not answer it, or one that only moves the problem). Then read each changed passage once against the approved brief, the rest of the spec, and the gate blocks above that apply (Control Register; Evals with `evals: on`; Planned Call Graph with `tracing: on`): a contradiction, or a broken rule, that the fix introduced is a new finding, rated as in §3.
+
+Append `## Fix Check` to the CRITICAL-SPEC document. Its first line is exactly `CONFIRMED` (nothing HIGH or MEDIUM open or new) or `OPEN (<h> HIGH, <m> MEDIUM)`; then one line per finding checked — its ID, resolved or open, and why in one clause — and the new findings. Write nothing else.
+
 ### Critical Questions
 
 1. What will cause arguments during implementation due to spec ambiguity?

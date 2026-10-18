@@ -175,7 +175,7 @@ The mirror never halts the flow and is never skipped without the user being told
 
 ### Second-Model Review (who runs a review)
 
-**A review is run by a different model family than wrote what it reviews.** Everything a cycle produces is written by Claude subagents, and a Claude reviewer shares their blind spots, so each of these review steps — 2c, 3d, 4b, the slice review, 4d, and the 4e.5 verification — is given to a second model through its command-line agent: the Codex CLI by default, OpenCode when the user names it with a model. `references/second-model-review.md` is the one definition: the list of review steps (and why the 3c specialist panel is not on it — it stays on Claude subagents, with 3d as the spec's second-model review), how the reviewer is settled at Step 0 and recorded as `Reviewer: …`, the preamble every second-model prompt starts with, the call to `scripts/second-model-review.py`, and what to do with each result. Read it at Step 0 and before the first review step; the phase chapters point to it and never restate it.
+**A review is run by a different model family than wrote what it reviews.** Everything a cycle produces is written by Claude subagents, and a Claude reviewer shares their blind spots, so each of these review steps — 2c, 3d, the 3e.5 check of the spec fix, 4b, the slice review, 4d, and the 4e.5 verification — is given to a second model through its command-line agent: the Codex CLI by default, OpenCode when the user names it with a model. `references/second-model-review.md` is the one definition: the list of review steps (and why the 3c specialist panel is not on it — it stays on Claude subagents, with 3d as the spec's second-model review), how the reviewer is settled at Step 0 and recorded as `Reviewer: …`, the preamble every second-model prompt starts with, the call to `scripts/second-model-review.py`, and what to do with each result. Read it at Step 0 and before the first review step; the phase chapters point to it and never restate it.
 
 Three things hold whichever model reviews, and an edit to a review step is checked against them:
 
@@ -221,7 +221,7 @@ Routing of every writing and fixing step is carried by **shipped agent frontmatt
 | Each panel specialist (Stage 1) with a shipped agent — `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
 | Any other panel value — today `accessibility`, `privacy`, `cost` | `agent-engineering:sdd-workhorse`, with `bodies/panel-specialist.md` and the panel value | sonnet |
 | Panel synthesis (Stage 2) | `agent-engineering:sdd-critical-reviewer` | opus |
-| Research/spec/impl critical review — **Claude route** | `agent-engineering:sdd-critical-reviewer` | opus |
+| Research/spec/impl critical review, and the 3e.5 check of the spec fix — **Claude route** | `agent-engineering:sdd-critical-reviewer` | opus |
 | Design brief — first draft and every revision (2.5a, 2.5c) | `agent-engineering:sdd-workhorse` | **opus**, by per-spawn override — the one planning document a person reads |
 | The successor of any step above after a Mid-Phase Handoff (`bodies/continue.md`) | the agent type that step's row gives, with that row's override | that step's model — a critical review, a panel synthesis, or a design brief is finished on Opus |
 
