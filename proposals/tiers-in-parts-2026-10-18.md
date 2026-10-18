@@ -1,6 +1,6 @@
 # A Tier Delivered in Parts
 
-**Status:** Approved 2026-10-18, not implemented. Planned as agent-engineering 3.15.0. The next-tier cycle on the trial application `hint-tutor-mini` has run (3.14.0 tried alone first), so the build is unblocked; one open point from that run is at the end.
+**Status:** Approved 2026-10-18, not implemented. Planned as agent-engineering 3.15.0. The next-tier cycle on the trial application `hint-tutor-mini` has run (3.14.0 tried alone first), so the build is unblocked; one change from that run is at the end.
 **Date:** 2026-10-18
 **Task:** `CLAUDEPLUG-13` — sdd-flow: allow more than three tiers, or a tier delivered in parts.
 **Affects:** `agent-engineering/` plugin — the tier standard (`simplicity-challenge/references/tiers.md`), `sdd-flow` (phase files, bodies, `SKILL.md`, `scripts/tier-mirror.py`), `commands/research-clarify.md`. The `sdd/` plugin is frozen at 2.2.0 and is not touched.
@@ -65,7 +65,7 @@ Each batch: a Codex review until "No findings", the test suite run, and a checkp
 ## Decided (2026-10-18)
 
 1. Parts of a tier, as above — not N ordered tiers.
-2. On a next-tier cycle the scope assessment writes the part rows and sections straight into the tier plan; the decomposition file keeps only its rationale and dependency map.
+2. The tier plan is the one record of parts (rows and `## Tier 2B` sections); a decomposition file keeps only its rationale and dependency map. **Changed the same day** (see below): on a next-tier cycle the design brief, not Step 0's scope assessment, splits the tier.
 
 ## Found after approval (2026-10-18): the scope check splits before the brief cuts
 
@@ -75,4 +75,4 @@ The Tier 2 cycle of the trial application hint-tutor-mini (agent-engineering 3.1
 - The owner overrode the split. The design brief then cut Tier 2 to one prompt sentence and one eval case, and moved the rest to Tier 3. The split had sized work the brief was about to remove.
 - The split's items were plain `/sdd-flow` tasks, with no way back into the next-tier cycle (what this proposal fixes), and the scope subagent wrote "orchestrator picks F1" in `progress.md` although the stop is unconditional.
 
-So decision 2 needs one change before the build: on a next-tier cycle the scope assessment should not split ahead of the brief. Recommended: on a next-tier cycle, Step 0 skips the split; the design brief, which cuts the tier first, plans the tier in parts when what it keeps is still too big, and writes the part rows (already allowed above). The scope subagent's misstated stop is fixed in the same batch. **Open — for the owner to confirm before batch 3.**
+So decision 2 needs one change before the build: on a next-tier cycle the scope assessment should not split ahead of the brief. Recommended: on a next-tier cycle, Step 0 skips the split; the design brief, which cuts the tier first, plans the tier in parts when what it keeps is still too big, and writes the part rows (already allowed above). The scope subagent's misstated stop is fixed in the same batch. **Decided by the owner, 2026-10-18.** The "When parts are written" bullet above is read with this change: on a next-tier cycle only the brief writes part rows.
