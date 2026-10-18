@@ -44,6 +44,7 @@ for line in sys.stdin.read().splitlines():
         import time; time.sleep(60)
     elif verb == "EXIT":
         sys.exit(int(rest))
+out.with_name("argv.txt").write_text(" ".join(args))
 out.write_text(final)
 '''
 
@@ -267,6 +268,38 @@ class SecondModelReviewTest(unittest.TestCase):
         self.assertEqual(status, 0, line)
         returned = self.repo / "SDD" / "orchestration" / "reviewer-calls" / "4b-1.return.md"
         self.assertIn("model=litellm/some-model", returned.read_text())
+
+    def argv(self) -> str:
+        """The arguments the fake codex was started with."""
+        return (self.repo / "SDD" / "orchestration" / "reviewer-calls" / "argv.txt").read_text()
+
+    def test_run_gives_codex_network_access_by_default(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        status, line = self.review("WRITE SDD/reviews/REVIEW.md")
+        self.assertEqual(status, 0, line)
+        self.assertIn("-c sandbox_workspace_write.network_access=true", self.argv())
+
+    def test_run_keeps_the_network_closed_for_nonet(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        status, line = self.review("WRITE SDD/reviews/REVIEW.md", reviewer="codex:nonet")
+        self.assertEqual(status, 0, line)
+        self.assertIn("codex:nonet reviewed", line)
+        self.assertIn("-c sandbox_workspace_write.network_access=false", self.argv())
+        self.assertNotIn("network_access=true", self.argv())
+        self.assertNotIn(" -m ", self.argv())
+        status, line = self.review("WRITE SDD/reviews/REVIEW.md", reviewer="codex:gpt-x:nonet")
+        self.assertEqual(status, 0, line)
+        self.assertIn("-m gpt-x", self.argv())
+        self.assertIn("network_access=false", self.argv())
+
+    def test_resolve_keeps_nonet_and_refuses_it_for_opencode(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        self.install("opencode", FAKE_OPENCODE)
+        self.assertEqual(self.call("resolve", "--reviewer", "codex:nonet"), (0, "Result: codex:nonet"))
+        self.assertEqual(self.call("resolve", "--reviewer", "codex:gpt-x:nonet"), (0, "Result: codex:gpt-x:nonet"))
+        status, line = self.call("resolve", "--reviewer", "opencode:litellm/m:nonet")
+        self.assertEqual(status, 2)
+        self.assertIn("codex only", line)
 
     def test_run_refuses_the_claude_reviewer(self) -> None:
         status, line = self.review("anything", reviewer="claude")

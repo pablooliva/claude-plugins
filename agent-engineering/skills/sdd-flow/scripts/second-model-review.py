@@ -13,6 +13,8 @@ script is the one place that knows how each reviewer's CLI is called.
 A reviewer spec is one of:
     codex                   the `codex` CLI with its configured model
     codex:<model>           the `codex` CLI with that model
+    codex:nonet, codex:<model>:nonet
+                            the same, with the sandbox's network kept closed
     opencode:<provider/model>   the `opencode` CLI — the model must be named,
                             because opencode's default may be a Claude model
     claude                  no second model: the caller uses its Claude reviewer
@@ -35,6 +37,11 @@ and `<name>.return.md` (the reviewer's final message). The run counts only if:
 A status line `REVIEW: HANDOFF` is neither a pass nor a failure: the reviewer hit
 its read limit and wrote a compaction file, and the caller continues the review
 (exit 4; the `--expect` files are not checked).
+
+Codex runs in its `workspace-write` sandbox with network access on
+(`-c sandbox_workspace_write.network_access=true`), so a test suite that opens
+a local port or calls a local service can run; `:nonet` turns it off
+(`...=false`, whatever the user's Codex configuration says).
 
 A review changes no code. Before the run the script records the working tree
 (every tracked and untracked, non-ignored file) as a git tree object, without
@@ -73,6 +80,9 @@ COMPLETE = "REVIEW: COMPLETE"
 HANDOFF = "REVIEW: HANDOFF"
 CLAUDE_NAMES = ("claude", "anthropic")
 KEPT_DIR = "SDD"
+NONET = "nonet"
+NETWORK_ON = "sandbox_workspace_write.network_access=true"
+NETWORK_OFF = "sandbox_workspace_write.network_access=false"
 
 
 class InputError(Exception):
@@ -91,19 +101,29 @@ class GuardError(Exception):
     """The working tree could not be recorded or put back."""
 
 
-def parse_spec(spec: str) -> tuple[str, str]:
-    """Return (cli, model); model is '' when the CLI's own default is used."""
+def parse_spec(spec: str) -> tuple[str, str, bool]:
+    """Return (cli, model, closed); model is '' when the CLI's own default is used,
+    closed is True when the spec asks for codex's sandbox with no network (`:nonet`)."""
     cli, _, model = spec.strip().partition(":")
     cli, model = cli.strip().lower(), model.strip()
-    if cli == "claude" and not model:
-        return cli, ""
+    closed = model == NONET or model.endswith(":" + NONET)
+    if closed:
+        model = model[: -len(NONET)].rstrip(":").strip()
+    if cli == "claude" and not model and not closed:
+        return cli, "", False
     if cli not in ("codex", "opencode"):
-        raise InputError(f"unknown reviewer '{spec}' — use codex, codex:<model>, opencode:<provider/model>, or claude")
+        raise InputError(f"unknown reviewer '{spec}' — use codex, codex:<model>, codex:nonet, opencode:<provider/model>, or claude")
+    if cli == "opencode" and closed:
+        raise InputError("opencode has no sandbox to keep closed — `:nonet` is for codex only")
     if cli == "opencode" and not model:
         raise InputError("opencode needs a model — opencode:<provider/model>")
     if any(name in model.lower() for name in CLAUDE_NAMES):
         raise InputError(f"'{model}' is a Claude model — the reviewer must be a different model family")
-    return cli, model
+    return cli, model, closed
+
+
+def spec_label(cli: str, model: str, closed: bool) -> str:
+    return ":".join([cli] + ([model] if model else []) + ([NONET] if closed else []))
 
 
 def resolve(arg: str | None) -> tuple[str, int]:
@@ -112,19 +132,20 @@ def resolve(arg: str | None) -> tuple[str, int]:
         if shutil.which("codex"):
             return "codex", 0
         return "claude (fallback — no reviewer was set and the codex CLI is not on PATH)", 3
-    cli, model = parse_spec(spec)
+    cli, model, closed = parse_spec(spec)
     if cli == "claude":
         return "claude (chosen)", 3
     if not shutil.which(cli):
         return f"claude (fallback — the {cli} CLI is not on PATH)", 3
-    return f"{cli}:{model}" if model else cli, 0
+    return spec_label(cli, model, closed), 0
 
 
-def command(cli: str, model: str, cwd: Path, return_file: Path, prompt: str) -> tuple[list[str], str | None]:
+def command(cli: str, model: str, closed: bool, cwd: Path, return_file: Path, prompt: str) -> tuple[list[str], str | None]:
     """Return (argv, stdin text). codex takes the prompt on stdin, opencode as an argument."""
     extra = shlex.split(os.environ.get("SDD_FLOW_REVIEWER_ARGS", ""))
     if cli == "codex":
         argv = ["codex", "exec", "-s", "workspace-write", "-C", str(cwd), "-o", str(return_file)]
+        argv += ["-c", NETWORK_OFF if closed else NETWORK_ON]  # explicit both ways: a config file may set either
         if model:
             argv += ["-m", model]
         return argv + extra + ["-"], prompt
@@ -207,7 +228,7 @@ def stop_group(proc: subprocess.Popen[str]) -> None:
 
 
 def run(args: argparse.Namespace) -> tuple[str, int]:
-    cli, model = parse_spec(args.reviewer)
+    cli, model, closed = parse_spec(args.reviewer)
     if cli == "claude":
         raise InputError("`run` needs a second-model reviewer; the Claude reviewer is spawned by the orchestrator")
     prompt_file, cwd = Path(args.prompt_file).resolve(), Path(args.cwd).resolve()
@@ -219,10 +240,10 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
     log_file = prompt_file.with_name(f"{stem}.log")
     return_file = prompt_file.with_name(f"{stem}.return.md")
     return_file.unlink(missing_ok=True)
-    label = f"{cli}:{model}" if model else cli
+    label = spec_label(cli, model, closed)
     expected = [Path(p) if os.path.isabs(p) else cwd / p for p in args.expect]
     stamps = {p: p.stat().st_mtime_ns if p.is_file() else None for p in expected}
-    argv, stdin = command(cli, model, cwd, return_file, prompt_file.read_text())
+    argv, stdin = command(cli, model, closed, cwd, return_file, prompt_file.read_text())
 
     with tempfile.TemporaryDirectory() as tmp:
         scratch = Path(tmp)

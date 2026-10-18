@@ -195,6 +195,8 @@ Rotation is **orchestrator-only**, happens only between spawns (never mid-subage
 
 ### Subagent Safety-Net Rule (embed verbatim in every phase-execution, fix, and continuation prompt)
 
+A review run on the second model carries none of it — no rule, counter file, or compact path (`references/second-model-review.md` §3): the reviewer's CLI manages its own context.
+
 > **Bail-out trigger (a trigger, not a budget to spend):** you have Read more than **15** files (implementation chunks: more than **20**).
 >
 > **When it fires, stop immediately.** Read the compact-body path given in your prompt (under "Compact instructions — use only if the Safety-Net trips") and follow it: write `SDD/orchestration/compacted/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `progress.md` with the compaction file path and where you left off, and return ≤100 words stating a Mid-Phase Handoff is required.
@@ -209,7 +211,7 @@ Every spawn prompt includes: (1) the **absolute body path** `SKILL_ROOT/bodies/<
 
 ## Model Routing
 
-Routing of every writing and fixing step is carried by **shipped agent frontmatter** — no runtime model switching. The orchestrator MAY escalate a single spawn via the Agent tool's per-spawn model override. Review steps go to the cycle's second-model reviewer first (Second-Model Review above); the agent types this table gives for them are the **Claude route**, used when the cycle has no second model or a second-model run failed twice.
+Routing of every writing and fixing step is carried by **shipped agent frontmatter** — no runtime model switching. **This needs Claude Code's Agent tool (its built-in subagents).** Without it the agent types, and with them this table, do not apply. In bb, the Claude Code provider setting `subagentsDisabled` hides that tool; it must be `false` (`bb plugin config provider-claude-code set subagentsDisabled false`). The orchestrator MAY escalate a single spawn via the Agent tool's per-spawn model override. Review steps go to the cycle's second-model reviewer first (Second-Model Review above); the agent types this table gives for them are the **Claude route**, used when the cycle has no second model or a second-model run failed twice.
 
 | Spawn site | Agent type | Model |
 |---|---|---|
@@ -255,7 +257,7 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 | `--supervised` | Supervised mode with checkpoints (default) |
 | `--skip-clarify` | Suppress the Step 1.5 clarification gate; gate-skip recorded in the Step 2c review |
 | `--tier N` | Have the design brief recommend Tier N (1, 2, or 3) instead of Tier 1. The tier can still be changed at the design gate |
-| `--reviewer <spec>` | Which model family runs this cycle's reviews: `codex`, `codex:<model>`, `opencode:<provider/model>`, or `claude` for none. Default: `$SDD_FLOW_REVIEWER`, else `codex` when installed, else Claude reviewers with a warning (`references/second-model-review.md`) |
+| `--reviewer <spec>` | Which model family runs this cycle's reviews: `codex`, `codex:<model>`, `opencode:<provider/model>`, or `claude` for none; `:nonet` after a Codex spec keeps its sandbox off the network. Default: `$SDD_FLOW_REVIEWER`, else `codex` when installed, else Claude reviewers with a warning (`references/second-model-review.md`) |
 | `--next-tier [feature-name]` | Start a new cycle for the next unshipped tier in `SDD/flow/TIERS-[feature-name].md` (`phases/setup.md` → Step 0) |
 | `--skip-slice-checkpoints` | Suppress per-slice pauses (default ON in per-slice mode). The re-planning halt and the slice fix-loop halt fire regardless |
 | `--fall-back-to-whole-feature` | With `continue` after a practicality-gate halt: set `delivery_mode` to whole-feature and carry on with planning — the spec check, panel, and reviews (3a–3g) still run |

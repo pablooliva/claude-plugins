@@ -73,7 +73,16 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.14.1.
+Version 3.14.2.
+
+### What's new in 3.14.2
+
+Fixes to the review path, from the trial application's Tier 2 cycle, where both main reviews fell back from Codex to Claude.
+
+- **Codex reviews run with network access.** In Codex's sandbox a test that opens a local port failed with "Operation not permitted" (37 of the trial's 261 tests), so the reviewer could not finish. The script now turns the sandbox's network access on; the reviewer's commands can then reach the network too. A reviewer spec ending `:nonet` (`codex:nonet`, `codex:<model>:nonet`) keeps it closed.
+- **No read limit on a second-model review.** The 15-read Safety-Net protects a Claude subagent's context; Codex and OpenCode manage their own, and the limit only cut each review into handoffs — eight in that cycle. A second-model prompt now carries no Safety-Net; Claude-route reviews keep it.
+- **A failed review run is marked as failed.** A reviewer writes its verdict line while it runs, so a run that then fails could leave a "REJECTED" line that looked real. The orchestrator now appends `## Failed Review Run - …` after it.
+- **`sdd-flow` names what it needs from bb.** It relies on Claude Code's built-in subagents; in bb the Claude Code provider setting `subagentsDisabled` must be `false`.
 
 ### What's new in 3.14.1
 
