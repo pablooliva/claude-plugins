@@ -44,7 +44,7 @@ flowchart TD
 
 **A slice is vertical, not horizontal.** "Build the database layer, then the API, then the screen" is three horizontal layers: nothing can be tried until the last one lands. A slice goes the other way — a narrow column through all of them — which is why each one ends with something testable. The spec review rejects slices that are layers in disguise.
 
-**There is a third cut, before either of these:** when a request is too broad for one cycle, Step 0 splits it into separately deliverable features (a decomposition), and each of those gets its own tiers and slices. A feature too small to tier or slice is not forced into either — the brief says tiers are not applicable, and the spec falls back to building it whole.
+**There is a third cut, before either of these:** when a request is too broad for one cycle, Step 0 splits it into separately deliverable features (a decomposition), and each of those gets its own tiers and slices. A next-tier cycle skips this cut: its design brief cuts the tier to fit one cycle, moving the rest to a later tier. A feature too small to tier or slice is not forced into either — the brief says tiers are not applicable, and the spec falls back to building it whole.
 
 ## The whole cycle
 
@@ -127,7 +127,7 @@ flowchart TD
 
 | Stage | What is done | Who does it | What it writes (under `SDD/`) | Where it can stop |
 |---|---|---|---|---|
-| 0 Scope | Decides whether the request fits one cycle. `--next-tier` instead reads the tier plan and copies task comments into its Feedback | Sonnet subagent | `flow/DECOMPOSITION-*` (only when too large) | Always, when the feature is too large |
+| 0 Scope | Decides whether the request fits one cycle. `--next-tier` instead reads the tier plan and copies task comments into its Feedback, and makes no scope check — the design brief cuts the tier to fit one cycle | Sonnet subagent | `flow/DECOMPOSITION-*` (only when too large) | Always, when the feature is too large |
 | 1 Mode | Supervised or autonomous | Orchestrator | — | — |
 | 1.5 Clarification | An interview that gets your design concept written down. On a next-tier cycle it is a feedback interview instead | You, with `/research-clarify` | `research/CLARIFICATION-*` | Both modes, unless `--skip-clarify` or the file exists |
 | 2 Research | Investigates the codebase; finds cross-cutting decisions and lists them as ADR candidates for the design gate; adversarial review; fixes | Sonnet subagents; a second model for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*` | — |
@@ -140,7 +140,7 @@ flowchart TD
 
 | Stop | Supervised | Autonomous | Why it exists |
 |---|---|---|---|
-| Decomposition (Step 0) | stops | stops | The request is too large for one cycle |
+| Decomposition (Step 0) | stops | stops | The request is too large for one cycle (never on `--next-tier`) |
 | Clarification (1.5) | stops | stops | Your intent has to be written down before research |
 | Design gate (2.5) | stops | stops | You approve *what will be built* before anything is specified |
 | Slicing not practical (3a) | stops | stops | The spec asked for slices, and no meaningful ones exist. Fall back to building it whole, or point at a slice boundary and retry — either way planning carries on from the spec check, with every review |

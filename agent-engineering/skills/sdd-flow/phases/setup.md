@@ -19,7 +19,7 @@ When invoked, the orchestrator first (for `--next-tier`, steps 1–3 are replace
 Then spawn ONE **`agent-engineering:sdd-workhorse`** subagent for scope assessment. There is no dedicated body file — embed this brief directly in the prompt:
 
 - **Inputs:** task description, codebase access.
-- **Outputs:** either a decomposition document or a "proceed" signal (bounded return).
+- **Outputs:** either a decomposition document or a "proceed" signal (bounded return). It never picks or starts an item of its decomposition, and nothing it writes or returns says the flow goes on: a decomposition stops the flow (below).
 - **Task:** Determine whether the feature fits a single SDD cycle (research → planning → implementation) or should be decomposed. Judgment call, not a formula — the subagent explains its reasoning against these heuristics: number of distinct components/systems touched; number of independent user-facing behaviors; natural seams where each piece delivers standalone value; specification complexity (would the SPEC hold too many requirements for one implementation subagent?); test surface (would tests span unrelated subsystems?).
 - This subagent does file discovery **inline** (Grep/Glob/Read). It carries the Safety-Net Rule, a counter file, and the `research-compact.md` compact body path (scope work is research-shaped).
 
@@ -51,13 +51,13 @@ Then **STOP**. The user manually invokes `/sdd-flow <checklist item>` for each i
 4. **Pull feedback from the tier's task.** Run `python3 "$SKILL_ROOT/scripts/tier-mirror.py" feedback <tier plan> --tier N`: comments left on that tier's BB sub-task since the previous tier shipped are copied, dated, into the tier plan's `## Feedback`, so the Step 1.5 interview, research, and the brief read them from the file. Record and report the result per `SKILL.md` → Tier Task Mirror (resolve SKILL_ROOT first if this is the first thing the session does).
 5. **Record** in the Step 0 record (step 5 of the list at the top writes it — these lines go inside that block, beside the identifiers): `Next-tier cycle: Tier N`, **TIER_PLAN** = the tier plan's path (it keeps the first tier's feature name — every later spawn is given this path, never one derived from the suffixed name), and the previous tier's research document (from the tier plan's `Built in` column: the same number and name as that spec).
 
-Then continue with steps 4–5 of the list at the top of Step 0 and the scope-assessment spawn, as usual. On any other invocation, **TIER_PLAN** is `SDD/flow/TIERS-[feature-name].md`.
+Then continue with steps 4–5 of the list at the top of Step 0, and go straight to Step 1: **a next-tier cycle has no scope assessment.** Its task description is the most the tier could hold — the whole sketch and every Deferred row aimed at it — and the design brief cuts it first (`bodies/design-brief.md` rule 9); a split made before that cut sizes work the brief may remove, and its items, run as plain `/sdd-flow` tasks, would no longer be tied to the tier plan. On any other invocation, **TIER_PLAN** is `SDD/flow/TIERS-[feature-name].md`.
 
 ---
 
 ## Step 1: Parse Input and Select Mode
 
-Reached only after Step 0 says the feature fits one cycle. If the invocation already carried `--auto` or `--supervised`, use it and skip the prompt. Otherwise ask:
+Reached only after Step 0 says the feature fits one cycle — or, on a next-tier cycle, straight after *Starting the next tier*, which makes no scope assessment. If the invocation already carried `--auto` or `--supervised`, use it and skip the prompt. Otherwise ask:
 
 > **Choose execution mode:**
 > **Supervised** (default) — runs autonomously but pauses at two checkpoints: after the design brief, and before committing implementation.

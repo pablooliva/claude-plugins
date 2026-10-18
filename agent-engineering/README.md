@@ -73,7 +73,14 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.14.0.
+Version 3.14.1.
+
+### What's new in 3.14.1
+
+- **A next-tier cycle is no longer split before its design brief.** `/sdd-flow --next-tier` made the same scope check as a first cycle, on a task description that holds the most the tier could ever contain — its whole sketch and every deferred item aimed at it. On the trial application's Tier 2 that check split the tier into four separate features and stopped; the design brief, once the split was overridden, cut Tier 2 to one prompt sentence and one eval case. The split had sized work the brief was about to remove, and its items, run as plain `/sdd-flow` tasks, were no longer tied to the tier plan. A next-tier cycle now skips the scope check; its design brief makes the size check, moving what does not fit one cycle to a later tier — or, when no cut of the tier fits, saying so at the design gate, where you narrow what this cycle builds or stop.
+- **The scope check never says the flow goes on after a split.** On that run the scope subagent wrote that the orchestrator would pick the first item, though a decomposition always stops the flow; its instructions now say so.
+
+Splitting a tier into parts, each its own cycle, stays for later (`CLAUDEPLUG-13`, `proposals/tiers-in-parts-2026-10-18.md`).
 
 ### What's new in 3.14.0
 
@@ -86,7 +93,7 @@ Lighter `sdd-flow` reviews. Two trial cycles on a small application showed the w
 
 **Runs that began implementing before 3.14.0** have no `## Site Depth` line: they take no snapshots and keep every count and review in full, as before. The first two changes apply to them from the next review on.
 
-**Not yet exercised on a real cycle.** The script suite has 213 tests, 59 of them for `site-diff.py`, its snapshot and carry rules among them; the review and loop rules were each reviewed by Codex until it had no findings. The next tier of the trial application is the first cycle that will run them.
+**Exercised once since (2026-10-18):** the trial application's Tier 2 ran on 3.14.0 — one round each for the code review and the final check, with no HIGH finding; no fix round ran, so the snapshots and the recorded-not-fixed outcome were not reached. **At release:** the script suite has 213 tests, 59 of them for `site-diff.py`, its snapshot and carry rules among them; the review and loop rules were each reviewed by Codex until it had no findings. The next tier of the trial application is the first cycle that will run them.
 
 **Not in this release:** more than three tiers, or a tier delivered in parts (`CLAUDEPLUG-13`) — the depth table already names "any later tier" and gives a part its tier's depth, so that change will not need to rewrite it.
 
