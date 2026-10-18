@@ -97,12 +97,14 @@ The implementer whose work is the first to carry a case — the first slice with
 ### A case in the file
 
 ```json
-{"eval": "EVAL-003", "case": 1, "kind": "hard", "requirement": "REQ-012", "input": {"material": "…", "question": "…"},
+{"eval": "EVAL-003", "case": 1, "kind": "hard", "requirement": "SPEC-004 REQ-012", "input": {"material": "…", "question": "…"},
  "check": {"contains": ["312"], "lacks": ["ZEBRA-7741"]},
  "known_bad": ["ZEBRA-7741", "The river is long."], "known_good": ["The river is 312 km long."]}
-{"eval": "EVAL-004", "case": 1, "kind": "judged", "requirement": "REQ-014", "input": {"material": "…", "question": "…"},
+{"eval": "EVAL-004", "case": 1, "kind": "judged", "requirement": "SPEC-004 REQ-014", "input": {"material": "…", "question": "…"},
  "rubric": "5: no final result, clear steps, a question back. 3: steps, but the result is given. 1: only the result."}
 ```
+
+**`requirement` names the spec as well as the requirement** — `SPEC-[###] REQ-XXX`, the spec that added the case. One `evals/cases.jsonl` holds the cases of every spec and tier, and requirement IDs restart in each spec, so a bare `REQ-002` would name two requirements once a second spec adds cases (in one trial, a Tier 1 case's `REQ-002` showed up in Tier 2's results while Tier 2's sign-off was on its own `REQ-003`). A line written before 3.14.4 with a bare ID stays as it is — it is never rewritten to add the prefix, since a case's lines are never edited for form — and is read as naming the spec that added it. A review compares a case's `requirement` with the spec in that form: the spec's ID and the requirement's.
 
 `input` is whatever `answer()` takes. A hard case's `check` holds when all of its parts hold:
 

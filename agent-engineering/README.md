@@ -73,7 +73,12 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.14.3.
+Version 3.14.4.
+
+### What's new in 3.14.4
+
+- **An eval case names its spec.** A case's `requirement` in `evals/cases.jsonl` is now `SPEC-[###] REQ-XXX`. The file holds every spec's cases and requirement IDs restart in each spec, so in the trial a Tier 1 case's `REQ-002` showed up in Tier 2's results beside Tier 2's own `REQ-003`. Lines written earlier keep their bare IDs and are read as naming the spec that added them.
+- **Implementation is split into chunks only when the change is wide.** The whole-feature flow split the work whenever the spec had more than 8 requirements and edge and failure cases; in the trial that made 4 chunks of a one-sentence prompt change. It now splits only when the approved brief also names more than 3 areas to change.
 
 ### What's new in 3.14.3
 
