@@ -217,6 +217,7 @@ With a sign-off asked for, the block has one more line: `Sign-off asked for: <th
 > **Implementation complete.** Here's a summary:
 > [What was built, test results, review outcomes]
 > Brief check: [whole-feature: outside the approved footprint: none | list] [per-slice: N of M slices stayed inside the approved footprint; exceptions: …]
+> [If the summary's `### Not Proven by a Test` lists any row:] Not proven by a test: [n] site(s) of [the control IDs] — the code holds each rule, but no test fails without it. Listed in the summary under `### Not Proven by a Test`.
 > Key artifacts:
 > - Spec: `SDD/requirements/SPEC-[###]-[feature-name].md`
 > - Code review: `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`
@@ -263,6 +264,7 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Pr
 > All artifacts committed. Feature is ready for deployment.
 > [If the spec carries `tier:`:] Shipped: **Tier [N]**. Left for later: [one line per tier still sketched in the tier plan, or "nothing"]. Tier plan: `SDD/flow/TIERS-[feature-name].md`. Use it, note what you find under its `## Feedback`, then run `/sdd-flow --next-tier [feature-name]` when you want more.
 > Brief check: [the same line as 4h — shown here too, because an autonomous run usually has no 4h]
+> [If the summary's `### Not Proven by a Test` lists any row:] Not proven by a test: [the same line as 4h, for the same reason].
 > [If 4h wrote a `## Sign-off - ` line:] Accepted by you at the commit checkpoint: [the requirement IDs], on the scores and outputs in `[the final EVAL_RESULTS path]`.
 > [If this cycle's IMPLEMENTATION-PLAN has a `Harvested, before any change:` line that does not end `failed`:] Harvested cases not seen to fail before the change made for them: [each such case, with what its line says]. A stand-in that passed, or only got scores, may not reproduce what its trace showed — a later cycle can rewrite it, or keep it as a guard (`references/evals.md` §2).
 > [If the spec carries `tier:` and the application has `SDD/OBSERVABILITY.md`:] To turn a wrong answer from using this tier into a case for the next one: mark its trace in Opik, then run `/eval-harvest`.
