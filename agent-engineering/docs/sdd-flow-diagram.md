@@ -73,9 +73,9 @@ flowchart TD
     dev --> s4
     s3g -- "no" --> s4{"Step 4 — Implementation<br/>route on delivery mode"}
     s4 -- "per-slice" --> slices("Per-slice cycle<br/>see the next diagram")
-    s4 -- "whole-feature" --> wf("4a implement<br/>4a.5 blind site count and diff<br/>4b code review, 4c fix<br/>tracing on: 4b also compares a real run with the planned calls<br/>evals on: 4b also checks what the model really answered")
+    s4 -- "whole-feature" --> wf("4a implement<br/>4a.5 blind site count and diff — Tier 3 or no tier only<br/>4b code review, 4c fix<br/>tracing on: 4b also compares a real run with the planned calls<br/>evals on: 4b also checks what the model really answered")
     slices --> eof
-    wf --> eof("4d critical review of the code, 4e fix<br/>4e.5 final blind recount<br/>tracing on: and the trace check, once more<br/>evals on: and every eval case, once more<br/>4f completion: summary, tier plan updated")
+    wf --> eof("4d critical review of the code, 4e fix<br/>4e.5 final blind recount — every tier<br/>later rounds read what the fix changed<br/>tracing on: and the trace check, once more<br/>evals on: and every eval case, once more<br/>4f completion: summary, tier plan updated")
     eof --> m2["Mirror: tier in review"]:::orch
     m2 --> s4h["4h — STOP in supervised mode<br/>in both modes when a requirement<br/>waits for your sign-off<br/>ready to commit?<br/>waits until you say yes"]:::stop
     s4h --> c4["4i commit implementation"]:::orch
@@ -93,13 +93,16 @@ When the spec says `delivery_mode: per-slice` (the default for new specs), this 
 ```mermaid
 flowchart TD
     scaffold("4a.0 — create the slice progress table<br/>once per feature") --> impl("4a — implement one slice<br/>code, tests, list of enforcement sites")
-    impl --> count("4a.5 — blind site count<br/>a fresh subagent that never sees the implementer's list")
+    impl --> count("4a.5 — blind site count<br/>a fresh subagent that never sees the implementer's list<br/>Tier 3 or no tier only")
     count --> diff["diff the two lists, places before labels<br/>scripts/site-diff.py"]:::orch
     diff --> review("4b — slice review<br/>includes the design brief check<br/>adds the list row of a missed site a test already proves<br/>tracing on: and the trace check<br/>evals on: and the eval check")
-    review -- "any finding" --> fix("4c — fix all of them, then recount<br/>and re-review, at most 3 rounds")
+    impl -. "Tiers 1 and 2: no count per slice" .-> review
+    review -- "any finding" --> fix("4c — fix all of them, then recount<br/>and re-review, at most 3 rounds<br/>the re-review checks the earlier findings<br/>and reads what the fix changed")
     fix --> count
+    fix -. "Tiers 1 and 2" .-> review
     fix -- "no progress, or 3 rounds used" --> halt["STOP in every mode — slice halted<br/>findings go to the ledger<br/>you fix them, then continue re-reviews"]:::stop
     halt -- "continue" --> count
+    halt -. "Tiers 1 and 2" .-> review
     review -- "approved" --> retro("4c.5 — slice retrospective<br/>updates the learnings ledger")
     retro -- "recommends re-planning" --> replan["STOP in every mode<br/>--replan commits the slice, revises<br/>the brief, then the spec"]:::stop
     replan -- "--override-replan" --> commit
@@ -130,7 +133,7 @@ flowchart TD
 | 2 Research | Investigates the codebase; finds cross-cutting decisions and lists them as ADR candidates for the design gate; adversarial review; fixes | Sonnet subagents; a second model for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*` | — |
 | 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. It also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*`, `adr/*` (on approval) | **Both modes, every time the brief is written or rewritten.** `approve` is refused while a question is open |
 | 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief, and carries a control register: for each rule that must hold on every path, the one ID its enforcement sites are filed under | Sonnet subagents for the spec and the panel, Opus for the panel's synthesis; a second model for the adversarial review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, both modes, when the spec departs from the brief** |
-| 4 Implementation | Builds the feature (whole, or slice by slice). Every control's enforcement sites are listed twice — by the implementer and by a blind subagent — and the two lists are compared for places only one of them found. A place both found under different IDs is settled by a test, not by a fix round, and a missed place a test already proves gets its row from the reviewer. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; a second model for the reviews (the blind count stays a Sonnet subagent) | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Slice fix-loop halt and re-planning halt (every mode). Recount halt. 4h before the final commit (supervised; both modes when a requirement waits for your sign-off) |
+| 4 Implementation | Builds the feature (whole, or slice by slice). Every control's enforcement sites are listed twice — by the implementer and by a blind subagent — and the two lists are compared for places only one of them found. A place both found under different IDs is settled by a test, not by a fix round, and a missed place a test already proves gets its row from the reviewer. A place no test proves is fixed only for a security rule; any other is recorded and listed for you. The tier sets the depth: at Tier 1 only security rules are listed and counted, and at Tiers 1 and 2 the blind count is made once, at the final recount. A review after a fix round checks the earlier findings and reads what the fix changed. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; a second model for the reviews (the blind count stays a Sonnet subagent) | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Slice fix-loop halt and re-planning halt (every mode). Recount halt. 4h before the final commit (supervised; both modes when a requirement waits for your sign-off) |
 | Done | Tier marked shipped in the tier plan; task set to done; announcement names what shipped and what is left | Orchestrator | updated `flow/TIERS-*` | — |
 
 ## What the stops are for
@@ -144,7 +147,7 @@ flowchart TD
 | Tracing or evals asked for and not possible (3c) | stops | stops | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the cycle started, or one of the two fields holds a value other than `auto`, `true`, `false`. You change the field in the spec; nothing is reviewed until you do. It cannot fire with both fields left at `auto` |
 | Panel halt (3c) | stops | stops | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
 | Deviation check (3g) | stops if deviations | stops if deviations | The spec is no longer what you approved |
-| Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. A difference in how a site is filed, or a missed site a test already proves, is not a finding and cannot cause this stop. You resolve the findings; `continue` re-counts and re-reviews the slice |
+| Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. A difference in how a site is filed, a missed site a test already proves, or a site of a rule that is not a security rule that no test proves (recorded for you instead), is not a finding and cannot cause this stop. You resolve the findings; `continue` re-counts and re-reviews the slice |
 | Slice pause | stops | stops | Review each slice while it is small. Off with `--skip-slice-checkpoints` |
 | Re-planning halt (4c.5) | stops | stops | A slice showed the plan is wrong. `--replan` or `--override-replan`; either one commits the slice first |
 | Eval run could not be made (before a review, evals on) | stops | stops | The application's model could not be reached, twice, when the flow ran the feature's eval cases before a review. Nothing is reviewed until it can be: you fix the network, the key, or the provider's limit, and continue. It costs no fix round |
@@ -158,7 +161,7 @@ Every stop above that waits for your answer is written to `SDD/orchestration/pro
 
 ## Tiers across cycles
 
-A feature is delivered in up to three tiers — Tier 1 POC-plus, Tier 2 Standard, Tier 3 Full — and each tier is one full pass through the first diagram. The rules for what belongs in which tier live in `skills/simplicity-challenge/references/tiers.md`.
+A feature is delivered in up to three tiers — Tier 1 POC-plus, Tier 2 Standard, Tier 3 Full — and each tier is one full pass through the first diagram. The rules for what belongs in which tier live in `skills/simplicity-challenge/references/tiers.md`. So does the one thing a tier changes about how a cycle checks its work: every tier is reviewed in full, but Tier 1 proves enforcement sites one by one only for security rules, and Tiers 1 and 2 count sites blind once, at the final recount.
 
 ```mermaid
 flowchart LR

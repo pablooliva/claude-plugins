@@ -52,7 +52,8 @@ agent-engineering/
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
 │   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
 │   │   ├── references/             #   enforcement-sites.md — control/site/mutation standard, incl. the spec's control register (§1.1:
-│   │   │                           #   bodies/planning.md writes it, planning-complete + spec critical review check it, site-diff.py applies it — change together);
+│   │   │                           #   bodies/planning.md writes it, planning-complete + spec critical review check it, site-diff.py applies it — change together;
+│   │   │                           #   §7 = what the tier's depth row in simplicity-challenge's tiers.md means for each Step 4 step — change the two together);
 │   │   │                           #   second-model-review.md — the ONE definition of who runs a review (a second model family via
 │   │   │                           #   its CLI, marked fallback to the Claude reviewer agents); phase chapters point to it, never restate it;
 │   │   │                           #   test-integrity.md — the ONE definition of a real test and of the reviews' Test Integrity Lens
@@ -64,7 +65,8 @@ agent-engineering/
 │   │   ├── templates/evals/        #   what an application's eval run is rendered from (Python only): run.py, task.py, test_eval_checks.py.
 │   │   │                           #   An application's evals/run.py stays equal to run.py.template apart from three placeholders — a review checks that,
 │   │   │                           #   so what one application needs goes into its task.py or checks.py, never into the template for its sake
-│   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff (places before labels; --register folds restating IDs);
+│   │   └── scripts/                #   site-diff.py — orchestrator's deterministic site-count diff (places before labels; --register folds restating IDs;
+│   │                               #   --snapshot saves the working tree before a fix round and before its re-review; --base <it> carries what the fix left alone);
 │   │                               #   second-model-review.py — settles the cycle's reviewer and runs one review step on codex/opencode;
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
 │   │                               #   trace-tree.py — renders a trace run's span file as call trees and call counts
@@ -76,7 +78,7 @@ agent-engineering/
 │   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)
 │   ├── rephrase/               # restates an end-of-work report as Done / Pending / Blocking / Next
 │   ├── simplicity-challenge/   # user-invoked: cuts a proposal down before it is built (function + structure);
-│   │                       #   references/tiers.md is the plugin's ONE tier standard (tiers, floor, cut tests,
+│   │                       #   references/tiers.md is the plugin's ONE tier standard (tiers, floor, cut tests, how deep a tier's site proof goes,
 │   │                       #   tier-plan template) — anything that works in tiers reads it, never restates it
 │   ├── worth-building/     # user-invoked: asks whether the work should be built as planned at all — six questions
 │   │                       #   (kill test, ceiling, ratio, what a user sees, rule or code, budget and tripwire) and one

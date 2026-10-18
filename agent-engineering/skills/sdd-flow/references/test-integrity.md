@@ -34,7 +34,7 @@ It has no gate: it runs in every cycle. Inputs, all from the prompt: **TEST_INTE
 
 **Test files** are found, not assumed: the files the project's test command collects, plus fixtures, snapshot or golden files, and the configuration that decides what is collected and how (`pytest.ini`, `pyproject.toml`, `conftest.py`, `jest.config.*`, `package.json` scripts, CI workflow files, a `Makefile` target).
 
-Requirements that are **controls** are already proven site by site under the enforcement-site standard. T4 does not repeat that work for them; every other check applies to their tests as to any other.
+Requirements that are **controls** are already proven site by site under the enforcement-site standard. T4 does not repeat that work for them; every other check applies to their tests as to any other. **At `Site depth: security`** (Tier 1 — `references/enforcement-sites.md` §7) only the security controls are proven site by site; every other control is a requirement like any other here, held by its test alone, and T4 checks it.
 
 **The plugin's own files are not under this lens.** `evals/run.py` and the files `/observability-init` rendered are this plugin's code, tested where their templates are made (`references/enforcement-sites.md` §1, *Not sites*). No check here breaks a line of one or asks for a test of what it does by itself — that the eval run runs each case three times, reports an unreachable model, uploads, replaces secrets. The checks apply to the application's tests of the application's own code, `evals/task.py` and `evals/checks.py` included. A placeholder filled with code of the application's own is the application's code.
 

@@ -91,7 +91,7 @@ flowchart TD
     bind --> rev3("3d Spec review<br/>tracing: nodes present and assigned to slices<br/>evals: every LLM requirement has a rule-based eval,<br/>or is listed for you to accept at the final commit")
     rev3 --> impl("4a Implement one slice<br/>tracing: spans for the entry points, LLM calls,<br/>and external calls it adds<br/>evals: the spec's cases and their checks;<br/>the first such slice also creates the eval run")
     impl --> review("4b Slice review<br/>tracing: trace run, call tree, compare with the plan<br/>evals: the flow first runs the cases and sends the run to Opik;<br/>the review reads the results against the spec")
-    review -- "any finding" --> fix("4c Fix, recount, re-review<br/>at most 3 rounds")
+    review -- "any finding" --> fix("4c Fix, recount, re-review<br/>what the fix changed<br/>at most 3 rounds")
     fix --> review
     fix -- "no progress,<br/>or 3 rounds used" --> halt["STOP — slice halted<br/>an existing stop"]:::stop
     review -- "no finding" --> commit["4c.6 commit the slice"]:::orch
@@ -99,7 +99,7 @@ flowchart TD
     pause -- "more slices" --> impl
     pause -- "last slice done" --> crit("4d critical review of the code, 4e fix")
     crit --> final("4e.5 Final recount<br/>with either gate on, its verification always runs<br/>tracing: whole call graph compared<br/>evals: every case run again, and checked")
-    final -- "any finding" --> ffix("fix, recount, verify again<br/>at most 3 rounds")
+    final -- "any finding" --> ffix("fix, recount, verify again<br/>what the fix changed<br/>trace and evals in full<br/>at most 3 rounds")
     ffix --> final
     ffix -- "no progress,<br/>or 3 rounds used" --> fhalt["STOP — final recount halt<br/>an existing stop"]:::stop
     final -- "no finding" --> done("4f Completion<br/>reads the final call tree and eval results")

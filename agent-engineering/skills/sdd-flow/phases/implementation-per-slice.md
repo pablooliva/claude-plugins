@@ -142,7 +142,7 @@ If the review found anything — HIGH, MEDIUM, or LOW — spawn an **`agent-engi
 python3 "$SKILL_ROOT/scripts/site-diff.py" --snapshot
 ```
 
-It prints the SHA of a commit holding the working tree as it is — untracked files included, git-ignored ones left out — that no ref points to; it changes neither the index, HEAD, a branch, nor the stash, and the fix sees nothing of it. Two per iteration k:
+**Only a cycle with a `## Site Depth` line** (written when implementation begins, from 3.14.0 — `references/enforcement-sites.md` §7) takes snapshots. A cycle that began implementing earlier has none: it takes no snapshot, and every recount and re-review of it runs in full, as before. The command prints the SHA of a commit holding the working tree as it is — untracked files included, git-ignored ones left out — that no ref points to; it changes neither the index, HEAD, a branch, nor the stash, and the fix sees nothing of it. Two per iteration k:
 
 1. **Before fix** — immediately before the fix spawn: append `## Snapshot SLICE-XXX iter <k> - before fix <sha>`.
 2. **After fix** — immediately before the re-review of iteration k is spawned (after the recount, the diff, and — evals on — the eval run of record): append `## Snapshot SLICE-XXX iter <k> - after fix <sha>`. Taken this late, it holds exactly the code the reviewer reads, whatever ran after the fix.
