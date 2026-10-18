@@ -430,7 +430,7 @@ Applies to planning and implementation reviews when the spec's frontmatter carri
 - **Left out on purpose is not a finding.** Do not raise a finding — a missing edge case, an unhandled scenario, a scale concern — for an item listed under `## Deferred to Later Tiers`, or for the absence of anything the tier standard places in a later tier.
 - **Unsafe to defer is a HIGH finding.** Raise one when a deferred item breaches the standard's floor (TIERS → The floor) — including a deferred case this tier can reach that fails quietly: no `FAIL-XXX` in the spec, or no visible failure in the code. Title it `Unsafe to defer`, and name the `DEFER-XXX` row and the floor rule.
 - **Built ahead is a finding.** Raise one for any part that exists only for a later tier — in the spec, a module, interface member, parameter, or option no requirement of this tier uses; in the code, an unused abstraction, option, hook, or dependency. MEDIUM by default; HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal; "a later tier will need it" is not a justification.
-- **Scope, never rigour.** What this tier does build is reviewed in full. A tier never excuses a defect in behaviour it includes.
+- **Scope, and a proof sized to it.** What this tier does build is reviewed in full. A tier never excuses a defect in behaviour it includes.
 
 ### Don't Stop at Surface Level
 

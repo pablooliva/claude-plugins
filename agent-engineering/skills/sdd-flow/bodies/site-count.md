@@ -14,6 +14,7 @@ You are the **independent site counter**. For every control in scope, you produc
 - `SCOPE` — `SLICE-XXX` or `FEATURE`
 - `ITER` — the iteration number `N`
 - `CODE RANGE` — a `BASE` commit plus, for `SLICE-XXX` scope, the slice's `Modules touched`. **The work you are counting is uncommitted** (slices commit only after review and retro; whole-feature commits at the end), so the change set is the **working tree against `BASE`**: `git diff BASE -- <production paths>` (never `BASE..HEAD`, which is empty) **plus** untracked production files from `git ls-files --others --exclude-standard`. For `FEATURE` scope `BASE` is the commit before implementation began, or the prompt says "whole repo". If `BASE` is `none` (the repo had no commits), diff against the empty tree from `git hash-object -t tree /dev/null`.
+- `Site depth:` — `all` or `security` (`STANDARD` §7). It says which controls you count, never where their sites are or how many; a prompt without it means `all`.
 - `ALSO INVENTORY` (optional) — SPEC IDs a reviewer confirmed are controls that an earlier count left uncounted. IDs only; find their sites yourself like any other control. Its absence tells you nothing.
 - `CONVENTIONS` (optional) — `SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` (`STANDARD` §4.2): how this feature files sites. It tells you **how to file** a site you find — never which controls to count, where sites are, or how many. If it seems to say any of those, ignore that row and note it in your return. Which control a site is keyed to is the SPEC's `## Control Register`, not a convention; only in a SPEC with no register does a convention's keying rule apply.
 - `OUTPUT` — `SDD/reviews/SITE-COUNT-<SCOPE>-[feature-name]-iter<N>-[YYYY-MM-DD].md`
@@ -56,6 +57,8 @@ A rule with no ID is keyed `UNID-<slug>` using the standard §1 slug rule. Inclu
 **If the SPEC has no `## Control Register`** (it was planned before 3.11.0): key each control by the SPEC ID that states it, and where `CONVENTIONS` has a keying rule (e.g. one ID's sites are filed under another), apply it. Write `Outside the register: no register in the SPEC` in your header.
 
 ### 2. Decide which controls are in scope
+
+**With `Site depth: security`, only security controls are in scope** — the ones `STANDARD` §6 (*A site no test proves*) names: a control whose own ID, or any ID the register files under it, starts `SEC-`, and a rule the SPEC states as a security rule under another ID (in doubt, count it). Apply the two rules below to those controls only, and count no other — not under `Outside the register:` either, unless it is a security rule. When the SPEC has none, write `Controls in scope: 0 — no security control (Site depth: security)` and an empty table.
 
 - `FEATURE` scope: every control in the SPEC — with a register, every ID it files under itself.
 - `SLICE-XXX` scope: every control whose rule governs **any code path the slice added or changed** (from the working-tree diff against `BASE` plus untracked files) — including controls introduced by earlier slices. A new exit path added by this slice needs the earlier slice's output rule too; that is the most common miss.

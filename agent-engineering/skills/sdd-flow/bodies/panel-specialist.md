@@ -48,7 +48,7 @@ Applies only when the spec's frontmatter carries `tier:` (1, 2, or 3). Read the 
 - **Left out on purpose is not a finding.** Do not raise a finding for an item listed under `## Deferred to Later Tiers`, or for the absence of anything the tier standard places in a later tier. A tiered spec is small by design.
 - **Unsafe to defer is a HIGH finding.** Raise one when a deferred item breaches the standard's floor (TIERS → The floor) — including a deferred case this tier can reach that has no `FAIL-XXX` giving it a loud failure. Title it `Unsafe to defer`, and name the `DEFER-XXX` row and the floor rule.
 - **Built ahead is a finding.** Raise one for any part that exists only for a later tier: a module, interface member, parameter, option, or dependency that no requirement of this tier uses, or a justification that rests on a later tier's needs. MEDIUM by default; HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal — "a later tier will need it" is not a justification.
-- **Scope, never rigour.** Everything this tier does specify is held to the full standard of your section. A tier never excuses a defect in what it builds.
+- **Scope, and a proof sized to it.** Everything this tier does specify is held to the full standard of your section. A tier never excuses a defect in what it builds.
 
 ## 4. Specialist Prompts
 

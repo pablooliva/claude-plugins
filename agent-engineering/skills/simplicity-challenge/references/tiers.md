@@ -10,9 +10,17 @@ The plugin's one definition of delivery tiers: what each tier is, what may never
 
 Each tier is delivered and used before the next is planned. Tiers 2 and 3 are sketches — ten lines each at most — until their own turn comes. A later tier may be reshaped or dropped once the earlier one has been used; a sketched tier that is never built is an acceptable outcome, not unfinished work.
 
-## Tenet 1 — Scope, never rigour
+## Tenet 1 — Scope, and a proof sized to it
 
-A tier limits what is built. It does not lower how well it is built: the same reviews, tests for everything the tier does, and every verification step the workflow in use requires. A Tier 1 is small, not sloppy.
+A tier limits what is built, and it sets how deep the proof of it goes. Every tier gets the same reviews, a real test for everything it does, and the floor below. What a lower tier gives up is part of the proof that each rule is enforced at every place in the code — the deletion of each such place to show a test fails, and the blind counts that check the list of places (in `sdd-flow`, enforcement sites) — never the review itself. A Tier 1 is small, not sloppy.
+
+| Tier | Places proven one by one, and counted blind | Blind counts |
+|---|---|---|
+| Tier 1 | security controls only (the floor's item 2); every other rule is held by a real test of its requirement | one, at the final check |
+| Tier 2 | every control | one, at the final check |
+| Any later tier, or no tier | every control | after each slice (or once for the whole feature) and at the final check |
+
+A part of a tier is proven at its tier's depth. `sdd-flow` passes this table to its implementers, counters, and reviewers (`sdd-flow/references/enforcement-sites.md` §7); a workflow with no site counts reads only the first paragraph.
 
 ## Tenet 2 — Nothing is built ahead
 

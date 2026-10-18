@@ -202,3 +202,17 @@ Control status lives in the IMPLEMENTATION-PLAN's `## Control Site Status` table
 ```
 
 The two site columns are row totals copied from the diff. They are a record, not the test: a control can be `Complete` with different totals, and is not `Complete` merely because they are equal.
+
+## 7. Depth by tier
+
+The tier standard (`simplicity-challenge/references/tiers.md`, Tenet 1) sets, for a tiered SPEC, which controls are proven site by site and how many blind counts are made. This section says what that means for each step. When implementation begins, the orchestrator reads the SPEC's `tier:` and appends, directly under `## Feature - Implementing` and its `Base commit:` line:
+
+```markdown
+## Site Depth - sites: <all | security>, blind counts: <every scope | final check>
+```
+
+Tier 1 → `security`, `final check`; Tier 2 → `all`, `final check`; any later tier, a part of a tier at its tier's row, or no `tier:` → `all`, `every scope`. A cycle whose record has no such line — one that began implementing before 3.14.0 — is `all`, `every scope`. Every implementer, fixer, counter, reviewer, retrospective, and completion spawn of Step 4 is passed the line `Site depth: all` or `Site depth: security`; the blind-count setting is the orchestrator's alone.
+
+**`Site depth: security`.** The rules of this standard apply to the security controls only (§6, *A site no test proves*, says which controls those are). The implementer inventories their sites, with a mutation each; the counter counts only them; the reviewers verify only them; the `## Control Site Status` table has a row for each of them and no other. Every other control is held by a real test of the requirement that states it — which the Test Integrity Lens checks as it checks every test (`references/test-integrity.md`) — and has no inventory row, no blind count, no deletion proof, and no status row. An implementer row for one is set aside like a row in a plugin file (§1): the reviewer writes `not a site at this depth` beside it, it is not a finding, and the next implementer or fixer deletes it. A diff's `UNCOUNTED` for a control that is not a security control is resolved the same way, never a finding. A SPEC with no security control is counted at the final check all the same: the counter finds no control in scope, the diff says so, and the verification's site steps have nothing to check.
+
+**`Blind counts: final check`.** No count is made after a slice, after a slice's fix round, or for the whole feature before its code review: 4a.5 is skipped. The final check (4e.5) counts and diffs as in every cycle. A slice review or the whole-feature code review then has no count and no diff, so its site verification runs only the steps that read the implementer's inventory — the mutation sample, the (ii)/(iii) arguments, the real-subprocess tests, and the leak check (steps 3–6) — while the steps that turn a diff into findings (1–2b) have nothing to carry. A slice's fix round has no recount: its iteration is snapshot → fix → snapshot → re-review. Until the final check every control is `Partial`, as a control with no independent count always is (§6).
