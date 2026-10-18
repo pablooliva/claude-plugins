@@ -80,6 +80,19 @@ The slice's reviewable file set is computed as the **intersection** of:
 
 **Slice-scoped review caveat — shared/foundation files:** if the slice's file set includes a file that was also modified by an EARLIER slice (foundation file shared across slices), the review focuses on THIS slice's diff only — use `git diff BASE -- <path>` (working tree against the slice's base) to scope the diff. An untracked file has no diff — review it in full. The earlier slice's review owns the earlier slice's diff; this slice owns its own.
 
+## Step 4.5: A re-review after a fix round (only when your prompt gives `SNAPSHOT`)
+
+On a re-review whose fix round the orchestrator snapshotted, your prompt gives three more inputs: `SNAPSHOT`, a commit holding the working tree as it was before the fix; `FIXED`, one holding it as the fix left it; and `PREVIOUS REVIEW`, the review document the fix answered. The previous review read the whole slice. This one checks that its findings are closed and reads what the fix changed — no more. If your prompt gives only some of the three, or git cannot diff the two commits, review the slice in full, as the steps below say, and write why on the `Re-review:` line; never take a snapshot yourself or guess one.
+
+- **The change** is `git diff --name-only --no-renames SNAPSHOT FIXED -- . ':(exclude)SDD'`, and `git diff SNAPSHOT FIXED -- <file>` for what changed in a file. Both are commits, so a file the slice created and has not committed shows only what the fix did to it. Step 4 still runs as written: the file set is what Steps 5.6 and 5.7 refer to.
+- **Every finding of PREVIOUS REVIEW** gets one line in `## Earlier Findings` (template below): `closed` with the evidence — the change that closed it, the test that now fails without the site, the row whose argument you accept — or `still open`. A finding still open is a finding of this review again, at its severity, numbered with the others, whether or not the code it is about changed. A finding the fix closed only in the inventory — a row added or changed, no code or test changed — is closed only when you re-run its mutation and a test fails, or accept the row's argument.
+- **Step 5 reads the change only.** Specification alignment for the requirements the changed code serves; test alignment and the Test Integrity Lens over the tests the fix added or changed, with `SNAPSHOT` in place of `BASE` for what changed; the Agentic-Surface Lens over the changed files; risk-tiered depth for the modules the change touches; the tier rules over what the fix added. Code the fix did not change was read by the previous review and is not read again: raise nothing there, except a HIGH you see without looking for it.
+- **Step 5.5** walks the checklist items the change touches; mark each other one `N/A — unchanged since PREVIOUS REVIEW`.
+- **Step 5.6** runs on this iteration's diff, which the orchestrator made with `--base SNAPSHOT`: its `## Carried` section lists the keys the fix left alone, and they are owed to the FEATURE recount like any carried key. Three of its steps narrow to the change. Step 3's sample — one site per control and 25% of the `(i)` sites — is counted and drawn from sites in changed code only, **and also takes every `(i)` row whose Evidence names a test in a file the fix changed** — all of them, not a sample: a fix is where a test is quietly made weaker. Step 4 checks the (ii) and (iii) rows added or changed since PREVIOUS REVIEW, and that none was deleted. Steps 5 and 6 cover the controls with a site in the change, and the change, the new `progress.md` entries, and the new `CONVENTIONS` rows.
+- **Step 5.7** compares the change, not the whole git list, with the brief.
+- **Steps 5.8 and 5.9 run in full**, as on a first review: they read a trace run and an eval run made after the fix, so every node and case in scope is checked again.
+- The marker, the iteration cap, and the stall check are unchanged.
+
 ## Step 5: Apply the code review process, scoped to the slice's files
 
 Apply the following review process to the computed slice file set. The full review priority order applies:
@@ -172,8 +185,10 @@ The spec states cases — written examples, and what must be true of what the mo
 Write the review output to:
 
 ```
-SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-<YYYY-MM-DD>.md
+SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-iter<N>-<YYYY-MM-DD>.md
 ```
+
+`N` is the `ITER` in your prompt: one document per iteration, so a re-review never overwrites the review its fix answered. (A slice reviewed before 3.14.0 has one document per day, with no `iter<N>`.)
 
 Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across the new artifact families introduced by this feature — RETROSPECTIVE-SLICE, REVIEW-SLICE; resolves panel deferred LOW-13). Pre-existing REVIEW artifacts authored before SDD 2.0.0 may continue to use `[YYYYMMDD]`; the carry-forward is internally consistent within the legacy family.
 
@@ -194,6 +209,11 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 - ...
 **Source of file set:** <"intersection — agreement" / "git list preferred — divergence">
 **Slice changes:** tracked changes in the working tree vs `BASE` = `<commit>`; untracked files reviewed in full: <list or "none">
+**Re-review:** <"no — reviewed in full" | "after fix round <N>: SNAPSHOT `<sha>` → FIXED `<sha>`; PREVIOUS REVIEW <path>; the change: <files>">
+
+## Earlier Findings
+
+[Re-review only (Step 4.5): one line per finding of PREVIOUS REVIEW — `<#> <severity> <title>: closed — <evidence>` or `still open — finding <#> below`. On a review in full: `None — reviewed in full.`]
 
 ## Slice-Specific Findings
 
@@ -285,7 +305,7 @@ This review emits paths under the SDD 2.0.0 layout:
 - `SDD/requirements/SPEC-XXX-[feature-name].md`
 - `SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md`
 - `SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md` (kebab-case feature-name slug per CLARIFICATION OQ-B)
-- `SDD/reviews/REVIEW-SLICE-XXX-[feature-name]-[YYYY-MM-DD].md`
+- `SDD/reviews/REVIEW-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md`
 - `SDD/orchestration/subagent-calls/`
 
 ## Refusal-Message Discipline (REQ-007 / UX-001)

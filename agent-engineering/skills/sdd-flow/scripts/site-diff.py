@@ -4,6 +4,7 @@
 Usage:
     site-diff.py <impl-inventory.md> <blind-count.md> <out.md> --scope <SLICE-XXX|FEATURE>
                  [--base <commit|none>] [--register <SPEC.md>]
+    site-diff.py --snapshot
 
 Both inputs carry a `## Site Inventory` table in the shape defined by
 `references/enforcement-sites.md` §4. Rows of Kind `site` are grouped per
@@ -18,11 +19,23 @@ that File + Symbol under none. A key only the implementer has is EXTRA
 is listed LOW under `## Row Counts Differ`. Blind-count `gap` rows are reported
 as findings. The result is written to <out.md> and its first line is echoed.
 
---base (SLICE scope only): the slice's base commit. A key whose code the slice
-did not change (per `git diff <base>` of the working tree, untracked files
-counting as changed) is *carried*: a disagreement there is reported LOW in its
-own section, owed to the FEATURE recount, never as MISSED/EXTRA. Anything the
-script cannot place with certainty is treated as changed.
+--base: the commit the code is compared with. At SLICE scope it is the slice's
+base commit, or the snapshot taken before the fix round being recounted; at
+FEATURE scope it is only ever such a snapshot (a FEATURE diff with no --base
+compares every row). A key whose code did not change since --base is *carried*:
+a disagreement there is reported LOW in its own section, never as MISSED/EXTRA —
+owed to the FEATURE recount at SLICE scope. At FEATURE scope only a key where the
+implementer has more rows (or the only rows) is carried — an earlier round of the
+final check compared it; a key where the blind count has more is compared as owned,
+since no later recount would see it. The working tree is compared as it is,
+untracked files included (git-ignored files are left out and count as changed).
+Anything the script cannot place with certainty is treated as changed.
+
+--snapshot: print the SHA of a commit holding the working tree as it is now —
+tracked and untracked files, git-ignored ones left out, parent HEAD. It is
+built in a temporary index and no ref points to it: the real index, HEAD, the
+branches, and the stash are not touched. The orchestrator takes one before each
+fix round and passes it as --base to the recount's diff.
 
 --register: the SPEC. When it has a `## Control Register` table (ID | Filed
 under | Reason — `references/enforcement-sites.md` §1.1), every row of either
@@ -44,15 +57,17 @@ says how many were set aside. A control the blind count counted only there is
 still a control it counted.
 
 Exit status: 0 = MATCH, 1 = MISMATCH, 2 = usage or input error.
-Deterministic: no judgment, no network, stdlib only (plus local `git` with --base).
+Deterministic: no judgment, no network, stdlib only (plus local `git` with --base or --snapshot).
 """
 from __future__ import annotations
 
 import argparse
 import ast
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -68,6 +83,9 @@ CELL_SPLIT = re.compile(r"(?<!\\)\|")  # split on | not preceded by a backslash
 MD_ESCAPE = re.compile(r"\\([\\<>_*`\[\]#])")
 PLUGIN_FILES = ("evals/run.py",)  # enforcement-sites.md §1: the plugin's own files, never sites
 HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+SNAPSHOT_MESSAGE = "sdd-flow: the working tree before a fix round (no ref points here; site-diff.py --base)"
+SNAPSHOT_IDENTITY = {"GIT_AUTHOR_NAME": "sdd-flow", "GIT_AUTHOR_EMAIL": "sdd-flow@localhost",
+                     "GIT_COMMITTER_NAME": "sdd-flow", "GIT_COMMITTER_EMAIL": "sdd-flow@localhost"}
 
 Key = tuple[str, str, str]
 
@@ -167,11 +185,35 @@ def key(row: dict[str, Any]) -> Key:
     return (row["control"], row["file"], row["symbol"])
 
 
-def git(cwd: Path | None, *args: str) -> str:
-    r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+def git(cwd: Path | None, *args: str, env: dict[str, str] | None = None) -> str:
+    r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, env=env)
     if r.returncode != 0:
         fail(f"git {' '.join(args)} failed: {r.stderr.strip()}")
     return r.stdout
+
+
+def has_head(root: Path) -> bool:
+    return subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD"], cwd=root,
+                          capture_output=True).returncode == 0
+
+
+def work_tree(root: Path) -> str:
+    """The working tree as a tree object: tracked and untracked files, git-ignored ones left out.
+
+    Built in a temporary index, so the real index, HEAD, and the stash are never touched."""
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {**os.environ, "GIT_INDEX_FILE": str(Path(tmp) / "index")}
+        git(root, "read-tree", "HEAD" if has_head(root) else "--empty", env=env)
+        git(root, "add", "-A", "--", ".", env=env)
+        return git(root, "write-tree", env=env).strip()
+
+
+def snapshot() -> str:
+    """A commit no ref points to, holding the working tree as it is now (--snapshot)."""
+    root = Path(git(None, "rev-parse", "--show-toplevel").strip())
+    parent = ["-p", "HEAD"] if has_head(root) else []
+    return git(root, "commit-tree", "--no-gpg-sign", work_tree(root), *parent, "-m", SNAPSHOT_MESSAGE,
+               env={**os.environ, **SNAPSHOT_IDENTITY}).strip()
 
 
 class ChangeMap:
@@ -183,8 +225,10 @@ class ChangeMap:
             base = git(self.root, "hash-object", "-t", "tree", "/dev/null").strip()
         git(self.root, "rev-parse", "--verify", f"{base}^{{tree}}")
         self.base = base
-        self.files = set(git(self.root, "diff", "--name-only", base, "--").splitlines())
-        self.untracked = set(git(self.root, "ls-files", "--others", "--exclude-standard").splitlines())
+        # Compared tree to tree: `git diff <base>` alone reads a file still untracked as deleted.
+        self.work = work_tree(self.root)
+        self.files = set(git(self.root, "diff", "--name-only", "--no-renames", base, self.work, "--").splitlines())
+        self.in_work = set(git(self.root, "ls-tree", "-r", "--name-only", self.work).splitlines())
         self.at_base = set(git(self.root, "ls-tree", "-r", "--name-only", base).splitlines())
         self._lines: dict[str, set[int]] = {}
         self._span_cache: dict[str, dict[str, list[tuple[int, int]]] | None] = {}
@@ -193,7 +237,7 @@ class ChangeMap:
         if file in self._lines:
             return self._lines[file]
         lines = self._lines[file] = set()
-        for ln in git(self.root, "diff", "-U0", self.base, "--", file).splitlines():
+        for ln in git(self.root, "diff", "-U0", "--no-renames", self.base, self.work, "--", file).splitlines():
             m = HUNK.match(ln)
             if not m:
                 continue
@@ -206,8 +250,8 @@ class ChangeMap:
         """True unless the location is certainly untouched since --base."""
         if not (self.root / file).is_file():
             return True  # stale or mis-pathed row: never hide it as carried
-        if file in self.untracked or file not in self.at_base:
-            return True  # new since base (including git-ignored files): nothing to be carried from
+        if file not in self.in_work or file not in self.at_base:
+            return True  # git-ignored, or new since base: nothing to be carried from
         if file not in self.files:
             return False
         if symbol == "<module>" or not file.endswith(".py"):
@@ -255,6 +299,9 @@ def in_declared(row: dict[str, Any], declared: list[dict[str, Any]]) -> bool:
 
 
 def main() -> None:
+    if sys.argv[1:] == ["--snapshot"]:
+        print(snapshot())
+        sys.exit(0)
     ap = argparse.ArgumentParser()
     ap.add_argument("impl")
     ap.add_argument("blind")
@@ -265,9 +312,9 @@ def main() -> None:
     a = ap.parse_args()
     if not SCOPE_RE.match(a.scope):
         fail(f"--scope must match SLICE-### (optionally one lowercase letter) or FEATURE, got {a.scope!r}")
-    if a.base and a.scope == "FEATURE":
-        fail("--base applies only to a SLICE scope; a FEATURE diff compares every row")
     feature = a.scope == "FEATURE"
+    # Where a carried disagreement is settled: the FEATURE recount, or (FEATURE) the round before.
+    owed = "compared in an earlier round" if feature else "owed to the FEATURE recount"
 
     impl = parse_inventory(Path(a.impl))
     blind = parse_inventory(Path(a.blind))
@@ -335,7 +382,9 @@ def main() -> None:
         pc["blind"] += b
         if i == b:
             continue
-        if carried(k):
+        if carried(k) and not (feature and b > i):
+            # At FEATURE no later recount follows: a site the blind count lists that the implementer
+            # does not may never have been seen by a reviewer, so it is compared as owned (§6).
             pc["carried"].append((k, i, b))
         elif i and b:
             pc["rows"].append((k, i, b))  # both sides have the key: not a finding
@@ -383,7 +432,7 @@ def main() -> None:
         result = "MATCH"
         notes = []
         if low:
-            notes.append(f"{low} LOW carried or out-of-scope, owed to the FEATURE recount")
+            notes.append(f"{low} LOW carried, {owed}" if feature else f"{low} LOW carried or out-of-scope, {owed}")
         if rows_low:
             # "more blind rows" tells the orchestrator a reviewer still owes those keys a check (§6).
             notes.append(f"{rows_low} LOW row counts differ" + (f", {rows_more} with more blind rows" if rows_more else ""))
@@ -506,15 +555,14 @@ def main() -> None:
                 carried_lines.append(f"- **LOW — OUT-OF-SCOPE-BY-DECLARED-SCOPE `{c}` at `{r['file']}` "
                                      f"`{r['symbol']}`**: outside the declared scope; code unchanged since base.")
     if carried_lines:
-        out += [
-            "## Carried (owed to the FEATURE recount)",
-            "",
-            "Disagreements on code this slice did not change. Not findings for this slice; the controls "
-            "stay Partial and the FEATURE recount (4e.5) compares these rows in full.",
-            "",
-            *carried_lines,
-            "",
-        ]
+        if feature:
+            why = ("Disagreements on code unchanged since the base, the working tree before this fix round. Not "
+                   "findings: an earlier round of the final check compared these keys in full, and the reviewer "
+                   "checks that round's findings one by one.")
+        else:
+            why = ("Disagreements on code this slice did not change. Not findings for this slice; the controls "
+                   "stay Partial and the FEATURE recount (4e.5) compares these rows in full.")
+        out += [f"## Carried ({owed})", "", why, "", *carried_lines, ""]
 
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text("\n".join(out), encoding="utf-8")

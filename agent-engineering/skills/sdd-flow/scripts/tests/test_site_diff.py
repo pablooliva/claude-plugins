@@ -430,10 +430,6 @@ class NoGitCases(unittest.TestCase):
         self.assertEqual(line, "Result: MISMATCH (1 HIGH, 0 MEDIUM)")
         self.assertNotIn("## Carried", out)
 
-    def test_feature_scope_rejects_base(self) -> None:
-        inv = inventory([])
-        self.assertEqual(run_diff(self.dir, inv, inv, "FEATURE", base="HEAD")[0], 2)
-
     def test_feature_scope_declared_scope_is_medium_and_compares_fully(self) -> None:
         impl = inventory([impl_row("REQ-019", "app/groups.py", "_group_payload", "—"),
                           impl_row("REQ-019", "app/groups.py", "_legacy_group", "—")])
@@ -554,6 +550,98 @@ class GitCases(unittest.TestCase):
     def test_bad_base_is_input_error(self) -> None:
         inv = inventory([])
         self.assertEqual(self.diff(inv, inv, base="no-such-commit")[0], 2)
+
+    # --- The snapshot before a fix round (--snapshot), and a diff against it ----------------
+
+    def snapshot(self, root: Path | None = None) -> str:
+        r = subprocess.run([sys.executable, str(SCRIPT), "--snapshot"], cwd=root or self.repo.root,
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout.strip()
+
+    def test_snapshot_holds_the_working_tree_and_touches_nothing(self) -> None:
+        self.repo.write(".gitignore", "secret.env\n")
+        self.repo.write("secret.env", "KEY=1\n")
+        self.repo.git("add", ".gitignore")
+        self.repo.git("stash", "list")
+        before = [self.repo.git(*a) for a in (("rev-parse", "HEAD"), ("ls-files", "-s"), ("status", "--porcelain"),
+                                             ("stash", "list"), ("for-each-ref",))]
+        sha = self.snapshot()
+        after = [self.repo.git(*a) for a in (("rev-parse", "HEAD"), ("ls-files", "-s"), ("status", "--porcelain"),
+                                            ("stash", "list"), ("for-each-ref",))]
+        self.assertEqual(before, after)
+        self.assertEqual(self.repo.git("rev-parse", f"{sha}^").strip(), self.repo.base)
+        files = self.repo.git("ls-tree", "-r", "--name-only", sha).split()
+        self.assertIn("app/export.py", files)  # untracked: kept
+        self.assertNotIn("secret.env", files)  # git-ignored: left out
+        self.assertIn("raise ValueError", self.repo.git("show", f"{sha}:app/groups.py").split("def _legacy")[0])
+        self.assertEqual(self.repo.git("for-each-ref", "--contains", sha), "")
+
+    def test_snapshot_in_a_repo_with_no_commits_has_no_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / "a.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+            sha = self.snapshot(root)
+            out = subprocess.run(["git", "cat-file", "-p", sha], cwd=root, capture_output=True, text=True).stdout
+            self.assertNotIn("parent ", out)
+            self.assertIn("a.py", subprocess.run(["git", "ls-tree", "--name-only", sha], cwd=root,
+                                                 capture_output=True, text=True).stdout)
+
+    def test_untracked_file_unchanged_since_the_snapshot_is_carried(self) -> None:
+        sha = self.snapshot()
+        impl = inventory([])
+        blind = inventory([blind_row("D-10", "app/export.py", "run")])
+        self.assertEqual(self.diff(impl, blind, base=sha)[0], 0)
+        self.repo.write("app/export.py", "def run(path):\n    return 0 if path else 3\n")
+        self.assertEqual(self.diff(impl, blind, base=sha)[1], "Result: MISMATCH (1 HIGH, 0 MEDIUM)")
+
+    def test_ignored_file_is_owned_against_a_snapshot(self) -> None:
+        self.repo.write(".gitignore", "generated/\n")
+        self.repo.write("generated/handlers.py", "def handle(req):\n    return req\n")
+        sha = self.snapshot()
+        impl = inventory([])
+        blind = inventory([blind_row("D-10", "generated/handlers.py", "handle")])
+        self.assertEqual(self.diff(impl, blind, base=sha)[1], "Result: MISMATCH (1 HIGH, 0 MEDIUM)")
+
+    def test_feature_scope_with_a_snapshot_carries_only_what_the_fix_left_alone(self) -> None:
+        sha = self.snapshot()
+        self.repo.write("app/registry.py", textwrap.dedent(Repo.BASE_FILES["app/registry.py"]).replace(
+            "raise KeyError(k)", "raise LookupError(k)"))
+        impl = inventory([impl_row("REQ-005", "app/groups.py", "_legacy_group", "—")])
+        blind = inventory([blind_row("REQ-005", "app/registry.py", "lookup")])
+        code, line, out = self.diff(impl, blind, scope="FEATURE", base=sha)
+        self.assertEqual(line, "Result: MISMATCH (1 HIGH, 0 MEDIUM) + 1 LOW")
+        self.assertIn("HIGH — MISSED `REQ-005` at `app/registry.py` `lookup`", out)
+        carried = out.split("## Carried (compared in an earlier round)")[1]
+        self.assertIn("LOW — CARRIED `REQ-005` at `app/groups.py` `_legacy_group`", carried)
+        self.assertNotIn("owed to the FEATURE recount", out)
+
+    def test_feature_scope_never_carries_what_only_the_blind_count_has(self) -> None:
+        sha = self.snapshot()  # nothing changes after it: every key is in code the fix left alone
+        impl = inventory([impl_row("REQ-005", "app/registry.py", "lookup", "—")])
+        blind = inventory([blind_row("REQ-005", "app/registry.py", "lookup")] * 2
+                          + [blind_row("REQ-005", "app/registry.py", "validate")])
+        code, line, out = self.diff(impl, blind, scope="FEATURE", base=sha)
+        self.assertEqual(line, "Result: MISMATCH (1 HIGH, 0 MEDIUM) + 1 LOW")
+        self.assertIn("HIGH — MISSED `REQ-005` at `app/registry.py` `validate`", out)
+        self.assertIn("LOW — ROWS-DIFFER `REQ-005` at `app/registry.py` `lookup`", out)
+        self.assertNotIn("## Carried", out)
+
+    def test_slice_scope_with_a_snapshot_still_carries_what_only_the_blind_count_has(self) -> None:
+        sha = self.snapshot()
+        impl = inventory([])
+        blind = inventory([blind_row("REQ-005", "app/registry.py", "validate")])
+        self.assertEqual(self.diff(impl, blind, base=sha)[1],
+                         "Result: MATCH (1 LOW carried or out-of-scope, owed to the FEATURE recount)")
+
+    def test_feature_scope_match_against_a_snapshot_names_the_earlier_round(self) -> None:
+        sha = self.snapshot()
+        impl = inventory([impl_row("REQ-005", "app/registry.py", "lookup", "—"),
+                          impl_row("REQ-005", "app/registry.py", "validate", "—")])
+        blind = inventory([blind_row("REQ-005", "app/registry.py", "lookup")])
+        code, line, out = self.diff(impl, blind, scope="FEATURE", base=sha)
+        self.assertEqual((code, line), (0, "Result: MATCH (1 LOW carried, compared in an earlier round)"))
 
     # --- The worked example: a SLICE-005a-shaped diff ---------------------------------------
 

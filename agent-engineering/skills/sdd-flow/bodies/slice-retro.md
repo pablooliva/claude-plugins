@@ -60,9 +60,9 @@ The retrospective requires the per-slice review as input. Verify:
 ls SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-*.md
 ```
 
-If absent, fail with: `No per-slice review found for SLICE-XXX (expected SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-<YYYY-MM-DD>.md). Run the slice-review body for SLICE-XXX before the slice retrospective.`
+If absent, fail with: `No per-slice review found for SLICE-XXX (expected SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-iter<N>-<YYYY-MM-DD>.md). Run the slice-review body for SLICE-XXX before the slice retrospective.`
 
-If present, read it into context. Note its findings (HIGH/MEDIUM/LOW counts and any unresolved items).
+There is one document per review iteration (`…-iter<N>-…`). Read the one with the highest `N` — the review that passed the slice, or the latest before a halt; an earlier one is read only for a finding the latest names as closed. A slice reviewed before 3.14.0 has dated documents with no `iter<N>`: read the latest by date. If present, read it into context. Note its findings (HIGH/MEDIUM/LOW counts and any unresolved items).
 
 Also read the slice's **site-count trail** (paths in your prompt): every `SDD/reviews/SITE-DIFF-<SLICE-XXX>-*-iter<N>-*.md` for this slice (iter0 through the latest), the review's `## Enforcement-Site Verification` section, and `STANDARD` (`references/enforcement-sites.md` §6). Note, per iteration, which sites the implementer missed (`MISSED` / `GAP`) — those the review proved and added a row for (`CONFIRMED-MISSED`) included: they cost no fix round, and they are still places the implementer did not list — which extra and cross-filed keys the reviewer confirmed, any site the reviewer's row-count check found unproven, and which controls ended `Partial`. Read the review's `Outside the register` line too: each ID on it that the review says should change the SPEC's `## Control Register` is a `## Recommended SPEC Amendments` entry of this retrospective (the row to add or correct, and why) — a routine amendment, never a re-planning recommendation on that ground alone.
 
@@ -109,7 +109,7 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 **Feature:** [feature-name]
 **SPEC:** SDD/requirements/SPEC-XXX-[feature-name].md
 **IMPLEMENTATION-PLAN:** SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md
-**Per-slice review:** SDD/reviews/REVIEW-SLICE-XXX-[feature-name]-[YYYY-MM-DD].md
+**Per-slice review:** SDD/reviews/REVIEW-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md
 **Date:** YYYY-MM-DD
 
 ## What Was Learned
@@ -417,7 +417,7 @@ This body emits paths under the SDD 2.0.0 layout:
 - `SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md`
 - `SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-[feature-name]-[YYYY-MM-DD].md`
 - `SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md` (kebab-case feature-name slug per CLARIFICATION OQ-B)
-- `SDD/reviews/REVIEW-SLICE-XXX-[feature-name]-[YYYY-MM-DD].md`
+- `SDD/reviews/REVIEW-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md`
 - `SDD/orchestration/progress.md`
 
 ## Refusal-Message Discipline (REQ-007 / UX-001)
