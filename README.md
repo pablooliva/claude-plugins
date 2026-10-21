@@ -10,11 +10,13 @@ This repository hosts Claude Code plugins that extend the capabilities of Claude
 
 ### 1. Spec-Driven Development (SDD) — v2.2.0
 
+> **Superseded by `sdd-flow`.** This plugin is frozen at v2.2.0 and no longer developed: it still works, but new features and fixes go only into the `sdd-flow` skill in the **Agent Engineering** plugin below, which carries its own copy of this methodology. For new projects, use `sdd-flow`.
+
 A comprehensive plugin that provides a standardized Specification-Driven Development methodology for consistent, high-quality software development practices. SDD ensures your projects follow a structured approach through research, planning, and implementation phases.
 
 **Delivery modes:** Two are supported — `whole-feature` (default) and `delivery_mode: per-slice` (opt-in; vertical-thread implementation cycle with per-slice review, retrospective, and a learnings ledger). The 2.0.0 release restructured the directory layout (`SDD/prompts/` split into `SDD/implementation/` + `SDD/orchestration/`) and renamed `PROMPT-XXX` to `IMPLEMENTATION-PLAN-XXX`; run `/sdd-migrate-layout` once on repos created before 2.0.0. See the SDD plugin README for the full migration guide.
 
-**Standalone by design:** SDD is a human-driven methodology you run via its slash commands — it does **not** require any other plugin. For the *agent-orchestrated* version of this lifecycle (subagents driving Research → Planning → Implementation with fresh context per phase), see the self-contained `sdd-flow` skill in the **Agent Engineering** plugin below.
+**Standalone by design:** SDD is a human-driven methodology you run via its slash commands — it does **not** require any other plugin. Its successor is the self-contained `sdd-flow` skill in the **Agent Engineering** plugin below: the same lifecycle, driven by subagents with fresh context per phase (Research → Planning → Implementation), and where all further development happens.
 
 **Key Features:**
 
