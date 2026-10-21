@@ -64,6 +64,18 @@ These are **interactive commands you run yourself** (depth 0, so they may delega
 - **`/research-compact`**, **`/planning-compact`**, **`/implementation-compact`** — Phase-specific compaction. Thin wrappers that read `sdd-flow`'s own compaction bodies (`skills/sdd-flow/bodies/<phase>-compact.md`) and run them interactively, so a manual compaction produces the same artifact an orchestrated run would — no second copy of the templates to drift.
 - **`/commit`** — Commit conventions (no co-author attribution), including atomic per-slice commits.
 
+## Keeping the work small
+
+Three tools question a proposal before it is built, each from a different side. All three read a proposal, plan, design brief, or spec; none edits it or implements anything; each runs only when you ask. Run them in this order:
+
+1. **`/worth-building`** — should this be built as planned at all? Its verdict is proceed, reorder, shrink, or stop. Run it first: there is no point trimming a plan that should be reordered or stopped. A *shrink* verdict points to the next step.
+2. **`/simplicity-challenge`** — the work is worth doing; what is the smallest version still worth using? It cuts or defers item by item, on what the proposal does and on how it is built, and keeps the floor (data safety, security, loud failure) on purpose.
+3. **`/critical-review`** — argues the opposite case: what is missing or wrong. Run it on the reduced version, so the gaps it finds are gaps in what will really be built.
+
+In `sdd-flow` the natural moment is the design gate, before you approve the brief — the last point before a spec is written. The flow reminds you of `worth-building` there and after a plan's first slice (`/worth-building recheck`, with the measured cost in place of the estimate); it runs none of the three itself.
+
+For code that already exists, use something else: the built-in `/simplify` cleans up a diff, and `improve-codebase-architecture` finds shallow modules in a codebase.
+
 ## Coexisting with the SDD plugin
 
 The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it. If you keep both installed:
