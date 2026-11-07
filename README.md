@@ -36,9 +36,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v3.14.4
+### 3. Agent Engineering — v3.15.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
+
+**v3.15.0 highlights:** faster `sdd-flow` slice re-reviews. A re-review after a fix round runs only the tests the fix can affect; the whole suite, and the trace check, run once at the end, when the re-review would pass the slice.
 
 **v3.14.4:** eval cases name their spec (`SPEC-[###] REQ-XXX`); implementation is chunked only when the change is wide.
 

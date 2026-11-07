@@ -85,7 +85,21 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.14.4.
+Version 3.15.0.
+
+### What's new in 3.15.0
+
+A slice re-review after a fix round runs the tests the fix can affect, not the whole suite. In the eduKate project a review round went from about 30 minutes in October to between 2 and 11 hours, mostly from re-running a 44-minute traced suite before every re-review.
+
+- **The tests the fix can affect.** A re-review whose fix round has both snapshots runs the test files the fix changed, the test files that reach a changed module (following imports, and fixtures, through other application modules), the slice's acceptance check, and the tests behind the previous review's findings. It runs the whole suite instead when the fix touches what decides how tests are collected or run (`conftest.py`, `pytest.ini`, a CI workflow and the like), or when it cannot tell which tests a change reaches. The `Re-review:` line names the tests run and their pass count.
+- **The whole suite and the trace check at the end.** When the re-review would otherwise pass the slice, it runs the whole suite and the Tracing Lens before it writes its verdict; a test that fails there is a HIGH finding. While a re-review still has findings, the Tracing Lens waits — unless the previous review had a tracing finding, which it re-checks. A slice still leaves the loop only through a review that ran the whole suite.
+- **The stall check sets aside what only the whole suite found.** That run writes `## Whole Suite SLICE-XXX iter N - w HIGH raised` directly before its review marker, and the stall check leaves those `w` HIGH out: they were hidden from the reviews before, so they say nothing about whether the fix loop is progressing. The 3-round cap is unchanged.
+
+Unchanged: the eval run of record before every review, the first review of a slice (in full), and the whole-feature final check (4e.5), which runs the whole suite and the trace check in full.
+
+**Runs already in a fix loop** take the new rule at their next re-review that has both snapshots; a run that began implementing before 3.14.0 takes no snapshots, so its re-reviews stay in full.
+
+**Not yet exercised on a real cycle.** The rules were reviewed by Codex until it had no findings; no script changed.
 
 ### What's new in 3.14.4
 

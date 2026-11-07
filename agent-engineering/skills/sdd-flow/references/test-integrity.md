@@ -19,13 +19,13 @@ And three things the implementer never does to reach a green run:
 
 - **Never weaken a test that fails.** No deleting it, skipping or expected-failing it, loosening its assertion, changing its expected value, or narrowing what the test command collects. A failing test means the code is wrong or the spec changed. If the SPEC really says the behaviour is now different, change the test and record the requirement that says so under `### Test Changes` in the IMPLEMENTATION-PLAN — one line per changed or removed pre-existing test: the test, what changed, the `REQ-XXX` that requires it.
 - **Never teach the code about the tests.** No branch on a value because a test passes it, no table of the tests' cases, no behaviour that depends on running under the test runner.
-- **Never report a run you did not make.** The pass count in the IMPLEMENTATION-PLAN is from a real run of the whole suite, after the last edit.
+- **Never report a run you did not make.** The pass count in the IMPLEMENTATION-PLAN is from a real run of the whole suite, after the last edit. A fix subagent in a per-slice fix round runs the tests its change can affect — the scoped set of `bodies/slice-review.md` Step 4.5 — and records that count as scoped, naming the files; the re-review that passes the slice runs the whole suite.
 
 ## 2. When the lens runs, and with what
 
 | Review | Runs | Changes it reads |
 |---|---|---|
-| Per-slice 4b (`bodies/slice-review.md`) | the full lens, on the slice's requirements | working tree against the slice's `BASE` |
+| Per-slice 4b (`bodies/slice-review.md`) | the full lens, on the slice's requirements | working tree against the slice's `BASE`; a re-review after a snapshotted fix round, the tests the fix added or changed, against `SNAPSHOT` (it runs the tests that change can affect, and the whole suite only when it would pass the slice — `bodies/slice-review.md` Step 4.5) |
 | Whole-feature 4b (`bodies/code-review.md`) | the full lens, on every requirement | working tree against `BASE` |
 | 4d implementation critical review (`bodies/critical-review.md`) | the lens **by reading** (§5) | working tree against `BASE`; in per-slice mode, the committed slices since `BASE` |
 | 4e.5 verification (`bodies/code-review.md`, `MODE: site-verification-only`) | the **last-look checks** (§5) — after the last fix round | working tree against `BASE` |
