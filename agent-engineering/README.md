@@ -37,6 +37,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 ### Skills
 
 - **`sdd-flow`** — Self-contained end-to-end SDD lifecycle orchestration (see above).
+- **`sdd-lite`** — A light alternative to `sdd-flow` for work whose requirements can be settled in one short interview. Builds in the main conversation with no subagents: an interview only for what is open, a one-page brief of your decisions that you approve (the one gate), the build with tests, one Codex review only when the change touches security, data, money or something hard to undo, and a close-out that keeps the records later cycles read: a decision record through `cross-cutting-adr` when a choice binds later work, glossary updates, and the brief under `SDD/briefs/`. Writes no research, spec, slices, site counts, review reports or run logs. Tells you to switch to `sdd-flow` when the requirements stay unclear or the work needs slices. `/sdd-lite <task>`.
 - **`cross-cutting-adr`** — Captures cross-cutting architectural decisions as numbered ADRs under `SDD/adr/`. Triggers on comparison-with-selection patterns, explicit invocation, or ambient detection. Operationalizes Principle 3 (Living Documentation).
 - **`improve-claude-md`** — Audits `CLAUDE.md`/`AGENTS.md` and `CLAUDE.local.md` to strip discoverable content and concentrate on preferences, behavioral nudges, and corrections. Mirrored from [pablooliva/claude-skills](https://github.com/pablooliva/claude-skills).
 - **`ai-agent-security-review`** — Adversarial security review of **agentic** systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt-injection defense, memory/context security, human-in-the-loop for high-impact actions, output guardrails, monitoring, multi-agent trust, data protection, adversarial validation). Runs standalone on a spec, research doc, diff, or codebase; the same vendored control catalog (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) is what `sdd-flow` consumes at its two gated hook points. Distinct from classical appsec, which stays with the `security` panel value and `/critical-review`.
@@ -85,7 +86,12 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.15.0.
+Version 3.16.0.
+
+### What's new in 3.16.0
+
+- **New skill: `sdd-lite`.** An evaluation of `sdd-flow` against plain Claude Code (four tasks, blind reviews by a second model) found the flow cost 15 to 44 times as much on clear tasks without better code, and a review of one project's later cycles found that what they reopened was small: the owner's decisions, the decision records, the glossary and the tier plan. `sdd-lite` keeps those and drops the rest: interview, one-page brief approved by you, build with tests in the main conversation, one Codex review only for risky changes, and a close-out of ADR, glossary and brief. It points you to `sdd-flow` when the work needs it.
+- **Not yet exercised on a real cycle.** `sdd-flow` is unchanged.
 
 ### What's new in 3.15.0
 

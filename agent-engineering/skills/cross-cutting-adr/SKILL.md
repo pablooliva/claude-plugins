@@ -79,6 +79,10 @@ Even without comparison, activate when the user asserts a system-wide convention
 
 Pair this with decision language ("use", "go with", "adopt", "standardize on") to reduce false positives.
 
+### Trigger E: sdd-lite close-out
+
+At the close-out of an `sdd-lite` build, for each entry under the approved brief's `## Decision records to write` (`SDD/briefs/BRIEF-*.md`). The brief supplies the title, alternatives and consequences.
+
 ## When NOT to Activate
 
 - **Pure exploration.** User is brainstorming without having made a decision yet.
@@ -96,6 +100,7 @@ Behavior differs by trigger source to respect automation vs. confirmation bounda
 - **Trigger C (sdd-flow, comparison detected in research):** the flow lists each match as a candidate at its design gate, in supervised and autonomous mode alike; the user approves or drops them there, and only the accepted ones are written. Do not silently commit — the user should see what's being captured.
 - **Trigger C (sdd-flow, listed in spec frontmatter):** assume pre-approved. The spec explicitly declared the decision should be captured. Proceed without extra confirmation.
 - **Trigger D (ambient scope language):** same as Trigger B — confirm before writing.
+- **Trigger E (sdd-lite close-out):** assume pre-approved. The owner approved the decision under the brief's "Decision records to write", with its alternatives and consequences; take them from the brief and proceed without extra confirmation. A decision not listed there is Trigger B: confirm first.
 
 ## Behavioral Instructions
 
