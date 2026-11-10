@@ -1,8 +1,8 @@
 # sdd-lite — the light build path at a glance
 
-A picture of what `/sdd-lite` does, step by step, as of agent-engineering 3.16.0. It is a reading aid for people: the skill itself runs from `skills/sdd-lite/SKILL.md`, and that file is the source of truth when this page and it disagree.
+A picture of what `/sdd-lite` does, step by step, as of agent-engineering 3.16.1. It is a reading aid for people: the skill itself runs from `skills/sdd-lite/SKILL.md`, and that file is the source of truth when this page and it disagree.
 
-**How to read it.** Every box is work done in the main conversation — `sdd-lite` spawns no subagents. Red boxes are places it **stops and waits for you**. Grey boxes are the one step done by another model (the Codex review) and the hand-off to `sdd-flow`.
+**How to read it.** Every box is work done in the main conversation — `sdd-lite` spawns no subagents. Red boxes are places it **stops and waits for you**. Grey boxes are the one step done by another model (the Codex review, run on every change) and the hand-off to `sdd-flow`.
 
 ## Which path: sdd-lite or sdd-flow
 
@@ -20,7 +20,7 @@ flowchart TD
     classDef other fill:#eeeeee,stroke:#888888,color:#000
 ```
 
-`sdd-lite` exists because, on clear tasks, `sdd-flow` cost 15 to 44 times a plain build without better code, and later cycles reopened only a few of its records: your decisions, the decision records (ADRs), the glossary and the tier plan. `sdd-lite` keeps those, updates the user docs the change needs, and writes no other process records.
+`sdd-lite` exists because, on clear tasks, `sdd-flow` cost 15 to 44 times a plain build and wrote larger, broader code, with correctness the same or better (never worse), and later cycles reopened only a few of its records: your decisions, the decision records (ADRs), the glossary and the tier plan. `sdd-lite` keeps those and the one independent review, updates the user docs the change needs, and writes no other process records.
 
 ## The whole run
 
@@ -37,9 +37,7 @@ flowchart TD
     gate -- "approve" --> s4("4 — Build<br/>small steps, tests as you go,<br/>glossary names, inside the brief<br/>whole suite at the end")
     s4 -- "something the brief<br/>does not cover" --> ask["STOP — you decide<br/>the answer goes into the brief"]:::stop
     ask --> s4
-    s4 --> risk{"Risk class<br/>from step 1"}
-    risk -- "ordinary" --> s6
-    risk -- "risky" --> r1["5 — Codex review<br/>codex review --uncommitted"]:::other
+    s4 --> r1["5 — Codex review, every change<br/>codex review --uncommitted"]:::other
     r1 --> fix("Fix each real finding<br/>with a test that fails without it")
     fix --> r2["One check of the fixes<br/>and no more"]:::other
     r2 -- "still P0 or P1, or one that would<br/>lose data, open a security hole<br/>or do a wrong irreversible action" --> halt["STOP — needs /sdd-flow<br/>or your decision"]:::stop
@@ -59,9 +57,9 @@ flowchart TD
 | 2 Interview | Asks only what the request, the code and the records leave open and what changes what gets built. Each question carries a recommended answer and its consequence | — | Waits for your answers. Points you to `/sdd-flow` when you are still unsure after one round, or the work is more than about a day or more than one part |
 | 3 Brief | One page: what you can do afterwards, your decisions (quoted), how it will work (with `file:line` for today's code), what is left out, how you will check it, the risk class, and the decision records to write with their alternatives and consequences | `SDD/briefs/BRIEF-###-name.md` | **Always.** Nothing is built until you approve; approving also approves writing exactly the listed ADRs |
 | 4 Build | Builds and tests in the conversation. Tests follow `sdd-flow/references/test-integrity.md` §1, with the brief in place of the spec; a changed or removed test is one line under `## Test changes` in the brief | code and tests | When the work reaches something the brief does not cover that changes what you get |
-| 5 Review | Ordinary: none. Risky: one Codex review, fixes with tests, one check of the fixes. No Codex CLI: asks whether to go on without one | — (no review report) | When the check still reports a P0 or P1 finding (Codex's top two priorities), or one you judge would cause data loss, a security hole or a wrong irreversible action |
+| 5 Review | Every change: one Codex review, fixes with tests, one check of the fixes, no further rounds. No Codex CLI: asks whether to go on without one | — (no review report) | When the check still reports a P0 or P1 finding (Codex's top two priorities), or one you judge would cause data loss, a security hole or a wrong irreversible action |
 | 6 Close-out | Writes each ADR the brief listed through `cross-cutting-adr` (pre-approved); a new binding decision that came up while building is shown to you first. Adds the change's terms to the glossary, one dated line to the tier plan, and what a user needs to the README | `adr/*`, glossary, tier-plan line, user docs | Only to ask about an ADR the brief did not list |
-| 7 Report | What was built, test result, review result or "no review (ordinary)", records written, what is not done, your check | — | Offers to commit; never commits unasked |
+| 7 Report | What was built, test result, review result (or why none ran), records written, what is not done, your check | — | Offers to commit; never commits unasked |
 
 ## What it leaves behind
 

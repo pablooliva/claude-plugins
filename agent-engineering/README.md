@@ -37,7 +37,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 ### Skills
 
 - **`sdd-flow`** — Self-contained end-to-end SDD lifecycle orchestration (see above).
-- **`sdd-lite`** — A light alternative to `sdd-flow` for work whose requirements can be settled in one short interview. Builds in the main conversation with no subagents: an interview only for what is open, a one-page brief of your decisions that you approve (the one gate), the build with tests, one Codex review only when the change touches security, data, money or something hard to undo, and a close-out that keeps the records later cycles read: a decision record through `cross-cutting-adr` when a choice binds later work, glossary updates, and the brief under `SDD/briefs/`. Writes no research, spec, slices, site counts, review reports or run logs. Tells you to switch to `sdd-flow` when the requirements stay unclear or the work needs slices. `/sdd-lite <task>`. [`docs/sdd-lite-diagram.md`](docs/sdd-lite-diagram.md) draws its steps, its stops, and when to pick it over `sdd-flow`.
+- **`sdd-lite`** — A light alternative to `sdd-flow` for work whose requirements can be settled in one short interview. Builds in the main conversation with no subagents: an interview only for what is open, a one-page brief of your decisions that you approve (the one gate), the build with tests, one Codex review of every change (and one check of its fixes, no further rounds), and a close-out that keeps the records later cycles read: a decision record through `cross-cutting-adr` when a choice binds later work, glossary updates, and the brief under `SDD/briefs/`. Writes no research, spec, slices, site counts, review reports or run logs. Tells you to switch to `sdd-flow` when the requirements stay unclear or the work needs slices. `/sdd-lite <task>`. [`docs/sdd-lite-diagram.md`](docs/sdd-lite-diagram.md) draws its steps, its stops, and when to pick it over `sdd-flow`.
 - **`cross-cutting-adr`** — Captures cross-cutting architectural decisions as numbered ADRs under `SDD/adr/`. Triggers on comparison-with-selection patterns, explicit invocation, or ambient detection. Operationalizes Principle 3 (Living Documentation).
 - **`improve-claude-md`** — Audits `CLAUDE.md`/`AGENTS.md` and `CLAUDE.local.md` to strip discoverable content and concentrate on preferences, behavioral nudges, and corrections. Mirrored from [pablooliva/claude-skills](https://github.com/pablooliva/claude-skills).
 - **`ai-agent-security-review`** — Adversarial security review of **agentic** systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt-injection defense, memory/context security, human-in-the-loop for high-impact actions, output guardrails, monitoring, multi-agent trust, data protection, adversarial validation). Runs standalone on a spec, research doc, diff, or codebase; the same vendored control catalog (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) is what `sdd-flow` consumes at its two gated hook points. Distinct from classical appsec, which stays with the `security` panel value and `/critical-review`.
@@ -86,7 +86,17 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.16.0.
+Version 3.16.1.
+
+### What's new in 3.16.1
+
+- **`sdd-lite` reviews every change.** One Codex review and one check of its fixes now run on ordinary changes too, not
+  only risky ones: an independent review is the check most likely to catch a bug, and the cap keeps it from growing the
+  code. Without a Codex CLI it asks you before going on, for any change; the risk class stays in the brief so you see
+  what a mistake would touch.
+- **Its premise corrected.** The evaluation found `sdd-flow`'s correctness the same or better than plain's (never
+  worse); what it cost was larger, broader code at 15 to 44 times the price. The skill, its diagram and this README now
+  say that, instead of "without better code".
 
 ### What's new in 3.16.0
 
