@@ -36,11 +36,13 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v3.15.0
+### 3. Agent Engineering — v3.16.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
 
-**v3.15.0 highlights:** faster `sdd-flow` slice re-reviews. A re-review after a fix round runs only the tests the fix can affect; the whole suite, and the trace check, run once at the end, when the re-review would pass the slice.
+**v3.16.0 highlights:** `sdd-lite` — a light build path beside `sdd-flow`, for work one short interview can settle: you approve a one-page brief, it is built in the main conversation with tests, Codex reviews it only when the change is risky, and only the brief, ADRs, glossary and a tier-plan line are kept. It tells you when the work needs `sdd-flow` instead ([diagram](agent-engineering/docs/sdd-lite-diagram.md)). Not yet exercised on a real build.
+
+**v3.15.0:** faster `sdd-flow` slice re-reviews. A re-review after a fix round runs only the tests the fix can affect; the whole suite, and the trace check, run once at the end, when the re-review would pass the slice.
 
 **v3.14.4:** eval cases name their spec (`SPEC-[###] REQ-XXX`); implementation is chunked only when the change is wide.
 
@@ -94,7 +96,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `improve-claude-md` skill — audits and trims `CLAUDE.md`/`AGENTS.md` files to focus on preferences and behavioral nudges
 - `prompt-doctor` skill — diagnoses a task prompt before you send it against the ten-component anatomy, with quoted evidence per component and an opt-in rewrite built only from your own words
 - `rephrase` skill — restates an end-of-work report as Done / Pending / Blocking / Next, without adding facts or doing new work
-- `sdd-lite` skill — the light path: an interview only for what is open, one approved brief, the build in the main conversation, one Codex review only for risky changes, and a close-out of decision records, glossary and brief; points to `sdd-flow` when the work needs it
+- `sdd-lite` skill — the light path: an interview only for what is open, one approved brief, the build in the main conversation, one Codex review only for risky changes, and a close-out of decision records, glossary and brief; points to `sdd-flow` when the work needs it ([diagram](agent-engineering/docs/sdd-lite-diagram.md))
 - `worth-building` skill — asks whether the work should be built as planned at all: the cheapest test that could kill the idea, the ceiling, the budget, and a tripwire; one verdict (proceed / reorder / shrink / stop)
 - `simplicity-challenge` skill — cuts a proposal down before it is built: smallest useful version, cuts and deferrals by tier (POC-plus / Standard / Full) with their costs, and what was kept for safety; removes or defers only
 - `ai-agent-security-review` skill — adversarial review of agentic systems against the OWASP AI Agent Security Cheat Sheet (tool least-privilege, prompt injection, memory security, human-in-the-loop, output guardrails, multi-agent trust, adversarial testing); runs standalone, and the same vendored catalog gates two hook points inside `sdd-flow`
