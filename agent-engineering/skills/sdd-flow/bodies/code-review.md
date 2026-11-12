@@ -12,8 +12,6 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 
 **STOP - Before reviewing ANY code, verify the artifacts named in your prompt exist.** Use the paths in your prompt; do not list `SDD/` directories to find or choose them — other research documents, specs, and plans there belong to earlier features and tiers.
 
-**In `MODE: site-verification-only`, skip this whole section** — that mode's inputs are the ones the Enforcement-Site Verification section names.
-
 ### Required Documents
 
 1. **RESEARCH Document** (`SDD/research/RESEARCH-XXX-[feature-name].md`)
@@ -132,9 +130,7 @@ Perfect code that doesn't meet specifications is worthless; imperfect code that 
 
 #### Test Integrity Lens (mandatory, every cycle)
 
-The checks above ask whether tests exist and pass. This lens asks whether they are real — and whether the tests or the code were bent to get the green run. Read the standard at the `TEST_INTEGRITY` path in your prompt and run it **as written**: checks T1–T7 (§3), at the depth §4 gives for each module's `Risk:` tier, with `BASE` from your prompt and `### Test Changes` from the IMPLEMENTATION-PLAN. It is an overlay on the 70/20/10 split, not a slice of it, and it runs after the test suite has passed. Restore every mutation and delete every probe before you go on. Write the `## Test Integrity` section in the shape §6 gives, and number its findings with the review's others, each tagged `[needs-code-or-test]`. **A HIGH lens finding is a rejection criterion.** If your prompt has no `TEST_INTEGRITY` path, return a failure to the orchestrator naming it.
-
-**In `MODE: site-verification-only`, run only its last-look checks,** as the Enforcement-Site Verification section says under *Test Integrity in site-verification-only mode*.
+The checks above ask whether tests exist and pass. This lens asks whether they are real — and whether the tests or the code were bent to get the green run. Read the standard at the `TEST_INTEGRITY` path in your prompt and run it **as written**: checks T1–T7 (§3), at the depth §4 gives for each module's `Risk:` tier, with `BASE` from your prompt and `### Test Changes` from the IMPLEMENTATION-PLAN. It is an overlay on the 70/20/10 split, not a slice of it, and it runs after the test suite has passed. Make every mutation and probe in a scratch copy of the working tree (TEST_INTEGRITY §8), never in the working tree. Write the `## Test Integrity` section in the shape §6 gives, and number its findings with the review's others, each tagged `[needs-code-or-test]`. **A HIGH lens finding is a rejection criterion.** If your prompt has no `TEST_INTEGRITY` path, return a failure to the orchestrator naming it.
 
 ### 4. CODE QUALITY (ONLY IF ABOVE CRITERIA MET)
 
@@ -221,8 +217,6 @@ If your prompt gives a catalog path but no gate value, read `agent_security:` fr
 
 **How it interacts with the review budget.** Like the Agentic-Surface Lens, it is an overlay on the 70/20/10 split, not a slice of it. It runs after the test suite has passed (Step 6), because the trace run is made of those tests. Its findings are reported in their own section and count in the decision like any other; a HIGH is a rejection criterion.
 
-**In `MODE: site-verification-only`** the lens runs too when your prompt says `tracing: on` — that mode's paragraph, below, says when and what it adds to the document and the marker.
-
 ## Eval Check (conditional)
 
 **Gate:** your spawn prompt carries the line `evals: on` or `evals: off` — the decision the orchestrator recorded when the spec was planned. Do not read the spec's `evals:` field to decide for yourself.
@@ -234,58 +228,11 @@ If your prompt gives a catalog path but no gate value, read `agent_security:` fr
 
 **How it interacts with the review budget.** Like the two lenses above, it is an overlay on the 70/20/10 split, not a slice of it. It runs after the test suite has passed (Step 6), because the test of the cases and checks is one of those tests. Its findings are reported in their own section and count in the decision like any other; a HIGH is a rejection criterion.
 
-**In `MODE: site-verification-only`** the check runs too when your prompt says `evals: on` — that mode's paragraph, below, says when and what it adds to the document.
+## Severities and the marker
 
-## Enforcement-Site Verification (mandatory)
+**A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list in the end report — and nothing sends it to a fix round.
 
-Your prompt provides `STANDARD` (`references/enforcement-sites.md`), `CONVENTIONS` (`SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` — may not exist yet), the implementer's inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, the latest blind count `SDD/reviews/SITE-COUNT-FEATURE-…-iter<N>-….md`, and the orchestrator's diff `SDD/reviews/SITE-DIFF-FEATURE-…-iter<N>-….md`. Read the standard first — it defines control, the control register, enforcement site, gap, the per-site mutation standard, and the three dispositions. It also says which files are not yours to prove (§1, *Not sites*): the plugin's own files in the application — `evals/run.py` and the files `/observability-init` rendered. Do not break a line of one, sample its rows, or raise a finding about how it is tested; the diff has already set aside its rows in `evals/run.py`. An implementer row in a plugin file is not a finding either: write `plugin file, set aside` beside it in your review, and the next implementer or fixer deletes it. A change to `evals/run.py` beyond its placeholders is the Eval Check's finding 9, not a site finding. You are not blind; the blind count was a separate spawn before you. Turn the diff into findings and verify the implementer's evidence. The inventory is also one of your outputs, for one thing only: appending the row of a missed site you proved yourself (step 1c).
-
-**The tier's depth** (the `Site depth:` line in your prompt; `STANDARD` §7 — a prompt without it means `all`). With `Site depth: security`, every step below applies to the security controls only (`STANDARD` §6 says which those are): an implementer row for any other control is not a site at this depth — write `not a site at this depth` beside it, as for a plugin file, and raise nothing — and so is an `UNCOUNTED` control that is not a security control. **With no count and no diff in your prompt** (at Tiers 1 and 2 the blind count is made once, at the final check), steps 1–2b have nothing to carry: write `No blind count at this tier — counted at the final check` in place of the diff line, run steps 3–6 on the implementer's inventory, and record every control as Partial. (A `MODE: site-verification-only` pass always has a count and a diff.)
-
-The steps:
-
-1. **Carry every diff finding into this review at its stated severity** — `GAP` is HIGH, `MISSED` is HIGH until step 1c resolves it, `UNCOUNTED` is MEDIUM, `EXTRA` and `CROSS-FILED` are MEDIUM until step 2 resolves them; a combined outcome (`MISSED+EXTRA`, `CROSS-FILED+EXTRA`, …) is HIGH per missed key and MEDIUM per cross-filed or extra key; a `PARTIAL COUNT` (the blind count declared partial scope at FEATURE scope) is MEDIUM — record its control in `ALSO INVENTORY` so the next recount counts it in full. The diff's `## Row Counts Differ` section (LOW) is **not** a list of findings: never raise a finding, or ask for an inventory row, because two row counts differ (`STANDARD` §6) — step 2b says what those lines require. A difference in which control a site is filed under is never a finding by itself: the diff compares places before labels, and steps 1c, 2, and 2b settle every such key by mutation. A `MISSED control` line in a diff written before 3.11.0 is read as `bodies/slice-review.md` Step 5.6 item 1 says.
-1b. **Adjudicate every `UNCOUNTED`:** not a control / out of scope — with a `## Control Register` in the SPEC, an ID it does not file under itself is not a control (`STANDARD` §1.1) → fix is "delete its inventory rows", or "re-key them to the registered control the rule belongs to"; a real control → record `ALSO INVENTORY for next recount: <IDs>` in the review (IDs only).
-1c. **Resolve every `MISSED` in this pass — by mutation, and add the row of each site a test already proves**, exactly as `bodies/slice-review.md` Step 5.6 item 1c defines: re-run the mutation of each site the blind count names at the key. A test fails → `CONFIRMED-MISSED`: append the row to the implementer's inventory yourself (the blind row's Control, File, Symbol, Path class, and description; `site`; `(i)`; Evidence `mutation: <what you deleted> → failing test <test id> (reviewer, FEATURE iter <N>)`; `Slice` = `—` in whole-feature mode, the slice that owns the code in per-slice mode) — resolved, not a finding, not counted in the marker. No test fails → *a site no test proves* — handled exactly as that step says (HIGH `[needs-code-or-test]` with no row added for a security control; for any other control, the row that describes the site changed to `(iii)` — or a `(iii)` row added when none does — with Evidence `owner: review (FEATURE iter <N>); …`, listed under `Recorded, not proven`, not a finding; which controls are security controls, `STANDARD` §6 says). You add a row only for a site you mutated yourself in this pass — one a test failed for, or one you record as not proven — you delete no row and change one only to record that a site it describes is not proven, and you add one row per site but never two for the same site: a row already there for that same site, with Evidence naming this scope and iteration (a run of this review that was cut short), is not added again, while other sites at the same key still get their own rows. There is no `[row-only]` tag any more; every site-count HIGH left open — a security control's site no test proves, or a gap — is `[needs-code-or-test]`.
-1d. **Record filing conventions — count-free**, exactly as `bodies/slice-review.md` Step 5.6 item 1d defines (the `Added` cell is `FEATURE iter <N>`): a ruling on which **symbol** both sides file the same real site at — never on how many rows a statement is, and never on which control a site is keyed to when the SPEC has a `## Control Register` (the register settles that; only a SPEC with no register leaves a keying to a convention) — appended to `CONVENTIONS` only after checking it against `STANDARD` §4.2's count-free rule.
-2. **Resolve every `EXTRA` and every `CROSS-FILED` — by mutation:** re-run the extra site's mutation (delete the site, run the tests, restore, confirm the file is exactly what it was before the deletion (keep a copy, or compare `git diff -- <file>` taken before and after — the work is uncommitted, so that diff is not empty to begin with)). A test fails → `CONFIRMED-EXTRA` (resolved). None fails → *a site no test proves*, as in step 1c. For a `CROSS-FILED` key (the blind count lists the function under one control, the implementer only under another — including a control the implementer lists nowhere), re-run the mutation of each site the blind count names there: a test fails → `CONFIRMED-CROSS-FILED` (resolved; no row is owed); none fails → *a site no test proves*, as in step 1c. Only the mutation decides, exactly as `bodies/slice-review.md` Step 5.6 item 2 defines — including its **argued-row rule**: a green mutation at an `EXTRA`, `CROSS-FILED`, or row-count key whose statement an implementer row describes as (ii) or (iii), under any control, is what that row claims; it is resolved "by argument" once step 4 accepts the row, and is *a site no test proves* (step 1c) only when no such row describes the statement or the row is `(i)`.
-2b. **Check every row-count key where the blind count has more rows** (marked in the diff's `## Row Counts Differ` section), exactly as `bodies/slice-review.md` Step 5.6 item 2b defines: re-run the mutation of every blind row there that no implementer row describes — every one, not a sample. A test fails → nothing is owed. None fails → *a site no test proves*, as in step 1c, unless step 2's argued-row rule applies. Record one line per key.
-3. **Re-run a sample of mutations (beyond steps 2 and 2b):** at least one site per control and at least 25% (rounded up) of all disposition-`(i)` sites. A recorded `(i)` whose mutation leaves every test green is *a site no test proves*: HIGH for a security control; for any other, change that row to `(iii)` as `bodies/slice-review.md` Step 5.6 item 3 says, and list it under `Recorded, not proven`.
-4. **Dispositions (ii)/(iii) must be argued, not asserted:** each (ii) comment AT the site names which other site or test covers the path and why deleting this one alone is unobservable; each (iii) names an owner and a follow-up. Missing → MEDIUM. A (ii)/(iii) site deleted as dead code → HIGH.
-5. **Output / stream contracts:** every control on stdout, stderr, or exit code needs at least one real-subprocess test per path class in the blind count (in the implementer's inventory when your prompt has no count), asserting on actual bytes. `CliRunner` / `capsys` do not count. Missing → HIGH.
-6. **Leak check:** site comments carrying counts, indices, or greppable site tags, a `progress.md` entry listing per-control rows or site totals, or a `CONVENTIONS` row that breaks `STANDARD` §4.2's count-free rule → MEDIUM.
-
-Record results in the review document's `## Enforcement-Site Verification` section. Do not edit the IMPLEMENTATION-PLAN's `## Control Site Status` table — the completion step owns it.
-
-**Site-verification-only mode (Step 4e.5).** When your prompt says `MODE: site-verification-only`, run ONLY this section (steps 1–6, including 1b–1d — step 1c's rows are the one thing this mode writes outside its review document) against the `FEATURE` diff your prompt names — skip the Pre-Review Artifact Verification, the 70/20/10 review, the checklist walk, the agentic lens, the delivery-tier rules, and the design brief check. The Tracing Lens and the Eval Check are not in that list: the two paragraphs below say when this mode runs each. Your prompt names the SPEC for this mode: step 1b judges each `UNCOUNTED` rule against it. When the diff is a `MATCH`, steps 1–2 have nothing to carry — run step 2b if its `Result:` line says `more blind rows`, then steps 3–6: the row-count check and the dispositions are what this pass is for. Write `SDD/reviews/REVIEW-SITES-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` containing only: the `## Enforcement-Site Verification` table, a numbered `## Findings` list with severities, and `## Decision: [APPROVED/REJECTED]` (any open HIGH or MEDIUM rejects) — and the sections the paragraphs below add.
-
-**The Tracing Lens in site-verification-only mode.** This pass is the last check before completion, after every fix has landed, so with `tracing: on` in your prompt it also repeats the comparison of the planned calls with a real run. With `tracing: off`, or no such line, do nothing about tracing and write nothing about it: the document and the marker are exactly as above. With `tracing: on`:
-
-1. Your prompt also gives **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, **TRACE_TREE** (a file named for this iteration), the IMPLEMENTATION-PLAN path, and `BASE`. If one is missing, return a failure to the orchestrator naming it.
-2. Finish steps 1–6 first and confirm that every mutation you re-ran is restored. Then run the project's full test suite: the trace run is made of those tests, and LENS runs only after they pass. A suite that does not pass is a HIGH finding of this review, `[needs-code-or-test]`, titled *the test suite does not pass after the last fix* and naming the failing tests. It is not a Tracing Lens finding — LENS's own HIGH is for a trace run that fails or cannot be read. Do not run the lens then: write a `## Tracing Lens` section with the one line `Tracing Lens not run — the test suite does not pass (finding <#>)`, write no trace tree, and go to step 5.
-3. With the suite passing, read LENS and run it as written at `SCOPE = FEATURE`, against every marked node of the spec's `### Planned call graph`. *The code the scope changed* (LENS §4) is what changed since `BASE`; a plan-versus-trace difference already under `### Implementation Deviations` in the IMPLEMENTATION-PLAN is listed as recorded and not raised again (LENS §6).
-4. Add the `## Tracing Lens` section to the document, in the shape LENS §7 gives, and number its findings in the document's one `## Findings` list with the site findings.
-5. **Report LOW findings.** List every LOW finding of this pass in `## Findings` and write the count in the marker (below). The decision rule does not change — an open HIGH or MEDIUM rejects, a LOW does not — but the flow sends any count above zero to the fix step, so a LOW left out of the list is a finding nobody fixes.
-
-**The Eval Check in site-verification-only mode.** This pass is the last check before completion, after every fix has landed, so with `evals: on` in your prompt it also reads a run of record made after the last fix — the flow's main session made it just before this pass. With `evals: off`, or no such line, do nothing about evals and write nothing about them: the document and the marker are exactly as above. With `evals: on`:
-
-1. Your prompt also gives **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not), the IMPLEMENTATION-PLAN path, and `BASE`. If EVALS, the eval run line, or `BASE` is missing, return a failure to the orchestrator naming it. **You make no eval run yourself** — the one command of it you may run is `--self-test` (EVALS §4).
-2. Finish steps 1–6 first and confirm that every mutation you re-ran is restored. Then run the project's full test suite — unless you have just run it for the Tracing Lens (step 2 of the paragraph above): one run serves both. With `tracing: off`, a suite that does not pass is the finding that paragraph defines: HIGH, `[needs-code-or-test]`, titled *the test suite does not pass after the last fix*, naming the failing tests.
-3. Read EVALS and run its §7 as written, at `SCOPE = FEATURE`: every case of the spec's `### Evals` is in scope, and so is every older case the application holds; `BASE` is the commit the feature started from. Run it whether or not the suite passed — it reads a run that is already made, and a fixer given all of this pass's findings at once uses one round where two would be needed. The test run that §7's step 7 speaks of is the one of step 2 here.
-4. Add the `## Eval Check` section to the document, in the shape EVALS §7 gives, and number its findings in the document's one `## Findings` list with the others. An open HIGH or MEDIUM of these rejects, like any other.
-5. The check changes nothing in the marker: none of its findings is LOW.
-
-**Test Integrity in site-verification-only mode.** This pass is the only review after the last fix round, and a fix is where a failing test is most cheaply made to pass — by loosening it, skipping it, or leaving it out of the run. So in this mode, with `tracing` on or off, you also run the last-look checks of the Test Integrity Lens. Your prompt gives **TEST_INTEGRITY**, the IMPLEMENTATION-PLAN path, and `BASE`; if one is missing, return a failure to the orchestrator naming it. After steps 1–6, with every mutation restored, read that standard and run its **last-look checks** (§5) as written: **T1** (existing tests not weakened or removed) and **T2** (nothing kept out of the run) over everything changed since `BASE`, and **T3** (expected values come from the SPEC) and the reading half of **T4** (no assertion that cannot be false) over the tests this feature added — no other check of the lens, and no mutation or probe. Add a `## Test Integrity` section with the T1–T4 rows of the table its §6 gives (T4 marked "by reading"), and number any finding in the document's one `## Findings` list, tagged `[needs-code-or-test]`. An open HIGH or MEDIUM of these rejects, like any other.
-
-**A later round of the final check (only when your prompt gives `SNAPSHOT`).** From the second round of 4e.5 on, the orchestrator snapshots each fix round, and your prompt then gives `SNAPSHOT` (a commit holding the working tree before the fix), `FIXED` (one holding it as the fix left it), and `PREVIOUS REVIEW` (the verification the fix answered). That verification checked the whole feature; this one checks that its findings are closed and reads what the fix changed. If your prompt gives only some of the three, or git cannot diff the two commits, run the mode in full and say why in one line at the top of the document; never take a snapshot yourself or guess one.
-
-1. **The change and the earlier findings** — exactly as the first two items of `bodies/slice-review.md` Step 4.5 define them: the change is `SNAPSHOT` → `FIXED`, and every finding of PREVIOUS REVIEW gets one line, closed with its evidence or still open. Write those lines in an `## Earlier Findings` section before `## Findings`, and number each finding still open in `## Findings` again, at its severity.
-2. **Steps 1–6** run on this iteration's diff, which the orchestrator made with `--base SNAPSHOT`. Its `## Carried` keys are those the fix left alone: an earlier round compared them in full, so they are not findings, and a control whose only differences are there is judged as `MATCH` (`STANDARD` §6). Steps 3–6 narrow to the change as Step 4.5 says for Step 5.6: the sample counted and drawn from sites in changed code only, plus every `(i)` row whose Evidence names a test in a file the fix changed; step 4 over the (ii) and (iii) rows added or changed since PREVIOUS REVIEW; steps 5 and 6 over the change.
-3. **The last-look checks** of the Test Integrity Lens: T1 and T2 over the change instead of everything changed since `BASE`, and T3 and T4's reading half over the tests the fix added or changed.
-4. **The Tracing Lens and the Eval Check run in full**, as their paragraphs above say: they read a trace run and an eval run made after the fix. For the lens, *the code the scope changed* stays everything changed since `BASE`.
-5. The marker is unchanged.
-
-**Progress marker (both modes).** When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). The counts are the findings left open: a `CONFIRMED-MISSED`, `CONFIRMED-EXTRA`, or `CONFIRMED-CROSS-FILED` key is resolved and not counted. Write no `[<r> row-only]` bracket — it belonged to markers written before 3.11.0. In `MODE: site-verification-only` with `tracing: on`, add the LOW count inside the parentheses — `(<h> HIGH, <m> MEDIUM, <l> LOW)` — and always write it, zero included; in every other case write no LOW count — `evals: on` alone adds none. It is a phase-detection marker; do not paraphrase it.
+When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` — all three counts, zeros included (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). It is a phase-detection marker; do not paraphrase it.
 
 ## Delivery Tier (tiered specs only)
 
@@ -294,7 +241,7 @@ When the spec's frontmatter carries `tier:` (the delivery tier — not a module'
 - **Left out on purpose is not a finding.** Do not raise a finding for behaviour that section lists as deferred.
 - **Unsafe to defer is a HIGH finding.** Raise one, titled `Unsafe to defer`, when the code breaches the standard's floor for a deferred item — most often a deferred case the code can reach that fails quietly instead of visibly. Name the `DEFER-XXX` row and the floor rule.
 - **Built ahead is a finding.** Raise one for an abstraction, parameter, option, hook, flag, or dependency that no requirement of this tier uses. MEDIUM by default; HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal; "a later tier will need it" is not a justification.
-- **Scope, and a proof sized to it.** Everything this tier does build is reviewed in full; only how deep the enforcement-site proof goes depends on the tier (`Site depth:`, `references/enforcement-sites.md` §7).
+- **Scope.** Everything this tier does build is reviewed in full.
 
 ## Design Brief Check (informational)
 
@@ -309,7 +256,7 @@ git ls-files --others --exclude-standard -- . ':(exclude)SDD'
 
 If your prompt has no `BASE`, use the file paths the IMPLEMENTATION-PLAN lists. Compare that file set against the areas in the brief's "What changes where" table and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
 
-**Informational only.** Do not raise a finding for an out-of-footprint file on that ground alone, and do not let this section affect the APPROVED / REJECTED decision. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body. In `MODE: site-verification-only`, skip this section entirely.
+**Informational only.** Do not raise a finding for an out-of-footprint file on that ground alone, and do not let this section affect the APPROVED / REJECTED decision. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body.
 
 ## Review Process Workflow
 
@@ -351,11 +298,7 @@ ls SDD/orchestration/subagent-calls/
 
 Run the discovery + walk described in the **Project Review Checklist Walk** section above. Record every item's verdict; route FAIL items into the review's findings at their warranted severity.
 
-### Step 4c: Verify Enforcement Sites
-
-Run the **Enforcement-Site Verification** section above. Every finding it raises goes into the review's findings at its stated severity.
-
-### Step 4d: Check Against the Design Brief
+### Step 4c: Check Against the Design Brief
 
 Run the **Design Brief Check** section above. It produces no findings.
 
@@ -560,26 +503,9 @@ Include this section only when the lens ran. When it was skipped, replace it wit
 
 [When the check ran: the section in the shape EVALS §7 gives — the eval run line, the results path, the table of cases in scope, the judge, and the findings. When it was skipped, the one line: "Eval check skipped — evals: off".]
 
-## Enforcement-Site Verification
+## LOW Findings (listed, not fixed)
 
-**Site diff:** <SITE-DIFF path> — `Result:` line verbatim
-**Blind count:** <SITE-COUNT path>   **Implementer inventory:** SDD/implementation/sites/SITES-IMPL-[feature-name].md
-
-| Control | Diff outcome | Missed / extras / cross-filed confirmed | Mutations re-run (pass/total) | (ii)/(iii) argued | Subprocess test per path class | Control verdict |
-|---------|--------------|--------------------------------|-------------------------------|-------------------|--------------------------------|-----------------|
-| <ID> | MATCH \| MISSED \| CROSS-FILED \| EXTRA \| a `+` combination of those three \| UNCOUNTED \| GAP | <n>/<n> (+<k> by argument) or — | <n>/<n> | yes \| no: <site> \| — | yes \| no: <class> \| n/a | Complete-eligible \| Partial |
-
-**Row-count keys checked (blind count has more rows):** one line per key — `<Control> <File> <Symbol>: <n> blind row(s) no implementer row describes; mutation → <failing test id> | NO TEST FAILED → finding <#> | NO TEST FAILED → recorded, not proven | green, covered by the argued (ii)/(iii) row at <Control> <Symbol>` — or `None.` when the diff marks no such key.
-
-**Rows added to the inventory (`CONFIRMED-MISSED`):** one line per row — `<Control> <File> <Symbol>: mutation → <failing test id>` — or `None.`
-
-**Recorded, not proven** (`STANDARD` §6, *A site no test proves* — a control that is not a security control; not findings): one line per site — `<Control> <File> <Symbol>: deleted <what>; every test stayed green; (iii) row added | row changed from (i)` — or `None.`
-
-**Resolved by argument:** one line per `EXTRA`, `CROSS-FILED`, or row-count key whose green mutation an argued row covers — `<Control> <File> <Symbol>: green; covered by the (ii)|(iii) row at <Control> <Symbol>` — or `None.`
-
-**Outside the register:** the IDs on the blind count's `Outside the register:` line and any `Register rows ignored` the diff's header lists, each with what became of its sites and one line on whether the register should change — or `None.` Not findings.
-
-A control is **Complete-eligible** only if its diff is `MATCH` (or only `CONFIRMED-MISSED` / `CONFIRMED-EXTRA` / `CONFIRMED-CROSS-FILED` differences — by mutation or by argument — and sites recorded as not proven), every row-count key of it listed above is checked with no site left open (a site recorded as not proven, `STANDARD` §6, is not open), it has no open gap, every re-run mutation failed a test or is covered by an accepted (ii)/(iii) row, and every (ii)/(iii) is argued. A difference in row counts alone never makes a control Partial, and neither does a difference in which control a site is filed under. Any open HIGH here rejects the implementation.
+[One line per LOW finding — `<#> <title> — <file:line>` — or `None.`]
 
 ## Context Engineering (20%)
 [Context management review]

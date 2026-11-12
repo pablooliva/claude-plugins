@@ -1,6 +1,6 @@
 # Tracing Lens — a real run compared with the planned call graph
 
-The one definition of how an `sdd-flow` review checks what a feature really did when it ran. Three reviews run it, each at the scope its prompt gives: the per-slice review (`bodies/slice-review.md`), the whole-feature code review (`bodies/code-review.md`), and the final verification at Step 4e.5. They read this file instead of restating it.
+The one definition of how an `sdd-flow` review checks what a feature really did when it ran. Three reviews run it, each at the scope its prompt gives: the per-slice review (`bodies/slice-review.md`), the whole-feature code review (`bodies/code-review.md`), and the final check at Step 4e.5 (`bodies/final-check.md`). They read this file instead of restating it.
 
 It runs only when your prompt carries the line `tracing: on`. With `tracing: off`, or no such line, do not run it: write the one line `Tracing lens skipped — tracing: off` in the review and move on.
 

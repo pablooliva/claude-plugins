@@ -50,7 +50,7 @@ You are tasked with creating git commits for the changes made during this sessio
 
 ## Per-slice atomic commits (`delivery_mode: per-slice`)
 
-When the orchestrator runs the per-slice commit (per-slice cycle step 4c.6), the commit is **ATOMIC PER SLICE**: ONE commit covering everything the slice produced — slice code + tests + site inventory + the IMPLEMENTATION-PLAN (with the slice's row already `Complete`) + the slice's site counts and diffs + per-slice review doc + fix-findings notes + retrospective + ledger update. One slice = one commit, so the slice's contribution is traceable in `git log` and reversible with a single `git revert <SHA>`.
+When the orchestrator runs the per-slice commit (per-slice cycle step 4c.6), the commit is **ATOMIC PER SLICE**: ONE commit covering everything the slice produced — slice code + tests + the IMPLEMENTATION-PLAN (with the slice's row already `Complete`) + per-slice review doc + fix-findings notes + retrospective + ledger update. One slice = one commit, so the slice's contribution is traceable in `git log` and reversible with a single `git revert <SHA>`.
 
 **Staging (looser default):** the per-slice commit does NOT enforce that the working tree contains only slice-scoped files (this is hostile to legitimate "I fixed an unrelated typo while here" workflows). The orchestrator stages the slice's files explicitly with `git add <specific paths>` (never `-A` or `.`); it may first show `git status` and confirm the staged set looks slice-scoped.
 

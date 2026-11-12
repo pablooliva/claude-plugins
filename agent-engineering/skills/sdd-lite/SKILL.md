@@ -24,7 +24,7 @@ project's sdd-flow records were used in later cycles, 2026-11.)
   one second-model review of every change (and at most one check of the fixes); write a decision record, glossary
   entries and the brief.
 - **Does NOT:** spawn subagents; write research, specs, implementation plans, slice files, counters, review reports or
-  progress logs; run a specialist panel or site counts; commit (unless the user asks); push.
+  progress logs; run a specialist panel; commit (unless the user asks); push.
 
 ## Steps
 

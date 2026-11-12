@@ -67,7 +67,7 @@ flowchart TD
 |---|---|
 | The brief (`SDD/briefs/`) — the record of *why* | Research document |
 | ADRs (`SDD/adr/`) for decisions that bind later work | Spec, implementation plan, slice files |
-| Glossary entries (`SDD/UBIQUITOUS_LANGUAGE.md`) | Specialist panel, site counts |
+| Glossary entries (`SDD/UBIQUITOUS_LANGUAGE.md`) | Specialist panel |
 | One tier-plan line, when the feature has a tier plan | Review reports, progress logs, run logs |
 
 Any other file a `sdd-lite` run writes under `SDD/` is a sign the full flow is being rebuilt by hand: if the work needs it, it needs `/sdd-flow`.

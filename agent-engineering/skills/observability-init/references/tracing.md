@@ -178,10 +178,8 @@ What an implementer does for the code it adds, and nothing more:
 4. **Nothing outside the bootstrap module names a backend, an exporter, or an instrumentation library** — apart from the tests and the trace lookup, as *The foundation* says.
 5. **The entry-point test passes and the trace run still completes.** The same test file checks that own functions are recorded and that, while the values switch is unset, none that succeeded carries a value.
 
-## These rules and the enforcement-site standard
+## These rules and a feature's security rules
 
-"Every entry point has a span" and "no span records a header" hold on every path, which is how `sdd-flow/references/enforcement-sites.md` defines a control. The rules in this file are nevertheless **not controls** under that standard: no per-site mutation and no blind site count is owed for them.
+The rules in this file are not security rules of a feature's spec: `sdd-flow`'s security verification (`sdd-flow/references/security-verification.md`) neither breaks nor tests them. They are stated once for the whole application, made true mostly by one setting in the bootstrap module, and checked by the application's own entry-point test and by reading the trace run's span file.
 
-- A control is a rule a feature's spec states. These rules are stated once for the whole application, and are checked by the application's own entry-point test and by reading the trace run's span file.
-- Most tracing comes from one setting in the bootstrap module, so there is no per-path code to count or to break.
-- **A spec that needs one of these rules as a real control restates it with an ID**, and then the enforcement-site standard applies to it in full. A feature that handles credentials should carry "no path records the `Authorization` header on a span" as a security requirement of its own.
+- **A spec that needs one of these rules as a security rule restates it with a `SEC-` ID**, and then the security verification checks it in the application's own code. A feature that handles credentials should carry "no path records the `Authorization` header on a span" as a security requirement of its own.

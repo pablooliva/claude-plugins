@@ -56,27 +56,24 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
    - Only the one `progress.md` names for this feature: the compaction file path in its latest `## PARTIAL: needs continuation` block for the implementation phase. Do not list `SDD/orchestration/compacted/` and pick "the most recent" — files there belong to other phases, earlier handoffs, and other features.
    - If one is named, load it to understand any pending items, and review its "Specification Validation Remaining" section. If none is named, skip this step.
 
-5. **Final Site Diff and Control Site Status:**
-   - Your prompt provides the final feature-wide diff `SDD/reviews/SITE-DIFF-FEATURE-[feature-name]-iter<N>-[date].md`, the site review(s) that verified it, the implementer inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md`, and `STANDARD` (`references/enforcement-sites.md` — read §6).
-   - Update the IMPLEMENTATION-PLAN's `## Control Site Status` table from these, one row per control: implementer and independent site counts from the diff, the diff path, and `Status` per standard §6 — `Complete` only if the final diff is `MATCH` for it — or `CARRIED`, when that diff is a later round's, made against a snapshot (standard §6) — (or its only differences are `CONFIRMED-MISSED` / `CONFIRMED-EXTRA` / `CONFIRMED-CROSS-FILED` in the review, by mutation or by argument, and sites the review recorded as not proven), the review recorded its check of every row-count key of the control where the blind count has more rows with no site left open (a site recorded as not proven, `STANDARD` §6, is not open), it has no open gap, and every (ii)/(iii) was accepted by the reviewer. Different row totals in the two site columns do not make a control `Partial`. **A control with no independent count is `Partial`.** Copy (iii) owners into `Open (iii) owners`.
-   - Never mark a control `Complete` on the implementer's inventory alone.
-   - **With `Site depth: security` in your prompt** (`STANDARD` §7), the table has a row for each security control and no other; write one line under it: `Tier 1: other controls are held by their requirements' tests and have no site rows.`
-   - **List every site no test proves** in the summary's `### Not Proven by a Test` (template below): every inventory row with Disposition `(iii)` — the ones a reviewer recorded (Evidence `owner: review (…)`, `STANDARD` §6, *A site no test proves*) and the ones an implementer kept. The code holds each rule today; no test fails without the site. The user reads this list at the commit checkpoint, so leave none out, and write `None.` when there are none.
+5. **The Final Check and the LOW Findings:**
+   - Your prompt provides **FINAL_CHECK** — the last final-check review (`SDD/reviews/FINAL-CHECK-FEATURE-*`), the one that let the loop end — **SECURITY** (`references/security-verification.md`, read §5), and **REVIEWS**, the review documents of this feature.
+   - Copy FINAL_CHECK's `## Security Verification` table into the summary's `### Security Verification` (template below). A rule whose row is not `holds, proven` is an incomplete item.
+   - Copy every LOW finding from the `LOW Findings (listed, not fixed)` sections of REVIEWS into the summary's `### LOW Findings (listed, not fixed)` — one line each, with the review it came from — and write `None.` when there are none. The owner reads this list in the end report.
+   - **Change no code and no test in this run.** FINAL_CHECK reviewed the code and the tests as they stand; a change made after it would be completed without that check. Wherever this body tells you to fix a failing test, write a missing test, or complete an implementation, list the item as incomplete instead and return it (Error Recovery → Save Progress), saying in the return that it needs code or tests changed. Completion documents — the plan, the spec's summary, the tier plan, the glossary, the implementation summary — are yours to write.
 
 6. **Tier Standard and Tier Plan (tiered specs only):**
    - When the SPEC's frontmatter carries `tier:`, your prompt provides **TIERS** (the tier standard — read its "Recording a deferral" and "Tier plan" sections) and **TIER_PLAN** (`SDD/flow/TIERS-[feature-name].md`). Load both. With no `tier:` in the SPEC, skip everything this body says about the tier plan.
 
 7. **Final Trace Tree (only when your prompt says `tracing: on`):**
    - Your prompt carries the line `tracing: on` or `tracing: off` — the decision recorded when the spec was planned. Do not read the spec's `tracing:` field to decide for yourself. With `tracing: off`, or no such line, skip everything this body says about tracing.
-   - With `tracing: on` your prompt also provides **OBS_RECORD** (`SDD/OBSERVABILITY.md` — where traces go, the switches, the trace run, the entry-point test) and **TRACE_TREE** (the call tree the final verification rendered from a real run). The site review named in step 5 is that verification: its `## Tracing Lens` section holds the comparison of the tree with the spec's `### Planned call graph`. If either path is missing from your prompt or cannot be read, or that review has no `## Tracing Lens` section, return a failure to the orchestrator naming it.
+   - With `tracing: on` your prompt also provides **OBS_RECORD** (`SDD/OBSERVABILITY.md` — where traces go, the switches, the trace run, the entry-point test) and **TRACE_TREE** (the call tree the final verification rendered from a real run). FINAL_CHECK is that verification: its `## Tracing Lens` section holds the comparison of the tree with the spec's `### Planned call graph`. If either path is missing from your prompt or cannot be read, or that review has no `## Tracing Lens` section, return a failure to the orchestrator naming it.
    - **Run nothing for tracing** — no trace run, no script, no reading of a span file. You report what the final verification found; you do not repeat it.
-   - **Change no code and no test in this run.** The tree in your prompt is of the code and the tests as they stood at the final verification; a change made after it would be completed without that check. Wherever this body tells you to fix a failing test, write a missing test, or complete an implementation, with `tracing: on` list the item as incomplete instead and return it (Error Recovery → Save Progress), saying in the return that it needs code or tests changed. Completion documents — the plan, the spec's summary, the tier plan, the glossary, the implementation summary — are yours to write as before.
 
 8. **Final Eval Results (only when your prompt says `evals: on`):**
    - Your prompt carries the line `evals: on` or `evals: off` — the decision recorded when the spec was planned. Do not read the spec's `evals:` field to decide for yourself. With `evals: off`, or no such line, skip everything this body says about evals.
-   - With `evals: on` your prompt also provides **EVALS** (`references/evals.md` of this skill — read its §1 and §9), the eval run line (`Eval run: …`) of the run the final verification read, and **EVAL_RESULTS** — that run's results document — when the run wrote one; your prompt says so in one line when it did not. The site review named in step 5 is that verification: its `## Eval Check` section holds the check of that run and of the eval files against the spec. If EVALS or the eval run line is missing from your prompt, a file it names cannot be read, or that review has no `## Eval Check` section, return a failure to the orchestrator naming it.
+   - With `evals: on` your prompt also provides **EVALS** (`references/evals.md` of this skill — read its §1 and §9), the eval run line (`Eval run: …`) of the run the final verification read, and **EVAL_RESULTS** — that run's results document — when the run wrote one; your prompt says so in one line when it did not. FINAL_CHECK is that verification: its `## Eval Check` section holds the check of that run and of the eval files against the spec. If EVALS or the eval run line is missing from your prompt, a file it names cannot be read, or that review has no `## Eval Check` section, return a failure to the orchestrator naming it.
    - **Run nothing for evals** — no eval run, and not the command with `--self-test` either. You report what the final verification found; you do not repeat it.
-   - **Change no code and no test in this run** — step 7's rule, and with `evals: on` it holds whether or not tracing is on. The results in your prompt are of the application as it stood at the final verification; a change made after it would be completed on answers the application no longer gives. List the item as incomplete and return it (Error Recovery → Save Progress), saying in the return that it needs code or tests changed.
    - **A sign-off requirement** — one the SPEC lists under `### Manual Verification` with a line that starts `- [ ] **Sign-off: ` — shows `Complete` when it is implemented, every case of the judged eval its line names has a row in EVAL_RESULTS with a score on every run, and the final verification raised no finding about it (EVALS §9). Otherwise it is an incomplete item. Its acceptance is the user's, at the commit checkpoint that follows this run: do not wait for it, do not record it as given, and do not edit the line or tick its box.
 
 ### 2. Pre-Completion Verification
@@ -99,10 +96,10 @@ COMPLETION READINESS CHECKLIST
 □ All UX-XXX user experience requirements show "Satisfied"
 □ All EDGE-XXX edge cases show "Complete" implementation
 □ All FAIL-XXX failure scenarios show error handling "Implemented"
-□ Every control in "## Control Site Status" is "Complete" (independently counted, diff matched)
-□ With `tracing: on` — the final verification review ran the Tracing Lens and lists no finding of any severity
-  (a "Tracing lens skipped" or "Tracing Lens not run" line there, or an open HIGH, MEDIUM, or LOW, is an incomplete item)
-□ With `evals: on` — the final verification review ran the Eval Check and lists no finding of it
+□ Every security rule in the final check's `## Security Verification` table holds and is proven
+□ With `tracing: on` — the final check ran the Tracing Lens and left no HIGH or MEDIUM finding open
+  (a "Tracing Lens not run" line there, or an open HIGH or MEDIUM, is an incomplete item; a LOW is listed, not blocking)
+□ With `evals: on` — the final check ran the Eval Check and lists no finding of it
   (no `## Eval Check` section there, or an open eval finding, is an incomplete item)
 □ With `evals: on` — every sign-off requirement's judged eval has a score on every run in the final eval results
 □ Test coverage meets or exceeds target from specification
@@ -427,59 +424,17 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 - Edge Cases: [X]/[Y] scenarios covered
 - Failure Scenarios: [X]/[Y] handled
 
-### Not Proven by a Test
-[Every inventory row with Disposition `(iii)` — `None.` when there are none.]
+### Security Verification
+[The final check's `## Security Verification` table, as it stood when the loop ended — or `No security rule in this spec`.]
 
-| Control | File | Symbol | What was deleted with every test still green | Recorded by |
-|---|---|---|---|---|
-| [ID] | [file] | [symbol] | [from the row's Evidence] | [review (SCOPE iter N) \| implementer: owner] |
+### LOW Findings (listed, not fixed)
+[One line per LOW finding of every review of this feature: `<review file> #<n>: <title> — <file:line>`. `None.` when there are none.]
 
-### Code Quality
-- Linting: [Pass/Fail with issues if any]
-- Type Safety: [Coverage if applicable]
-- Documentation: [Status]
-
-## Deployment Readiness
-
-### Environment Requirements
-
-- Environment Variables:
-
-  ```text
-  [VAR_NAME_1]: [purpose]
-  [VAR_NAME_2]: [purpose]
-  ```
-
-- Configuration Files:
-
-  ```text
-  [config.file]: [required settings]
-  ```
-
-### Database Changes
-- Migrations: [list or "None"]
-- Schema Updates: [list or "None"]
-
-### API Changes
-- New Endpoints: [list with methods]
-- Modified Endpoints: [list with changes]
-- Deprecated: [list or "None"]
-
-## Monitoring & Observability
-
-### Key Metrics to Track
-1. [Metric]: Expected range [value]
-2. [Metric]: Alert threshold [value]
-
-### Logging Added
-- [Component]: [What is logged]
-
-### Error Tracking
 - [Error scenario]: [How it's tracked]
 
 ### Tracing
 
-[Only with `tracing: on` in your prompt — with `tracing: off`, or no such line, leave this whole subsection out, heading included. Fill it from the final trace tree and the final verification review's `## Tracing Lens` section — names and counts only, never a value recorded on a span:]
+[Only with `tracing: on` in your prompt — with `tracing: off`, or no such line, leave this whole subsection out, heading included. Fill it from the final trace tree and the final check's `## Tracing Lens` section — names and counts only, never a value recorded on a span:]
 
 - **Where traces go, and the switches:** see `SDD/OBSERVABILITY.md` [name its sections; do not copy an endpoint, a key, or any other value out of it]
 - **Final trace tree:** [TRACE_TREE path] — [its `Result:` line, verbatim]
@@ -494,7 +449,7 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 
 ### Evals
 
-[Only with `evals: on` in your prompt — with `evals: off`, or no such line, leave this whole subsection out, heading included. Fill it from the final eval results and the final verification review's `## Eval Check` section — IDs, verdicts, and scores only, never a word of what the model answered: the outputs stay in the results. When that section is the one line `Eval check: no eval in scope.`, write that line here and nothing else.]
+[Only with `evals: on` in your prompt — with `evals: off`, or no such line, leave this whole subsection out, heading included. Fill it from the final eval results and the final check's `## Eval Check` section — IDs, verdicts, and scores only, never a word of what the model answered: the outputs stay in the results. When that section is the one line `Eval check: no eval in scope.`, write that line here and nothing else.]
 
 - **Eval command:** see the `Eval command` row of `SDD/OBSERVABILITY.md`
 - **Final eval run:** [EVAL_RESULTS path] — [the eval run line, verbatim]

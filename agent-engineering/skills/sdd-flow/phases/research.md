@@ -52,7 +52,7 @@ Run this review by the cycle's **review route** (`references/second-model-review
 Spawn an **`agent-engineering:sdd-workhorse`** subagent (fix subagent — no body file; brief inline):
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md` AND `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`.
 - **Outputs:** updated RESEARCH document, append `progress.md`.
-- **Task:** Resolve ALL findings — HIGH, MEDIUM, and LOW. Fill gaps, strengthen weak evidence, add missing perspectives, address questionable assumptions; no finding left unresolved. After fixing, append a "Findings Addressed" section to the review document noting how each was resolved.
+- **Task:** Resolve every HIGH and MEDIUM finding — fill gaps, strengthen weak evidence, add missing perspectives, address questionable assumptions. A LOW finding is listed, not fixed. After fixing, append a "Findings Addressed" section to the review document noting how each was resolved.
 
 ---
 

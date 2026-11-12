@@ -151,17 +151,6 @@ If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## De
 - [ ] **Coverage** — Will every REQ-XXX / EDGE-XXX / FAIL-XXX be reachable through some slice by the time the last slice lands? Orphan REQs are a HIGH finding.
 - [ ] **Acceptance check quality** — Each slice's `Acceptance check` field cites a single, focused, testable criterion. Bare "manual verification" with no detail is a MEDIUM finding.
 
-### Control Register
-
-The spec's `## Control Register` decides which ID every enforcement site is filed under during implementation — for the implementer and for the blind counter alike (the standard at the **STANDARD** path in your prompt, §1 and §1.1; with no such path, a spec reviewed outside the flow, skip this sub-section silently). Both sides follow it, so the comparison between them cannot catch an error in it. You are the last independent look at it.
-
-- [ ] **Missing** — the spec has no `## Control Register`. HIGH.
-- [ ] **A control left out** — read every ID in the spec. One that states a rule that must hold on every path (a guard, a refusal, a write control, an output or stream contract, an invariant, a security control) and has no row will be counted by nobody. HIGH. Look hardest at output contracts and at non-`SEC` entries.
-- [ ] **A rule hidden by a restating row** — for every row filed under another ID, apply the deletion test: with this entry deleted, would the system be allowed anything it was not allowed before? If yes, the entry adds a clause of its own, and filing it under another control means that clause's path may never be traced. HIGH. The typical case is a `SEC`, `FAIL`, or `UX` entry that repeats a requirement and adds one condition.
-- [ ] **Not a control, listed as one** — a row for an ID that describes a single behaviour, a document, or a test. MEDIUM: it will be counted, come back with no sites, and cost a review round.
-- [ ] **Malformed** — a `Filed under` cell that names an ID filed under another (a chain), an ID that does not exist, or an ID in two rows. MEDIUM.
-- [ ] **A leak** — a row that names a file, a function, a module, a slice, or a number of places. MEDIUM: the blind counter reads this table.
-
 ### Planned Call Graph (by the tracing gate in your prompt)
 
 Your prompt carries the line `tracing: on` or `tracing: off` — whether the flow will later check what this feature really does when it runs against the tree of calls the spec plans. With no such line (a spec reviewed outside the flow, or a flow begun before tracing was part of it), skip this sub-section silently.
@@ -263,9 +252,6 @@ Append `## Fix Check` to the CRITICAL-SPEC document. Its first line is exactly `
 
 ### Design Brief Fidelity
 [One line if no brief exists. Otherwise each unrecorded departure, with the brief's text and the spec's, or "Spec matches the approved brief; N recorded deviation(s) verified."]
-
-### Control Register
-[Omit when your prompt names no STANDARD. Otherwise each finding with its severity, the ID it concerns, and the corrected row — or "Register covers N controls and M restating IDs; every ID in the spec checked."]
 
 ### Planned Call Graph
 [Omit when your prompt carries no tracing gate. `tracing: off`: one line. `tracing: on`: each finding with its severity, the node or slice it concerns, and the correction — or "Graph covers N entry point(s); every LLM and external call marked and assigned."]
@@ -429,6 +415,8 @@ Rate each finding:
 - **MEDIUM**: Will cause confusion, technical debt, or minor issues
 - **LOW**: Best practice deviation, style issue, or minor improvement
 
+A review with no HIGH and no MEDIUM finding passes. A LOW finding is listed, not fixed: put every one in a closing `### LOW Findings (listed, not fixed)` section — one line each, or `None.` — which the owner sees in the end report; the fix step does not act on it.
+
 ### Respect the Tier
 
 Applies to planning and implementation reviews when the spec's frontmatter carries `tier:` (1, 2, or 3). Read the tier standard at the **TIERS** path in your prompt and the spec's `## Deferred to Later Tiers` first. An untiered spec is reviewed as before.
@@ -436,7 +424,7 @@ Applies to planning and implementation reviews when the spec's frontmatter carri
 - **Left out on purpose is not a finding.** Do not raise a finding — a missing edge case, an unhandled scenario, a scale concern — for an item listed under `## Deferred to Later Tiers`, or for the absence of anything the tier standard places in a later tier.
 - **Unsafe to defer is a HIGH finding.** Raise one when a deferred item breaches the standard's floor (TIERS → The floor) — including a deferred case this tier can reach that fails quietly: no `FAIL-XXX` in the spec, or no visible failure in the code. Title it `Unsafe to defer`, and name the `DEFER-XXX` row and the floor rule.
 - **Built ahead is a finding.** Raise one for any part that exists only for a later tier — in the spec, a module, interface member, parameter, or option no requirement of this tier uses; in the code, an unused abstraction, option, hook, or dependency. MEDIUM by default; HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal; "a later tier will need it" is not a justification.
-- **Scope, and a proof sized to it.** What this tier does build is reviewed in full. A tier never excuses a defect in behaviour it includes.
+- **Scope.** What this tier does build is reviewed in full. A tier never excuses a defect in behaviour it includes.
 
 ### Don't Stop at Surface Level
 

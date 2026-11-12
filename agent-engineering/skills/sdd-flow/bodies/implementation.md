@@ -189,13 +189,9 @@ Create the implementation tracking document using this enhanced template. **The 
 2. [Following priority]
 3. [Subsequent priority]
 
-## Control Site Status
+## Security Proofs
 
-> **Required in both delivery modes.** One row per control (any SPEC rule that must hold on every path — see `references/enforcement-sites.md` §1). Scaffold it empty; `slice-retro` (per-slice) or the completion step (whole-feature) fills `Independent sites`, `Latest diff`, and `Status`. `Status` is `Partial` until the control has been checked against a blind, independent count (`references/enforcement-sites.md` §6) — **a control with no independent count is never `Complete`**.
-
-| Control | Implementer sites | Independent sites | Latest diff | Status | Open (iii) owners |
-|---------|-------------------|-------------------|-------------|--------|-------------------|
-| [SPEC ID] | [n] | — | — | Partial | — |
+> One line per guard of a security rule (`references/security-verification.md` §1, §3): `<rule> <file>:<symbol>: <what was removed> → <failing test id>`. Written by the implementer and by fixers; the final check reads it.
 
 ## Slice Progress
 
@@ -246,14 +242,9 @@ Create the implementation tracking document using this enhanced template. **The 
    - Mark requirements as implemented in the tracking document
    - Document any deviations or discoveries immediately
 
-6. **Record Enforcement Sites and Per-Site Mutation Evidence (whole-feature):**
-   - Read the enforcement-site standard at the `STANDARD` path in your prompt (`references/enforcement-sites.md`) — it defines **control**, **enforcement site**, **gap**, the **per-site mutation standard**, and the **three dispositions**.
-   - **With `Site depth: security` in your prompt** (`STANDARD` §7), everything in this step applies to the **security controls** only (`STANDARD` §6 says which those are); every other control gets no inventory row, and its requirement is held by the real test step 4 already requires. Read "every control" below as "every security control".
-   - For every control in the SPEC (any rule that must hold on every path — guards, refusals, write controls, output contracts, invariants, security controls; not only `SEC-xxx`), record every site in `SDD/implementation/sites/SITES-IMPL-[feature-name].md` under `## Site Inventory`, in the exact table shape of the standard §4 (`Slice` = `—`; File and Symbol written plain, e.g. `<module>`). **Key every site by the SPEC's `## Control Register`** (standard §1.1): a control is an ID the register files under itself; a site found on the path an `EDGE`, `FAIL`, `SEC`, or `UX` entry describes is keyed by the control that entry is **filed under**, never by the restating ID; an ID in no register row is not a control and gets no rows. Do not list one site under several IDs because several entries mention it — list it under each **control** it enforces, and only those. (A SPEC with no register was planned before 3.11.0: key by the SPEC ID that states the rule, and by any keying rule in the conventions file.) If `SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` exists, file every site by its rules (standard §4.2). If you are one implementation chunk of several, add and update rows for your chunk; do not delete earlier chunks' rows unless the site no longer exists in the working tree.
-   - Run one mutation per site: delete exactly that site, run the tests, confirm at least one fails, restore, confirm the file is exactly what it was before the deletion (keep a copy, or compare `git diff -- <file>` taken before and after — the work is uncommitted, so that diff is not empty to begin with). Record `(i)` with the failing test; where the site genuinely cannot be proven alone, record `(ii)` with the argument written as a comment AT the site, or `(iii)` with a named owner and follow-up. Never mutate shared machinery as a stand-in for its call sites.
-   - For output / stream contracts (stdout, stderr, exit codes), write at least one **real-subprocess** test per path class asserting on the actual bytes — `CliRunner` / `capsys` tests do not count toward this.
-   - Fill `Implementer sites` in `## Control Site Status`; leave `Status` at `Partial`.
-   - **Do not leak the list.** Site comments carry no counts, indices, or greppable site tags; your `progress.md` entry names the inventory path only. A blind, independent count (Step 4a.5, or at Tiers 1 and 2 the final check) runs after you and is diffed against your inventory — every site it finds at a place you listed under no control is a HIGH finding, and every site it finds anywhere has its mutation re-run by the reviewer.
+6. **Prove the Security Rules (whole-feature):**
+   - Read the security standard at the `SECURITY` path in your prompt, §1 and §3. For each security rule the SPEC states, write a test that drives the real entry point with the adverse input or condition really present and asserts the denial the rule states.
+   - Show that each guard is proven: in a scratch copy of the working tree (TEST_INTEGRITY §8) remove the guard, run the test, see it fail. Record one line per guard under `## Security Proofs` in the IMPLEMENTATION-PLAN. Every other requirement is held by the real test step 4 requires.
 
 7. **Follow the Tracing Standard (whole-feature, by the gate in your prompt):**
 
@@ -302,8 +293,7 @@ During implementation, continuously verify:
 - [ ] Failure scenarios (FAIL-XXX) have error handling
 - [ ] Performance requirements (PERF-XXX) are being measured
 - [ ] Security requirements (SEC-XXX) are implemented
-- [ ] Every control's sites are recorded in `SITES-IMPL-[feature-name].md`, each with a disposition and evidence
-- [ ] Output / stream contracts have a real-subprocess test per path class
+- [ ] Every security rule's guard has a proving test, recorded under `## Security Proofs`
 - [ ] `tracing: on` only: every marked node of the planned call graph that your requirements build shows in the trace run's tree (or is marked `not exercised in tests`); no other span was added; the entry-point test passes
 - [ ] `evals: on` only: every case of the spec's `### Evals` that your requirements carry is in `evals/cases.jsonl` as the spec states it, each hard case with a known-bad and a known-good answer; the test of the cases and checks passes; your own eval run passed every hard case — or it ended `UNAVAILABLE`, or a hard case still failed after three runs, and your return says which
 - [ ] Code follows existing project patterns (discovered via inline search)

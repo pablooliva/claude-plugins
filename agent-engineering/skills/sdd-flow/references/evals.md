@@ -169,11 +169,11 @@ A hard eval is a test, and `references/test-integrity.md` §1 binds it as it bin
 - **The expected outcome comes from the spec's case.** A check is never written by running the application and requiring whatever it said.
 - **A failing case is never weakened.** No removing it, no loosening its check, no changing its input to one the application handles, no moving a requirement from hard to judged. When the spec really changes, the case changes with it and the change is recorded under `### Test Changes` in the IMPLEMENTATION-PLAN, citing the requirement.
 - **The application is never taught the cases.** No branch on a case's input, no instruction to the model that names one.
-- **Evals are not controls** under `references/enforcement-sites.md`: an eval has no enforcement site, and nothing here is counted or mutated. A requirement that is a control keeps its sites and its mutations whether or not an eval also checks it.
+- **An eval is not a security proof.** Nothing here is mutated. A security rule keeps its proving test (`references/security-verification.md` §3) whether or not an eval also checks it.
 
 ## 7. The review's eval check
 
-Run by the per-slice review (`bodies/slice-review.md`), the whole-feature code review (`bodies/code-review.md`), and every verification of the final check (that same body in `MODE: site-verification-only`, at `FEATURE`), each at the scope its prompt gives, when the prompt carries the line `evals: on`. With `evals: off`, or no such line, do not run it: write the one line `Eval check skipped — evals: off` in the review and move on (a verification of the final check writes nothing about evals then).
+Run by the per-slice review (`bodies/slice-review.md`), the whole-feature code review (`bodies/code-review.md`), and every review of the final check (`bodies/final-check.md`, at `FEATURE`), each at the scope its prompt gives, when the prompt carries the line `evals: on`. With `evals: off`, or no such line, do not run it: write the one line `Eval check skipped — evals: off` in the review and move on (a final check writes nothing about evals then).
 
 It checks what no test checks: that the run of record says what it must, and that the cases and checks in the application are the spec's and can tell a good answer from a bad one. It is not a second look at whether the spec's cases are the right ones — the spec review settled that, and here the spec's cases are the reference.
 
@@ -230,7 +230,7 @@ Two groups of cases are in scope, and "a case in scope" below means a case of ei
 | 6 | The check passed an output that breaks the part of the requirement its eval checks | HIGH |
 | 7 | `evals/task.py` does not go through the application's own code, replaces the model, or turns an unreachable model into an answer | HIGH |
 | 8 | The application was taught a case: a branch on a case's input, or an instruction to the model that names one | HIGH |
-| 9 | `evals/run.py` differs from its template in more than the three placeholders — resolved by restoring the template, never by testing the change (`references/enforcement-sites.md` §1, *Not sites*) | HIGH |
+| 9 | `evals/run.py` differs from its template in more than the three placeholders — resolved by restoring the template, never by testing the change | HIGH |
 | 10 | The eval run line counts one or more replaced secrets | HIGH |
 | 11 | A judged case in scope has a run with no score — the person who accepts its requirement would be reading less than the run was meant to give | HIGH |
 | 12 | The test of the cases and checks against their own examples is not among the application's ordinary tests, or does not pass | HIGH |
@@ -268,8 +268,8 @@ Eval findings are ordinary review findings: they count in the review's verdict a
 
 - **By changing the application** — its prompt, the code around the model call — or by building what is missing: a case, a check, an example, the task.
 - **Never by weakening a case** (§6), and never by editing the spec's `### Evals`, an `Evals:` line, a `Sign-off:` line, or its `evals:` field.
-- **There is no recording it instead.** A hard case that cannot be made to pass is a requirement the application does not meet. The fix loop's cap brings that to the user, who decides whether the behaviour is made dependable or the promise changed (§2) — the slice's loop for a finding of a slice review, the final check's loop for a finding of the whole-feature code review or of a final verification.
-- **A fix is checked by a new run of record, never by the fixer's own.** In a slice, that is the run made before the re-review; for the whole feature, the run made before each verification of the final check. Until a review has read that run, the finding is open.
+- **There is no recording it instead.** A hard case that cannot be made to pass is a requirement the application does not meet. The fix loop's cap brings that to the user, who decides whether the behaviour is made dependable or the promise changed (§2) — the slice's loop for a finding of a slice review, the final check's loop for a finding of the whole-feature code review or of the final check.
+- **A fix is checked by a new run of record, never by the fixer's own.** In a slice, that is the run made before the re-review; for the whole feature, the run made before each review of the final check. Until a review has read that run, the finding is open.
 - **The fixer makes its own run before it returns** (§4, *Who makes which run*) — at most three, like an implementer — and leaves the test of the cases and checks passing. A hard case it could not bring to pass goes back in its return, named, with the last `Result:` line; it is never reported as fixed.
 
 ## 9. Sign-off — what a person accepts

@@ -61,7 +61,6 @@ All four templates carry the same `## Continuation Priorities` section — **Ess
 
       Exactly one candidate → load it and say that it was the only one. Several → show the newest few with their first heading line and ask the user which to resume; never pick silently — the newest file may belong to different work.
    - Tell the user which file you loaded and which of the three steps found it.
-   - Never load `site-count-compacted-*.md`: that is a blind site count's handoff inside an `sdd-flow` run, and only the flow may continue it.
 
 3. **Check for a Pending `sdd-flow` Stop:**
    - An `## Awaiting …` block is pending when it is the latest block in `progress.md` — or when the only things after it are compaction records (`## Current State`, `## PARTIAL: needs continuation`), which older compact commands appended below it. No `## Halt Resolved - ` line or later flow entry follows a pending block.

@@ -1,8 +1,8 @@
 # Test Integrity — What a Real Test Is, and the Lens That Checks It
 
-The one definition of the flow's **Test Integrity Lens**. The implementer bodies read §1; the code review, the slice review, and the implementation critical review run the lens (§2–§6), and the final verification runs its last-look checks (§5); fix subagents follow §7. No body restates it. The path reaches each of them as **TEST_INTEGRITY** in its prompt.
+The one definition of the flow's **Test Integrity Lens**. The implementer bodies read §1; the code review, the slice review, and the implementation critical review run the lens (§2–§6), and the final check runs its last-look checks (§5); fix subagents follow §7; every body that breaks code to prove a test does it in a scratch copy (§8). No body restates it. The path reaches each of them as **TEST_INTEGRITY** in its prompt.
 
-**Why this exists.** The flow's gates are green test runs: a slice is delivered when its acceptance check passes, a review approves at 100%. An author that is rewarded for green has two ways to get there — make the code right, or make the test agree with the code. The second is cheaper and looks identical in a pass count. It takes several forms: a test whose expected value was copied from what the code happened to return, a test that asserts nothing that could be false, a mock standing where the logic should be, an existing test loosened until it stopped failing, code that recognises the test's inputs. Each one leaves a requirement marked as verified that nothing verifies — and with it goes the tests' second job, which is to make wrong business logic and a badly placed boundary show up as a failure. The enforcement-site standard already closes this for controls (a control whose tests cannot fail is not a control); this standard closes it for every other requirement.
+**Why this exists.** The flow's gates are green test runs: a slice is delivered when its acceptance check passes, a review approves at 100%. An author that is rewarded for green has two ways to get there — make the code right, or make the test agree with the code. The second is cheaper and looks identical in a pass count. It takes several forms: a test whose expected value was copied from what the code happened to return, a test that asserts nothing that could be false, a mock standing where the logic should be, an existing test loosened until it stopped failing, code that recognises the test's inputs. Each one leaves a requirement marked as verified that nothing verifies — and with it goes the tests' second job, which is to make wrong business logic and a badly placed boundary show up as a failure. This standard closes it for every requirement; the security verification (`references/security-verification.md`) adds an adversarial pass over the security rules at the end of the feature.
 
 ---
 
@@ -13,7 +13,7 @@ A test of a requirement is **real** when all four hold:
 1. **Its expected value comes from the SPEC.** The requirement, an edge case, a failure scenario, or a worked example in the spec says what the outcome must be, and the test asserts that — written out as a literal or derived by reasoning the spec gives. Never obtain an expected value by running the code and pasting what it printed, and never compute it in the test with the same function, formula, or helper the code uses.
 2. **It fails when the behaviour is broken.** If the line that implements the requirement were deleted or its condition inverted, this test would go red. A test that only checks that something was returned, that no exception was raised, or that a mock was called does not meet this.
 3. **It runs the code that holds the logic.** A stand-in (mock, stub, fake, patch) replaces only what lies outside the application — the network, another service, the clock, randomness, a paid API. The module where the requirement's logic lives is never the thing replaced, and neither is one of the application's own modules that sits between the test's entry point and that logic.
-4. **It checks an outcome the spec names** — a returned value, stored state, an emitted message, an error a caller sees. A test that asserts a private helper was called, or the order of internal calls, tests how the code is written today and breaks on a harmless refactor while passing on a wrong result.
+4. **It checks an outcome the spec names** — a returned value, stored state, an emitted message, an error a caller sees. A test that asserts a private helper was called, or the order of internal calls, tests how the code is written today and breaks on a harmless refactor while passing on a wrong result. A rule about what reaches stdout, stderr, or the exit code is checked by running the program as a real subprocess and asserting on the bytes — an in-process runner (`CliRunner`, `capsys`) has hidden real defects.
 
 And three things the implementer never does to reach a green run:
 
@@ -28,15 +28,13 @@ And three things the implementer never does to reach a green run:
 | Per-slice 4b (`bodies/slice-review.md`) | the full lens, on the slice's requirements | working tree against the slice's `BASE`; a re-review after a snapshotted fix round, the tests the fix added or changed, against `SNAPSHOT` (it runs the tests that change can affect, and the whole suite only when it would pass the slice — `bodies/slice-review.md` Step 4.5) |
 | Whole-feature 4b (`bodies/code-review.md`) | the full lens, on every requirement | working tree against `BASE` |
 | 4d implementation critical review (`bodies/critical-review.md`) | the lens **by reading** (§5) | working tree against `BASE`; in per-slice mode, the committed slices since `BASE` |
-| 4e.5 verification (`bodies/code-review.md`, `MODE: site-verification-only`) | the **last-look checks** (§5) — after the last fix round | working tree against `BASE` |
+| 4e.5 final check (`bodies/final-check.md`) | the **last-look checks** (§5) — after the last fix round | working tree against `BASE` |
 
 It has no gate: it runs in every cycle. Inputs, all from the prompt: **TEST_INTEGRITY** (this file), the SPEC, the IMPLEMENTATION-PLAN (for `### Test Changes`), and `BASE`. A review with no `BASE` runs every check except T1 and says so.
 
 **Test files** are found, not assumed: the files the project's test command collects, plus fixtures, snapshot or golden files, and the configuration that decides what is collected and how (`pytest.ini`, `pyproject.toml`, `conftest.py`, `jest.config.*`, `package.json` scripts, CI workflow files, a `Makefile` target).
 
-Requirements that are **controls** are already proven site by site under the enforcement-site standard. T4 does not repeat that work for them; every other check applies to their tests as to any other. **At `Site depth: security`** (Tier 1 — `references/enforcement-sites.md` §7) only the security controls are proven site by site; every other control is a requirement like any other here, held by its test alone, and T4 checks it.
-
-**The plugin's own files are not under this lens.** `evals/run.py` and the files `/observability-init` rendered are this plugin's code, tested where their templates are made (`references/enforcement-sites.md` §1, *Not sites*). No check here breaks a line of one or asks for a test of what it does by itself — that the eval run runs each case three times, reports an unreachable model, uploads, replaces secrets. The checks apply to the application's tests of the application's own code, `evals/task.py` and `evals/checks.py` included. A placeholder filled with code of the application's own is the application's code.
+**The plugin's own files are not under this lens.** `evals/run.py` and the files `/observability-init` rendered are this plugin's code, tested where their templates are made. No check here breaks a line of one or asks for a test of what it does by itself — that the eval run runs each case three times, reports an unreachable model, uploads, replaces secrets. The checks apply to the application's tests of the application's own code, `evals/task.py` and `evals/checks.py` included. A placeholder filled with code of the application's own is the application's code.
 
 ## 3. The checks
 
@@ -58,7 +56,7 @@ For each pre-existing test that was deleted, renamed away, skipped, marked expec
 - A snapshot or golden file with no sign that anyone checked its content against the SPEC → **MEDIUM**; **HIGH** when it is the requirement's only test.
 - A value the SPEC does not give and cannot be derived from it → **MEDIUM**, and say which: the test invented a requirement, or the spec has a gap.
 
-**T4 — The test fails when the behaviour is broken.** For each requirement in the sample (§4): find the line or condition that implements it; break it — invert the condition, return a constant, delete the line — run that requirement's tests; restore; confirm the file is exactly what it was before you broke it (keep a copy, or compare `git diff -- <file>` taken before and after — the work under review is uncommitted, so that diff is not empty to begin with). At least one test must fail, and for the reason the requirement gives.
+**T4 — The test fails when the behaviour is broken.** For each requirement in the sample (§4): find the line or condition that implements it; in a scratch copy of the working tree (§8), break it — invert the condition, return a constant, delete the line — and run that requirement's tests there. At least one test must fail, and for the reason the requirement gives.
 - No test fails → **HIGH**: the requirement is untested, whatever the coverage map says.
 - A test fails only incidentally (an import error, an unrelated assertion) → **MEDIUM**.
 
@@ -76,7 +74,7 @@ Before breaking anything, read the test: one with no assertion, an assertion tha
 - behaviour that depends on running under the test runner (an environment variable, a `testing` flag, the runner's name in `sys.modules`);
 - a requirement stated for a range and implemented only for the values the tests use.
 
-Each is **HIGH**. Then **probe**: for each requirement in the sample (§4), choose an input the SPEC covers and **no test uses** — a different valid value, the other side of a boundary — work out from the SPEC what the outcome must be, and run the real code with it (a throwaway script or test; delete it afterwards and confirm nothing is left behind). An outcome that differs from the SPEC's → **HIGH**: the code is right only where it is tested.
+Each is **HIGH**. Then **probe**: for each requirement in the sample (§4), choose an input the SPEC covers and **no test uses** — a different valid value, the other side of a boundary — work out from the SPEC what the outcome must be, and run the real code with it (a throwaway script or test, in the scratch copy). An outcome that differs from the SPEC's → **HIGH**: the code is right only where it is tested.
 
 **T7 — The test says what it claims.** For each requirement's tests, state in one line the outcome a user or caller would see that the test proves.
 - A test named or mapped to `REQ-XXX` that asserts something else → **HIGH**.
@@ -99,7 +97,7 @@ Choose the requirements where a wrong answer costs most — money, permissions, 
 
 The implementation critical review runs T1, T2, T3, T5, T7, the reading half of T4 (the assertions that cannot be false), and the reading half of T6 (the four signs) over the whole feature. It runs a T4 mutation or a T6 probe only where its reading gives it a reason to doubt a specific test, and it says which. It does not re-sample: the 4b review did that, and this pass is there to catch what a second reader sees and what the fixes after 4b changed. T1 here has a particular target — **tests changed by a fix subagent since the 4b review**, where a finding may have been answered by weakening the test that exposed it.
 
-**The last-look checks** are what the 4e.5 verification runs, in every cycle, because it is the only review after the last fix round: **T1, T2, T3, and the reading half of T4** — no mutation, no probe. T1 and T2 catch a pre-existing test weakened or left out. T3 and the reading half of T4 are there for the tests **this feature added**: T1 cannot see a change to them (their files are new since `BASE`, and the work is uncommitted, so there is no earlier version to compare with), so a fix that changed an expected value or loosened an assertion in one is caught by reading it again against the SPEC — is the expected value still the spec's, can the assertion still be false.
+**The last-look checks** are what the 4e.5 final check runs, in every cycle, because it is the only review after the last fix round: **T1, T2, T3, and the reading half of T4** — no mutation, no probe. T1 and T2 catch a pre-existing test weakened or left out. T3 and the reading half of T4 are there for the tests **this feature added**: T1 cannot see a change to them (their files are new since `BASE`, and the work is uncommitted, so there is no earlier version to compare with), so a fix that changed an expected value or loosened an assertion in one is caught by reading it again against the SPEC — is the expected value still the spec's, can the assertion still be false.
 
 ## 6. What the review writes
 
@@ -118,7 +116,7 @@ A `## Test Integrity` section in the review document, with this table and the tw
 | T6 Code not fitted to tests | <n> files read; <n> probes | PASS / FAIL | <#s or —> |
 | T7 Tests say what they claim | <n> requirements | PASS / FAIL | <#s or —> |
 
-**Mutations (T4):** one line each — `REQ-XXX <file>:<symbol>: <what was broken> → <failing test id>` or `→ NO TEST FAILED → finding <#>`. Every one restored: yes.
+**Mutations (T4):** one line each — `REQ-XXX <file>:<symbol>: <what was broken> → <failing test id>` or `→ NO TEST FAILED → finding <#>`. Run in a scratch copy: yes.
 **Probes (T6):** one line each — `REQ-XXX: input <value> (no test uses it); SPEC says <outcome>; code gave <outcome>` — or `→ finding <#>`.
 ```
 
@@ -128,5 +126,17 @@ Lens findings are ordinary findings of the review: listed with the others at the
 
 - **By making the test real or the code right — never by removing the evidence.** A test that could not fail is given an assertion that can, with an expected value from the SPEC. A mocked-away module is run for real. Fitted code is replaced by the rule the SPEC states.
 - **A weakened test is restored** to what it asserted at `BASE` (`git show BASE:<path>`), and the code is fixed until it passes — unless the SPEC requires the new behaviour, in which case the missing `### Test Changes` line is added, citing the requirement.
-- **A fix never weakens a test either.** §1's three "never" rules bind a fix subagent exactly as they bind the implementer; the 4d pass reads what the fixes before it changed (§5), and the 4e.5 verification, which always runs, reads the tests once more after the fixes that follow it (the last-look checks, §5).
+- **A fix never weakens a test either.** §1's three "never" rules bind a fix subagent exactly as they bind the implementer; the 4d pass reads what the fixes before it changed (§5), and the 4e.5 final check, which always runs, reads the tests once more after the fixes that follow it (the last-look checks, §5).
 - **When the expected value cannot be found in the SPEC,** the fix does not invent one. It records the gap under `### Implementation Deviations` in the IMPLEMENTATION-PLAN — the requirement, the question the spec leaves open, the value assumed and why — so the gap reaches the completion summary and the user.
+
+## 8. The scratch copy (every mutation, in every body)
+
+A mutation — a guard or line deleted, a condition inverted, a probe script — is never made in the working tree. A run there can write into the repository's local databases, caches, or history, and a restore that goes wrong leaves broken code behind. Make it in a copy instead:
+
+```bash
+COPY=$(python3 <this file's directory>/../scripts/snapshot.py scratch)   # a new directory outside the repository
+# … mutate and run the tests inside "$COPY" …
+rm -rf "$(dirname "$COPY")"
+```
+
+The copy holds every file of the working tree except `.git` — uncommitted, untracked, and git-ignored files included — so the tests find their env file and fixtures; no link in it leads back out (one to a file outside the repository becomes a copy of that file). The script ships beside this file; if it cannot run, copy the same way by hand from the repository root (`rsync -aL --exclude .git ./ "$COPY"/`, `COPY` a new directory under the system's temporary directory). **Check once that the copy runs its own code:** before the first mutation, break one line in the copy that the suite certainly covers and run the suite there. If nothing fails, the tests import the repository's code — an editable install or a virtual environment that points back — so point them at the copy (for Python, `PYTHONPATH="$COPY/<source root>"`, or a fresh environment inside the copy) and check again. A green mutation proves nothing until this check has failed once. Remove the copy before you return, and record `Run in a scratch copy: yes` wherever the mutation lines are written.

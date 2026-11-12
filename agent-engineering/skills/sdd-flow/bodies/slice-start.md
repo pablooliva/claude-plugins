@@ -44,7 +44,7 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 ## Slice-ID Validation (REQ-024 / SEC-003) — canonical regex shared across slice primitives
 
-> **Canonical regex (single source of truth — resolves L-4):** the slice-ID validation regex `^SLICE-\d{3}[a-z]?$` is duplicated verbatim across `bodies/slice-start.md`, `bodies/slice-review.md`, `bodies/slice-retro.md`, `phases/protocols.md`, `phases/implementation-per-slice.md`, and `SCOPE_RE` in `scripts/site-diff.py`. **`slice-start` is the canonical home** for this regex; the other copies SHOULD cross-reference this section rather than re-deriving the pattern. Future changes (e.g., allowing 4-digit slice IDs `SLICE-####`) MUST be coordinated across all of them in a single commit; a drift between them would produce inconsistent regex enforcement at primitive boundaries. The optional single lowercase letter (`SLICE-005a`, `SLICE-005b`) exists for slices split during re-planning; it cannot carry `/`, `.`, or any other path character, so the traversal guarantee is unchanged.
+> **Canonical regex (single source of truth — resolves L-4):** the slice-ID validation regex `^SLICE-\d{3}[a-z]?$` is duplicated verbatim across `bodies/slice-start.md`, `bodies/slice-review.md`, `bodies/slice-retro.md`, `phases/protocols.md`, and `phases/implementation-per-slice.md`. **`slice-start` is the canonical home** for this regex; the other copies SHOULD cross-reference this section rather than re-deriving the pattern. Future changes (e.g., allowing 4-digit slice IDs `SLICE-####`) MUST be coordinated across all of them in a single commit; a drift between them would produce inconsistent regex enforcement at primitive boundaries. The optional single lowercase letter (`SLICE-005a`, `SLICE-005b`) exists for slices split during re-planning; it cannot carry `/`, `.`, or any other path character, so the traversal guarantee is unchanged.
 
 Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}[a-z]?$` BEFORE being interpolated into any read or write path. This prevents directory-traversal attacks (a malicious arg like `../../etc/passwd` would otherwise bypass the path templates).
 
@@ -147,25 +147,15 @@ Append an entry to `SDD/orchestration/progress.md` recording the slice start:
 - **Base commit:** <output of `git rev-parse HEAD` now, before any slice work; `none` if the repo has no commits>
 ```
 
-The **Base commit** line is load-bearing: the slice stays uncommitted until its per-slice commit, so the blind site count (4a.5) and the slice review diff the working tree against this commit. It is the only durable record of it — a resumed session reads it from here. On `--resume`, copy the base from the slice's earlier `In Progress` entry rather than re-reading HEAD; if the earlier run ended before writing one, HEAD is correct — the previous slice is committed and this one is not.
+The **Base commit** line is load-bearing: the slice stays uncommitted until its per-slice commit, so the slice review diffs the working tree against this commit. It is the only durable record of it — a resumed session reads it from here. On `--resume`, copy the base from the slice's earlier `In Progress` entry rather than re-reading HEAD; if the earlier run ended before writing one, HEAD is correct — the previous slice is committed and this one is not.
 
 ## Step 10: Implement the slice
 
-In sdd-flow per-slice mode, **you implement the slice end-to-end in this same run** — the orchestrator spawns no separate implementation subagent. Implement the slice's REQ/EDGE/FAIL coverage (per its `Acceptance check` and `Modules touched`), with tests alongside each component, and run the acceptance check. **Harvested cases first:** with `evals: on`, when a case on this slice's `Evals:` line is marked `*(harvested: …)*` in the spec, build those cases by Step 11.6's points 1–4 and make the baseline run EVALS §2 (*A case harvested from a real trace*) describes before you change anything for them. **Before writing the first test, read the test integrity standard at the `TEST_INTEGRITY` path in your prompt, §1:** every test's expected value comes from the SPEC, it fails when the behaviour is broken, it runs the code that holds the logic, and it checks an outcome the spec names. Never make a failing test pass by weakening it, and never teach the code about the tests' inputs; where the SPEC requires a pre-existing test to change or go, add its line under `### Test Changes` in the IMPLEMENTATION-PLAN (create the heading if the plan has none). Follow the rolling ledger's learnings — in particular its `Enforcement-site count mismatches` section, which records the kinds of sites earlier slices missed.
+In sdd-flow per-slice mode, **you implement the slice end-to-end in this same run** — the orchestrator spawns no separate implementation subagent. Implement the slice's REQ/EDGE/FAIL coverage (per its `Acceptance check` and `Modules touched`), with tests alongside each component, and run the acceptance check. **Harvested cases first:** with `evals: on`, when a case on this slice's `Evals:` line is marked `*(harvested: …)*` in the spec, build those cases by Step 11.6's points 1–4 and make the baseline run EVALS §2 (*A case harvested from a real trace*) describes before you change anything for them. **Before writing the first test, read the test integrity standard at the `TEST_INTEGRITY` path in your prompt, §1:** every test's expected value comes from the SPEC, it fails when the behaviour is broken, it runs the code that holds the logic, and it checks an outcome the spec names. Never make a failing test pass by weakening it, and never teach the code about the tests' inputs; where the SPEC requires a pre-existing test to change or go, add its line under `### Test Changes` in the IMPLEMENTATION-PLAN (create the heading if the plan has none). Follow the rolling ledger's learnings.
 
-## Step 11: Record enforcement sites and per-site mutation evidence
+## Step 11: Prove the security rules the slice touches
 
-Read the enforcement-site standard at the `STANDARD` path in your prompt (`references/enforcement-sites.md`). It defines **control**, **enforcement site**, **gap**, the **per-site mutation standard**, and the **three dispositions**. Then:
-
-**With `Site depth: security` in your prompt** (`STANDARD` §7), every item below applies to the **security controls** only (`STANDARD` §6 says which those are); every other control gets no inventory row, and its requirement is held by the slice's real tests.
-
-1. **List the controls this slice touches** — every SPEC rule that must hold on every path through code this slice added or changed, including controls introduced by earlier slices (a new exit path needs an earlier slice's output rule too). Not limited to `SEC-xxx`. **Key every site by the SPEC's `## Control Register`** (standard §1.1): a control is an ID the register files under itself; a site found on the path an `EDGE`, `FAIL`, `SEC`, or `UX` entry describes is keyed by the control that entry is **filed under**, never by the restating ID; an ID in no register row is not a control and gets no rows. Do not list one site under several IDs because several entries mention it — list it under each **control** it enforces, and only those. (A SPEC with no register was planned before 3.11.0: key by the SPEC ID that states the rule, and by any keying rule in the conventions file.)
-2. **Record every site** for those controls in the feature's living inventory `SDD/implementation/sites/SITES-IMPL-[feature-name].md` under `## Site Inventory`, in the exact table shape of the standard §4 (File and Symbol written plain, e.g. `<module>`). If `SDD/implementation/sites/SITE-CONVENTIONS-[feature-name].md` exists, file every site by its rules (standard §4.2). Create the inventory if absent. Update rows for sites this slice changed; add rows for new sites; **delete rows for sites that no longer exist in the working tree** (a stale row can show as a phantom `EXTRA` in every later diff); set `Slice` to this SLICE-XXX on each row you add or change. Count sites across the whole working tree, not only in your diff.
-3. **Run one mutation per site** (standard §2): delete exactly that site, run the tests, confirm at least one fails, restore, confirm the file is exactly what it was before the deletion (keep a copy, or compare `git diff -- <file>` taken before and after — the work is uncommitted, so that diff is not empty to begin with). Record disposition `(i)` with `mutation: <what was deleted> → failing test <id>`. Where no test can fail, add one — or, if the site genuinely cannot be proven alone, record `(ii)` with the argument written as a comment AT the site, or `(iii)` with a named owner and follow-up. Never mutate shared machinery as a stand-in for its call sites.
-4. **Output / stream contracts** (stdout, stderr, exit codes): add at least one **real-subprocess** test per path class that asserts on the actual bytes. `CliRunner` / `capsys` tests do not count toward this.
-5. **Do not leak the list into the code or the log.** Site comments carry no counts, indices, or greppable site tags. Your `progress.md` entry names the inventory path only — never its rows or counts per control. An independent counter will count these sites blind; anything that hands it your list defeats the check.
-
-A blind, independent count runs after you return — at Tiers 1 and 2, at the final check — and is diffed against your inventory. Every site it finds at a place you listed under no control is a HIGH finding, and every site it finds anywhere has its mutation re-run by the reviewer.
+Read the security standard at the `SECURITY` path in your prompt, §1 and §3. For each security rule that must hold on code this slice added or changed — an earlier slice's rule included, when this slice adds a path it must hold on — write a test that drives the real entry point with the adverse input or condition really present and asserts the denial the rule states. In a scratch copy of the working tree (TEST_INTEGRITY §8) remove the guard, run the test, see it fail; record one line per guard under `## Security Proofs` in the IMPLEMENTATION-PLAN. Every other requirement is held by the slice's real tests.
 
 ## Step 11.5: Follow the tracing standard (by the gate in your prompt)
 
@@ -201,10 +191,9 @@ With `evals: on`, your prompt also gives **EVALS** (the evals reference), **EVAL
 ## Slice <SLICE-XXX> - Implemented
 
 - **Acceptance check:** <test name> — passing | failing: <reason>
-- **Site inventory:** SDD/implementation/sites/SITES-IMPL-<feature-name>.md
 ```
 
-This line is a phase-detection marker: it tells a resumed run that implementation finished and the blind count is next.
+This line is a phase-detection marker: it tells a resumed run that implementation finished and the slice review is next.
 
 ## Step 13: Return a bounded result
 
@@ -213,10 +202,10 @@ Return a bounded result (≤200 words + artifact paths) summarizing:
 - The active SLICE-XXX, its Name, and its Acceptance check (verbatim from the row), and whether it passes.
 - The `Modules touched` field from the SPEC's `### SLICE-XXX:` block (read SPEC's `## Delivery Slices` section).
 - The ledger summary (if loaded): one line per ledger section with entry counts.
-- The site-inventory path and the number of controls you inventoried (not per-control counts).
+- The security rules you proved, by ID.
 - With `tracing: on`: whether every node on the slice's `Traced nodes:` line showed in the trace run's tree, and any difference you recorded under `### Implementation Deviations`.
 - With `evals: on`: the cases you built, and the `Result:` line of your own eval run — or that it ended `UNAVAILABLE`, or that the slice's `Evals:` line is `none`.
-- Next step: blind site count, then `slice-review` for SLICE-XXX.
+- Next step: `slice-review` for SLICE-XXX.
 
 ## Flag Inventory (REQ-025 — applies to `slice-start`)
 

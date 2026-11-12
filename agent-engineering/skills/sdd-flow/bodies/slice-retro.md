@@ -64,7 +64,7 @@ If absent, fail with: `No per-slice review found for SLICE-XXX (expected SDD/rev
 
 There is one document per review iteration (`…-iter<N>-…`). Read the one with the highest `N` — the review that passed the slice, or the latest before a halt; an earlier one is read only for a finding the latest names as closed. A slice reviewed before 3.14.0 has dated documents with no `iter<N>`: read the latest by date. If present, read it into context. Note its findings (HIGH/MEDIUM/LOW counts and any unresolved items).
 
-Also read the slice's **site-count trail** (paths in your prompt — none at Tiers 1 and 2, where the blind count is made once, at the final check: then the section below holds that one line and the review's `Recorded, not proven` sites, and nothing else): every `SDD/reviews/SITE-DIFF-<SLICE-XXX>-*-iter<N>-*.md` for this slice (iter0 through the latest), the review's `## Enforcement-Site Verification` section, and `STANDARD` (`references/enforcement-sites.md` §6). Note, per iteration, which sites the implementer missed (`MISSED` / `GAP`) — those the review proved and added a row for (`CONFIRMED-MISSED`) included: they cost no fix round, and they are still places the implementer did not list — which extra and cross-filed keys the reviewer confirmed, any site the reviewer's row-count check found unproven, and which controls ended `Partial`. Read the review's `Outside the register` line too: each ID on it that the review says should change the SPEC's `## Control Register` is a `## Recommended SPEC Amendments` entry of this retrospective (the row to add or correct, and why) — a routine amendment, never a re-planning recommendation on that ground alone.
+Note the review's `## LOW Findings (listed, not fixed)` section: every LOW finding there goes into the ledger's *Open recommendations awaiting user decision* (template below), so the owner sees it.
 
 ## Step 5: EDGE-014 — re-invocation refusal when retrospective already exists
 
@@ -142,15 +142,6 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 - **Should change to:** <proposed re-plan direction>
 - **Why:** <observation grounding plan-level invalidation — typically: a foundational assumption broken, an interface contract that ripples through later slices, a discovered constraint that invalidates the slice ordering>
 
-## Site Count Reconciliation
-
-[Structured, REQUIRED. One row per control that, in any iteration of this slice, was not `MATCH` (a `CARRIED` outcome gets a row too; its `Resolved how` is `owed to FEATURE recount`) **or** had a site the reviewer's row-count check found unproven — that can happen under a `MATCH`. A difference in row counts alone (the diff's `## Row Counts Differ` section) is not a mismatch and gets no row. The body is the single line `None.` only when neither happened in any iteration.]
-
-| Control | Iter | Outcome | Sites missed by implementer (file · symbol · path class) | Resolved how |
-|---|---|---|---|---|
-
-**Pattern:** <one or two sentences — what KIND of site the implementer missed (e.g. "interrupt handlers on prompt paths", "the final-URL check after redirects"). This is what the next slice's implementer needs, so name the kind, not just the instance.>
-
 ## Ledger Update Sections (structured)
 
 [The retrospective records the ledger updates this retro will write into LEARNINGS-FEATURE-[feature-name].md. The ledger sections are:]
@@ -167,13 +158,9 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 
 - <entry>
 
-### Enforcement-site count mismatches
-
-- <the Pattern above, as a reusable warning> (Sources: SLICE-XXX)
-
 ### Open recommendations awaiting user decision
 
-- <entry — include every (iii) site with its owner, and every control left Partial>
+- <entry — include every LOW finding the slice review listed, not fixed>
 ```
 
 ### CRITICAL: Recommendation header strings (Chunk 4b matcher contract)
@@ -240,10 +227,6 @@ If the ledger does not yet exist, scaffold it with this initial structure:
 
 ## Performance / failure modes observed
 
-## Enforcement-site count mismatches
-
-(Kinds of enforcement site that implementers left out of their inventory, as found by the blind count. Slice implementers read this before recording their inventory.)
-
 ## Open recommendations awaiting user decision
 
 (Iteration-cap exhaustions, deferred SPEC amendments, anything blocked.)
@@ -288,8 +271,6 @@ This body updates `Status`, `Test result`, and `Notes` columns ONLY — never `S
 - **Status:** advance per the forward-only state machine: `In Progress` → `Acceptance Check Passing`, when the acceptance check has been run and passes. This body never writes `Complete`: the orchestrator sets it as its last edit before the per-slice commit (step 4c.6).
 - **Test result:** free-form text — `passing`, `failing: <test name> + <reason>`, `n/a (manual)`, etc.
 - **Notes:** brief pointer — `see retro at SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md` or `see ledger §Open recommendations` for blocking issues.
-
-**Control Site Status (same step).** With no site diff for this slice (at Tiers 1 and 2 the blind count is made once, at the final check — `STANDARD` §7), leave the table as it is and write `No blind count at this tier — counted at the final check` in the retro's `## Site Count Reconciliation`. Otherwise: for every control in this slice's latest site diff, update its row in the IMPLEMENTATION-PLAN's `## Control Site Status` table (add the row if absent): implementer and independent site counts and the diff path from the latest `SITE-DIFF-<SLICE-XXX>` for this slice, and `Status` per standard §6 — `Complete` only if that diff's per-control outcome is `MATCH` (or only `CONFIRMED-MISSED` / `CONFIRMED-EXTRA` / `CONFIRMED-CROSS-FILED` differences in the review, by mutation or by argument, and sites the review recorded as not proven) — `CARRIED` and `OUT-OF-SCOPE-BY-DECLARED-SCOPE` are `Partial`, settled by the FEATURE recount — the review recorded its check of every row-count key of the control where the blind count has more rows with no site left open (a site recorded as not proven, `STANDARD` §6, is not open), no gap is open, and the review accepted every (ii)/(iii); otherwise `Partial`. Different row totals in the two site columns do not make a control `Partial`. **A control with no independent count is `Partial`.** Never set `Complete` from the implementer's inventory alone. A later slice may flip a `Complete` control back to `Partial` if its recount no longer matches — control status is re-evaluated per count, unlike the forward-only slice Status.
 
 State transitions are forward-only (no backwards transitions encoded in the column; "stuck" surfaces via the ledger's `Open recommendations` section, not the column). SLICE-ID, Name, and Acceptance check are SPEC-derived and immutable from this side.
 
@@ -353,7 +334,7 @@ The classifier MUST use the durable `Sources:` field convention introduced in St
 When your prompt carries the line `FINISH: SLICE-XXX` with `--reconcile-ledger`, a retrospective for that slice is on disk and the run that wrote it ended before its remaining writes. That file is the record: do not rewrite, replace, or add to it. Do, in this order:
 
 1. The reconcile algorithm above, with one change: **treat the named slice's retrospective as NOT covered, whatever the `Sources:` lists say.** The run that wrote it may have stopped partway through the ledger update, so a bare ID already in the ledger proves nothing. Consolidate every one of its ledger-update entries (step 4 of the algorithm); the consolidation rules leave an entry that is already there as it is, so repeating this is safe.
-2. Step 8 for the slice (the `## Slice Progress` row and `## Control Site Status`), from the retrospective, the review, and the site diffs in your prompt.
+2. Step 8 for the slice (the `## Slice Progress` row), from the retrospective and the review.
 3. Step 9 — the `## Slice <SLICE-XXX> - Retrospective Complete` entry, naming the existing retrospective's path — unless that entry is already there.
 
 Return as a normal retrospective does: the retrospective's path, and the first non-empty body line of its two recommendation sections, re-read from the file.
@@ -373,7 +354,7 @@ The slice's fix loop stopped without passing review (cap reached, or no progress
 3. Append a `progress.md` entry of at most 5 lines: the slice, how many findings were recorded, the ledger path. Use the header `## Slice <SLICE-XXX> - Halt Note Recorded`.
 4. Return ≤100 words with the ledger path.
 
-Write nothing else: no `RETROSPECTIVE-SLICE` file, no `## Slice Progress` or `## Control Site Status` change, no `Retrospective Complete` entry, and no `## Awaiting …` block — the orchestrator writes the halt block. When the slice later passes review, its retrospective (Step 7) supersedes these entries with what was actually resolved.
+Write nothing else: no `RETROSPECTIVE-SLICE` file, no `## Slice Progress` change, no `Retrospective Complete` entry, and no `## Awaiting …` block — the orchestrator writes the halt block. When the slice later passes review, its retrospective (Step 7) supersedes these entries with what was actually resolved.
 
 ## Flag Inventory (REQ-025)
 

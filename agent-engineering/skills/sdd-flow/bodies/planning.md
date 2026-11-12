@@ -30,9 +30,6 @@ Starting planning phase based on completed research.
    - When it is `present`, your prompt also gives the path of the tracing standard (**TRACING**). Read its sections *What gets a span — the three traced kinds* and *Adding code to a traced application*: they define the three kinds of call you will mark in the planned call graph (Planning Process → *Planned call graph rules*).
    - When it is `present`, your prompt also gives the path of the evals reference (**EVALS**). Read it only when evals are on for this spec (the table under `evals:`, Specification Frontmatter Fields) — then its §1, §2, and §6: the two kinds of eval, how a case is written, and what binds a case once it is written (Planning Process → *Eval rules*). When your prompt has a `HARVEST:` line, read §2's *A case harvested from a real trace* whether evals are on or off (*Eval rules* → Harvested cases).
 
-   **Read the Enforcement-Site Standard, §1 only:**
-   - Your prompt gives **STANDARD** (`references/enforcement-sites.md` of this skill). Read its §1 and §1.1: what a **control** is (a rule the SPEC says must hold on every path — as opposed to a single happy-path behaviour), and the **control register** you write into the spec. Nothing else in that file concerns planning.
-
 6. **Update Progress for Planning Phase:**
    - Add a new planning section to `SDD/orchestration/progress.md`
    - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
@@ -189,18 +186,6 @@ tier: 1
   - Expected behavior: [How system should handle it]
   - User communication: [Error messages/feedback]
   - Recovery approach: [How to recover]
-
-## Control Register
-
-> Which ID each enforcement site is filed under. Implementation lists every place in the code that makes a control true, twice — once by the implementer and once by a blind counter — and compares the two lists. A spec gives one behaviour several IDs (a `REQ`, and `EDGE`, `FAIL`, `SEC`, `UX` entries that spell out one path of it); without this table each side picks a different one and the lists differ on labels alone. Definitions: STANDARD §1 and §1.1. This table names no file, no function, and no count — it is written from this spec alone.
->
-> One row for every ID in this spec that states, or restates, a rule that must hold on **every path**. An ID in no row is not a control.
-
-| ID | Filed under | Reason |
-|---|---|---|
-| REQ-001 | REQ-001 | [the rule, in a few words — it states a rule of its own, so it is filed under itself] |
-| EDGE-001 | REQ-001 | [restates one path of REQ-001: which path] |
-| SEC-001 | SEC-001 | [adds a rule of its own: which rule — even if it also mentions a path of another control] |
 
 ## Implementation Constraints
 
@@ -505,17 +490,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - If any goal needs more headroom than its constraints permit, the spec is internally contradictory — effective and compliant are mutually exclusive. Do NOT write the spec around it. Resolve it now: relax the constraint, lower the goal, or specify a different mechanism, and record which you chose in `## Implementation Notes`.
    - If a goal's `Bears on` column is empty because no constraint was written down, re-read the Non-Functional Requirements before accepting that — an unstated cap that shows up later as an eval criterion is the same failure, discovered more expensively.
 
-12. **Write the Control Register:**
-   - Do this last, when every `REQ` / `PERF` / `SEC` / `UX` / `EDGE` / `FAIL` ID the spec will carry exists — the `FAIL-XXX` entries written for deferred cases included. It applies in both delivery modes.
-   - Go through every ID and ask STANDARD §1's question: does it state a rule that must hold on **every path** through some part of the system (a guard, a refusal, a write control, an output or stream contract, an invariant, a security control), or does it describe one behaviour (the happy path of a feature, a document to write, a test to have)? Only the first kind goes in the register. Output contracts are controls, not only `SEC` entries.
-   - **A rule only the plugin's own files enforce is not this spec's.** `evals/run.py` and the files `/observability-init` rendered are the plugin's, tested where their templates are made (STANDARD §1, *Not sites*). Do not write a requirement or register a control for what one of them does by itself — that the eval run runs each case three times, reports an unreachable model, uploads, or replaces secrets; cite EVALS or the tracing standard instead. A rule this feature's own code must keep on such a path is the spec's as usual, with its sites in that code: `evals/task.py` raising `Unavailable` when the model cannot be reached is one.
-   - For each ID that goes in, decide what it is **filed under**:
-     - It states a rule of its own → filed under itself.
-     - It only spells out one path of a rule another ID already states (the usual case for an `EDGE` or `FAIL` entry under its `REQ`, and for a `SEC` or `UX` entry that repeats one) → filed under that ID. The test: **delete this entry — is the system allowed to do anything it was not allowed before?** If not, it restates. If yes, it adds a clause of its own and is filed under itself, even when it also mentions a path of another control (`SEC-005: one request in flight, and no automatic retry` restates the in-flight rule of its `REQ` and adds "no retry": it is filed under itself).
-     - `Filed under` always names an ID that is filed under itself. No chains.
-   - Give each row a `Reason` of a few words: the rule, or which path of which rule it restates. Name no file, function, module, slice, or number of places — the blind counter reads this table, and it must learn from it which label to use and nothing about where the code is.
-   - A rule the spec states with no ID gets one now; do not leave it for the count to key by a slug.
-   - When a later step of yours changes the spec's IDs, bring the register with it: every such ID is in exactly one row or deliberately in none.
+12. **Leave the plugin's own files to the plugin.** `evals/run.py` and the files `/observability-init` rendered are tested where their templates are made. Write no requirement for what one of them does by itself — that the eval run runs each case three times, reports an unreachable model, uploads, or replaces secrets; cite EVALS or the tracing standard instead. A rule this feature's own code must keep on such a path is the spec's as usual: `evals/task.py` raising `Unavailable` when the model cannot be reached is one.
 
 ### Planned call graph rules (tracing on only)
 
@@ -577,7 +552,6 @@ Before considering the specification complete:
 - [ ] Every module has a `MODULE-XXX` entry with Interface, Hides, and Risk filled in
 - [ ] No shallow modules without explicit justification
 - [ ] Every REQ-XXX / EDGE-XXX / FAIL-XXX is mapped to at least one module
-- [ ] `## Control Register` exists; every ID that states a rule holding on every path has exactly one row; a restating ID is filed under the control whose path it restates and an ID that adds a clause of its own is filed under itself; no `Filed under` cell names an ID that is filed under another; no row names a file, a function, or a count
 - [ ] If `delivery_mode: per-slice`, the `## Delivery Slices` section exists and is populated with at least one `SLICE-XXX` entry
 - [ ] If `delivery_mode: per-slice`, every slice declares Concentrated function, REQs satisfied, Modules touched, Acceptance check, Try it, and Sequence rationale
 - [ ] If `delivery_mode: per-slice`, SLICE-001 is the thinnest possible end-to-end happy path
