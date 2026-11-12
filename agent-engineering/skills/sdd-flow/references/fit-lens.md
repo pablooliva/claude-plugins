@@ -1,7 +1,7 @@
 # The Fit Lens — fit and size
 
 The one definition of the fit-and-size check. The slice review and the code review (4b) and the implementation
-critical review (4d) run it; every fix spawn of Step 4 follows §4. A body reads this file at the `FIT` path in its
+critical review (4d) run it; every fix spawn of Step 4 follows §4; the implementers follow §5. A body reads this file at the `FIT` path in its
 prompt and never restates it.
 
 A change can meet its spec and still be too big, or not fit the code it lands in. Each round of findings tends
@@ -58,3 +58,18 @@ Every fix round — of any finding, not only fit — reports its **net line chan
 lines removed by the round, `SDD/` left out. Before your first edit and after your last, take the net against
 `BASE` — added minus removed in `git diff --numstat BASE -- . ':(exclude)SDD'`, plus every line of each untracked
 file outside `SDD/` — and report the difference, e.g. `Net line change: -42`.
+
+## 5. Building: extend before adding
+
+The implementer — whole-feature 4a and each slice's 4a — reads this section and the design brief at the `BRIEF` path
+in its prompt: its `## Builds on` list and the new files its "What changes where" table names. Nothing else in the
+brief binds the implementer; the spec does.
+
+- **Change existing code first.** Before you add a function, class, file, or layer, look for the code in
+  `## Builds on`, and the module the change lands in, that can hold it, and extend that.
+- **A new file is one the brief names.** Add no other unless the work cannot be done without it; then give it its
+  reason like any new structure (below), and know that the review still reports it under §2 — the owner decides.
+- **Give each new function, class, file, or layer a reason.** One line under `### New Structure` in the
+  IMPLEMENTATION-PLAN (create the heading if the plan has none): what it is, and why the existing code named in
+  `## Builds on` or the module it sits beside cannot hold it. The reviews read these lines; a reason does not
+  excuse a finding under §1–§3.

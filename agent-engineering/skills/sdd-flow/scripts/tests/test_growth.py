@@ -71,7 +71,7 @@ class GrowthTest(unittest.TestCase):
         (self.root / "tests/test_page.py").write_text(lines(25), encoding="utf-8")  # untracked
         out = self.run_growth()
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-        self.assertIn("Growth: source +30 of ~30 (1.0x), tests +25 of ~20 (1.2x), new files 2 of 2", out.stdout)
+        self.assertIn("Growth: source +30 of ~30 (1.0x), tests +25 of ~20 (1.2x), new files 2 of 2, tests per source line 0.8", out.stdout)
         self.assertIn("Unnamed new files: none", out.stdout)
         self.assertIn("Over budget: no", out.stdout)
 
@@ -81,6 +81,7 @@ class GrowthTest(unittest.TestCase):
         (self.root / "tests/test_page.py").write_text(lines(31), encoding="utf-8")
         out = self.run_growth()
         self.assertIn("tests +31 of ~20 (1.6x)", out.stdout)
+        self.assertIn("tests per source line n/a", out.stdout)  # no source line added
         self.assertIn("Over budget: yes", out.stdout)
 
     def test_a_new_file_under_an_area_but_not_named_is_reported(self) -> None:

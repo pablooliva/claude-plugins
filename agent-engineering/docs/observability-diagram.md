@@ -91,9 +91,9 @@ flowchart TD
     bind --> rev3("3d Spec review<br/>tracing: nodes present and assigned to slices<br/>evals: every LLM requirement has a rule-based eval,<br/>or is listed for you to accept at the final commit")
     rev3 --> impl("4a Implement one slice<br/>tracing: spans for the entry points, LLM calls,<br/>and external calls it adds<br/>evals: the spec's cases and their checks;<br/>the first such slice also creates the eval run")
     impl --> review("4b Slice review<br/>tracing: trace run, call tree, compare with the plan<br/>evals: the flow first runs the cases and sends the run to Opik;<br/>the review reads the results against the spec")
-    review -- "HIGH or MEDIUM" --> fix("4c Fix, re-review<br/>what the fix changed<br/>trace run when it would pass,<br/>or after a tracing finding<br/>at most 3 rounds")
+    review -- "HIGH or MEDIUM" --> fix("4c Fix, re-review<br/>what the fix changed<br/>trace run when it would pass,<br/>or after a tracing finding<br/>at most 2 rounds")
     fix --> review
-    fix -- "no progress,<br/>or 3 rounds used" --> halt["STOP — slice halted<br/>an existing stop"]:::stop
+    fix -- "no progress,<br/>or 2 rounds used" --> halt["STOP — slice halted<br/>an existing stop"]:::stop
     review -- "no HIGH or MEDIUM" --> commit["4c.6 commit the slice"]:::orch
     commit --> pause["Slice pause<br/>evals: shows the last line of the slice's eval run"]:::stop
     pause -- "more slices" --> impl

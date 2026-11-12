@@ -208,7 +208,8 @@ Routing of every writing and fixing step is carried by **shipped agent frontmatt
 
 | Spawn site | Agent type | Model |
 |---|---|---|
-| Research, planning, ADR capture, fixes, impl chunks, completion, slice cycle (all but its review) | `agent-engineering:sdd-workhorse` | sonnet |
+| Research, planning, ADR capture, fixes, completion, slice cycle (all but its implementation and review) | `agent-engineering:sdd-workhorse` | sonnet |
+| Implementation — whole-feature 4a and every chunk of it, per-slice 4a | `agent-engineering:sdd-workhorse` | **opus**, by per-spawn override — the code is what the cycle delivers |
 | Code review (4b), slice review, 4e.5 final check — **Claude route** | `agent-engineering:sdd-workhorse` | sonnet |
 | Each panel specialist (Stage 1) with a shipped agent — `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
 | Any other panel value — today `accessibility`, `privacy`, `cost` | `agent-engineering:sdd-workhorse`, with `bodies/panel-specialist.md` and the panel value | sonnet |
@@ -252,7 +253,7 @@ The flow stops only where the user has something to decide or try: the clarifica
 
 1. **Each phase is thorough** — research informs planning; planning constrains implementation.
 2. **Every requirement gets a test — a real one (Principle 14).** Reviews are gates, not checkboxes: a review passes when no HIGH and no MEDIUM finding is open. Fit and size are review criteria like correctness: the code reviews ask whether a change matches and reuses the code around it and is no bigger than the tier needs, a file outside the brief's footprint is a finding, and a fit finding is fixed by removing code (`references/fit-lens.md`). LOW findings are listed, not fixed — the owner sees them at the slice pause and in the end report — because fixing them cost whole review rounds for little gain. A review after a fix round checks that the earlier review's findings are closed and reads what the fix changed, not the whole scope again: the orchestrator snapshots the working tree before and after each fix to tell it what that is, and the eval check still reads a fresh eval run in full. In a per-slice re-review the tests run are the ones the fix can affect, and the whole suite and the trace check run when the review would pass the slice — the trace check also after a tracing finding (`bodies/slice-review.md` → Step 4.5); the final check (4e.5) runs both in full. In a tiered spec, a finding that something is *absent* may be resolved by recording it under `## Deferred to Later Tiers`; a finding about behaviour the tier does build is always fixed.
-3. **Panel STOP/REVISE halts the flow, but the fix loop is bounded** — max 3 iterations; any iteration that fails to strictly decrease the gating finding count halts. Unresolvable findings route back to the human.
+3. **Panel STOP/REVISE halts the flow, but the fix loop is bounded** — max 2 iterations; any iteration that fails to strictly decrease the gating finding count halts. Unresolvable findings route back to the human.
 4. **ADRs compound across features; the spec is the source of truth; document deviations.**
 5. **Never persist PII or secrets in SDD docs. Commit messages have NO co-author attribution.**
 6. **Explicit paths always; the orchestrator never does phase/review/fix/capture/completion work itself.**

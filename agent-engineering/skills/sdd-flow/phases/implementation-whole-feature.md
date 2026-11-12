@@ -80,12 +80,13 @@ The post-implementation steps (4e.5 final check, 4f completion, 4h checkpoint, 4
 
 This is the only durable record of the commit implementation began from. 4b, 4d, and 4e.5 take `BASE` from this line — never from `HEAD`, which a resumed session cannot trust. Write it once per feature; when resuming with the line already present, leave it alone.
 
-Spawn an **`agent-engineering:sdd-workhorse`** subagent:
+Spawn an **`agent-engineering:sdd-workhorse`** subagent **with the per-spawn model override `opus`** (every chunk too):
 - **Body:** `bodies/implementation.md`
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present — use canonical names in code, comments, commits, tests), and **SECURITY**.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/orchestration/progress.md`, `SDD/UBIQUITOUS_LANGUAGE.md` (if present — use canonical names in code, comments, commits, tests), **SECURITY**, **BRIEF** (`SDD/requirements/DESIGN-[###]-[feature-name].md`, with its approved revision), and **FIT**.
 - **Outputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, implemented code and tests (each security rule's guard proven, body Implementation Process step 6), append `progress.md`.
 - **Tracing:** the **tracing inputs** (top of this file), the same to every chunk. With `tracing: on` the body's step 7 applies: the implementer follows the tracing standard for what it adds and checks its marked nodes against the trace run.
 - **Tests:** **TEST_INTEGRITY** — the body's step 4 holds every test to its §1.
+- **Fit:** **BRIEF** and **FIT** — the body's step 4 follows FIT §5: extend the code the brief's `## Builds on` names before adding, add only the new files it names, and give each new structure a one-line reason.
 - **Evals:** the **evals inputs** (top of this file), the same to every chunk. With `evals: on` the body's step 8 applies: the implementer builds the cases of the spec's `### Evals` that its requirements carry — rendering the eval run from EVAL_TEMPLATES when the application has none yet — and makes its own eval run.
 - **Task:** Implement ALL requirements — core/happy path, edge cases (EDGE-XXX), failure handling (FAIL-XXX), tests alongside each component, performance + security validation — updating IMPLEMENTATION-PLAN throughout, and prove each security rule (SECURITY §3).
 
@@ -182,7 +183,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 
 **When it stops.** Only when a sign-off is asked for, or the feature is over its growth budget; otherwise go straight to the commit (4i). An unresolved finding never reaches this step: it stopped the flow earlier (the fix-loop and final-check halts).
 
-**The growth check.** Run `python3 "$SKILL_ROOT/scripts/growth.py" --base <BASE> --brief SDD/requirements/DESIGN-[###]-[feature-name].md`, `BASE` = the `Base commit:` under `## Feature - Implementing`. The feature is **over its growth budget** when the third line it prints is `Over budget: yes` — source or test lines added are more than one and a half times the estimate the user approved with the brief. Keep the three lines for this step and for 4j. Exit 3 (the brief has no budget) is never over; 4j says the budget was missing. Exit 2 is a failed script: tell the user, and go on as not over.
+**The growth check.** Run `python3 "$SKILL_ROOT/scripts/growth.py" --base <BASE> --brief SDD/requirements/DESIGN-[###]-[feature-name].md`, `BASE` = the `Base commit:` under `## Feature - Implementing`. The feature is **over its growth budget** when the third line it prints is `Over budget: yes` — source or test lines added are more than one and a half times the estimate the user approved with the brief. Keep the three lines for this step and for 4j. Tests per source line, at the end of the first line, is shown and never stops the commit. Exit 3 (the brief has no budget) is never over; 4j says the budget was missing. Exit 2 is a failed script: tell the user, and go on as not over.
 
 **A sign-off is asked for** when the evals gate is on and the SPEC has at least one line that starts `- [ ] **Sign-off: ` — the orchestrator runs `grep -E '^- \[ \] \*\*Sign-off: ' <SPEC>` and reads no more of the spec for it. Each such line names a requirement about what the model says that no rule can check: a judge model scored real outputs, and only a person's answer meets it (EVALS §9). With the gate off the lines are not looked for.
 

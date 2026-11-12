@@ -207,7 +207,7 @@ After all Stage 1 specialists return, spawn ONE **`agent-engineering:sdd-critica
 - **`PROCEED`** (no HIGH; at most two MEDIUM, none of them cross-domain) → continue to 3d. Any MEDIUM findings it carries are resolved at 3e with the critical review's; LOW findings are listed, not fixed.
 - **`STOP AND RECONSIDER`** (any HIGH) or **`REVISE BEFORE PROCEEDING`** (3+ MEDIUM or cross-domain MEDIUM) → enter the bounded **fix-and-re-review loop** below.
 
-### Fix-and-re-review loop (bounded — max 3 iterations)
+### Fix-and-re-review loop (bounded — max 2 iterations)
 
 Each iteration:
 
@@ -218,10 +218,10 @@ Each iteration:
    - **Task:** Resolve every HIGH and MEDIUM finding; each resolution cites the specific spec change made. Do NOT claim resolution without an actual edit. Embed the **Brief and tier rules for spec fixes** (below) verbatim, and beneath them the **Call-graph rule for spec fixes** with `tracing: on` and the **Evals rule for spec fixes** with `evals: on`.
 3. **Re-run Step 3c** (both stages — fresh PANEL-FINDINGS + a fresh synthesis) over the updated spec, producing a new/overwritten `PANEL-SPEC-*`.
 4. **Act on the new verdict, in this order:**
-   - **The panel now returns `PROCEED`** → exit the loop and continue to 3d — at any iteration, the third included. A passing verdict is never a halt.
+   - **The panel now returns `PROCEED`** → exit the loop and continue to 3d — at any iteration, the second included. A passing verdict is never a halt.
    - **Progress-stall check** (verdict still STOP/REVISE): if HIGH did not strictly decrease (when HIGH was non-zero), OR (in REVISE case) MEDIUM did not strictly decrease → **halt immediately**. The fix subagent is making no real progress; further iterations waste tokens or degrade review quality (placating edits).
-   - **Still STOP/REVISE and iteration < 3** → next iteration.
-   - **Still STOP/REVISE after iteration 3** → halt (cap exhausted).
+   - **Still STOP/REVISE and iteration < 2** → next iteration.
+   - **Still STOP/REVISE after iteration 2** → halt (cap exhausted).
 
 ### Brief and tier rules for spec fixes (embed verbatim in the 3c and 3e fix prompts)
 

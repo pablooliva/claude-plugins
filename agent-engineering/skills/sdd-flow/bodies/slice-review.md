@@ -265,7 +265,7 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 
 ## Per-Slice Review Iteration Cap (REQ-013, reference — enforced elsewhere)
 
-This review itself can be re-run any number of times. The **iteration cap of 3 with progress-stall check** (HIGH must strictly decrease across iterations; or MEDIUM when HIGH is zero) is enforced by the orchestrator's per-slice 4b/4c loop, NOT by this review. The fix step runs on HIGH and MEDIUM findings only. On cap or stall the flow stops and the findings go to the rolling ledger's `Open recommendations awaiting user decision` section. The loop is defined in `phases/implementation-per-slice.md` → 4c.
+This review itself can be re-run any number of times. The **iteration cap of 2 with progress-stall check** (HIGH must strictly decrease across iterations; or MEDIUM when HIGH is zero) is enforced by the orchestrator's per-slice 4b/4c loop, NOT by this review. The fix step runs on HIGH and MEDIUM findings only. On cap or stall the flow stops and the findings go to the rolling ledger's `Open recommendations awaiting user decision` section. The loop is defined in `phases/implementation-per-slice.md` → 4c.
 
 ## Flag Inventory (REQ-025 — applies to slice review)
 

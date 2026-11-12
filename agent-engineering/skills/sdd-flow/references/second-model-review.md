@@ -22,7 +22,7 @@ The second model is Codex, through the `codex` CLI. The review steps that go to 
 
 Every re-run of one of these — a re-review after a fix round, a resumed review — is the same step and takes the same route.
 
-**The specialist panel (3c, both stages) stays on Claude subagents.** It is up to eight domain reviews per round and up to three rounds of them; on a second model that is a great many reviewer runs for one spec, whose specialist checklists come from the body file whichever model reads it. The spec is not left to Claude alone: the adversarial spec review that follows the panel (3d) is on the second model, and reads the panel's verdict.
+**The specialist panel (3c, both stages) stays on Claude subagents.** It is up to eight domain reviews per round and up to two rounds of them; on a second model that is a great many reviewer runs for one spec, whose specialist checklists come from the body file whichever model reads it. The spec is not left to Claude alone: the adversarial spec review that follows the panel (3d) is on the second model, and reads the panel's verdict.
 
 Every step that writes or fixes stays a Claude subagent.
 

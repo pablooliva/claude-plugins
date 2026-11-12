@@ -8,7 +8,7 @@ Compares the working tree (committed and uncommitted work, untracked files
 included, `SDD/` left out) with BASE, and reads the brief's `## Growth budget`
 and `## What changes where` sections. Prints three lines:
 
-    Growth: source +<n> of ~<n> (<r>x), tests +<n> of ~<n> (<r>x), new files <n> of <n>
+    Growth: source +<n> of ~<n> (<r>x), tests +<n> of ~<n> (<r>x), new files <n> of <n>, tests per source line <t>
     Unnamed new files: none | <path>, <path>
     Over budget: yes | no
 
@@ -18,6 +18,9 @@ and `## What changes where` sections. Prints three lines:
   contains `.test.` or `.spec.`, or is `conftest.py`.
 - A new file is named when its exact path appears in backticks in the first
   column of the brief's "What changes where" table.
+- Tests per source line: test lines added divided by source lines added (`n/a`
+  when no source line was added). Shown as a warning sign for tests sized to the
+  code's shape rather than its behaviour; never a limit.
 - Over budget: source or test lines added exceed OVERRUN (1.5) times their
   estimate. An estimate of 0 with any line added is over.
 
@@ -116,6 +119,10 @@ def ratio(actual: int, estimate: int) -> tuple[str, bool]:
     return f"{r:.1f}x", r > OVERRUN
 
 
+def per_source(tests: int, source: int) -> str:
+    return f"{tests / source:.1f}" if source else "n/a"
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Measure a feature's growth against its design brief's budget.")
     ap.add_argument("--base", required=True)
@@ -143,7 +150,7 @@ def main(argv: list[str]) -> int:
     rt, over_t = ratio(tests, budget["tests"])
     print(
         f"Growth: source +{source} of ~{budget['source']} ({rs}), tests +{tests} of ~{budget['tests']} ({rt}), "
-        f"new files {len(new_files)} of {budget['files']}"
+        f"new files {len(new_files)} of {budget['files']}, tests per source line {per_source(tests, source)}"
     )
     print("Unnamed new files: " + (", ".join(unnamed) if unnamed else "none"))
     print("Over budget: " + ("yes" if over_s or over_t else "no"))

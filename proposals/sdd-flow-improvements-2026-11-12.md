@@ -176,9 +176,10 @@ before code comes first.
    passing the removed flags. Beyond the list above it also removed the 3.8.0/3.12.0 gate-line defaults, the pre-3.12.1
    handoff wording, and the pre-3.14.0 review-document shape. Kept: the pre-3.14.4 bare requirement IDs in an
    application's `evals/cases.jsonl` (`references/evals.md`), since those lines are application data that is never rewritten.
-4. **Size while building:** the implementer rule (extend before adding; implementers do not read the brief today,
-   so they must be given its `## Builds on` list and named new files), the
-   fix-round cap of two, and the test rules (behaviour, not wording or shape; the test-to-code ratio).
+4. ~~**Size while building**~~ — built as 4.5.0 (owner decisions 2026-11-12): implementers get the brief's
+   `## Builds on` and named new files and follow `fit-lens.md` §5; the implementer runs on Opus; fix-round cap of two
+   for the slice loop and the spec panel; test rules 5–6 in `test-integrity.md` with T7 findings; tests per source line
+   in `growth.py`'s output. Not built: the end-of-feature consolidation pass (left to step 5's review merge).
 5. **Fewer steps and a slimmer orchestrator:** merge the two end-of-feature code reviews, drop the per-slice
    retrospective and the research review, keep process records out of the repository, shorten the instructions.
 6. **Checks.** Check 2 (did evals catch regressions in SPEC-007) only reads records, so run it whenever convenient;

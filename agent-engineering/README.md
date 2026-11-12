@@ -23,7 +23,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 ### Architecture (1.0.0)
 
 - **One-level spawning.** Every spawn happens at the orchestrator (main-conversation) level; spawned subagents must not spawn subagents and must not invoke slash commands or skills. Every body is pre-adapted for inline execution. *(Was a platform limit on Claude Code ≤2.1.171; since 2.1.172 the platform allows nesting to depth 5 — the flat design is retained deliberately. See `proposals/nested-subagents-analysis-2026-06-12.md` before refactoring toward nesting.)*
-- **Two-stage specialist panel.** During planning, the orchestrator spawns one specialist subagent per `review_panel:` value in parallel (Stage 1; each writes a `PANEL-FINDINGS-*` file), then one `sdd-critical-reviewer` synthesis subagent reads those files from disk and emits the verdict (Stage 2). The bounded fix-and-re-review loop (max 3 iterations, progress-stall halt) is unchanged.
+- **Two-stage specialist panel.** During planning, the orchestrator spawns one specialist subagent per `review_panel:` value in parallel (Stage 1; each writes a `PANEL-FINDINGS-*` file), then one `sdd-critical-reviewer` synthesis subagent reads those files from disk and emits the verdict (Stage 2). The bounded fix-and-re-review loop (max 2 iterations, progress-stall halt) is unchanged.
 - **Reads-only safety net.** Spawned subagents do not spawn in this flow, so there is no nested-subagent counter — the only safety-net signal is file Reads (default trigger >15; >20 for implementation chunks). On trip, the subagent compacts and hands off.
 - **Per-slice authoring default.** The planning body sets `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices (then `whole-feature` with a one-line justification). The PARSE default (frontmatter absent → whole-feature) is unchanged for backward compatibility.
 - **Gated AI-agent security review (2.1.0).** Spec frontmatter `agent_security: auto|true|false` gates three hook points: the `agent-security` panel value at Step 3c (spec-level checks), the Agentic-Surface Lens in the Step 4b / per-slice code review (code-level checks), and the OWASP abuse cases the final check (4e.5) verifies as security rules. `auto` resolves by detecting an agentic surface — a model call, a tool/MCP definition, agent memory or a retrieval store, inter-agent messaging, or a model output driving an external action.
@@ -87,7 +87,25 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 4.4.0.
+Version 4.5.0.
+
+### What's new in 4.5.0
+
+`sdd-flow` keeps a change small while it is built, not only before (4.3.0) and after (4.2.0).
+
+- **The implementer reads the brief's `## Builds on` and its named new files** (`references/fit-lens.md` §5): it
+  extends existing code before adding, adds only the new files the brief names, and gives each new function, class,
+  file, or layer a one-line reason under `### New Structure` in the IMPLEMENTATION-PLAN.
+- **The implementer runs on Opus** (whole-feature 4a and its chunks, per-slice 4a), by per-spawn override. Fixes and
+  completion stay on Sonnet.
+- **Two fix rounds, not three,** for a slice's review loop and the spec panel; then the flow stops and the open
+  findings come to you, as before. The final check already had two.
+- **Tests check behaviour, not wording, and test helpers get no tests of their own** (`references/test-integrity.md`
+  §1 rules 5–6). The reviews flag either as MEDIUM under T7.
+- **Tests per source line** is shown with the growth figures at each slice pause and before the final commit — a
+  warning sign, never a limit.
+
+**Not exercised on a real cycle.**
 
 ### What's new in 4.4.0
 

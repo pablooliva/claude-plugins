@@ -14,6 +14,8 @@ A test of a requirement is **real** when all four hold:
 2. **It fails when the behaviour is broken.** If the line that implements the requirement were deleted or its condition inverted, this test would go red. A test that only checks that something was returned, that no exception was raised, or that a mock was called does not meet this.
 3. **It runs the code that holds the logic.** A stand-in (mock, stub, fake, patch) replaces only what lies outside the application — the network, another service, the clock, randomness, a paid API. The module where the requirement's logic lives is never the thing replaced, and neither is one of the application's own modules that sits between the test's entry point and that logic.
 4. **It checks an outcome the spec names** — a returned value, stored state, an emitted message, an error a caller sees. A test that asserts a private helper was called, or the order of internal calls, tests how the code is written today and breaks on a harmless refactor while passing on a wrong result. A rule about what reaches stdout, stderr, or the exit code is checked by running the program as a real subprocess and asserting on the bytes — an in-process runner (`CliRunner`, `capsys`) has hidden real defects.
+5. **It checks behaviour, not wording.** A test does not pin the exact text of a message, prompt, label, or document unless the SPEC makes that text the requirement. Assert what the text must do — the fact it must carry, the field it must name, that the error is the one a caller sees — so a rewording that keeps the behaviour passes.
+6. **Test helpers get no tests of their own.** A fixture, factory, or assertion helper is tested by the tests that use it. Give it its own test only when it holds real logic a wrong answer could hide behind — a parser, a fake with rules of its own.
 
 And three things the implementer never does to reach a green run:
 
@@ -80,6 +82,10 @@ Each is **HIGH**. Then **probe**: for each requirement in the sample (§4), choo
 - A test named or mapped to `REQ-XXX` that asserts something else → **HIGH**.
 - A test that proves only internal structure — a private helper's result, a call count, an order of internal calls — when the SPEC names an observable outcome → **MEDIUM**.
 - A requirement whose tests all pass through a seam built only for the test → **MEDIUM**, and say what that implies about the design: logic that can be tested only by reaching inside is logic sitting behind the wrong interface.
+- A test that pins exact wording the SPEC does not make the requirement (§1 rule 5) → **MEDIUM**. Resolved by asserting what the text must do instead.
+- A test of a test helper that holds no real logic (§1 rule 6) → **MEDIUM**. Resolved by deleting that test.
+
+Neither resolution weakens a test in T1's sense: neither test holds a requirement.
 
 ## 4. How much to check
 
