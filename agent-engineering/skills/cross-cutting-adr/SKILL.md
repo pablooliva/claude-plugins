@@ -97,7 +97,7 @@ Behavior differs by trigger source to respect automation vs. confirmation bounda
 
 - **Trigger A (manual):** proceed to capture without additional confirmation — user already chose to invoke.
 - **Trigger B (ambient comparison+scope in conversation):** show the proposed ADR to the user and ask `Capture as ADR? (y/N)`. Default no. False positives here are likely; require explicit confirmation.
-- **Trigger C (sdd-flow, comparison detected in research):** the flow lists each match as a candidate at its design gate, in supervised and autonomous mode alike; the user approves or drops them there, and only the accepted ones are written. Do not silently commit — the user should see what's being captured.
+- **Trigger C (sdd-flow, comparison detected in research):** the flow lists each match as a candidate at its design gate; the user approves or drops them there, and only the accepted ones are written. Do not silently commit — the user should see what's being captured.
 - **Trigger C (sdd-flow, listed in spec frontmatter):** assume pre-approved. The spec explicitly declared the decision should be captured. Proceed without extra confirmation.
 - **Trigger D (ambient scope language):** same as Trigger B — confirm before writing.
 - **Trigger E (sdd-lite close-out):** assume pre-approved. The owner approved the decision under the brief's "Decision records to write", with its alternatives and consequences; take them from the brief and proceed without extra confirmation. A decision not listed there is Trigger B: confirm first.

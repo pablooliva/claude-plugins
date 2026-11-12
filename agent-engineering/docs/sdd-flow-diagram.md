@@ -52,16 +52,15 @@ flowchart TD
 flowchart TD
     start(["/sdd-flow task"]) --> s0("Step 0 — Scope<br/>does this fit one cycle?")
     s0 -- "too large" --> decomp["STOP — decomposition written<br/>you run /sdd-flow per item"]:::stop
-    s0 -- "fits" --> s1["Step 1 — Mode<br/>supervised or autonomous"]:::orch
-    s1 --> s15["Step 1.5 — Clarification gate<br/>STOP in both modes<br/>you run /research-clarify"]:::stop
+    s0 -- "fits" --> s15["Step 1.5 — Clarification gate<br/>STOP — clarify first? y/n<br/>y: you run /research-clarify"]:::stop
     s15 --> s2("Step 2 — Research<br/>2a research and completeness check<br/>2b ADR candidates listed for the design gate<br/>2c critical review, 2d fix findings")
     s2 --> c2["2e commit research"]:::orch
     c2 --> s25a("Step 2.5a — Design brief<br/>at most 150 lines, plain language<br/>proposes three tiers, writes the tier plan")
-    s25a --> gate["Step 2.5b — Design gate<br/>STOP in both modes<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve<br/>reminds you of /worth-building"]:::stop
+    s25a --> gate["Step 2.5b — Design gate<br/>STOP<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve<br/>reminds you of /worth-building<br/>model feature, no tracing foundation:<br/>recommends /observability-init"]:::stop
     gate -- "answers or changes" --> s25c("2.5c — Revise the brief")
     s25c --> gate
-    gate -- "approve" --> m1["Write the accepted ADRs<br/>Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
-    m1 --> s3a("Step 3a — Specification<br/>covers the approved tier only<br/>lists what is deferred<br/>control register: one ID per rule")
+    gate -- "approve" --> m1["Look again for the tracing foundation<br/>Write the accepted ADRs<br/>Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
+    m1 --> s3a("Step 3a — Specification<br/>covers the approved tier only<br/>lists what is deferred<br/>control register: one ID per rule<br/>no meaningful slices: whole-feature,<br/>and you are told why")
     s3a --> s3c("3b capture ADRs<br/>3c specialist panel, in parallel<br/>then one synthesis")
     s3c -- "findings" --> fix3("fix the spec, re-run the panel<br/>at most 3 rounds")
     fix3 --> s3c
@@ -70,7 +69,7 @@ flowchart TD
     s3d -- "still open after one more fix" --> halt3e["STOP — fix-check halt<br/>you fix the spec by hand"]:::stop
     s3d --> c3["3f commit planning"]:::orch
     c3 --> s3g{"3g — does the spec depart<br/>from the approved brief?"}
-    s3g -- "yes" --> dev["STOP in both modes<br/>deviations shown, you accept or edit"]:::stop
+    s3g -- "yes" --> dev["STOP<br/>deviations shown, you accept or edit"]:::stop
     dev --> s4
     s3g -- "no" --> s4{"Step 4 — Implementation<br/>route on delivery mode"}
     s4 -- "per-slice" --> slices("Per-slice cycle<br/>see the next diagram")
@@ -78,9 +77,11 @@ flowchart TD
     slices --> eof
     wf --> eof("4d critical review of the code, 4e fix<br/>4e.5 final blind recount — every tier<br/>later rounds read what the fix changed<br/>tracing on: and the trace check, once more<br/>evals on: and every eval case, once more<br/>4f completion: summary, tier plan updated")
     eof --> m2["Mirror: tier in review"]:::orch
-    m2 --> s4h["4h — STOP in supervised mode<br/>in both modes when a requirement<br/>waits for your sign-off<br/>ready to commit?<br/>waits until you say yes"]:::stop
-    s4h --> c4["4i commit implementation"]:::orch
-    c4 --> done["4j — Mirror: tier done<br/>announcement, progress file rotated"]:::orch
+    m2 --> q4h{"4h — does a requirement<br/>wait for your sign-off?<br/>evals on only"}
+    q4h -- "yes" --> s4h["STOP — scores shown<br/>yes commits and accepts"]:::stop
+    s4h --> c4
+    q4h -- "no" --> c4["4i commit implementation"]:::orch
+    c4 --> done["4j — Mirror: tier done<br/>short report: shipped, deferred,<br/>unproven, diff size<br/>progress file rotated"]:::orch
     done --> next(["later: /sdd-flow --next-tier<br/>a new cycle for the next tier"])
 
     classDef stop fill:#fde2e2,stroke:#c0392b,color:#000
@@ -101,14 +102,13 @@ flowchart TD
     review -- "any finding" --> fix("4c — fix all of them, then recount<br/>and re-review, at most 3 rounds<br/>the re-review checks the earlier findings,<br/>reads what the fix changed, and runs the tests it can affect<br/>the whole suite and the trace check when it would pass")
     fix --> count
     fix -. "Tiers 1 and 2" .-> review
-    fix -- "no progress, or 3 rounds used" --> halt["STOP in every mode — slice halted<br/>findings go to the ledger<br/>you fix them, then continue re-reviews"]:::stop
+    fix -- "no progress, or 3 rounds used" --> halt["STOP — slice halted<br/>findings go to the ledger<br/>you fix them, then continue re-reviews"]:::stop
     halt -- "continue" --> count
     halt -. "Tiers 1 and 2" .-> review
     review -- "approved" --> retro("4c.5 — slice retrospective<br/>updates the learnings ledger")
-    retro -- "recommends re-planning" --> replan["STOP in every mode<br/>--replan commits the slice, revises<br/>the brief, then the spec"]:::stop
-    replan -- "--override-replan" --> commit
     retro --> commit["4c.6 — mark the slice complete<br/>and commit it"]:::orch
-    commit --> pause["STOP — slice pause<br/>unless --skip-slice-checkpoints<br/>shows the brief check line<br/>evals on: and the eval run's line<br/>after the first slice: reminds you<br/>of /worth-building recheck"]:::stop
+    commit --> pause["STOP — slice pause, every slice<br/>what to run and what you should see<br/>the brief check line<br/>re-plan advice, when there is any<br/>evals on: and the eval run's line<br/>after the first slice: reminds you<br/>of /worth-building recheck"]:::stop
+    pause -- "you ask for a re-plan" --> replan(["back to the design gate (2.5)<br/>with the request, then planning again"])
     pause -- "more slices" --> impl
     pause -- "last slice done" --> eof(["end-of-feature steps"])
 
@@ -118,46 +118,43 @@ flowchart TD
 
 ## What happens at each stage
 
-**Who reviews.** Wherever the table says a review is done by a second model, it is run by a different model family than wrote the work — the Codex CLI by default, OpenCode when you name it with `--reviewer`. Where no second model is available, or its run fails twice, that review falls back to a Claude subagent (Opus for the adversarial reviews and the panel synthesis, Sonnet for the rest); the cycle goes on, and you are told. Every review document says who reviewed it.
+**Who reviews.** Wherever the table says a review is done by a second model, it is run by a different model family than wrote the work — the Codex CLI. Where Codex is not available, or its run fails twice, that review falls back to a Claude subagent (Opus for the adversarial reviews and the panel synthesis, Sonnet for the rest); the cycle goes on, and you are told. Every review document says who reviewed it.
 
 **Tests.** The final recount (4e.5) always ends with a review, which checks once more that no fix weakened a test or left one out of the run. Before that, the code review, each slice review, and the adversarial review of the code check that the tests are real: that none was weakened or left out of the run, that expected values come from the spec, that each test fails when the behaviour is broken, and that the code was not fitted to the tests' inputs.
 
-**Tracing.** In an application that has the tracing foundation (`/observability-init` was run on it), a cycle also plans which calls the feature makes and checks them against a real run: the spec draws a planned call graph (3a), the gate is settled at 3c, the implementer follows the tracing standard (4a), and the slice review, the code review, and the final recount's verification each compare the call tree a real run recorded with the plan, writing `reviews/TRACE-TREE-*`. With the gate on, the final recount's verification always runs and every finding it raises is fixed before completion. Without the foundation none of this happens. `observability-diagram.md`, beside this file, draws it.
+**Tracing.** In an application that has the tracing foundation (`/observability-init` was run on it), a cycle also plans which calls the feature makes and checks them against a real run: whether the application has it is settled when you approve the design brief, the spec draws a planned call graph (3a), the gate is settled at 3c, the implementer follows the tracing standard (4a), and the slice review, the code review, and the final recount's verification each compare the call tree a real run recorded with the plan, writing `reviews/TRACE-TREE-*`. With the gate on, the final recount's verification always runs and every finding it raises is fixed before completion. Without the foundation none of this happens. `observability-diagram.md`, beside this file, draws it.
 
-**Evals.** In such an application, a feature with a model in it is also checked on what the model really answers. You decide at the design gate which behaviours a rule checks and which you will accept yourself; the spec writes the cases out (3a) and the gate is settled at 3c; the implementer builds the cases and, the first time, the eval run (4a). Before the slice review, the code review, and each verification of the final recount, the flow puts every case to the running application, three times each, and the review reads the results, kept as `reviews/EVAL-RESULTS-*`. A case checked by rule that fails is a finding, like a failing test. A case scored by a judge model blocks nothing: its scores are shown to you before the final commit (4h), which then stops in autonomous mode too. Without the foundation, or for a feature with no model in it, none of this happens. `observability-diagram.md` draws this as well.
+**Evals.** In such an application, a feature with a model in it is also checked on what the model really answers. You decide at the design gate which behaviours a rule checks and which you will accept yourself; the spec writes the cases out (3a) and the gate is settled at 3c; the implementer builds the cases and, the first time, the eval run (4a). Before the slice review, the code review, and each verification of the final recount, the flow puts every case to the running application, three times each, and the review reads the results, kept as `reviews/EVAL-RESULTS-*`. A case checked by rule that fails is a finding, like a failing test. A case scored by a judge model blocks nothing: its scores are shown to you before the final commit (4h) — the one reason that step stops. Without the foundation, or for a feature with no model in it, none of this happens. `observability-diagram.md` draws this as well.
 
 | Stage | What is done | Who does it | What it writes (under `SDD/`) | Where it can stop |
 |---|---|---|---|---|
 | 0 Scope | Decides whether the request fits one cycle. `--next-tier` instead reads the tier plan and copies task comments into its Feedback, and makes no scope check — the design brief cuts the tier to fit one cycle | Sonnet subagent | `flow/DECOMPOSITION-*` (only when too large) | Always, when the feature is too large |
-| 1 Mode | Supervised or autonomous | Orchestrator | — | — |
-| 1.5 Clarification | An interview that gets your design concept written down. On a next-tier cycle it is a feedback interview instead | You, with `/research-clarify` | `research/CLARIFICATION-*` | Both modes, unless `--skip-clarify` or the file exists |
+| 1.5 Clarification | An interview that gets your design concept written down. On a next-tier cycle it is a feedback interview instead | You, with `/research-clarify` | `research/CLARIFICATION-*` | Every time — yes or no — unless the file exists |
 | 2 Research | Investigates the codebase; finds cross-cutting decisions and lists them as ADR candidates for the design gate; adversarial review; fixes | Sonnet subagents; a second model for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*` | — |
-| 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. It also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*`, `adr/*` (on approval) | **Both modes, every time the brief is written or rewritten.** `approve` is refused while a question is open |
-| 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief, and carries a control register: for each rule that must hold on every path, the one ID its enforcement sites are filed under | Sonnet subagents for the spec and the panel, Opus for the panel's synthesis; a second model for the adversarial review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, both modes, when the spec departs from the brief** |
-| 4 Implementation | Builds the feature (whole, or slice by slice). Every control's enforcement sites are listed twice — by the implementer and by a blind subagent — and the two lists are compared for places only one of them found. A place both found under different IDs is settled by a test, not by a fix round, and a missed place a test already proves gets its row from the reviewer. A place no test proves is fixed only for a security rule; any other is recorded and listed for you. The tier sets the depth: at Tier 1 only security rules are listed and counted, and at Tiers 1 and 2 the blind count is made once, at the final recount. A review after a fix round checks the earlier findings and reads what the fix changed; a slice re-review runs only the tests the fix can affect, and the whole suite and the trace check when it would pass the slice. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; a second model for the reviews (the blind count stays a Sonnet subagent) | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Slice fix-loop halt and re-planning halt (every mode). Recount halt. 4h before the final commit (supervised; both modes when a requirement waits for your sign-off) |
-| Done | Tier marked shipped in the tier plan; task set to done; announcement names what shipped and what is left | Orchestrator | updated `flow/TIERS-*` | — |
+| 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. It also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*`, `adr/*` (on approval) | **Every time the brief is written or rewritten.** `approve` is refused while a question is open |
+| 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief, and carries a control register: for each rule that must hold on every path, the one ID its enforcement sites are filed under | Sonnet subagents for the spec and the panel, Opus for the panel's synthesis; a second model for the adversarial review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, when the spec departs from the brief** |
+| 4 Implementation | Builds the feature (whole, or slice by slice). Every control's enforcement sites are listed twice — by the implementer and by a blind subagent — and the two lists are compared for places only one of them found. A place both found under different IDs is settled by a test, not by a fix round, and a missed place a test already proves gets its row from the reviewer. A place no test proves is fixed only for a security rule; any other is recorded and listed for you. The tier sets the depth: at Tier 1 only security rules are listed and counted, and at Tiers 1 and 2 the blind count is made once, at the final recount. A review after a fix round checks the earlier findings and reads what the fix changed; a slice re-review runs only the tests the fix can affect, and the whole suite and the trace check when it would pass the slice. Code review, adversarial review, fixes, final recount, completion | Sonnet subagents; a second model for the reviews (the blind count stays a Sonnet subagent) | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/SITE-*`, `reviews/CRITICAL-IMPL-*` | Slice pauses (per-slice). Slice fix-loop halt. Recount halt. 4h before the final commit, only when a requirement waits for your sign-off |
+| Done | Tier marked shipped in the tier plan; task set to done; a short report: what shipped, what was deferred, anything left unproven, the diff size | Orchestrator | updated `flow/TIERS-*` | — |
 
 ## What the stops are for
 
-| Stop | Supervised | Autonomous | Why it exists |
-|---|---|---|---|
-| Decomposition (Step 0) | stops | stops | The request is too large for one cycle (never on `--next-tier`) |
-| Clarification (1.5) | stops | stops | Your intent has to be written down before research |
-| Design gate (2.5) | stops | stops | You approve *what will be built* before anything is specified |
-| Slicing not practical (3a) | stops | stops | The spec asked for slices, and no meaningful ones exist. Fall back to building it whole, or point at a slice boundary and retry — either way planning carries on from the spec check, with every review |
-| Tracing or evals asked for and not possible (3c) | stops | stops | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the cycle started, or one of the two fields holds a value other than `auto`, `true`, `false`. You change the field in the spec; nothing is reviewed until you do. It cannot fire with both fields left at `auto` |
-| Panel halt (3c) | stops | stops | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
-| Fix-check halt (3e.5) | stops | stops | The check after the spec fix still found a HIGH or MEDIUM finding open after one more fix. You fix the spec by hand |
-| Deviation check (3g) | stops if deviations | stops if deviations | The spec is no longer what you approved |
-| Slice fix-loop halt (4c) | stops | stops | A slice did not pass its review in 3 fix rounds, or a round made no progress. A test failure that only the whole-suite run at the end of a re-review found does not count against progress. A difference in how a site is filed, a missed site a test already proves, or a site of a rule that is not a security rule that no test proves (recorded for you instead), is not a finding and cannot cause this stop. You resolve the findings; `continue` re-counts and re-reviews the slice |
-| Slice pause | stops | stops | Review each slice while it is small. Off with `--skip-slice-checkpoints` |
-| Re-planning halt (4c.5) | stops | stops | A slice showed the plan is wrong. `--replan` or `--override-replan`; either one commits the slice first |
-| Eval run could not be made (before a review, evals on) | stops | stops | The application's model could not be reached, twice, when the flow ran the feature's eval cases before a review. Nothing is reviewed until it can be: you fix the network, the key, or the provider's limit, and continue. It costs no fix round |
-| Final recount halt (4e.5) | stops | stops | The final recount's verification review still has open findings after 3 fix rounds, or a round made no progress. That covers the two lists of enforcement sites disagreeing on which places enforce a rule, and matching lists where a site's justification for having no proof of its own has not been accepted. With tracing on it also covers a difference between the calls the spec planned and the calls a real run recorded. With evals on it also covers a finding about the eval cases — most often a case checked by rule that the application still fails. With either on it covers the completion step finding something that needs code or tests changed after that check. You resolve the findings; `continue` starts from a fresh recount |
-| Before the final commit (4h) | stops; until you say yes the final commit is not made, and `continue` asks again. In per-slice mode the slices are already committed, one commit each | does not stop — unless evals are on and the spec leaves a requirement about a model's answers for you to accept. Then it stops, shows each such requirement with the judge's scores and where the outputs are, and yes both commits and accepts | Last look before the final commit, and the one place where a requirement only a judge can score is accepted |
-| A stop record `continue` does not recognise | stops | stops | A stop left by another version. It is shown to you as written; the flow never guesses what it was waiting for |
-| A subagent failed twice | stops | stops | The same step failed, was retried with more context, and failed again |
-| Broken install or old folder layout | stops | stops | A file the flow ships is missing, or the repo still uses the 1.x `SDD/` layout. Not resumable until fixed |
+| Stop | When | Why it exists |
+|---|---|---|
+| Decomposition (Step 0) | always, when too large | The request is too large for one cycle (never on `--next-tier`) |
+| Clarification (1.5) | every time, unless a clarification document exists | Your intent has to be written down before research. Answer yes to run `/research-clarify`, no to go on |
+| Design gate (2.5) | every time the brief is written or rewritten | You approve *what will be built* before anything is specified. A feature that calls a model in an application with no tracing foundation gets a recommendation to run `/observability-init` first; the flow looks again on approval |
+| Tracing or evals asked for and not possible (3c) | when it applies | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the brief was approved, or one of the two fields holds a value other than `auto`, `true`, `false`. You change the field in the spec; nothing is reviewed until you do. It cannot fire with both fields left at `auto` |
+| Panel halt (3c) | when it applies | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
+| Fix-check halt (3e.5) | when it applies | The check after the spec fix still found a HIGH or MEDIUM finding open after one more fix. You fix the spec by hand |
+| Deviation check (3g) | if deviations | The spec is no longer what you approved |
+| Slice fix-loop halt (4c) | when it applies | A slice did not pass its review in 3 fix rounds, or a round made no progress. A test failure that only the whole-suite run at the end of a re-review found does not count against progress. A difference in how a site is filed, a missed site a test already proves, or a site of a rule that is not a security rule that no test proves (recorded for you instead), is not a finding and cannot cause this stop. You resolve the findings; `continue` re-counts and re-reviews the slice |
+| Slice pause | after every slice | Try the slice while it is small: it says what to run and what you should see, the brief check, and the retrospective's re-plan advice when there is any. `continue` starts the next slice; ask for a re-plan in words and the brief is revised, the design gate stops for you, and planning runs again |
+| Eval run could not be made (before a review, evals on) | when it applies | The application's model could not be reached, twice, when the flow ran the feature's eval cases before a review. Nothing is reviewed until it can be: you fix the network, the key, or the provider's limit, and continue. It costs no fix round |
+| Final recount halt (4e.5) | when it applies | The final recount's verification review still has open findings after 3 fix rounds, or a round made no progress. That covers the two lists of enforcement sites disagreeing on which places enforce a rule, and matching lists where a site's justification for having no proof of its own has not been accepted. With tracing on it also covers a difference between the calls the spec planned and the calls a real run recorded. With evals on it also covers a finding about the eval cases — most often a case checked by rule that the application still fails. With either on it covers the completion step finding something that needs code or tests changed after that check. You resolve the findings; `continue` starts from a fresh recount |
+| Sign-off before the final commit (4h) | only when evals are on and the spec leaves a requirement about a model's answers for you to accept | It shows each such requirement with the judge's scores and where the outputs are; yes both commits and accepts. Otherwise the flow commits without stopping and ends with a short report |
+| A stop record `continue` does not recognise | always | A stop left by another version. It is shown to you as written; the flow never guesses what it was waiting for |
+| A subagent failed twice | always | The same step failed, was retried with more context, and failed again |
+| Broken install or old folder layout | always | A file the flow ships — the OWASP catalog included — is missing, or the repo still uses the 1.x `SDD/` layout. Not resumable until fixed |
 
 Every stop above that waits for your answer is written to `SDD/orchestration/progress.md` before the flow asks, and `/sdd-flow continue` resumes from that record. The rest write no such record: the slice pause needs no answer (`continue` starts the next slice), and after a decomposition, a broken or old-layout install, or a twice-failed subagent you deal with the cause and run the flow again.
 

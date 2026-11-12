@@ -133,7 +133,7 @@ Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across new artifact 
 
 ## Recommended Re-planning
 
-[Structured, REQUIRED, ELEVATED severity. Each entry follows the same template as SPEC Amendments but signals a fundamental plan-level failure rather than a local clarification. If no re-planning is recommended, the section body MUST be the single line `None.` — do NOT omit the section. **One or more entries HALT the flow** even under `--skip-slice-checkpoints` per REQ-014; a `None.` body does not — see "Three-Tier Recommendation Surfacing" below.]
+[Structured, REQUIRED, ELEVATED severity. Each entry follows the same template as SPEC Amendments but signals a fundamental plan-level failure rather than a local clarification. If no re-planning is recommended, the section body MUST be the single line `None.` — do NOT omit the section. One or more entries are shown to the user at the slice pause as re-plan advice; a `None.` body is not — see "Three-Tier Recommendation Surfacing" below.]
 
 ### Re-plan trigger 1: <short label>
 
@@ -199,9 +199,9 @@ Omitting either section is a **malformed retro** — the orchestrator cannot dis
 
 Retrospectives can raise recommendations at three escalating tiers (per REQ-014 three-tier model):
 
-1. **Normal recommendation** — structured `## Recommended SPEC Amendments` entries (slice-bounded; user reviews at next slice-boundary pause OR at the consolidated announcement under `--skip-slice-checkpoints`; **no halt**).
-2. **Iteration-cap-exhaustion** — per-slice review-fix-rerun loop fails to reduce HIGH findings across the cap (REQ-013); stops the flow in every mode with an `## Awaiting Slice Resolution` block the orchestrator writes, and routes the findings to the ledger's `Open recommendations awaiting user decision` section (this body's Halt-Note Mode).
-3. **Re-planning recommendation** — `## Recommended Re-planning` (this retro section) with a **non-`None.` body**; **halts the flow even under `--skip-slice-checkpoints`** (mirrors Step 3c panel-review halt). The section with a `None.` body is the required no-re-plan shape and does not halt.
+1. **Normal recommendation** — structured `## Recommended SPEC Amendments` entries (slice-bounded; recorded in the ledger; **no halt**).
+2. **Iteration-cap-exhaustion** — per-slice review-fix-rerun loop fails to reduce HIGH findings across the cap (REQ-013); stops the flow with an `## Awaiting Slice Resolution` block the orchestrator writes, and routes the findings to the ledger's `Open recommendations awaiting user decision` section (this body's Halt-Note Mode).
+3. **Re-planning recommendation** — `## Recommended Re-planning` (this retro section) with a **non-`None.` body**; shown to the user at the slice pause, who may ask for a re-plan. The section with a `None.` body is the required no-re-plan shape.
 
 Each tier has its own surfacing mechanism. Implementations SHOULD treat the three as distinct user-decision points; UI/CLI surfaces SHOULD label them by tier so users grasp the severity at a glance.
 
@@ -310,18 +310,12 @@ Append an entry to `SDD/orchestration/progress.md` recording the retrospective:
 
 ### Two-stage matcher contract — what this body does NOT write
 
-This body writes only the `## Slice <SLICE-XXX> - Retrospective Complete` log entry above. It DOES NOT write a `## Awaiting Re-planning Decision` halt block to `progress.md` — that block is the **orchestrator's** responsibility (per `agent-engineering/skills/sdd-flow/SKILL.md` per-slice cycle Step 4c.5).
+This body writes only the `## Slice <SLICE-XXX> - Retrospective Complete` log entry above. It writes no `Retro Matched` line and no halt-shaped block to `progress.md` — reading the recommendation is the **orchestrator's** (`phases/implementation-per-slice.md` → 4c.5).
 
 The contract is two-stage by design (resolves M-2):
 
 1. **Retro stage (this body):** the retrospective ARTIFACT always contains the EXACT header `## Recommended Re-planning` (per Step 6 + the matcher-contract block above); its BODY carries the answer — entries when the slice's learnings warrant a re-plan, `None.` when they do not. The retro ARTIFACT (not this body's return summary) is the SOURCE OF TRUTH for the recommendation. This body does NOT itself touch any halt-shaped block in `progress.md`.
-2. **Orchestrator stage (flow Step 4c.5):** after this body returns, the orchestrator reads the just-written retrospective and matches `^## Recommended Re-planning$` **AND** a first non-empty body line that is not `None.` (it never keys off this body's return summary). On match, the ORCHESTRATOR (not this body) writes the `## Awaiting Re-planning Decision` halt block to `progress.md` and halts the per-slice cycle. On a fresh-session resume, Phase Detection reads `progress.md` for `## Awaiting Re-planning Decision` (the progress-block name) and re-prompts the user.
-
-This separates the two strings unambiguously:
-- `## Recommended Re-planning` lives ONLY in the retrospective artifact (`SDD/implementation/slices/RETROSPECTIVE-SLICE-XXX-...md`).
-- `## Awaiting Re-planning Decision` lives ONLY in `progress.md` and is written by the orchestrator (never by this body).
-
-If this body is invoked outside the flow orchestrator and the retro contains `## Recommended Re-planning` entries, the user is responsible for either invoking the orchestrator's continue/resume step (which detects the recommendation via the matcher) or manually consulting the retro's recommendations. This body does not halt or write any halt-shaped block; it only records the retrospective and updates the ledger.
+2. **Orchestrator stage (flow Step 4c.5):** after this body returns, the orchestrator reads the just-written retrospective and matches `^## Recommended Re-planning$` **AND** a first non-empty body line that is not `None.` (it never keys off this body's return summary). On match it shows the advice at the slice pause, where the user may ask for a re-plan.
 
 ### Bounded return — what to report about the two recommendation sections
 
@@ -385,29 +379,11 @@ Write nothing else: no `RETROSPECTIVE-SLICE` file, no `## Slice Progress` or `##
 
 This body recognizes ONE flag.
 
-| Flag | Semantics | Default (without flag) | Supervised flow | Autonomous flow |
-|------|-----------|------------------------|-----------------|-----------------|
-| `--reconcile-ledger SLICE-XXX` | Re-reads every `RETROSPECTIVE-SLICE-XXX-...md` for the active feature; rebuilds `LEARNINGS-FEATURE-[feature-name].md` per the 8-step algorithm above. | Writes a new retro + updates ledger (or refuses per EDGE-014 if a retro already exists). | The orchestrator passes the flag on an explicit user recovery directive, and — with the line `FINISH: SLICE-XXX` — on its own when it resumes a retrospective that was cut short (`phases/protocols.md`); produce a diff between pre- and post-reconcile ledger and surface it via your bounded return so the user can see it at the next checkpoint. | Same algorithm; the diff-confirm step degrades to "write without prompt" but the change is logged to `progress.md`. |
+| Flag | Semantics | Default (without flag) | In the flow |
+|------|-----------|------------------------|-------------|
+| `--reconcile-ledger SLICE-XXX` | Re-reads every `RETROSPECTIVE-SLICE-XXX-...md` for the active feature; rebuilds `LEARNINGS-FEATURE-[feature-name].md` per the 8-step algorithm above. | Writes a new retro + updates ledger (or refuses per EDGE-014 if a retro already exists). | The orchestrator passes the flag on an explicit user recovery directive, and — with the line `FINISH: SLICE-XXX` — on its own when it resumes a retrospective that was cut short (`phases/protocols.md`). Write without prompting; log the change to `progress.md` and give the diff between pre- and post-reconcile ledger in your bounded return. |
 
 The `--reconcile-` prefix is the convention for "reconstruct derived state from authoritative sources" (the retros are authoritative; the ledger is derived). Future flags following the same pattern (`--reconcile-progress`, `--reconcile-counters`) inherit this convention.
-
-## Boundary with orchestrator resume flags (REQ-025)
-
-The flags `--replan`, `--from-slice SLICE-XXX`, and `--override-replan` are **NOT** slice-body flags — they belong to the orchestrator's continue/resume step. Documented here because retrospectives can recommend re-planning (the `## Recommended Re-planning` section), and the user's resume options after such a recommendation are these orchestrator flags.
-
-| Flag | Step | Semantics | Default | Notes |
-|------|------|-----------|---------|-------|
-| `--replan` | orchestrator continue | Commits the triggering slice as it stands, revises the design brief for approval, then re-runs the planning phase with the ledger and triggering retro in scope; resumes implementation from SLICE-001 of the new plan. | Without `--replan`, the orchestrator's continue step proceeds along the existing flow. | Triggered by `## Recommended Re-planning` retro recommendations. |
-| `--from-slice SLICE-XXX` | orchestrator continue (only meaningful with `--replan`) | Resume implementation from the named slice after the re-plan completes. | Without the flag, re-plan resumes from `SLICE-001`. | **Validation:** `--from-slice` value MUST match `^SLICE-\d{3}[a-z]?$` AND MUST reference an existing SLICE-XXX in the IMPLEMENTATION-PLAN's `## Slice Progress` table. Invalid value (regex mismatch or unknown slice) refuses with the REQ-007 message-discipline shape. |
-| `--override-replan` | orchestrator continue | Commits the triggering slice, then continues with the current plan despite a `## Recommended Re-planning` recommendation. Documented but discouraged. | Without the flag, a non-`None.` `## Recommended Re-planning` halts the flow per REQ-014 (even under `--skip-slice-checkpoints`). | The orchestrator does NOT silently emit `--override-replan`; in autonomous mode the halt fires per REQ-014. |
-
-**Combination semantics for the orchestrator's continue step:**
-
-- `--replan` alone — re-runs the planning phase with retro context, resumes from SLICE-001.
-- `--replan --from-slice SLICE-XXX` — re-runs planning, resumes from `SLICE-XXX` after re-plan.
-- `--override-replan` alone — continues without re-plan.
-- `--from-slice SLICE-XXX` without `--replan` — INVALID. Refuses with: `--from-slice requires --replan; running --replan --from-slice <id> is the documented combination.`
-- `--replan --override-replan` — INVALID (mutually exclusive intents). Refuses with: `--replan and --override-replan are mutually exclusive; pick one.`
 
 ## Path Conventions (REQ-016)
 

@@ -8,7 +8,7 @@ The one definition of the flow's **review route**. `SKILL.md`, the phase chapter
 
 ## 1. Which steps are reviews
 
-The review steps that go to the second model are these — at least one for each thing a cycle writes (research, spec, code and tests):
+The second model is Codex, through the `codex` CLI. The review steps that go to it are these — at least one for each thing a cycle writes (research, spec, code and tests):
 
 | Step | Review | Body | Role file (`PLUGIN_ROOT/agents/`) |
 |---|---|---|---|
@@ -31,18 +31,14 @@ Every re-run of one of these — a re-review after a fix round, a resumed review
 The orchestrator runs
 
 ```
-python3 "$SKILL_ROOT/scripts/second-model-review.py" resolve [--reviewer <spec>]
+python3 "$SKILL_ROOT/scripts/second-model-review.py" resolve
 ```
 
-passing `--reviewer` only when the user gave `/sdd-flow --reviewer <spec>`. Without it the script reads `$SDD_FLOW_REVIEWER`, and failing that picks `codex` when that CLI is installed. A reviewer spec is `codex`, `codex:<model>`, `opencode:<provider/model>`, or `claude`; `:nonet` after a Codex spec (`codex:nonet`, `codex:<model>:nonet`) keeps the reviewer's sandbox closed to the network (§3, *Sandbox and permissions*). OpenCode is used only when named, model included: its default model may be a Claude model, and the script refuses a model whose name says it is one.
+It answers `codex` when that CLI is installed, and the Claude route otherwise. The first stdout line is `Result: …`. Write what follows `Result: ` into the Step 0 record as the line `Reviewer: …`, then act on the exit status:
 
-The first stdout line is `Result: …`. Write what follows `Result: ` into the Step 0 record as the line `Reviewer: …`, then act on the exit status:
-
-- **0** — a second model reviews. The line is the **REVIEWER** for the whole cycle.
-- **3** — the line reads `claude (fallback — <reason>)` or `claude (chosen)`. Every review step of this cycle takes the Claude route (§5). **A recorded line that starts with `claude` means the Claude route, whatever follows the word** — here, on resume, and wherever a file says "REVIEWER is `claude`"; the words after it are kept for the `Reviewed by:` line and are never passed to the script. On a fallback, **tell the user in the next user-facing message**, quoting the line: the cycle's reviews will be Claude reviewing Claude. The flow does not halt.
-- **2** — the spec is unusable (an unknown reviewer, OpenCode with no model, a Claude model). Tell the user, quoting the line, and stop before anything is spawned: this is a mistyped argument, not a cycle state, and nothing has been written.
-
-**The answer is taken once.** A resumed session reads the recorded `Reviewer:` line and does not resolve again. A cycle whose Step 0 record has no such line was started before 3.9.0 and finishes on the Claude route, as it began.
+- **0** — Codex reviews. The line is the **REVIEWER** for the whole cycle.
+- **3** — the line reads `claude (fallback — <reason>)`. Every review step of this cycle takes the Claude route (§5). **A recorded line that starts with `claude` means the Claude route, whatever follows the word** — here, on resume, and wherever a file says "REVIEWER is `claude`"; the words after it are kept for the `Reviewed by:` line and are never passed to the script. On a fallback, **tell the user in the next user-facing message**, quoting the line: the cycle's reviews will be Claude reviewing Claude. The flow does not halt.
+**The answer is taken once.** A resumed session reads the recorded `Reviewer:` line and does not resolve again.
 
 ## 3. Running a review step on the second model
 
@@ -52,7 +48,7 @@ At a review step, when the recorded reviewer line does not start with `claude`, 
 2. **Runs** — in the background, waiting for it to exit before doing anything else:
 
    ```
-   python3 "$SKILL_ROOT/scripts/second-model-review.py" run --reviewer "<REVIEWER>" \
+   python3 "$SKILL_ROOT/scripts/second-model-review.py" run \
      --prompt-file <the prompt file> --cwd <the repository root> \
      --expect <each output path the step writes>
    ```
@@ -61,16 +57,16 @@ At a review step, when the recorded reviewer line does not start with `claude`, 
 3. **Reads the result.** The first stdout line is `Result: …`.
    - **Exit 0 (`OK`)** — the review counts. The reviewer's final message is in the `.return.md` file the line names: read it as the step's bounded return. **Append `## Review Route - [step-id]-[iter]: <the line>` to `progress.md`** — after every `OK`, not only one that put files back. The reviewer writes its own review marker while it is still running, before this script has checked anything; this line is the record that the run was checked, and resume counts a second-model review as done only when it is there (`phases/protocols.md` → Session Resumption). From here the step is indistinguishable from the Claude route — the same review document, the same marker, the same next step.
    - **Exit 1 (`FAILED`)** — the CLI failed, timed out, wrote no review document, reported `REVIEW: INCOMPLETE`, or gave no status line at all. First append `## Failed Review Run - [step-id]-[iter]: <the Result line> — any review marker this run wrote is void` to `progress.md`: the reviewer appends its marker while it runs, so a failed run can leave a verdict line that looks real. Then run it once more with a fresh prompt-file timestamp (and, if that fails too, append a second such line). If it fails again, run **this step** on the Claude route (§5) — telling that subagent that a review document or marker the failed run left behind is to be written afresh, not trusted — and when it returns append `## Review Route - [step-id]-[iter]: claude (fallback — <the Result line>)` to `progress.md`, and **tell the user in the next user-facing message**, quoting the line. Later review steps try the second model again.
-   - **Exit 4 (`HANDOFF`)** — the reviewer handed off: it wrote a compaction file and the `## PARTIAL: needs continuation` block, and its review document may not exist yet. Since 3.14.2 a second-model prompt carries no Safety-Net, so this comes only from a prompt written before then. It is not a failure and is never retried from scratch: continue the review as §6 says.
+   - **Exit 4 (`HANDOFF`)** — the reviewer handed off: it wrote a compaction file and the `## PARTIAL: needs continuation` block, and its review document may not exist yet. It is not a failure and is never retried from scratch: continue the review as §6 says.
    - **Exit 2** — the call itself was malformed; fix the call.
 
 **The fallback never halts the flow and is never silent.** A cycle on a machine with no second model, or in a session whose sandbox does not let the reviewer's CLI start or reach its service, still completes — with every such review marked.
 
 **A review changes no code, and the script enforces it.** Before the run it records the working tree — and does not start the reviewer if it cannot (a `FAILED`, like any other); afterwards it puts back every file outside `SDD/` that the reviewer left changed, added, or deleted — typically an enforcement site deleted for a mutation check and not restored — and names them in the result line. The index and the uncommitted work of the cycle are untouched. (The site inventory is under `SDD/`, so the one thing a review writes outside its own document besides the conventions file — the row of a missed site it proved by its own mutation, `references/enforcement-sites.md` §6 — stays; the step's prompt names the inventory as an output for that. Because no code can change in a review, such a row needs no recount.) **One limit:** the record is made with git, so in a repository that rewrites files on the way in or out — line-ending conversion, a clean/smudge filter such as Git LFS — a file is put back as git would check it out, which for an uncommitted file with unusual line endings may not be byte-for-byte what it was. A file it cannot put back fails the run and is named in the line: tell the user at once, before any fallback — the working tree holds a change no step made on purpose. A review with files put back still counts: its findings stand, and a finding that the stray change caused is caught by the re-review that follows the fix.
 
-**One at a time.** No second-model review step is run in parallel with another or with a subagent that writes: each has the working tree to itself, and parallel OpenCode runs fail on its session database.
+**One at a time.** No second-model review step is run in parallel with another or with a subagent that writes: each has the working tree to itself.
 
-**Sandbox and permissions.** The two CLIs do not confine a reviewer equally. `codex exec -s workspace-write` runs the reviewer in an operating-system sandbox that allows writes only inside the repository. **The script turns that sandbox's network access on** (`-c sandbox_workspace_write.network_access=true`): with it off, a test that opens a local port fails with "Operation not permitted" — in the trial application 37 of 261 tests did, and the reviews fell back to Claude. The cost is that the reviewer's commands can reach the network — the machine's local services and the internet. A Codex spec ending `:nonet` keeps the network closed, for a project where that matters more than its tests. **OpenCode has no such sandbox:** `opencode run --auto` approves whatever the reviewer asks to do, and the script only denies OpenCode's own file tools paths outside the repository (the `external_directory` permission) — a shell command the reviewer runs can still write anywhere the user can, and nothing outside the repository is recorded or put back. Name OpenCode as the reviewer only on a machine, or inside a container, where that is acceptable. OpenCode has whatever network access its own configuration gives it. `$SDD_FLOW_REVIEWER_ARGS` appends arguments for a project that needs more. Beyond the network setting above, the orchestrator never loosens a sandbox on its own: a run that fails because the session's sandbox or permission settings stopped the CLI is a `FAILED` like any other, and the user is told.
+**Sandbox and permissions.** `codex exec -s workspace-write` runs the reviewer in an operating-system sandbox that allows writes only inside the repository. **The script turns that sandbox's network access on** (`-c sandbox_workspace_write.network_access=true`): with it off, a test that opens a local port fails with "Operation not permitted" — in the trial application 37 of 261 tests did, and the reviews fell back to Claude. The cost is that the reviewer's commands can reach the network — the machine's local services and the internet. `$SDD_FLOW_REVIEWER_ARGS`, when set, is appended to the Codex arguments — a model, or what a container needs. Beyond the network setting above, the orchestrator never loosens a sandbox on its own: a run that fails because the session's sandbox or permission settings stopped the CLI is a `FAILED` like any other, and the user is told.
 
 ## 4. The reviewer preamble (embed verbatim, values filled in)
 
@@ -89,7 +85,7 @@ At a review step, when the recorded reviewer line does not start with `claude`, 
 
 ## 5. The Claude route
 
-The route for a cycle whose reviewer is `claude`, and for a single step whose second-model run failed twice. The step's review is spawned as the subagent the phase chapter names — `agent-engineering:sdd-critical-reviewer` or `agent-engineering:sdd-workhorse` — exactly as before 3.9.0, with one line added to its prompt:
+The route for a cycle whose reviewer is `claude`, and for a single step whose second-model run failed twice. The step's review is spawned as the subagent the phase chapter names — `agent-engineering:sdd-critical-reviewer` or `agent-engineering:sdd-workhorse` — with one line added to its prompt:
 
 > Put this line directly under the review document's title: `Reviewed by: <the recorded reviewer line, or "claude (fallback — second-model run failed)" for a single step>`
 
@@ -97,4 +93,4 @@ Every review document therefore says who reviewed it, whichever route wrote it.
 
 ## 6. What a continuation of a review does
 
-A review that trips the Safety-Net writes its compaction file and `## PARTIAL: needs continuation` block like any other step (`phases/protocols.md` → Mid-Phase Handoff). Its continuation takes the same route as the run it continues. On the Claude route that is every handoff; on the second model, only a run whose prompt was written before 3.14.2 can hand off (§3, step 1) — it ends with `REVIEW: HANDOFF` and the script exits 4; the orchestrator then writes the continuation prompt — the preamble, `bodies/continue.md` as the body, the same role file, the compaction file, and everything else the first run's prompt held — the body that run was following, now named **STEP BODY**, its `MODE`, `SCOPE`, `ITER`, and `BASE`, every input and output path, the gate lines — to a new prompt file and runs it through §3 with the same `--expect`. Like every second-model prompt written since 3.14.2, it carries no Safety-Net Rule, counter file, or compact path, even when the run it continues had them: the continuation runs to the end. A continuation may hand off again. A continuation that fails is handled as any failed run: once more, then this step on the Claude route, whose continuation subagent is the agent type the phase chapter names for the step — `agent-engineering:sdd-critical-reviewer` for a critical review (`phases/protocols.md` → Mid-Phase Handoff, step 2) — and is given the same compaction file.
+A review that trips the Safety-Net writes its compaction file and `## PARTIAL: needs continuation` block like any other step (`phases/protocols.md` → Mid-Phase Handoff). Its continuation takes the same route as the run it continues. On the Claude route that is every handoff; a second-model run that hands off ends with `REVIEW: HANDOFF` and the script exits 4; the orchestrator then writes the continuation prompt — the preamble, `bodies/continue.md` as the body, the same role file, the compaction file, and everything else the first run's prompt held — the body that run was following, now named **STEP BODY**, its `MODE`, `SCOPE`, `ITER`, and `BASE`, every input and output path, the gate lines — to a new prompt file and runs it through §3 with the same `--expect`. Like every second-model prompt, it carries no Safety-Net Rule, counter file, or compact path: the continuation runs to the end. A continuation may hand off again. A continuation that fails is handled as any failed run: once more, then this step on the Claude route, whose continuation subagent is the agent type the phase chapter names for the step — `agent-engineering:sdd-critical-reviewer` for a critical review (`phases/protocols.md` → Mid-Phase Handoff, step 2) — and is given the same compaction file.

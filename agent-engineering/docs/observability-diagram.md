@@ -34,7 +34,7 @@ The same machinery serves two different needs, and a feature can be in the first
 
 ```mermaid
 flowchart TD
-    feat(["A feature enters /sdd-flow"]) --> f{"Does the application have<br/>the tracing foundation?<br/>checked at Step 0"}
+    feat(["A feature enters /sdd-flow"]) --> f{"Does the application have<br/>the tracing foundation?<br/>settled at design approval"}
     f -- "no" --> off["tracing off, evals off<br/>the cycle runs exactly as it does today"]:::orch
     f -- "yes" --> l{"Does the feature have<br/>an LLM or agent in it?<br/>the same detection the security review uses"}
     l -- "no" --> a["Scenario 1<br/>tracing on, evals off"]:::trace
@@ -57,7 +57,7 @@ Tracing and evals are not one thing you switch on. The work is split across thre
 | 2 | `/sdd-flow` | Every time you build a feature or a tier, as you do today | Uses that plumbing while it builds: adds tracing for what each slice adds, checks what really ran against the plan, and writes and runs the evals |
 | 3 | `/eval-harvest` | After you have used what was built for a while | Looks at the real runs that went wrong and offers them to you as new eval cases, so the next round of building is tested against them |
 
-**Why step 1 is never run in the middle of a cycle.** `/sdd-flow` decides at the start of a cycle whether tracing and evals are on, writes the spec to match, and keeps that answer until the cycle ends. Plumbing installed halfway through changes nothing until the next cycle starts. And it cannot be run on an empty repository: it wires up the framework and entry points it finds, so there has to be something to find.
+**Why step 1 is never run in the middle of a cycle.** `/sdd-flow` decides when you approve the design brief whether the application has the foundation, writes the spec to match, and keeps that answer until the cycle ends. When a feature calls a model and the foundation is missing, the brief recommends running it before you approve — that is the last moment it counts for this cycle. Plumbing installed after approval changes nothing until the next cycle starts. And it cannot be run on an empty repository: it wires up the framework and entry points it finds, so there has to be something to find.
 
 - **An existing application:** run it once, any time before the next cycle.
 - **A new application, starting from nothing:** run `/sdd-flow` on the idea as usual and build its first tier. Nothing about tracing is done or asked for in that cycle. When the cycle is finished, run `/observability-init` once; it instruments what the first cycle built. Every later cycle is traced from its research step on, with no further setup. The only cost is that the first cycle is built without trace checks or evals — a reason to keep the first tier small, not a reason to build an artificial skeleton.
@@ -84,8 +84,8 @@ What tracing and evals add to each step of the cycle. Steps they do not touch ar
 
 ```mermaid
 flowchart TD
-    s0["Step 0 — records whether<br/>the tracing foundation exists"]:::orch --> brief("2.5a Design brief<br/>first reading of both gates<br/>evals: one Key decision, how quality is judged")
-    brief --> gate["2.5b Design gate — STOP in both modes<br/>evals: you approve how quality is judged"]:::stop
+    s0["Before each brief draft — looks for<br/>the tracing foundation"]:::orch --> brief("2.5a Design brief<br/>first reading of both gates<br/>evals: one Key decision, how quality is judged<br/>no foundation: recommends /observability-init")
+    brief --> gate["2.5b Design gate — STOP<br/>evals: you approve how quality is judged<br/>on approval: looks once more and records it"]:::stop
     gate --> spec("3a Specification<br/>tracing: planned call graph, traced nodes marked,<br/>each slice names its nodes<br/>evals: eval cases written out,<br/>each slice names its evals")
     spec --> bind["3c — both gates settled from the finished spec<br/>and recorded in progress.md"]:::orch
     bind --> rev3("3d Spec review<br/>tracing: nodes present and assigned to slices<br/>evals: every LLM requirement has a rule-based eval,<br/>or is listed for you to accept at the final commit")
@@ -105,17 +105,15 @@ flowchart TD
     final -- "no finding" --> done("4f Completion<br/>reads the final call tree and eval results")
     done -- "tracing or evals: it finds something that<br/>needs code or tests changed" --> fhalt
     done --> q{"Is there a requirement<br/>only a judge can score?"}
-    q -- "yes" --> ask["4h STOP in both modes<br/>judged scores shown, outputs in the results file<br/>yes commits and accepts"]:::stop
-    q -- "no, supervised" --> ask2["4h STOP — ready to commit?<br/>as today"]:::stop
-    q -- "no, autonomous" --> c4["4i commit, 4j announcement"]:::orch
+    q -- "yes" --> ask["4h STOP<br/>judged scores shown, outputs in the results file<br/>yes commits and accepts"]:::stop
+    q -- "no" --> c4["4i commit, 4j short report"]:::orch
     ask --> c4
-    ask2 --> c4
 
     classDef stop fill:#fde2e2,stroke:#c0392b,color:#000
     classDef orch fill:#eeeeee,stroke:#888888,color:#000
 ```
 
-In whole-feature mode the same checks run once in the code review (4b) instead of once per slice. The final recount (4e.5) and everything after it are shared by both modes.
+In whole-feature mode the same checks run once in the code review (4b) instead of once per slice. The final recount (4e.5) and everything after it are shared by both delivery modes.
 
 Not drawn: with evals on, the flow stops before a review when the application's model cannot be reached twice in a row — nothing can be reviewed, and no fix round is spent. `sdd-flow-diagram.md` lists that stop.
 
@@ -200,7 +198,7 @@ Evals do not swap: they go to Opik only, and `/eval-harvest` works only while tr
 | 4b Review | Trace run, call tree, comparison with the plan | The flow's main session makes the eval run and sends it to Opik; the review reads the results and the eval files against the spec | Orchestrator for the eval run; a second model for the review, a Sonnet subagent where none is available |
 | 4e.5 Final recount | Whole graph compared after every fix has landed; every finding, low-severity ones included, is fixed before completion | Every case run again after every fix has landed, and checked; a finding is fixed before completion | Sonnet subagents for the blind count and the fixes; orchestrator for the eval run; a second model for the verification, a Sonnet subagent where none is available |
 | 4f Completion | Summary filled from the final call tree. It changes no code or test: if it finds something that needs either, the flow stops and the final check runs again after you resume | Evals listed with their results, and each requirement left for you to accept with its judged scores. It changes no code or test, as with tracing on | Sonnet subagent |
-| 4h Commit question | — | Fires in both modes when a requirement can only be judged; yes accepts it | You |
+| 4h Commit question | — | Stops only when a requirement can only be judged; yes commits and accepts it | You |
 | `/eval-harvest` | Reads the traces you marked in Opik through the trace lookup; stops if the application sends them to Langfuse | Drafts an invented case for each failure you pick; writes the ones you approve to a harvest file for the next cycle's brief | A skill you run, after using the tier |
 
 ## What changes about the stops
@@ -209,9 +207,9 @@ The proposal added no stop. As built there are two new ones — the first two ro
 
 | Stop | Before | Now |
 |---|---|---|
-| Tracing or evals asked for and not possible (3c) — 3.8.0 for tracing, 3.12.0 for evals | Did not exist | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the cycle started, or one of the two fields holds an invalid value. You change the field; nothing is reviewed until you do |
+| Tracing or evals asked for and not possible (3c) — 3.8.0 for tracing, 3.12.0 for evals | Did not exist | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the design brief was approved, or one of the two fields holds an invalid value. You change the field; nothing is reviewed until you do |
 | Eval run could not be made (before a review) — 3.12.0 | Did not exist | With evals on, the application's model could not be reached twice in a row when the flow ran the eval cases. Nothing is reviewed until it can be; you fix the network, the key, or the provider's limit, and continue. It costs no fix round |
-| Before the final commit (4h) — changed in 3.12.0 | Supervised mode only | Also in autonomous mode, when evals are on and the spec has a requirement only a judge can score. It shows each such requirement with its judged scores and where the outputs are; yes commits and accepts them |
+| Before the final commit (4h) — changed in 3.12.0 and 4.0.0 | Always, unless the run was set to run unattended | Only when evals are on and the spec has a requirement only a judge can score. It shows each such requirement with its judged scores and where the outputs are; yes commits and accepts them |
 | Final recount halt (4e.5) — changed in 3.8.0 and 3.12.0 | The final recount's verification still has open findings after 3 fix rounds, or a round made no progress | The same, with tracing and eval findings counted among them — for tracing, low-severity ones included. It also fires when completion finds something that needs code or tests changed after the final check |
 | Slice fix-loop halt (4c) | A slice did not pass its review in 3 fix rounds, or a round made no progress | Unchanged — tracing and eval findings are ordinary review findings |
 | Slice pause — changed in 3.12.0 | Shows the brief check line | With evals on, also shows the last line of the slice's eval run — how many rule-checked cases passed, how many judged cases there are and their lowest score — and where its results are |

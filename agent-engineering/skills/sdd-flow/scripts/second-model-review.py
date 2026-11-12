@@ -1,31 +1,20 @@
 #!/usr/bin/env python3
-"""Run one sdd-flow review step on a second model, through its command-line agent.
+"""Run one sdd-flow review step on Codex, the second model, through its command-line agent.
 
 Usage:
-    second-model-review.py resolve [--reviewer <spec>]
-    second-model-review.py run --reviewer <spec> --prompt-file <path> --cwd <repo root>
+    second-model-review.py resolve
+    second-model-review.py run --prompt-file <path> --cwd <repo root>
                                --expect <path> [--expect <path> ...] [--timeout <seconds>]
 
 The flow's research, specs, and code are written by Claude subagents; a review
 is run by a different model family (`references/second-model-review.md`). This
-script is the one place that knows how each reviewer's CLI is called.
+script is the one place that knows how the reviewer's CLI is called.
 
-A reviewer spec is one of:
-    codex                   the `codex` CLI with its configured model
-    codex:<model>           the `codex` CLI with that model
-    codex:nonet, codex:<model>:nonet
-                            the same, with the sandbox's network kept closed
-    opencode:<provider/model>   the `opencode` CLI — the model must be named,
-                            because opencode's default may be a Claude model
-    claude                  no second model: the caller uses its Claude reviewer
+`resolve` settles the reviewer for a whole cycle: `codex` when that CLI is on
+PATH, else `claude (fallback — <reason>)`, the caller's Claude reviewer. The
+first stdout line is `Result: <answer>`.
 
-`resolve` settles the reviewer for a whole cycle. The spec comes from
-`--reviewer`, else from $SDD_FLOW_REVIEWER, else `codex` when that CLI is on
-PATH. The first stdout line is `Result: <spec>`; when the answer is `claude` it
-is `Result: claude (fallback — <reason>)`, or `Result: claude (chosen)` when the
-user asked for it.
-
-`run` gives the prompt file's text to the reviewer and waits. Beside the prompt
+`run` gives the prompt file's text to Codex and waits. Beside the prompt
 file (`<name>.prompt.md`) it writes `<name>.log` (everything the CLI printed)
 and `<name>.return.md` (the reviewer's final message). The run counts only if:
 
@@ -40,8 +29,7 @@ its read limit and wrote a compaction file, and the caller continues the review
 
 Codex runs in its `workspace-write` sandbox with network access on
 (`-c sandbox_workspace_write.network_access=true`), so a test suite that opens
-a local port or calls a local service can run; `:nonet` turns it off
-(`...=false`, whatever the user's Codex configuration says).
+a local port or calls a local service can run.
 
 A review changes no code. Before the run the script records the working tree
 (every tracked and untracked, non-ignored file) as a git tree object, without
@@ -59,7 +47,7 @@ model (`resolve`) or the review counts (`run`); 3 = `resolve` answered `claude`;
 1 = the run does not count; 4 = the review must be continued (`HANDOFF`);
 2 = usage or input error.
 $SDD_FLOW_REVIEWER_ARGS, when set, is split like a shell line and appended to
-the CLI's arguments. Deterministic apart from the reviewer itself; stdlib only.
+the CLI's arguments (a model, say, or what a container needs). Deterministic apart from the reviewer itself; stdlib only.
 """
 from __future__ import annotations
 
@@ -78,15 +66,14 @@ DEFAULT_TIMEOUT = 3600
 STATUS = "REVIEW: "
 COMPLETE = "REVIEW: COMPLETE"
 HANDOFF = "REVIEW: HANDOFF"
-CLAUDE_NAMES = ("claude", "anthropic")
 KEPT_DIR = "SDD"
-NONET = "nonet"
+CLI = "codex"
+LABEL = "codex"
 NETWORK_ON = "sandbox_workspace_write.network_access=true"
-NETWORK_OFF = "sandbox_workspace_write.network_access=false"
 
 
 class InputError(Exception):
-    """The reviewer spec or an argument is unusable."""
+    """An argument is unusable."""
 
 
 class Cancelled(Exception):
@@ -101,63 +88,18 @@ class GuardError(Exception):
     """The working tree could not be recorded or put back."""
 
 
-def parse_spec(spec: str) -> tuple[str, str, bool]:
-    """Return (cli, model, closed); model is '' when the CLI's own default is used,
-    closed is True when the spec asks for codex's sandbox with no network (`:nonet`)."""
-    cli, _, model = spec.strip().partition(":")
-    cli, model = cli.strip().lower(), model.strip()
-    closed = model == NONET or model.endswith(":" + NONET)
-    if closed:
-        model = model[: -len(NONET)].rstrip(":").strip()
-    if cli == "claude" and not model and not closed:
-        return cli, "", False
-    if cli not in ("codex", "opencode"):
-        raise InputError(f"unknown reviewer '{spec}' — use codex, codex:<model>, codex:nonet, opencode:<provider/model>, or claude")
-    if cli == "opencode" and closed:
-        raise InputError("opencode has no sandbox to keep closed — `:nonet` is for codex only")
-    if cli == "opencode" and not model:
-        raise InputError("opencode needs a model — opencode:<provider/model>")
-    if any(name in model.lower() for name in CLAUDE_NAMES):
-        raise InputError(f"'{model}' is a Claude model — the reviewer must be a different model family")
-    return cli, model, closed
+def resolve() -> tuple[str, int]:
+    if shutil.which(CLI):
+        return LABEL, 0
+    return "claude (fallback — the codex CLI is not on PATH)", 3
 
 
-def spec_label(cli: str, model: str, closed: bool) -> str:
-    return ":".join([cli] + ([model] if model else []) + ([NONET] if closed else []))
-
-
-def resolve(arg: str | None) -> tuple[str, int]:
-    spec = arg or os.environ.get("SDD_FLOW_REVIEWER", "").strip()
-    if not spec:
-        if shutil.which("codex"):
-            return "codex", 0
-        return "claude (fallback — no reviewer was set and the codex CLI is not on PATH)", 3
-    cli, model, closed = parse_spec(spec)
-    if cli == "claude":
-        return "claude (chosen)", 3
-    if not shutil.which(cli):
-        return f"claude (fallback — the {cli} CLI is not on PATH)", 3
-    return spec_label(cli, model, closed), 0
-
-
-def command(cli: str, model: str, closed: bool, cwd: Path, return_file: Path, prompt: str) -> tuple[list[str], str | None]:
-    """Return (argv, stdin text). codex takes the prompt on stdin, opencode as an argument."""
+def command(cwd: Path, return_file: Path) -> list[str]:
+    """Codex takes the prompt on stdin."""
     extra = shlex.split(os.environ.get("SDD_FLOW_REVIEWER_ARGS", ""))
-    if cli == "codex":
-        argv = ["codex", "exec", "-s", "workspace-write", "-C", str(cwd), "-o", str(return_file)]
-        argv += ["-c", NETWORK_OFF if closed else NETWORK_ON]  # explicit both ways: a config file may set either
-        if model:
-            argv += ["-m", model]
-        return argv + extra + ["-"], prompt
-    return ["opencode", "run", "--auto", "--dir", str(cwd), "-m", model] + extra + [prompt], None
-
-
-def reviewer_env(cli: str) -> dict[str, str]:
-    """opencode has no write sandbox; refuse its file tools anything outside the repository at least."""
-    env = dict(os.environ)
-    if cli == "opencode" and "OPENCODE_CONFIG_CONTENT" not in env:
-        env["OPENCODE_CONFIG_CONTENT"] = '{"permission": {"external_directory": "deny"}}'
-    return env
+    argv = [CLI, "exec", "-s", "workspace-write", "-C", str(cwd), "-o", str(return_file)]
+    argv += ["-c", NETWORK_ON]  # explicit: a config file may turn it off
+    return argv + extra + ["-"]
 
 
 def git(cwd: Path, *args: str, index: Path | None = None, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
@@ -228,9 +170,6 @@ def stop_group(proc: subprocess.Popen[str]) -> None:
 
 
 def run(args: argparse.Namespace) -> tuple[str, int]:
-    cli, model, closed = parse_spec(args.reviewer)
-    if cli == "claude":
-        raise InputError("`run` needs a second-model reviewer; the Claude reviewer is spawned by the orchestrator")
     prompt_file, cwd = Path(args.prompt_file).resolve(), Path(args.cwd).resolve()
     if not prompt_file.is_file():
         raise InputError(f"prompt file not found: {prompt_file}")
@@ -240,10 +179,10 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
     log_file = prompt_file.with_name(f"{stem}.log")
     return_file = prompt_file.with_name(f"{stem}.return.md")
     return_file.unlink(missing_ok=True)
-    label = spec_label(cli, model, closed)
+    label = LABEL
     expected = [Path(p) if os.path.isabs(p) else cwd / p for p in args.expect]
     stamps = {p: p.stat().st_mtime_ns if p.is_file() else None for p in expected}
-    argv, stdin = command(cli, model, closed, cwd, return_file, prompt_file.read_text())
+    argv, stdin = command(cwd, return_file), prompt_file.read_text()
 
     with tempfile.TemporaryDirectory() as tmp:
         scratch = Path(tmp)
@@ -253,12 +192,10 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
             return f"FAILED — {label}: not started — {exc}", 1
         failure = None
         try:
-            # Without a prompt on stdin, give the CLI a closed one: opencode waits on an open stdin.
             # Its own session, so that on a timeout every process it started is stopped with it —
             # a test run still writing files would undo the restore below.
-            proc = subprocess.Popen(argv, stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
-                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=cwd,
-                                    start_new_session=True, env=reviewer_env(cli))
+            proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True, cwd=cwd, start_new_session=True)
             try:
                 out, err = proc.communicate(stdin, timeout=args.timeout)
             except (subprocess.TimeoutExpired, Cancelled) as exc:
@@ -271,11 +208,9 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
                 failure = "cancelled" if isinstance(exc, Cancelled) else f"no answer after {args.timeout} s"
             log_file.write_text(out + ("\n--- stderr ---\n" + err if err else ""))
             if failure is None and proc.returncode != 0:
-                failure = f"the {cli} CLI exited {proc.returncode}"
-            elif failure is None and cli == "opencode":
-                return_file.write_text(out)
+                failure = f"the {CLI} CLI exited {proc.returncode}"
         except OSError as exc:
-            failure = f"the {cli} CLI could not be started ({exc.strerror})"
+            failure = f"the {CLI} CLI could not be started ({exc.strerror})"
         try:
             restored = restore_code(cwd, before, scratch)
         except GuardError as exc:
@@ -307,10 +242,8 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     sub = parser.add_subparsers(dest="action", required=True)
-    p_resolve = sub.add_parser("resolve")
-    p_resolve.add_argument("--reviewer")
+    sub.add_parser("resolve")
     p_run = sub.add_parser("run")
-    p_run.add_argument("--reviewer", required=True)
     p_run.add_argument("--prompt-file", required=True)
     p_run.add_argument("--cwd", required=True)
     p_run.add_argument("--expect", action="append", required=True)
@@ -319,7 +252,7 @@ def main() -> int:
     signal.signal(signal.SIGTERM, cancel)
     signal.signal(signal.SIGINT, cancel)
     try:
-        line, status = resolve(args.reviewer) if args.action == "resolve" else run(args)
+        line, status = resolve() if args.action == "resolve" else run(args)
     except InputError as exc:
         print(f"Result: ERROR — {exc}")
         return 2

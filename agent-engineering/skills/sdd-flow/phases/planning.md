@@ -6,7 +6,7 @@ Three resolved paths recur below. **BRIEF** = `SDD/requirements/DESIGN-[###]-[fe
 
 **STANDARD** = the enforcement-site standard resolved at Step 0 (`SKILL_ROOT/references/enforcement-sites.md`). Planning needs its §1 and §1.1 only: the spec carries a `## Control Register` — which ID every enforcement site will be filed under — written at 3a, checked by 3a's completion spawn and by 3d, and kept true by every spec fix. It is passed to each of those spawns, in every cycle and both delivery modes. *Runs started before 3.11.0:* a spec written at 3a by an older version has no register. While its planning is still open, 3d raises that as a finding and the 3e fix writes the register; a spec whose planning was already accepted keeps none, and implementation keys its controls as before (`references/enforcement-sites.md` §1.1).
 
-Two more come from the Step 0 record. **TRACING** = the tracing standard. **The observability line** = `Observability record: present` or `Observability record: absent` — whether the application has the tracing foundation (`phases/setup.md` → Step 0). A Step 0 record with no such line (a flow started before tracing was part of the flow) is read as `absent`. From 3c on, the **tracing gate** is `on` or `off`, as the latest `## Gates - ` line says; a spawn after 3c in a cycle that has no such line (it was planned before tracing was part of the flow) is passed `tracing: off`.
+**TRACING** = the tracing standard, from the Step 0 record. **The observability line** = `Observability record: present` or `Observability record: absent` — whether the application has the tracing foundation, `SDD/OBSERVABILITY.md`. Before approval the orchestrator looks for that file just before each design-brief spawn and passes what it found; at approval it looks once more and records the line (2.5b), and from then on that recorded line is the observability line for the cycle — a foundation installed later changes nothing until the next cycle. From 3c on, the **tracing gate** is `on` or `off`, as the latest `## Gates - ` line says; a spawn after 3c in a cycle that has no such line (it was planned before tracing was part of the flow) is passed `tracing: off`.
 
 **EVALS** = the evals reference (`SKILL_ROOT/references/evals.md`, `SKILL.md` → SKILL_ROOT resolution): what an eval is, its two kinds, and how its cases are written. It is passed to the design-brief and planning spawns when the observability line says `present`. From 3c on, the **evals gate** is `on` or `off`, as the `evals:` part of that same `## Gates - ` line says; a line with no `evals:` part (a cycle that passed 3c before evals were part of the flow), or no line at all, is `evals: off`.
 
@@ -23,11 +23,11 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent **with the per-spawn mod
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), existing `SDD/adr/`, **TIERS**, **TIER_PLAN** (the path, whether or not the file exists yet), `TIER: N` if the user passed `--tier N` or this is a next-tier cycle, **the observability line** copied verbatim, **EVALS** when that line says `present`, **HARVEST** when there is one (below), and on a next-tier cycle the previous tier's research document.
 - **HARVEST** — the harvested eval cases still open (`references/evals.md` §2). Derive it just before this spawn, before every revision run, before 3a, and again on a resumed session; it is not recorded. Take every `SDD/flow/HARVEST-….md` path named under the tier plan's `## Feedback` or in the task description; a file's cases are its `## Case <n> — trace <id>` headings. A case is closed when a spec other than the one this cycle writes has adopted or dropped it: `grep -l -F -e 'harvested: <path>, trace <id>' -e 'dropped: <path>, trace <id>' SDD/requirements/SPEC-*.md` lists one. A deferred case stays open. Pass the open cases as `HARVEST: <path> — traces <id>, <id>; <path> — traces <id>`; none open → no line.
 - **Outputs:** **BRIEF**, **TIER_PLAN** (none when the brief says tiers are not applicable), append `progress.md`.
-- **Task:** Write the design brief. The body's **quality rule** applies: when the observability line says `present` and the feature has a model in it, one Key decision says how the quality of what the model says will be judged. Carries the Safety-Net Rule, a fresh counter (`Reads: 0/15`), and `planning-compact.md` as the compact body.
+- **Task:** Write the design brief. The body's **quality rule** applies: when the observability line says `present` and the feature has a model in it, one Key decision says how the quality of what the model says will be judged; when it says `absent` and the feature has a model in it, the brief's `## Tracing foundation` section recommends running `/observability-init` before approving. Carries the Safety-Net Rule, a fresh counter (`Reads: 0/15`), and `planning-compact.md` as the compact body.
 
 ### 2.5b. Gate
 
-**Fires in BOTH supervised and autonomous modes, every time the brief is written or rewritten. No flag skips it.**
+**Fires every time the brief is written or rewritten. No flag skips it.**
 
 The orchestrator never edits the brief. Approval state is the latest `## Design Brief - ` line in `progress.md` — `Drafted` (written by the brief subagent: not yet decided) or `APPROVED` (written by the orchestrator, below).
 
@@ -37,7 +37,7 @@ Read the brief — the gate message is built from it, not from the subagent's re
 ## Awaiting Design Approval
 
 Brief: SDD/requirements/DESIGN-[###]-[feature-name].md (revision N)
-Re-plan: <no | yes — triggering retrospective: <retro-path>; from-slice: <SLICE-XXX | none>>
+Re-plan: <no | yes — triggering retrospective: <retro-path>>
 ```
 
 > **Design brief ready. No detailed planning happens until you approve it.**
@@ -47,7 +47,8 @@ Re-plan: <no | yes — triggering retrospective: <retro-path>; from-slice: <SLIC
 > **Decisions made:** [D1 title — chosen option] · [D2 …]
 > **Questions for you:** [Q1 — options — recommended (a)] · [Q2 …] [Or: "None."]
 > **Research review:** [one line: critical-review severity and whether findings were resolved] [· ADRs captured: [numbers] — only when an `## ADR Capture - Done` line that names any already follows the latest `## ADR Candidates` entry, as at a re-plan's gate. Otherwise omit this part.]
-> **ADR candidates:** [title — chosen option] · [title — chosen option] — written as decision records when you approve; name any you want dropped. [Both modes. Only when the latest `## ADR Candidates` entry lists any and no `## ADR Capture - Done` line follows it. Otherwise omit this line.]
+> **Tracing foundation:** [the brief's `## Tracing foundation` line — only when the brief has that section. Otherwise omit this line.]
+> **ADR candidates:** [title — chosen option] · [title — chosen option] — written as decision records when you approve; name any you want dropped. [Only when the latest `## ADR Candidates` entry lists any and no `## ADR Capture - Done` line follows it. Otherwise omit this line.]
 > Brief ([N] lines): `SDD/requirements/DESIGN-[###]-[feature-name].md`
 > Research: `SDD/research/RESEARCH-[###]-[feature-name].md`
 > **Before you approve:** `/worth-building SDD/requirements/DESIGN-[###]-[feature-name].md` asks whether this should be built as planned at all — the cheapest test that could show the idea does not work, and whether the plan runs it first. Optional; the flow does not run it for you.
@@ -55,20 +56,19 @@ Re-plan: <no | yes — triggering retrospective: <retro-path>; from-slice: <SLIC
 
 If the brief's first line under its title is `Too large for one brief — recommend decomposition` or `Too large for one cycle — no cut of this tier fits`, show that line and the seams it names in place of the summary, and offer only a change request or `stop` — there is nothing to approve. On a next-tier cycle, the change request is how the user narrows what this cycle builds (for example, "build only the first of those seams now"); do not suggest running a decomposition, whose items would no longer be tied to the tier plan — this holds for a brief drafted before 3.14.1 that carries the first line, too.
 
-**The `Before you approve` line is a reminder, not a step.** It is shown at every gate, in both modes — a revision round and a re-plan's gate included. The orchestrator never invokes the `worth-building` skill itself, the gate does not wait for it, and nothing is recorded about whether it was run. If the user runs it, its verdict reaches the flow only as their reply: a change request (2.5c), a different tier, or `stop`. Omit the line in both `Too large for one …` cases — there is no plan to judge yet.
+**The `Before you approve` line is a reminder, not a step.** It is shown at every gate — a revision round and a re-plan's gate included. The orchestrator never invokes the `worth-building` skill itself, the gate does not wait for it, and nothing is recorded about whether it was run. If the user runs it, its verdict reaches the flow only as their reply: a change request (2.5c), a different tier, or `stop`. Omit the line in both `Too large for one …` cases — there is no plan to judge yet.
 
 Act on the reply:
 
 - **Answers or changes** (including a different tier) → 2.5c.
-- **`approve`** → accepted only when the brief's `## Questions for you` is `None.`. Append `## Design Brief - APPROVED (revision N, tier T)` to `progress.md` — `T` is the brief's recommended tier (`1`, `2`, `3`), or `none` when the brief says tiers are not applicable — and proceed to 3a. If any question is still open, **refuse**: reply with the open questions, say that each needs an answer ("use your recommendation" counts as one, given per question), and stay at the gate. Nothing is rewritten and nothing is assumed.
+- **`approve`** → first look for `SDD/OBSERVABILITY.md` once more. If it is now there and the brief has a `## Tracing foundation` section (it was written while the record was absent, so it holds no decision on how answer quality is judged), do not approve: run 2.5c with the line `OBSERVABILITY: present — apply rules 11 and 13 afresh` in place of a user reply, and the gate fires again. Otherwise the reply is accepted only when the brief's `## Questions for you` is `None.`. Append `## Design Brief - APPROVED (revision N, tier T)` to `progress.md` — `T` is the brief's recommended tier (`1`, `2`, `3`), or `none` when the brief says tiers are not applicable — then append `Observability record: present` or `Observability record: absent` beneath it, from that last look: the cycle's observability line, from which 3c settles the tracing and evals gates. Then proceed to 3a. If any question is still open, **refuse**: reply with the open questions, say that each needs an answer ("use your recommendation" counts as one, given per question), and stay at the gate. Nothing is rewritten and nothing is assumed.
 - **`stop`** → leave `## Awaiting Design Approval` as the latest block and halt. `/sdd-flow continue` re-shows this gate.
 
-**ADR candidates (both modes).** Research's ADR step (2b) proposes candidates and writes none; this gate is where the user accepts them. The `ADR candidates:` line is built from the latest `## ADR Candidates` entry in `progress.md`, minus any candidate already dropped.
+**ADR candidates.** Research's ADR step (2b) proposes candidates and writes none; this gate is where the user accepts them. The `ADR candidates:` line is built from the latest `## ADR Candidates` entry in `progress.md`, minus any candidate already dropped.
 
 - **A reply that drops a candidate** — at approval or in an earlier round — is recorded at once: append `## ADR Candidate Dropped - <title>` to `progress.md`, one line per candidate, so the choice survives a stop.
 - **On `approve`**, after the `## Design Brief - APPROVED` line and before 3a: if the entry lists any candidate not dropped, spawn ONE **`agent-engineering:sdd-workhorse`** subagent with `bodies/adr-capture.md` in **AUTO mode**, passing the research document, the existing `SDD/adr/`, and the accepted candidate titles ("write exactly these"). Then append `## ADR Capture - Done (<ADR numbers | none>)` — `none` when every candidate was dropped or the entry said `none`. The records are committed at 3f.
 - A re-plan's gate does not repeat this: a `## ADR Capture - Done` line already follows the candidates.
-- *Runs started on 3.5.1 or earlier in autonomous mode:* 2b wrote the records itself and left no `## ADR Candidates` entry. With no entry there is nothing to list and nothing to write on approval — omit the `ADR candidates:` line and skip the capture.
 
 **Mirror the tiers to BB tasks** on approval, when `T` is not `none` — before spawning 3a, so the task keys the script writes into the tier plan are part of the 3f commit:
 
@@ -91,7 +91,7 @@ Then return to 2.5b. The loop has no cap — every round is requested by the use
 
 ### Re-plan
 
-`/sdd-flow continue --replan` (after a re-planning halt — `phases/protocols.md`; the slice that triggered it is committed first) re-enters here before Step 3: run 2.5c with the rolling ledger and the triggering retrospective as extra inputs and, in place of a user reply, the line `RE-PLAN: revise the brief from the ledger and retrospective`. The gate then fires as above, in both modes, with `Re-plan: yes` in the halt block — it also records the `--from-slice` value, so the flag survives the stop. On `approve`, continue to 3a with the ledger and retrospective in the planning subagent's prompt; the re-plan's planning run ends, like any other, with `## Planning - Accepted` at 3g.
+A re-plan is asked for in words, at a slice pause (`phases/implementation-per-slice.md` → 4c.5). The slice before it is already committed. Run 2.5c with the rolling ledger and the latest slice retrospective as extra inputs and, in place of a user reply, the line `RE-PLAN: <the user's request, verbatim>`. The gate then fires as above, with `Re-plan: yes` in the halt block. On `approve`, continue to 3a with the ledger and retrospective in the planning subagent's prompt; the re-plan's planning run ends, like any other, with `## Planning - Accepted` at 3g, and implementation starts at the new plan's first slice not yet `Complete`.
 
 ---
 
@@ -103,7 +103,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, append `progress.md`.
 - **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force. The body's **tracing rule** applies: the spec carries `tracing:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when the observability line says `present` and the field is not `false` — a `### Planned call graph` under `## Modules` with every entry point, LLM call, and external call marked, plus a `Traced nodes:` line per slice in per-slice mode; otherwise neither. The body's **evals rule** applies: the spec carries `evals:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when evals are on for this spec by the table under `evals:` in the body — an `### Evals` sub-section under `## Validation Strategy` with every case written out, a `Sign-off:` line under `### Manual Verification` for each requirement only a person can accept, and an `Evals:` line per slice in per-slice mode; otherwise none of the three.
 
-**If the practicality gate fired** — the subagent's return says so, and an `## Awaiting Slicing Decision` block is the latest in `progress.md` — do not go on: the spec asked for slices and no meaningful ones exist. Show the block's two options and stop, in both modes (in supervised mode the user may answer in the same session). The answer is handled by `phases/protocols.md` → `## Awaiting Slicing Decision`, and both answers come back here: falling back to whole-feature continues with the completion spawn below, and a retry re-runs the spawn above with `RETRY SLICING: <hint>`. Neither skips 3b–3g.
+**If the practicality gate fired** — the subagent's return says so — the spec now says `delivery_mode: whole-feature` with a `Slicing not applicable: <reason>` line. Do not stop: tell the user in the next user-facing message that the feature will be built in one piece, quoting the reason, and carry on.
 
 Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning-complete.md`
@@ -133,7 +133,6 @@ Panel composition comes from the spec's `review_panel:` frontmatter. If absent o
 - `true` → include `agent-security` in the panel, and the specialist skips its own scope gate. It can only skip it if it is told: pass the line `agent_security: true` in its prompt.
 - `false` → never include it; the user has declared the feature non-agentic.
 - `auto` → include it when the spec describes an agentic surface (LLM/model call, tool or MCP definition, agent memory or retrieval store feeding model context, inter-agent messaging, or a model output driving an action on an external system). The planning body (3a) normally resolves `auto` and appends the value to `review_panel:` itself; when it did not, the orchestrator applies the same test. Pass `agent_security: auto` in the specialist's prompt. Including it under `auto` is cheap — the specialist short-circuits when its own scope gate is closed.
-- **CATALOG missing** (recorded at Step 0 — `SKILL.md` → SKILL_ROOT resolution) → the gate is closed for the whole run, whatever the spec says, `true` included: drop `agent-security` from the panel and pass no catalog path to any spawn. The warning in `progress.md` already says so. The specialist cannot review without its catalog, and a spawn that fails on a missing file is worse than a review that is visibly absent.
 
 The `agent_security:` value also gates Step 4b's agentic-surface code-review lens, so it must be resolved even when `review_panel:` was authored by hand.
 
@@ -158,10 +157,10 @@ The `agent_security:` value also gates Step 4b's agentic-surface code-review len
 | `true` | `absent` | — | none — halt (below) |
 | any other value | — | — | none — halt (below) |
 
-- **"The spec has a model in it"** is asked only for `evals: auto` with the record `present`. It is yes when the spec carries an `### Evals` sub-section — the planning subagent judged so — or when the spec describes an agentic surface by the test of the `agent-security` gate above. Apply that test to the spec's text whatever its `agent_security:` field says, and whether or not CATALOG exists: the two gates share a test and nothing else.
+- **"The spec has a model in it"** is asked only for `evals: auto` with the record `present`. It is yes when the spec carries an `### Evals` sub-section — the planning subagent judged so — or when the spec describes an agentic surface by the test of the `agent-security` gate above. Apply that test to the spec's text whatever its `agent_security:` field says: the two gates share a test and nothing else.
 - **Record it.** Append one line to `progress.md`: `## Gates - tracing: <on|off>, evals: <on|off>`. The latest such line holds both gates for the rest of this cycle: every later spawn that needs one is passed exactly `tracing: on` or `tracing: off`, and exactly `evals: on` or `evals: off`, and no subagent reads a field to decide for itself. An edit to either field after this point — by a fix subagent or by hand — changes nothing until Step 3 runs again (a re-plan writes a new spec, a new `Planning Phase - COMPLETE`, and so a new line here).
 - **No specialist is given either gate.** The panel reviews neither the planned call graph nor the evals; the spec critical review (3d) does.
-- **`true` with no foundation, or a value outside the three — in either field → halt, in both modes, and spawn nothing.** Append this block to `progress.md`, then tell the user what cannot be decided, with one of the messages below for each field named:
+- **`true` with no foundation, or a value outside the three — in either field → halt and spawn nothing.** Append this block to `progress.md`, then tell the user what cannot be decided, with one of the messages below for each field named:
 
   ```markdown
   ## Awaiting Gate Decision
@@ -172,11 +171,11 @@ The `agent_security:` value also gates Step 4b's agentic-surface code-review len
   Set each field named above to a value this cycle can honour, then run `/sdd-flow continue`.
   ```
 
-  > **The spec asks for tracing, and this application has no tracing foundation.** `tracing: true` in `SDD/requirements/SPEC-[###]-[feature-name].md` needs `SDD/OBSERVABILITY.md`, which was absent when this cycle started. A cycle keeps the answer it started with, so tracing cannot be switched on in this one. Set `tracing:` to `auto` or `false` in the spec and run `/sdd-flow continue`; run `/observability-init` once this cycle is finished, and the next cycle is traced.
+  > **The spec asks for tracing, and this application has no tracing foundation.** `tracing: true` in `SDD/requirements/SPEC-[###]-[feature-name].md` needs `SDD/OBSERVABILITY.md`, which was absent when the design brief was approved. A cycle keeps the answer it had at approval, so tracing cannot be switched on in this one. Set `tracing:` to `auto` or `false` in the spec and run `/sdd-flow continue`; run `/observability-init` once this cycle is finished, and the next cycle is traced.
 
   > **Invalid `tracing` value '[value]' in `SDD/requirements/SPEC-[###]-[feature-name].md`.** Allowed values: `auto`, `true`, `false`. Edit the spec frontmatter and run `/sdd-flow continue`.
 
-  > **The spec asks for evals, and this application has no tracing foundation.** `evals: true` in `SDD/requirements/SPEC-[###]-[feature-name].md` needs `SDD/OBSERVABILITY.md` — the eval run is set up from what that record says, and its command is written into it — which was absent when this cycle started. A cycle keeps the answer it started with, so evals cannot be switched on in this one. Set `evals:` to `auto` or `false` in the spec and run `/sdd-flow continue`; run `/observability-init` once this cycle is finished, and the next cycle can check what the model says.
+  > **The spec asks for evals, and this application has no tracing foundation.** `evals: true` in `SDD/requirements/SPEC-[###]-[feature-name].md` needs `SDD/OBSERVABILITY.md` — the eval run is set up from what that record says, and its command is written into it — which was absent when the design brief was approved. A cycle keeps the answer it had at approval, so evals cannot be switched on in this one. Set `evals:` to `auto` or `false` in the spec and run `/sdd-flow continue`; run `/observability-init` once this cycle is finished, and the next cycle can check what the model says.
 
   > **Invalid `evals` value '[value]' in `SDD/requirements/SPEC-[###]-[feature-name].md`.** Allowed values: `auto`, `true`, `false`. Edit the spec frontmatter and run `/sdd-flow continue`.
 
@@ -207,7 +206,7 @@ After all Stage 1 specialists return, spawn ONE **`agent-engineering:sdd-critica
 ### Act on the verdict
 
 - **`PROCEED`** (no HIGH; at most two MEDIUM, none of them cross-domain) → continue to 3d. Any MEDIUM and LOW findings it carries are resolved at 3e with the critical review's.
-- **`STOP AND RECONSIDER`** (any HIGH) or **`REVISE BEFORE PROCEEDING`** (3+ MEDIUM or cross-domain MEDIUM) → enter the bounded **fix-and-re-review loop** below (both supervised and autonomous; the cap protects either).
+- **`STOP AND RECONSIDER`** (any HIGH) or **`REVISE BEFORE PROCEEDING`** (3+ MEDIUM or cross-domain MEDIUM) → enter the bounded **fix-and-re-review loop** below.
 
 ### Fix-and-re-review loop (bounded — max 3 iterations)
 
@@ -248,7 +247,7 @@ Each iteration:
 - Leave all artifacts in place — do not delete the spec or any panel review document.
 - Append a final `### Panel Review Halt` entry to `progress.md`: total iteration count, final HIGH/MEDIUM/LOW counts, halt reason (`cap-exhausted` | `progress-stall`), and a next-action hint.
 - Do NOT proceed to 3d/3e/3f. The spec has not been accepted.
-- Emit (identical in both modes):
+- Emit:
 
 > **Flow halted at panel review.** Spec did not pass specialist review after [N] iteration(s). Halt reason: [cap-exhausted | progress-stall].
 > Final verdict: [STOP AND RECONSIDER | REVISE BEFORE PROCEEDING]
@@ -288,7 +287,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 - **Then** the orchestrator appends `## Spec Fix Check - CONFIRMED` or `## Spec Fix Check - OPEN (<h> HIGH, <m> MEDIUM)` to `progress.md`, from the section's first line (on the second-model route only after the run's `## Review Route` line).
   - **`CONFIRMED`** → 3f.
   - **`OPEN`, first time** → one more 3e fix spawn, given the `## Fix Check` section as its findings, then this check once more.
-  - **`OPEN` again** → halt as 3c does on halt: leave everything in place, append `### Spec Fix Check Halt` with the open counts to `progress.md`, do not commit, and tell the user (both modes) that the spec fix left [h] HIGH / [m] MEDIUM open, with the CRITICAL-SPEC path, and that `/sdd-flow continue` re-runs this check over the spec as they left it.
+  - **`OPEN` again** → halt as 3c does on halt: leave everything in place, append `### Spec Fix Check Halt` with the open counts to `progress.md`, do not commit, and tell the user that the spec fix left [h] HIGH / [m] MEDIUM open, with the CRITICAL-SPEC path, and that `/sdd-flow continue` re-runs this check over the spec as they left it.
 
 A LOW finding of the check is recorded in the section and does not hold the spec.
 
@@ -306,11 +305,11 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Pr
 
 The spec was rewritten up to four times after the brief was approved (3a, the 3c loop, 3e, and 3e.5's one further fix). Before any code is written, check whether it is still what the user agreed to.
 
-Read the spec's `## Deviations from Design Brief` with the same body contract the re-planning matcher uses (`phases/implementation-per-slice.md` → 4c.5): take the first non-empty line of the section's body.
+Read the spec's `## Deviations from Design Brief`: take the first non-empty line of the section's body (the first line after the heading that is not blank, an HTML comment, or a horizontal rule).
 
 - **`None.`** (case-insensitive, trailing period optional) → no pause; route to Step 4 below.
 - **The section is absent or empty** → the spec is malformed: re-spawn the 3a completion subagent to add it (Error Handling's two-failure limit applies). Never read an absent section as "no deviations".
-- **Anything else** → in **both supervised and autonomous modes**, append `## Awaiting Deviation Approval` (with the spec path) to `progress.md` and pause. The halt block is required: `Planning Phase - COMPLETE` was recorded in 3a, so without it `/sdd-flow continue` would route straight to Step 4.
+- **Anything else** → append `## Awaiting Deviation Approval` (with the spec path) to `progress.md` and pause. The halt block is required: `Planning Phase - COMPLETE` was recorded in 3a, so without it `/sdd-flow continue` would route straight to Step 4.
 
   > **The spec departs from the brief you approved in [N] way(s):**
   > [each deviation: what the brief said → what the spec says — why]
@@ -321,4 +320,4 @@ Read the spec's `## Deviations from Design Brief` with the same body contract th
 
 A spec written before the design gate shipped has no brief: if no `## Design Brief - ` line exists in `progress.md`, skip this check.
 
-**Route to Step 4.** First append `## Planning - Accepted` to `progress.md` — one line, the spec path. It is the phase-detection marker that planning's reviews and this check are done: `Planning Phase - COMPLETE` alone does not say so, because the completion subagent writes it back in 3a. Then read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint — the design gate covered the decision. The next stops are the slice-boundary pauses (per-slice mode) and the supervised checkpoint before the final implementation commit.
+**Route to Step 4.** First append `## Planning - Accepted` to `progress.md` — one line, the spec path. It is the phase-detection marker that planning's reviews and this check are done: `Planning Phase - COMPLETE` alone does not say so, because the completion subagent writes it back in 3a. Then read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint — the design gate covered the decision. The next stops are the slice pauses (per-slice mode); the final commit stops only for a sign-off or an unresolved finding (`phases/implementation-whole-feature.md` → 4h).

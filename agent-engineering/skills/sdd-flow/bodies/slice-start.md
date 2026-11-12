@@ -230,7 +230,6 @@ This body recognizes ONE flag. The orchestrator decides when to pass it (`phases
 
 - Every `--<flag>` is a literal argument; absence is the default behavior.
 - There is no destructive override: a `Complete` slice is never re-started (Step 6).
-- The orchestrator flags `--replan`, `--from-slice SLICE-XXX`, and `--override-replan` are NOT slice-primitive flags — they belong to the orchestrator and are documented in the `slice-retro` body (since retrospectives can recommend re-planning) and in the sdd-flow skill documentation.
 
 ## Path Conventions (REQ-016)
 

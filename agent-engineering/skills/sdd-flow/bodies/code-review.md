@@ -196,7 +196,7 @@ Like the Agentic-Surface Lens, this walk is an overlay on the 70/20/10 budget, n
 
 - `agent_security: true` → run this lens.
 - `agent_security: auto` → run the scope test below and run the lens only if it passes.
-- **No catalog path in your prompt** → the gate is closed for this run (the spec says `false`, or the catalog is missing from the install). Skip the lens and record one line in the review document saying so.
+- **No catalog path in your prompt** → the gate is closed for this run (the spec says `false`). Skip the lens and record one line in the review document saying so.
 
 If your prompt gives a catalog path but no gate value, read `agent_security:` from the frontmatter of the spec at the path in your prompt (absent means `auto`).
 

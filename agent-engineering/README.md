@@ -27,7 +27,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **Reads-only safety net.** Spawned subagents do not spawn in this flow, so there is no nested-subagent counter — the only safety-net signal is file Reads (default trigger >15; >20 for implementation chunks). On trip, the subagent compacts and hands off.
 - **Per-slice authoring default.** The planning body sets `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices (then `whole-feature` with a one-line justification). The PARSE default (frontmatter absent → whole-feature) is unchanged for backward compatibility.
 - **Gated AI-agent security review (2.1.0).** Spec frontmatter `agent_security: auto|true|false` gates two hook points: the `agent-security` panel value at Step 3c (spec-level checks) and the Agentic-Surface Lens in the Step 4b / per-slice code review (code-level checks). `auto` resolves by detecting an agentic surface — a model call, a tool/MCP definition, agent memory or a retrieval store, inter-agent messaging, or a model output driving an external action.
-- **Design gate (3.4.0).** After research, one Opus subagent writes a **design brief** — at most 150 lines, in plain language: what will be built, how it will work, the decisions made and what was rejected, where the changes land, and what you must decide. The flow stops and shows it, in supervised and autonomous mode alike; nothing is specified until you approve it, and `approve` is refused while any of its questions is unanswered. The spec is then held to the brief: every departure is recorded, checked by the spec critical review, and shown to you before implementation starts. Each code review reports which changed files fall outside the footprint you approved.
+- **Design gate (3.4.0).** After research, one Opus subagent writes a **design brief** — at most 150 lines, in plain language: what will be built, how it will work, the decisions made and what was rejected, where the changes land, and what you must decide. The flow stops and shows it; nothing is specified until you approve it, and `approve` is refused while any of its questions is unanswered. The spec is then held to the brief: every departure is recorded, checked by the spec critical review, and shown to you before implementation starts. Each code review reports which changed files fall outside the footprint you approved.
 - **Tiered delivery (3.4.0).** The brief proposes three delivery tiers — POC-plus, Standard, Full — and builds Tier 1 unless you choose otherwise. The spec covers the chosen tier only and lists what it deferred; reviewers treat that list as deliberate, and flag anything unsafe to defer or built ahead for a later tier. From 3.14.0 the tier also sets how deep the enforcement-site proof goes (Tier 1: security controls only; Tiers 1 and 2: one blind count, at the final check); every tier is reviewed in full. Each tier is its own cycle: `/sdd-flow --next-tier <feature>` starts the next one from feedback on the last. The rules are the `simplicity-challenge` skill's `references/tiers.md`, read by the flow and not restated.
 - **A picture of the cycle.** [`docs/sdd-flow-diagram.md`](docs/sdd-flow-diagram.md) draws the stages, what each one does and writes, and every place the flow stops for you.
 - **Progressive disclosure.** `SKILL.md` is a slim orchestrator core; per-phase detail lives in `skills/sdd-flow/phases/` (`setup`, `research`, `planning`, `implementation-whole-feature`, `implementation-per-slice`, `protocols`), read at each phase boundary.
@@ -86,7 +86,37 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 3.16.1.
+Version 4.0.0.
+
+### What's new in 4.0.0
+
+`sdd-flow` has fewer modes, flags and stops. A stop exists only where you have something to decide or try; reading the
+code is the reviews' job. This is the first of two releases from `proposals/sdd-flow-simplification-2026-11-12.md`.
+
+- **One way to run.** Supervised and autonomous modes are gone, with the Step 1 mode question. The flow stops for the
+  clarification question, the design gate, a spec that departs from the brief, a pause after each slice, an unresolved
+  finding, and a sign-off.
+- **The final commit no longer waits for a yes.** It stops only when a requirement waits for your sign-off (evals on).
+  Otherwise the flow commits and ends with a short report: what shipped, what was deferred, anything left unproven, and
+  the size of the diff.
+- **Every slice ends in a pause for trying it.** The pause says what to run and what you should see (a new `Try it:`
+  line on each slice in the spec), the slice's brief check, and the retrospective's re-plan advice when it has any. To
+  re-plan, say so at the pause: the brief is revised, the design gate stops for you, and planning runs again. The
+  re-planning stop is gone.
+- **The clarification question is asked every time**, yes or no, unless a clarification document exists.
+- **Codex is the only second model.** The reviewer can no longer be chosen; without the Codex CLI, or when a run fails
+  twice, a Claude reviewer runs and you are told, as before. `SDD_FLOW_REVIEWER_ARGS` still passes arguments to Codex.
+- **No meaningful slices → whole-feature, without a stop.** The planner sets `delivery_mode: whole-feature` with a
+  one-line reason, and the flow tells you in its next message.
+- **A missing OWASP catalog is a broken install** and halts, like the other shipped references; the agent-security
+  checks are never switched off silently.
+- **Tracing is settled at the design gate.** When the feature calls a model and the application has no
+  `SDD/OBSERVABILITY.md`, the brief recommends running `/observability-init` before you approve; the flow looks again
+  on approval, and the tracing and evals gates follow from that.
+- **Removed flags are ignored with a one-line note** for this release, so old command lines keep working (the list is
+  in `skills/sdd-flow/SKILL.md` → Arguments).
+- **Finish a cycle in progress on the version that started it.** Nothing translates an older version's stop records;
+  a stop this version does not recognise is shown to you and not passed.
 
 ### What's new in 3.16.1
 

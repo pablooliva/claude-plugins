@@ -271,6 +271,7 @@ handle_upload(req)                              [entry: POST /uploads]
 - **Traced nodes:** [Only when tracing is on; omit the line otherwise. The marked nodes of `### Planned call graph` that this slice brings into existence, each with its kind — e.g. `handle_upload [entry], store_blob [external]` — or `none`.]
 - **Evals:** [Only when evals are on; omit the line otherwise. The cases of `### Evals` this slice is the first to be able to pass — e.g. `EVAL-001, EVAL-003 (case 1)` — or `none`.]
 - **Acceptance check:** [a single, focused test that proves the slice works end-to-end. Ideally an automated test name; manual verification step otherwise.]
+- **Try it:** [for the person who approved the brief, who does not read code: what to run or do to see this slice working, and what they should see — plain words, no test names. When nothing can be seen by hand yet, say so and why, in one line.]
 - **Sequence rationale:** [why this slice is at this position. SLICE-001 = thinnest end-to-end happy path; subsequent slices add depth, edge cases, and additional concentrated functions.]
 
 ### SLICE-002: [name]
@@ -418,7 +419,7 @@ The spec template includes these YAML frontmatter fields, consumed by sdd-flow a
 
   `whole-feature` preserves the existing flow exactly; the `## Delivery Slices` section is omitted entirely. `per-slice` opts into vertical-slicing decomposition — a concentrated function threaded end-to-end through every relevant layer per slice; in that mode this body must populate `## Delivery Slices`. If the field is absent from a spec written before this change, treat it as `whole-feature`.
 
-  - **Value validation (binding for every consumer of this field):** the canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Absent → silent default to `whole-feature` (no log line; this is the documented default behavior). Any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) is invalid: fail fast with a clear error naming (a) the SPEC file path, (b) the offending value verbatim, and (c) the canonical enum. Never silently fall through to the default branch. This body surfaces the failure by returning it to the orchestrator, in both modes, and writes no stop note — `## Awaiting Slicing Decision` belongs to the practicality gate alone. The same rule applies wherever `delivery_mode:` is read by downstream phases — the implementation phase, the slice handling, sdd-flow Step 4, the slice-integrity reviewers, and the practicality gate below — each consumer either fails fast with the same error shape or delegates to a single shared validation step.
+  - **Value validation (binding for every consumer of this field):** the canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Absent → silent default to `whole-feature` (no log line; this is the documented default behavior). Any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) is invalid: fail fast with a clear error naming (a) the SPEC file path, (b) the offending value verbatim, and (c) the canonical enum. Never silently fall through to the default branch. This body surfaces the failure by returning it to the orchestrator and writes no stop note. The same rule applies wherever `delivery_mode:` is read by downstream phases — the implementation phase, the slice handling, sdd-flow Step 4, the slice-integrity reviewers, and the practicality gate below — each consumer either fails fast with the same error shape or delegates to a single shared validation step.
 
 These fields have sensible defaults; populate them intentionally rather than leaving as boilerplate.
 
@@ -482,7 +483,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
 9. **Validate `delivery_mode:` value (spec ingestion gate):**
    - Read the `delivery_mode:` field from the spec frontmatter being created (or, when this body runs against an existing spec, the field already on disk).
    - Apply the value-validation rule from the frontmatter prose above: exact match against `{whole-feature, per-slice}`; absent → silent default `whole-feature`; any other value → fail fast.
-   - On invalid value, emit the error: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-invoke the planning body.` Stop processing and return that error to the orchestrator as a failure, in both modes. Write no stop note — `## Awaiting Slicing Decision` is the practicality gate's block (step 10) and its resume options do not apply to a malformed value.
+   - On invalid value, emit the error: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-invoke the planning body.` Stop processing and return that error to the orchestrator as a failure. Write no stop note — `## Awaiting Slicing Decision` is the practicality gate's block (step 10) and its resume options do not apply to a malformed value.
    - Do NOT silently fall through to the `whole-feature` branch when the value is malformed — that masks user typos and produces silent misbehavior downstream.
 
 10. **Practicality Check (per-slice mode only — the practicality gate):**
@@ -494,10 +495,8 @@ These fields have sensible defaults; populate them intentionally rather than lea
      4. **Single concentrated function.** The feature, examined honestly, has exactly one concentrated function and no candidate slice expresses a different concentrated function.
    - **Qualitative-judgment escape:** if all four boolean heuristics return false but qualitative judgment is that slicing is impractical anyway, that escape may fire — but the `<reason>` text MUST begin with the literal prefix `Qualitative judgment: ` so the audit trail can distinguish boolean firings from free-form ones.
    - **When the gate fires (any heuristic returns true OR the qualitative escape applies):**
-     - Replace the populated `## Delivery Slices` section with the single line: `Slicing not applicable: <reason citing the firing heuristic or "Qualitative judgment: <specific concern>">`.
-     - Append an `## Awaiting Slicing Decision` block to `SDD/orchestration/progress.md` mirroring the `## Awaiting Clarification` shape exactly. The block names the spec, the firing heuristic (or qualitative judgment text), and the two options: (a) fall back to `whole-feature` for this feature only — `/sdd-flow continue --fall-back-to-whole-feature` [recommended]; (b) point at a slice boundary that was missed and retry — `/sdd-flow continue --retry-slicing "<hint>"`. This header is this gate's alone; nothing else writes it.
-     - **In both modes, return** a bounded message (≤200 words) saying the gate fired, with the SPEC path and `SDD/orchestration/progress.md` as artifact paths. You cannot ask the user anything; the orchestrator shows the options (supervised) or stops (autonomous), and either answer brings the flow back into planning — the spec is checked and reviewed before any code is written.
-   - **Retry run.** When your prompt carries the line `RETRY SLICING: <hint>`, the spec already exists and the gate fired on it once: redo step 8 using the hint as the slice boundary to start from — its `Traced nodes:` lines included when tracing is on, and its `Evals:` lines when evals are on — then steps 9–10. Change nothing else in the spec. If the gate fires again, write a new block as above.
+     - Set `delivery_mode: whole-feature` in the frontmatter, and replace `## Delivery Slices` with the single line `Slicing not applicable: <reason citing the firing heuristic or "Qualitative judgment: <specific concern>">` — the one-line reason the user is shown. Remove the slices' `Traced nodes:` and `Evals:` lines with them. Write no stop note.
+     - Say in your bounded return that the gate fired, quoting that line. The flow goes on with whole-feature delivery.
    - When none of the heuristics fire and qualitative judgment is that slicing is meaningful, proceed with the populated `## Delivery Slices` section — no halt, no annotation.
 
 11. **Run the Feasibility Arithmetic Self-Check:**
@@ -516,7 +515,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
      - `Filed under` always names an ID that is filed under itself. No chains.
    - Give each row a `Reason` of a few words: the rule, or which path of which rule it restates. Name no file, function, module, slice, or number of places — the blind counter reads this table, and it must learn from it which label to use and nothing about where the code is.
    - A rule the spec states with no ID gets one now; do not leave it for the count to key by a slug.
-   - When a later step of yours changes the spec's IDs (a retry of the slicing does not), bring the register with it: every such ID is in exactly one row or deliberately in none.
+   - When a later step of yours changes the spec's IDs, bring the register with it: every such ID is in exactly one row or deliberately in none.
 
 ### Planned call graph rules (tracing on only)
 
@@ -580,7 +579,7 @@ Before considering the specification complete:
 - [ ] Every REQ-XXX / EDGE-XXX / FAIL-XXX is mapped to at least one module
 - [ ] `## Control Register` exists; every ID that states a rule holding on every path has exactly one row; a restating ID is filed under the control whose path it restates and an ID that adds a clause of its own is filed under itself; no `Filed under` cell names an ID that is filed under another; no row names a file, a function, or a count
 - [ ] If `delivery_mode: per-slice`, the `## Delivery Slices` section exists and is populated with at least one `SLICE-XXX` entry
-- [ ] If `delivery_mode: per-slice`, every slice declares Concentrated function, REQs satisfied, Modules touched, Acceptance check, and Sequence rationale
+- [ ] If `delivery_mode: per-slice`, every slice declares Concentrated function, REQs satisfied, Modules touched, Acceptance check, Try it, and Sequence rationale
 - [ ] If `delivery_mode: per-slice`, SLICE-001 is the thinnest possible end-to-end happy path
 - [ ] If `delivery_mode: per-slice`, slices are ordered by delivery sequence and each REQ-XXX / EDGE-XXX / FAIL-XXX is reachable through some slice by the last slice
 - [ ] If `delivery_mode: whole-feature` (or absent), the `## Delivery Slices` section is omitted

@@ -1,4 +1,4 @@
-# Phase: Setup — Step 0 (Scope) · Step 1 (Mode) · Step 1.5 (Clarification Gate)
+# Phase: Setup — Step 0 (Scope) · Step 1.5 (Clarification Gate)
 
 Read this at the very start of every fresh `/sdd-flow <task>` invocation (not `continue` — that routes through `protocols.md`). All spawns follow the SKILL's spawn-prompt construction checklist and Safety-Net obligations.
 
@@ -8,13 +8,13 @@ Read this at the very start of every fresh `/sdd-flow <task>` invocation (not `c
 
 When invoked, the orchestrator first (for `--next-tier`, steps 1–3 are replaced — see *Starting the next tier* at the end of this step):
 
-1. Extracts the **task description** from the user's input.
+1. Extracts the **task description** from the user's input, after dropping any removed flag (`SKILL.md` → Arguments).
 2. Extracts an **issue/ticket number** if provided (`#42`, `PROJ-123`); otherwise determines sequential numbering by checking existing `SDD/` artifacts.
 3. Derives a **kebab-case `[feature-name]`** from the task.
 4. Resolves all canonical identifiers (SKILL → Canonical Identifiers).
-5. **Resolves SKILL_ROOT, CATALOG, STANDARD, TIERS, and TRACING, and checks whether the observability record exists** (SKILL → SKILL_ROOT resolution) and appends the **Step 0 record** to `SDD/orchestration/progress.md` (create the file + parent dirs if absent): a block whose first line is exactly `## Flow Started - [###]-[feature-name]`, followed by the resolved identifiers, the five resolved paths, the line `Observability record: present` or `Observability record: absent`, the line `Reviewer: …` (below), and any `--tier N` value. Resumed sessions re-derive every body path from this record, and Phase Detection reads only the lines after the latest `## Flow Started - ` line (`phases/protocols.md`) — an earlier feature's markers above it never answer for this one. A missing CATALOG closes the `agent_security:` gate for the run (warning only, no halt). A missing STANDARD (`SKILL_ROOT/references/enforcement-sites.md`), TIERS (`PLUGIN_ROOT/skills/simplicity-challenge/references/tiers.md`), or TRACING (`PLUGIN_ROOT/skills/observability-init/references/tracing.md`) is a broken install: halt and tell the user. The observability record is **OBS_RECORD** = `SDD/OBSERVABILITY.md` in the application's repository, written by `/observability-init`; it being absent is not an error. It means the application has no tracing foundation, and the `tracing:` gate will resolve to off (`phases/planning.md` → 3c). **The answer is taken once, here, for the whole cycle:** a foundation installed while this cycle runs changes nothing until the next cycle starts, and a resumed session reads the recorded line instead of looking again.
+5. **Resolves SKILL_ROOT, CATALOG, STANDARD, TIERS, and TRACING** (SKILL → SKILL_ROOT resolution) and appends the **Step 0 record** to `SDD/orchestration/progress.md` (create the file + parent dirs if absent): a block whose first line is exactly `## Flow Started - [###]-[feature-name]`, followed by the resolved identifiers, the five resolved paths, the line `Reviewer: …` (below), and any `--tier N` value. Resumed sessions re-derive every body path from this record, and Phase Detection reads only the lines after the latest `## Flow Started - ` line (`phases/protocols.md`) — an earlier feature's markers above it never answer for this one. A missing CATALOG (`PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`), STANDARD (`SKILL_ROOT/references/enforcement-sites.md`), TIERS (`PLUGIN_ROOT/skills/simplicity-challenge/references/tiers.md`), or TRACING (`PLUGIN_ROOT/skills/observability-init/references/tracing.md`) is a broken install: halt and tell the user. Whether the application has the tracing foundation (`SDD/OBSERVABILITY.md`) is not settled here: the design gate settles it, on approval (`phases/planning.md` → 2.5b).
 
-**Who reviews is settled in step 5 too.** Before writing the Step 0 record, run `python3 "$SKILL_ROOT/scripts/second-model-review.py" resolve` (adding `--reviewer <spec>` when the invocation carried one) and put what follows `Result: ` into the record as the line `Reviewer: …`. `references/second-model-review.md` §2 says what each exit status means: a second model reviews this cycle; or the reviews fall back to Claude subagents and the user is told; or the reviewer named is unusable and the flow stops here, before anything is spawned or written. This answer too is taken once for the cycle.
+**Who reviews is settled in step 5 too.** Before writing the Step 0 record, run `python3 "$SKILL_ROOT/scripts/second-model-review.py" resolve` and put what follows `Result: ` into the record as the line `Reviewer: …`. `references/second-model-review.md` §2 says what each exit status means: Codex reviews this cycle, or the reviews fall back to Claude subagents and the user is told. The answer is taken once for the cycle.
 
 Then spawn ONE **`agent-engineering:sdd-workhorse`** subagent for scope assessment. There is no dedicated body file — embed this brief directly in the prompt:
 
@@ -25,7 +25,7 @@ Then spawn ONE **`agent-engineering:sdd-workhorse`** subagent for scope assessme
 
 ### If the scope is manageable (single SDD cycle)
 
-The subagent returns a "proceed" signal. The orchestrator proceeds directly to **Step 1** with no pause — the user should not notice this gate for small requests.
+The subagent returns a "proceed" signal. The orchestrator proceeds directly to **Step 1.5** with no pause — the user should not notice this gate for small requests.
 
 ### If the scope is too large (decomposition needed)
 
@@ -51,63 +51,29 @@ Then **STOP**. The user manually invokes `/sdd-flow <checklist item>` for each i
 4. **Pull feedback from the tier's task.** Run `python3 "$SKILL_ROOT/scripts/tier-mirror.py" feedback <tier plan> --tier N`: comments left on that tier's BB sub-task since the previous tier shipped are copied, dated, into the tier plan's `## Feedback`, so the Step 1.5 interview, research, and the brief read them from the file. Record and report the result per `SKILL.md` → Tier Task Mirror (resolve SKILL_ROOT first if this is the first thing the session does).
 5. **Record** in the Step 0 record (step 5 of the list at the top writes it — these lines go inside that block, beside the identifiers): `Next-tier cycle: Tier N`, **TIER_PLAN** = the tier plan's path (it keeps the first tier's feature name — every later spawn is given this path, never one derived from the suffixed name), and the previous tier's research document (from the tier plan's `Built in` column: the same number and name as that spec).
 
-Then continue with steps 4–5 of the list at the top of Step 0, and go straight to Step 1: **a next-tier cycle has no scope assessment.** Its task description is the most the tier could hold — the whole sketch and every Deferred row aimed at it — and the design brief cuts it first (`bodies/design-brief.md` rule 9); a split made before that cut sizes work the brief may remove, and its items, run as plain `/sdd-flow` tasks, would no longer be tied to the tier plan. On any other invocation, **TIER_PLAN** is `SDD/flow/TIERS-[feature-name].md`.
-
----
-
-## Step 1: Parse Input and Select Mode
-
-Reached only after Step 0 says the feature fits one cycle — or, on a next-tier cycle, straight after *Starting the next tier*, which makes no scope assessment. If the invocation already carried `--auto` or `--supervised`, use it and skip the prompt. Otherwise ask:
-
-> **Choose execution mode:**
-> **Supervised** (default) — runs autonomously but pauses at two checkpoints: after the design brief, and before committing implementation.
-> **Autonomous** — stops for you to approve the design brief, and again only if the spec departs from it, then runs to the end. (One more case: if the spec leaves a requirement about a model's answers for you to accept, it asks before the final commit.)
-> Both modes begin with the clarification step, and a feature built in slices pauses after each slice unless you pass `--skip-slice-checkpoints`.
-> Reply **s** for supervised or **a** for autonomous. (Default: supervised)
-
-Record the chosen mode in `progress.md`.
+Then continue with steps 4–5 of the list at the top of Step 0, and go straight to Step 1.5: **a next-tier cycle has no scope assessment.** Its task description is the most the tier could hold — the whole sketch and every Deferred row aimed at it — and the design brief cuts it first (`bodies/design-brief.md` rule 9); a split made before that cut sizes work the brief may remove, and its items, run as plain `/sdd-flow` tasks, would no longer be tied to the tier plan. On any other invocation, **TIER_PLAN** is `SDD/flow/TIERS-[feature-name].md`.
 
 ---
 
 ## Step 1.5: Pre-Research Clarification Gate
 
-**Fires in BOTH supervised and autonomous modes.** Externalizing the design concept (Brooks) before any work begins is the highest-leverage artifact, and the cost of skipping propagates through every downstream phase. This is one of two unconditional autonomous-mode stops (with the Step 2.5 design gate); Step 3g adds a third only when the spec departs from the approved brief.
+Reached after Step 0 says the feature fits one cycle — or, on a next-tier cycle, straight after *Starting the next tier*. Externalizing the design concept (Brooks) before any work begins is the highest-leverage artifact, and the cost of skipping propagates through every downstream phase.
 
 **On a next-tier cycle the interview is about feedback.** `/research-clarify` has a next-tier branch: it loads the tier plan, walks its `## Feedback` notes, and asks what using the previous tier showed. This is the same gate doing a different job, not an extra pause — say so in the prompt below ("Tell me what using Tier N showed" in place of "Clarify the design concept first?"), and name the tier plan's path along with the resolved identifiers.
 
 **Skip the gate if** `SDD/research/CLARIFICATION-[###]-[feature-name].md` already exists (user pre-clarified) — proceed to Step 2; the research subagent picks it up automatically.
 
-**Skip the gate if** the user passed `--skip-clarify`. The Step 2c critical review records the gate-skip in its executive summary. (Reply **s** below persists this opt-out for the rest of the flow.)
-
-Otherwise the gate fires:
-
-### Supervised mode
-
-Ask:
+Otherwise ask, every time:
 
 > **Clarify the design concept first?**
 > `/research-clarify` is a structured interview that externalizes your design concept before any codebase research. **Strongly recommended** unless your task description is already crisp.
-> Reply **y** to clarify first, **n** to proceed directly and accept the design-concept risk (crisp tickets / very small changes), or **s** to skip this gate now and on future invocations (equivalent to `--skip-clarify`).
+> Reply **y** to clarify first, or **n** to proceed directly and accept the design-concept risk (crisp tickets / very small changes).
 
-- **y** → instruct the user to run `/research-clarify` interactively; write an `## Awaiting Clarification` block to `progress.md`; **STOP**. Session Resumption picks up at Step 2 once the artifact exists.
-- **n** → proceed to Step 2; write a `## Clarification Skipped (user opt-out)` block to `progress.md` so Step 2c captures the gate-skip.
-- **s** → same as **n**, but persists the opt-out for the rest of this flow (no further re-prompting on continuation).
-
-### Autonomous mode
-
-Without an interactive interviewer the orchestrator cannot grill. The gate halts by default:
-
-1. Write an `## Awaiting Clarification` block to `progress.md` capturing the resolved identifiers and chosen mode.
-2. Emit and STOP:
-
-> **Autonomous flow halted at the clarification gate (Step 1.5).**
-> A clarified design concept is required before research, even in autonomous mode. Two options:
-> 1. **Clarify now (recommended):** run `/research-clarify` interactively, then `/sdd-flow continue` — the flow resumes autonomously from Step 2.
-> 2. **Skip the gate:** re-invoke as `/sdd-flow --auto --skip-clarify <task>` if you have a crisp spec and accept the design-concept risk.
-> Resolved identifiers: `[###]=<value>`, `[feature-name]=<value>`. Use these exact values when running `/research-clarify` so the artifact path aligns.
+- **y** → write an `## Awaiting Clarification` block (with the resolved identifiers: `[###]=<value>`, `[feature-name]=<value>` — use these exact values with `/research-clarify` so the artifact path aligns) to `progress.md`, tell the user to run `/research-clarify` and then `/sdd-flow continue`, and **STOP**. Session Resumption picks up at Step 2 once the artifact exists.
+- **n** → write a `## Clarification Skipped (user opt-out)` block to `progress.md` so Step 2c records the gate-skip, and proceed to Step 2.
 
 ### Orchestrator-discipline note
 
-The orchestrator does NOT spawn a subagent to "perform the clarification." Grilling extracts the user's design concept from their head; a subagent reasoning about the task description is a different artifact and produces false fidelity. The gate is satisfied only by a human-driven `/research-clarify` run, a pre-existing CLARIFICATION artifact, or an explicit `--skip-clarify` opt-out.
+The orchestrator does NOT spawn a subagent to "perform the clarification." Grilling extracts the user's design concept from their head; a subagent reasoning about the task description is a different artifact and produces false fidelity. The gate is satisfied only by a human-driven `/research-clarify` run, a pre-existing CLARIFICATION artifact, or the user's **n**.
 
 Once the gate is cleared, proceed to **Step 2** → read `phases/research.md`.

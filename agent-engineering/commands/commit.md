@@ -20,7 +20,7 @@ You are tasked with creating git commits for the changes made during this sessio
    - List the files you plan to add for each commit
    - Show the commit message(s) you'll use
    - Ask: "I plan to create [N] commit(s) with these changes. Shall I proceed?"
-   - (In autonomous sdd-flow runs, the orchestrator proceeds without prompting.)
+   - (Inside an sdd-flow run, the orchestrator proceeds without prompting: the flow's own stops are where the user decides.)
 
 4. **Execute upon confirmation:**
    - Use `git add` with specific files (never use `-A` or `.`)
@@ -52,7 +52,7 @@ You are tasked with creating git commits for the changes made during this sessio
 
 When the orchestrator runs the per-slice commit (per-slice cycle step 4c.6), the commit is **ATOMIC PER SLICE**: ONE commit covering everything the slice produced — slice code + tests + site inventory + the IMPLEMENTATION-PLAN (with the slice's row already `Complete`) + the slice's site counts and diffs + per-slice review doc + fix-findings notes + retrospective + ledger update. One slice = one commit, so the slice's contribution is traceable in `git log` and reversible with a single `git revert <SHA>`.
 
-**Staging (looser default):** the per-slice commit does NOT enforce that the working tree contains only slice-scoped files (this is hostile to legitimate "I fixed an unrelated typo while here" workflows). The orchestrator stages the slice's files explicitly with `git add <specific paths>` (never `-A` or `.`); in supervised mode it may first show `git status` and confirm the staged set looks slice-scoped.
+**Staging (looser default):** the per-slice commit does NOT enforce that the working tree contains only slice-scoped files (this is hostile to legitimate "I fixed an unrelated typo while here" workflows). The orchestrator stages the slice's files explicitly with `git add <specific paths>` (never `-A` or `.`); it may first show `git status` and confirm the staged set looks slice-scoped.
 
 **Preconditions** (the orchestrator verifies before committing): the retrospective `SDD/implementation/slices/RETROSPECTIVE-SLICE-<SLICE-XXX>-<feature-name>-<YYYY-MM-DD>.md` exists, and the rolling ledger `SDD/implementation/slices/LEARNINGS-FEATURE-<feature-name>.md` exists (the first slice may legitimately be the one that creates the ledger — warn, don't hard-fail, if absent).
 
@@ -77,5 +77,3 @@ EOF
 **Before the commit**, the orchestrator — never a slice subagent — sets the IMPLEMENTATION-PLAN `## Slice Progress` row `Status` to `Complete` (terminal, forward-only) and `Notes` to the retrospective path. It is the last edit before the commit, so the commit carries it.
 
 **After the commit lands**, the orchestrator appends `## Slice <SLICE-XXX> - Committed` to `SDD/orchestration/progress.md` — one line, the SHA. Order and resume behaviour: `skills/sdd-flow/phases/implementation-per-slice.md` → 4c.6.
-
-**A slice committed because of `--replan`** (the retrospective recommended re-planning and the user chose it) is committed the same way, with one extra line in the message body: `Committed as it stood before a re-plan.`

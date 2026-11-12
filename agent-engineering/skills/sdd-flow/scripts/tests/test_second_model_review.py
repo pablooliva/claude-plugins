@@ -48,20 +48,6 @@ out.with_name("argv.txt").write_text(" ".join(args))
 out.write_text(final)
 '''
 
-# A stand-in for `opencode`: the prompt is its last argument, stdout is its answer.
-FAKE_OPENCODE = r'''#!/usr/bin/env python3
-import sys, pathlib
-args = sys.argv[1:]
-cwd = pathlib.Path(args[args.index("--dir") + 1])
-for line in args[-1].splitlines():
-    verb, _, rest = line.partition(" ")
-    if verb == "WRITE":
-        (cwd / rest).parent.mkdir(parents=True, exist_ok=True)
-        (cwd / rest).write_text("# Review\n")
-print("I will read the files first.\n\nREVIEW: COMPLETE\nmodel=" + args[args.index("-m") + 1])
-'''
-
-
 class SecondModelReviewTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -91,10 +77,10 @@ class SecondModelReviewTest(unittest.TestCase):
         done = subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, env=base)
         return done.returncode, done.stdout.splitlines()[0] if done.stdout else done.stderr
 
-    def review(self, prompt: str, *expect: str, reviewer: str = "codex", timeout: str = "30") -> tuple[int, str]:
+    def review(self, prompt: str, *expect: str, timeout: str = "30") -> tuple[int, str]:
         prompt_file = self.repo / "SDD" / "orchestration" / "reviewer-calls" / "4b-1.prompt.md"
         prompt_file.write_text(prompt)
-        args = ["run", "--reviewer", reviewer, "--prompt-file", str(prompt_file), "--cwd", str(self.repo)]
+        args = ["run", "--prompt-file", str(prompt_file), "--cwd", str(self.repo)]
         for path in expect or ("SDD/reviews/REVIEW.md",):
             args += ["--expect", path]
         return self.call(*args, "--timeout", timeout)
@@ -106,31 +92,8 @@ class SecondModelReviewTest(unittest.TestCase):
         self.assertEqual(self.call("resolve"), (0, "Result: codex"))
 
     def test_resolve_falls_back_to_claude_with_a_reason(self) -> None:
-        status, line = self.call("resolve")
-        self.assertEqual(status, 3)
-        self.assertTrue(line.startswith("Result: claude (fallback — "), line)
+        self.assertEqual(self.call("resolve"), (3, "Result: claude (fallback — the codex CLI is not on PATH)"))
 
-    def test_resolve_falls_back_when_the_named_cli_is_missing(self) -> None:
-        status, line = self.call("resolve", "--reviewer", "opencode:litellm/some-model")
-        self.assertEqual((status, line), (3, "Result: claude (fallback — the opencode CLI is not on PATH)"))
-
-    def test_resolve_reads_the_environment_and_the_flag_wins(self) -> None:
-        self.install("codex", FAKE_CODEX)
-        self.install("opencode", FAKE_OPENCODE)
-        env = {"SDD_FLOW_REVIEWER": "opencode:litellm/some-model"}
-        self.assertEqual(self.call("resolve", env=env), (0, "Result: opencode:litellm/some-model"))
-        self.assertEqual(self.call("resolve", "--reviewer", "codex:gpt-x", env=env), (0, "Result: codex:gpt-x"))
-
-    def test_resolve_claude_when_the_user_chose_it(self) -> None:
-        self.install("codex", FAKE_CODEX)
-        self.assertEqual(self.call("resolve", "--reviewer", "claude"), (3, "Result: claude (chosen)"))
-
-    def test_resolve_refuses_a_claude_model_and_a_modelless_opencode(self) -> None:
-        self.install("opencode", FAKE_OPENCODE)
-        for spec in ("opencode:anthropic/claude-sonnet", "opencode", "gemini"):
-            status, line = self.call("resolve", "--reviewer", spec)
-            self.assertEqual(status, 2, line)
-            self.assertTrue(line.startswith("Result: ERROR — "), line)
 
     # run
 
@@ -190,7 +153,7 @@ class SecondModelReviewTest(unittest.TestCase):
         (plain / "calls").mkdir(parents=True)
         prompt = plain / "calls" / "4b-1.prompt.md"
         prompt.write_text("WRITE REVIEW.md")
-        status, line = self.call("run", "--reviewer", "codex", "--prompt-file", str(prompt), "--cwd", str(plain),
+        status, line = self.call("run", "--prompt-file", str(prompt), "--cwd", str(plain),
                                  "--expect", "REVIEW.md", env={"GIT_CEILING_DIRECTORIES": str(self.repo.parent)})
         self.assertEqual(status, 1, line)
         self.assertIn("not started", line)
@@ -218,7 +181,7 @@ class SecondModelReviewTest(unittest.TestCase):
         prompt = self.repo / "SDD" / "orchestration" / "reviewer-calls" / "4b-1.prompt.md"
         prompt.write_text("BREAK src/app.py\nHANG now")
         env = dict(os.environ, PATH=f"{self.bin}{os.pathsep}/usr/bin{os.pathsep}/bin")
-        proc = subprocess.Popen([sys.executable, str(SCRIPT), "run", "--reviewer", "codex", "--prompt-file", str(prompt),
+        proc = subprocess.Popen([sys.executable, str(SCRIPT), "run", "--prompt-file", str(prompt),
                                  "--cwd", str(self.repo), "--expect", "SDD/reviews/REVIEW.md"],
                                 stdout=subprocess.PIPE, text=True, env=env)
         deadline = time.time() + 20
@@ -262,13 +225,6 @@ class SecondModelReviewTest(unittest.TestCase):
         after = subprocess.run(["git", "-C", str(self.repo), "status", "--porcelain", "--", "src"], capture_output=True, text=True)
         self.assertEqual(before.stdout, after.stdout)
 
-    def test_run_with_opencode_passes_the_model_and_keeps_its_answer(self) -> None:
-        self.install("opencode", FAKE_OPENCODE)
-        status, line = self.review("WRITE SDD/reviews/REVIEW.md", reviewer="opencode:litellm/some-model")
-        self.assertEqual(status, 0, line)
-        returned = self.repo / "SDD" / "orchestration" / "reviewer-calls" / "4b-1.return.md"
-        self.assertIn("model=litellm/some-model", returned.read_text())
-
     def argv(self) -> str:
         """The arguments the fake codex was started with."""
         return (self.repo / "SDD" / "orchestration" / "reviewer-calls" / "argv.txt").read_text()
@@ -279,31 +235,14 @@ class SecondModelReviewTest(unittest.TestCase):
         self.assertEqual(status, 0, line)
         self.assertIn("-c sandbox_workspace_write.network_access=true", self.argv())
 
-    def test_run_keeps_the_network_closed_for_nonet(self) -> None:
+    def test_run_appends_the_reviewer_args(self) -> None:
         self.install("codex", FAKE_CODEX)
-        status, line = self.review("WRITE SDD/reviews/REVIEW.md", reviewer="codex:nonet")
+        prompt_file = self.repo / "SDD" / "orchestration" / "reviewer-calls" / "4b-1.prompt.md"
+        prompt_file.write_text("WRITE SDD/reviews/REVIEW.md")
+        status, line = self.call("run", "--prompt-file", str(prompt_file), "--cwd", str(self.repo),
+                                 "--expect", "SDD/reviews/REVIEW.md", env={"SDD_FLOW_REVIEWER_ARGS": "-m gpt-x --skip-git-repo-check"})
         self.assertEqual(status, 0, line)
-        self.assertIn("codex:nonet reviewed", line)
-        self.assertIn("-c sandbox_workspace_write.network_access=false", self.argv())
-        self.assertNotIn("network_access=true", self.argv())
-        self.assertNotIn(" -m ", self.argv())
-        status, line = self.review("WRITE SDD/reviews/REVIEW.md", reviewer="codex:gpt-x:nonet")
-        self.assertEqual(status, 0, line)
-        self.assertIn("-m gpt-x", self.argv())
-        self.assertIn("network_access=false", self.argv())
-
-    def test_resolve_keeps_nonet_and_refuses_it_for_opencode(self) -> None:
-        self.install("codex", FAKE_CODEX)
-        self.install("opencode", FAKE_OPENCODE)
-        self.assertEqual(self.call("resolve", "--reviewer", "codex:nonet"), (0, "Result: codex:nonet"))
-        self.assertEqual(self.call("resolve", "--reviewer", "codex:gpt-x:nonet"), (0, "Result: codex:gpt-x:nonet"))
-        status, line = self.call("resolve", "--reviewer", "opencode:litellm/m:nonet")
-        self.assertEqual(status, 2)
-        self.assertIn("codex only", line)
-
-    def test_run_refuses_the_claude_reviewer(self) -> None:
-        status, line = self.review("anything", reviewer="claude")
-        self.assertEqual(status, 2)
+        self.assertTrue(self.argv().endswith("-m gpt-x --skip-git-repo-check -"), self.argv())
 
     def test_run_fails_when_the_cli_is_not_installed(self) -> None:
         status, line = self.review("anything")
