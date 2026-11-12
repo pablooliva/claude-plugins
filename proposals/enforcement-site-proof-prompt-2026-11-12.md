@@ -5,6 +5,13 @@ skill as decided below. This is one part of release 2 of `proposals/sdd-flow-sim
 the other release 2 items (size controls, panel narrowing, process records out of the repo, orchestrator
 slimming) are out of scope — do not start them.
 
+A separate task follows this one, on top of it: changing what the code reviews check (fit with the
+surrounding code, whether it could be smaller, a footprint overrun as a finding, a fixer rule that fit findings
+are fixed by removing or merging code, and fit findings graded MEDIUM when they add a file, a layer or a
+duplicate helper). It is discussed in another thread. Do not make those changes here, and do not change the
+review criteria in `bodies/code-review.md`, `bodies/slice-review.md` or `bodies/critical-review.md` beyond what
+removing the site steps and the LOW rule requires.
+
 ## Before you start
 
 - Release 1 of the simplification (agent-engineering 4.0.0: modes and stop-skipping flags removed;
