@@ -172,8 +172,10 @@ before code comes first.
    - the reuse map in the brief;
    - a footprint finer than whole folders: name the test files the change adds, not just `tests/`;
    - panel narrowing, so the spec does not grow before the stop sees it.
-3. **Remove the backward-compatibility clauses.** Mechanical and independent of the rest; do it as soon as the
-   harness in `sdd-flow-eval` no longer passes the removed flags.
+3. ~~**Remove the backward-compatibility clauses.**~~ — built as 4.4.0, after the harness in `sdd-flow-eval` stopped
+   passing the removed flags. Beyond the list above it also removed the 3.8.0/3.12.0 gate-line defaults, the pre-3.12.1
+   handoff wording, and the pre-3.14.0 review-document shape. Kept: the pre-3.14.4 bare requirement IDs in an
+   application's `evals/cases.jsonl` (`references/evals.md`), since those lines are application data that is never rewritten.
 4. **Size while building:** the implementer rule (extend before adding; implementers do not read the brief today,
    so they must be given its `## Builds on` list and named new files), the
    fix-round cap of two, and the test rules (behaviour, not wording or shape; the test-to-code ratio).

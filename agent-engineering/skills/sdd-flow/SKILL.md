@@ -248,8 +248,6 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 
 The flow stops only where the user has something to decide or try: the clarification question, the design gate, a spec that departs from the brief, a pause after each slice, an unresolved finding, and a sign-off. Anything else is said in words at those stops — a re-plan is asked for at a slice pause.
 
-**Removed flags (4.0.0) are ignored, never read as task text:** `--auto`, `--supervised`, `--skip-clarify`, `--skip-slice-checkpoints`, `--reviewer` (with its value), `--fall-back-to-whole-feature`, `--retry-slicing` (with its value), `--replan`, `--from-slice` (with its value), and `--override-replan`. Drop them from the input — on `continue` too — and say so in one line in the next user-facing message: `Ignored (removed in 4.0.0): <the flags>`.
-
 ## Key Principles
 
 1. **Each phase is thorough** — research informs planning; planning constrains implementation.

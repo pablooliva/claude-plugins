@@ -87,7 +87,22 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 4.3.0.
+Version 4.4.0.
+
+### What's new in 4.4.0
+
+`sdd-flow` drops what it kept only for older runs, older files, and old command lines. Finish a cycle in progress on
+the version that started it.
+
+- **Removed flags are no longer recognised.** `--auto`, `--skip-clarify`, `--reviewer` and the other flags removed in
+  4.0.0 are read as part of the task text.
+- **Resume rules for older runs are gone:** runs started on 3.5.0 or before 3.5.1, flows planned before the design
+  gate, gate lines with no `evals:` part, the `## Awaiting Tracing Decision` name, and handoff notes with no `Step:`
+  line from before 3.12.1. A halt block with no resume rule is still shown to you and not passed.
+- **The legacy 1.x layout check is gone.**
+- **A spec without `delivery_mode:` is an error,** not a whole-feature spec; the planning check now asks for the field.
+- **`/agent-engineering:continue`** no longer looks in `SDD/orchestration/` for compaction files, or reads the
+  pre-3.5.1 section names.
 
 ### What's new in 4.3.0
 
@@ -189,8 +204,6 @@ code is the reviews' job. This is the first of two releases from `proposals/sdd-
 - **Tracing is settled at the design gate.** When the feature calls a model and the application has no
   `SDD/OBSERVABILITY.md`, the brief recommends running `/observability-init` before you approve; the flow looks again
   on approval, and the tracing and evals gates follow from that.
-- **Removed flags are ignored with a one-line note** for this release, so old command lines keep working (the list is
-  in `skills/sdd-flow/SKILL.md` → Arguments).
 - **Finish a cycle in progress on the version that started it.** Nothing translates an older version's stop records;
   a stop this version does not recognise is shown to you and not passed.
 
@@ -219,8 +232,6 @@ A slice re-review after a fix round runs the tests the fix can affect, not the w
 - **The stall check sets aside what only the whole suite found.** That run writes `## Whole Suite SLICE-XXX iter N - w HIGH raised` directly before its review marker, and the stall check leaves those `w` HIGH out: they were hidden from the reviews before, so they say nothing about whether the fix loop is progressing. The 3-round cap is unchanged.
 
 Unchanged: the eval run of record before every review, the first review of a slice (in full), and the whole-feature final check (4e.5), which runs the whole suite and the trace check in full.
-
-**Runs already in a fix loop** take the new rule at their next re-review that has both snapshots; a run that began implementing before 3.14.0 takes no snapshots, so its re-reviews stay in full.
 
 **Not yet exercised on a real cycle.** The rules were reviewed by Codex until it had no findings; no script changed.
 
@@ -292,7 +303,7 @@ Two fixes to how `sdd-flow` hands an unfinished step to a successor, both presen
 - **A step that is handed off mid-way is told which step it was.** A subagent that has read too many files stops, writes a handoff note, and the flow starts a successor to finish its step. The successor's instruction file is a general one, and the rule that starts it did not say to pass the instruction file the first one was following, nor its mode, scope, and iteration. The successor of the final check, say, was not told that this was the review it was finishing, so it could leave out a check that review requires, or write the wrong marker. Now the first spawn's prompt is the rule: the successor is given that step's own body by path (as `STEP BODY`), its task and embedded rules, its mode, scope, iteration, and base commit, and every input and output. The continue body says how to pick the work up; the step's body says what must still be produced. The handoff note's entry in `progress.md` gains a `Step:` line, so a later session can do the same.
 - **The successor is the same kind of agent as the one it replaces.** Every successor used to be the Sonnet workhorse. A critical review or a panel synthesis that Claude's Opus reviewer had begun was therefore finished on Sonnet, by an agent whose standing instructions tell it not to do adversarial review; a design brief begun on Opus was finished on Sonnet too. Now the successor is started as the agent type of the step's first spawn, with that spawn's model override. It costs more only where the step was on Opus already. A critical review on the second model was never affected: its continuation is a new call to the same reviewer, with the same role file.
 
-A run handed off before 3.12.1 has no `Step:` line: a resumed session works the step out from where the note says the work stopped, and asks when that leaves two candidates. **Not exercised on a real cycle:** no handoff has been made under the new rule; the wording was reviewed by a second model.
+**Not exercised on a real cycle:** no handoff has been made under the new rule; the wording was reviewed by a second model.
 
 ### What's new in 3.12.0
 
@@ -313,8 +324,6 @@ Evals inside `sdd-flow` — the third of four build steps of the tracing-and-eva
 **What it costs.** With the gate on, every review makes real model calls: every case the application holds — an earlier feature's included — three times, and twice that for a judged case, whose every answer is also scored. In the trial, five cases took about 20 seconds for one run of each.
 
 **Where it differs from the proposal** is listed in the proposal's "Step 3 as built". The largest: the flow's main session, not the reviewer, makes the eval run; one stop was added; the templates live in `sdd-flow`, not `observability-init`; there is no eval library; and the eval run is separate from the trace run.
-
-**Runs started before 3.12.0.** A cycle that passed 3c earlier has a gate line with no `evals:` part: evals stay off for it to its end.
 
 **Not in this release:** `/eval-harvest` (build step 4, in 3.13.0), and templates for a language other than Python.
 
@@ -339,7 +348,7 @@ Two changes to how `sdd-flow` reviews, both aimed at the same weakness: everythi
 - **A review changes no code, and the script enforces it.** Before a second-model run the script records the working tree; afterwards it puts back any file outside `SDD/` the reviewer left changed — a mutation made in the working tree and not restored, say — and names it.
 - **Test Integrity Lens.** Reviews used to ask whether tests exist, map to requirements, and pass. They now also ask whether the tests are real and whether anything was bent to get the green run. `skills/sdd-flow/references/test-integrity.md` states what a real test is — expected value from the spec, fails when the behaviour is broken, runs the code that holds the logic, checks an outcome the spec names — and seven checks: existing tests weakened or removed, anything kept out of the run, expected values copied from the code, tests that cannot fail (the reviewer breaks the requirement's code and runs its tests), stand-ins replacing the application's own logic, code fitted to the tests' inputs (the reviewer runs an input no test uses), and tests that do not prove what their name claims. The code review and every slice review run it in full, sampled by module risk; the implementation critical review runs it by reading, looking hardest at tests a fix changed; and the final check (4e.5), which now runs in every cycle, reads the tests once more after the last fix round — the first two checks, and for the tests the feature added, whether each expected value is still the spec's and each assertion can still fail. A HIGH finding rejects. Implementers and fix subagents are held to the same standard up front, and a pre-existing test may change only with a line under `### Test Changes` in the implementation plan naming the requirement that demands it.
 
-The specialist panel stays on Claude subagents — up to eight reviews a round would be a great many second-model runs, and the spec critical review that follows it is on the second model. A cycle started before 3.9.0 finishes with the reviewers it began with. **Not yet exercised on a real cycle:** the script is unit-tested against stand-in CLIs and was run once against the real Codex CLI on a scratch repository — it wrote its review file, and the script put back the source file it had been told to leave changed. No full cycle has used the new routing or the Test Integrity Lens yet.
+The specialist panel stays on Claude subagents — up to eight reviews a round would be a great many second-model runs, and the spec critical review that follows it is on the second model. **Not yet exercised on a real cycle:** the script is unit-tested against stand-in CLIs and was run once against the real Codex CLI on a scratch repository — it wrote its review file, and the script put back the source file it had been told to leave changed. No full cycle has used the new routing or the Test Integrity Lens yet.
 
 ### What's new in 3.8.1
 

@@ -105,8 +105,6 @@ If `SDD/requirements/DESIGN-[###]-[feature-name].md` exists, load it. The user r
 - [ ] **Outline recognisable** — Can each brief outline entry be matched to one or more delivery slices? Reordering and splitting are fine when recorded.
 - [ ] **Deviations accurate** — Is every recorded deviation real, and is every real deviation recorded? An unrecorded departure from a binding part (Key decisions, Not doing, answered questions) is a HIGH finding.
 
-If no brief exists (a flow that began before the design gate shipped), note the gate was skipped; this is not a finding.
-
 ### Specification Weaknesses
 
 - [ ] **Ambiguous requirements** - Which REQ-XXX can be interpreted multiple ways?
@@ -141,7 +139,7 @@ If the ledger section is missing but the spec does state numbers, build the tabl
 
 ### Slice Integrity (per-slice mode only)
 
-If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## Delivery Slices` section. If the frontmatter declares `delivery_mode: whole-feature` (or the field is absent), this entire sub-section is skipped silently — no findings to record, no "n/a" placeholder.
+If the spec's frontmatter declares `delivery_mode: per-slice`, verify the `## Delivery Slices` section. If the frontmatter declares `delivery_mode: whole-feature`, this entire sub-section is skipped silently — no findings to record, no "n/a" placeholder.
 
 > **Slice integrity (per-slice mode only):** Are the slices in `## Delivery Slices` genuinely thin vertical threads through the module set, or are they horizontal layers in disguise (e.g., "SLICE-001: build the frontend; SLICE-002: build the backend")? A slice that touches only one module (when the feature spans multiple) is a smell, unless explicitly justified.
 
@@ -251,7 +249,7 @@ Append `## Fix Check` to the CRITICAL-SPEC document. Its first line is exactly `
    - Suggested addition: [What to add]
 
 ### Design Brief Fidelity
-[One line if no brief exists. Otherwise each unrecorded departure, with the brief's text and the spec's, or "Spec matches the approved brief; N recorded deviation(s) verified."]
+[Each unrecorded departure, with the brief's text and the spec's, or "Spec matches the approved brief; N recorded deviation(s) verified."]
 
 ### Planned Call Graph
 [Omit when your prompt carries no tracing gate. `tracing: off`: one line. `tracing: on`: each finding with its severity, the node or slice it concerns, and the correction — or "Graph covers N entry point(s); every LLM and external call marked and assigned."]

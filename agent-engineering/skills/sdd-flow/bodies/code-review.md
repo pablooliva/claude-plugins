@@ -147,7 +147,7 @@ The spec's `## Modules` section assigns each module a `Risk:` tier. Use it to **
 grep -A 1 "MODULE-" <the SPEC path in your prompt> | grep "Risk:"
 ```
 
-If the spec has no `## Modules` section (legacy or config-only changes), treat the entire feature as **medium** by default and note in the review summary that risk tiering was not available.
+If the spec has no `## Modules` section (config-only changes), treat the entire feature as **medium** by default and note in the review summary that risk tiering was not available.
 
 **Per-tier review depth:**
 

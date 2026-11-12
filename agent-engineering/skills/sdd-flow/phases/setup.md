@@ -8,7 +8,7 @@ Read this at the very start of every fresh `/sdd-flow <task>` invocation (not `c
 
 When invoked, the orchestrator first (for `--next-tier`, steps 1–3 are replaced — see *Starting the next tier* at the end of this step):
 
-1. Extracts the **task description** from the user's input, after dropping any removed flag (`SKILL.md` → Arguments).
+1. Extracts the **task description** from the user's input.
 2. Extracts an **issue/ticket number** if provided (`#42`, `PROJ-123`); otherwise determines sequential numbering by checking existing `SDD/` artifacts.
 3. Derives a **kebab-case `[feature-name]`** from the task.
 4. Resolves all canonical identifiers (SKILL → Canonical Identifiers).

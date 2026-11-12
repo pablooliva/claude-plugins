@@ -29,13 +29,13 @@ If either path is missing from your prompt, or the file is missing or unreadable
 The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Branch:
 
 - **`per-slice`** → continue.
-- **`whole-feature` OR field absent** → emit the REQ-007 verbatim inert message and exit cleanly with NO partial state writes:
+- **`whole-feature`** → emit the REQ-007 verbatim inert message and exit cleanly with NO partial state writes:
 
   ```
   This retrospective body requires `delivery_mode: per-slice` in the spec frontmatter. Current spec uses `delivery_mode: <value>`. Run an implementation-start phase instead, or set `delivery_mode: per-slice` in your spec and re-run planning-start.
   ```
 
-- **Any other value** → fail per REQ-001 validation: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run planning-start.`
+- **Field missing, or any other value** → fail per REQ-001 validation: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run planning-start.`
 
 ## Slice-ID Validation (REQ-024 / SEC-003)
 
@@ -62,7 +62,7 @@ ls SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-*.md
 
 If absent, fail with: `No per-slice review found for SLICE-XXX (expected SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-iter<N>-<YYYY-MM-DD>.md). Run the slice-review body for SLICE-XXX before the slice retrospective.`
 
-There is one document per review iteration (`…-iter<N>-…`). Read the one with the highest `N` — the review that passed the slice, or the latest before a halt; an earlier one is read only for a finding the latest names as closed. A slice reviewed before 3.14.0 has dated documents with no `iter<N>`: read the latest by date. If present, read it into context. Note its findings (HIGH/MEDIUM/LOW counts and any unresolved items).
+There is one document per review iteration (`…-iter<N>-…`). Read the one with the highest `N` — the review that passed the slice, or the latest before a halt; an earlier one is read only for a finding the latest names as closed. If present, read it into context. Note its findings (HIGH/MEDIUM/LOW counts and any unresolved items).
 
 Note the review's `## LOW Findings (listed, not fixed)` section: every LOW finding there goes into the ledger's *Open recommendations awaiting user decision* (template below), so the owner sees it.
 

@@ -19,7 +19,6 @@ Starting planning phase based on completed research.
 
 3. **Read the Design Brief:**
    - Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]-[feature-name].md`). Your prompt states its approved revision and tier. The user read and approved this document; the spec you write is held to it.
-   - If your prompt names no brief (a flow that began before the design gate existed), proceed without one and write the single line `None.` under `## Deviations from Design Brief`.
 
 4. **Read the Tier Standard and Tier Plan (tiered features only):**
    - When your prompt gives an approved tier of `1`, `2`, or `3`, read **TIERS** (the tier standard — tiers, the floor, the cut tests) and **TIER_PLAN** (what this feature's tiers contain, with its Deferred table) at the paths in your prompt.
@@ -395,17 +394,17 @@ The spec template includes these YAML frontmatter fields, consumed by sdd-flow a
 
   **On:** the spec carries `### Evals` under `## Validation Strategy`, a `Sign-off:` line under `### Manual Verification` for each sign-off requirement, and, in per-slice mode, an `Evals:` line in every slice (Planning Process → *Eval rules*). **Off:** it carries none of the three, and says nothing about evals. The orchestrator makes the binding decision from this field at Step 3c and records it; nothing after that reads the field again.
 
-- **`tier:`** — `1`, `2`, or `3`: the delivery tier this spec covers, copied from the approved tier in your prompt. A tier says how much of the feature to build; slices say in what order to build it. Omit the field when the approved tier is `none` (the brief said tiers are not applicable). **Absent means untiered:** every rule applies as it did before tiers existed, so specs written before this field behave unchanged. A `tier:` value is never a reason to lower rigour — the same panel, reviews, tests, and site counts apply to whatever the tier builds.
+- **`tier:`** — `1`, `2`, or `3`: the delivery tier this spec covers, copied from the approved tier in your prompt. A tier says how much of the feature to build; slices say in what order to build it. Omit the field when the approved tier is `none` (the brief said tiers are not applicable). **Absent means untiered:** every rule applies as it does without tiers. A `tier:` value is never a reason to lower rigour — the same panel, reviews, tests, and site counts apply to whatever the tier builds.
 
 - **`delivery_mode:`** — `whole-feature` (default) or `per-slice`. Controls whether the spec must include a `## Delivery Slices` section and whether downstream phases route through per-slice behavior.
 
   **Authoring default (new specs):** Set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices — in which case set `delivery_mode: whole-feature` and record a one-line justification inline in the spec (e.g., as a comment in the `## Delivery Slices` section placeholder, or at the top of `## Implementation Notes`). The template above starts from `per-slice` to reflect this recommendation.
 
-  The parse-side default (field absent → `whole-feature`) is unchanged for backward compatibility with specs written before this guidance.
+  The field is required: a spec without it is malformed.
 
-  `whole-feature` preserves the existing flow exactly; the `## Delivery Slices` section is omitted entirely. `per-slice` opts into vertical-slicing decomposition — a concentrated function threaded end-to-end through every relevant layer per slice; in that mode this body must populate `## Delivery Slices`. If the field is absent from a spec written before this change, treat it as `whole-feature`.
+  `whole-feature` preserves the existing flow exactly; the `## Delivery Slices` section is omitted entirely. `per-slice` opts into vertical-slicing decomposition — a concentrated function threaded end-to-end through every relevant layer per slice; in that mode this body must populate `## Delivery Slices`.
 
-  - **Value validation (binding for every consumer of this field):** the canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Absent → silent default to `whole-feature` (no log line; this is the documented default behavior). Any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) is invalid: fail fast with a clear error naming (a) the SPEC file path, (b) the offending value verbatim, and (c) the canonical enum. Never silently fall through to the default branch. This body surfaces the failure by returning it to the orchestrator and writes no stop note. The same rule applies wherever `delivery_mode:` is read by downstream phases — the implementation phase, the slice handling, sdd-flow Step 4, the slice-integrity reviewers, and the practicality gate below — each consumer either fails fast with the same error shape or delegates to a single shared validation step.
+  - **Value validation (binding for every consumer of this field):** the canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). A missing field, or any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) is invalid: fail fast with a clear error naming (a) the SPEC file path, (b) the offending value verbatim, and (c) the canonical enum. Never silently fall through to the default branch. This body surfaces the failure by returning it to the orchestrator and writes no stop note. The same rule applies wherever `delivery_mode:` is read by downstream phases — the implementation phase, the slice handling, sdd-flow Step 4, the slice-integrity reviewers, and the practicality gate below — each consumer either fails fast with the same error shape or delegates to a single shared validation step.
 
 These fields have sensible defaults; populate them intentionally rather than leaving as boilerplate.
 
@@ -468,7 +467,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
 
 9. **Validate `delivery_mode:` value (spec ingestion gate):**
    - Read the `delivery_mode:` field from the spec frontmatter being created (or, when this body runs against an existing spec, the field already on disk).
-   - Apply the value-validation rule from the frontmatter prose above: exact match against `{whole-feature, per-slice}`; absent → silent default `whole-feature`; any other value → fail fast.
+   - Apply the value-validation rule from the frontmatter prose above: exact match against `{whole-feature, per-slice}`; missing or any other value → fail fast.
    - On invalid value, emit the error: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-invoke the planning body.` Stop processing and return that error to the orchestrator as a failure. Write no stop note — `## Awaiting Slicing Decision` is the practicality gate's block (step 10) and its resume options do not apply to a malformed value.
    - Do NOT silently fall through to the `whole-feature` branch when the value is malformed — that masks user typos and produces silent misbehavior downstream.
 
@@ -557,7 +556,7 @@ Before considering the specification complete:
 - [ ] If `delivery_mode: per-slice`, every slice declares Concentrated function, REQs satisfied, Modules touched, Acceptance check, Try it, and Sequence rationale
 - [ ] If `delivery_mode: per-slice`, SLICE-001 is the thinnest possible end-to-end happy path
 - [ ] If `delivery_mode: per-slice`, slices are ordered by delivery sequence and each REQ-XXX / EDGE-XXX / FAIL-XXX is reachable through some slice by the last slice
-- [ ] If `delivery_mode: whole-feature` (or absent), the `## Delivery Slices` section is omitted
+- [ ] If `delivery_mode: whole-feature`, the `## Delivery Slices` section is omitted
 - [ ] Every requirement that targets or constrains a quantity states the number and its unit — no qualitative stand-ins ("appropriately", "meaningfully", "significantly")
 - [ ] `### Quantitative Ledger` is populated with every goal and constraint the spec asserts, or carries the single line `No quantitative goals or constraints.`
 - [ ] Each `goal` row's `Bears on` column names the constraints acting on it, and the arithmetic clears — no goal requires more headroom than its constraints permit

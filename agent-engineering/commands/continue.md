@@ -53,7 +53,7 @@ All four templates carry the same `## Continuation Priorities` section — **Ess
 2. **Locate the Compaction File** — one rule, in this order; stop at the first that applies:
    1. **A path given with the command** (`/agent-engineering:continue <path>`) → load that file.
    2. **The path `progress.md` names.** Every compact command records it there: the latest `## PARTIAL: needs continuation` block (phase-specific commands) or the `Last compaction:` line under `## Current State` (`/adhoc-compact`). Whichever is later in the file wins. Load exactly that file. **If the named file is missing, stop and tell the user** — do not substitute another file; a different file is different work.
-   3. **`progress.md` names none** → list `SDD/orchestration/compacted/` (and, only if that is empty or absent, `SDD/orchestration/` itself, where older versions wrote) for these names, newest first by the timestamp in the name (`YYYY-MM-DD_HH-MM-SS`, 24-hour):
+   3. **`progress.md` names none** → list `SDD/orchestration/compacted/` for these names, newest first by the timestamp in the name (`YYYY-MM-DD_HH-MM-SS`, 24-hour):
       - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
       - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
       - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
@@ -77,8 +77,6 @@ Before resuming work, verify from compaction file:
 - [ ] Blocking items and open questions are documented
 - [ ] The numbered priority list gives clear next steps
 - [ ] `## Critical Review Status` says whether review findings are still open
-
-A generic file written by `/adhoc-compact` before 3.5.1 uses older names for the same things: `## Critical References` for the files, and `## Next Session` → **Resume From** / **Immediate Priorities** for the focus and the priority list. Read them as equivalents.
 
 If any critical information is missing, ask user for clarification before proceeding.
 

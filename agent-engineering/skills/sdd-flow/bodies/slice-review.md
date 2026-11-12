@@ -27,13 +27,13 @@ If either path is missing from your prompt, or the file is missing or unreadable
 The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Branch:
 
 - **`per-slice`** → continue with this review's normal behavior.
-- **`whole-feature` OR field absent** → emit the REQ-007 verbatim inert message and exit cleanly with NO partial state writes:
+- **`whole-feature`** → emit the REQ-007 verbatim inert message and exit cleanly with NO partial state writes:
 
   ```
   This review requires `delivery_mode: per-slice` in the spec frontmatter. Current spec uses `delivery_mode: <value>`. Use whole-feature implementation mode instead, or set `delivery_mode: per-slice` in your spec and re-run the planning phase.
   ```
 
-- **Any other value** → fail per REQ-001 validation: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run the planning phase.`
+- **Field missing, or any other value** → fail per REQ-001 validation: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run the planning phase.`
 
 ## Slice-ID Validation (REQ-024 / SEC-003)
 
@@ -184,9 +184,9 @@ Write the review output to:
 SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-iter<N>-<YYYY-MM-DD>.md
 ```
 
-`N` is the `ITER` in your prompt: one document per iteration, so a re-review never overwrites the review its fix answered. (A slice reviewed before 3.14.0 has one document per day, with no `iter<N>`.)
+`N` is the `ITER` in your prompt: one document per iteration, so a re-review never overwrites the review its fix answered.
 
-Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across the new artifact families introduced by this feature — RETROSPECTIVE-SLICE, REVIEW-SLICE; resolves panel deferred LOW-13). Pre-existing REVIEW artifacts authored before SDD 2.0.0 may continue to use `[YYYYMMDD]`; the carry-forward is internally consistent within the legacy family.
+Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across the new artifact families introduced by this feature — RETROSPECTIVE-SLICE, REVIEW-SLICE; resolves panel deferred LOW-13).
 
 The review document follows the standard review template (`SDD/reviews/REVIEW-XXX-...md` shape) with these slice-specific additions:
 

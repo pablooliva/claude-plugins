@@ -30,15 +30,16 @@ The active SPEC is the path in your prompt. Do not list `SDD/requirements/` to f
 The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenated). Branch:
 
 - **`per-slice`** → continue with this body's normal behavior (Step 3 onward).
-- **`whole-feature` OR field absent** (default per OQ-3 — stay silent on absence) → emit the REQ-007 verbatim inert message and exit cleanly with NO partial state writes:
+- **`whole-feature`** → emit the REQ-007 verbatim inert message and exit cleanly with NO partial state writes:
 
   ```
   This body requires `delivery_mode: per-slice` in the spec frontmatter. Current spec uses `delivery_mode: <value>`. Use the implementation scaffolding step instead, or set `delivery_mode: per-slice` in your spec and re-run the planning phase.
   ```
 
-  Where `<value>` is either the actual offending value or the literal string `whole-feature (default; field absent)` when the field is missing.
+  Where `<value>` is the spec's value.
+- **Field missing** → fail: `Missing delivery_mode in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run the planning phase.` No state is written.
 
-  **Typo-detection hint (resolves L-7):** when emitting the "field absent → default `whole-feature`" branch, ALSO grep the spec frontmatter for any line matching `mode:` (case-insensitive). If a near-miss field is found (e.g., `delvery_mode:`, `Delivery_mode:`, `delivery-mode:`), append a one-line hint to the inert message: `Hint: detected nearby field '<offending-line>' — possible typo of 'delivery_mode:'?`. The hint is informational; the inert message itself is unchanged. Users who genuinely intended `whole-feature` are unaffected.
+  **Typo-detection hint (resolves L-7):** when the field is missing, ALSO grep the spec frontmatter for any line matching `mode:` (case-insensitive). If a near-miss field is found (e.g., `delvery_mode:`, `Delivery_mode:`, `delivery-mode:`), append a one-line hint to the error: `Hint: detected nearby field '<offending-line>' — possible typo of 'delivery_mode:'?`.
 
 - **Any other value** (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, `delivry_mode` field-name typos, etc.) → fail per REQ-001 validation: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run the planning phase (or use the implementation scaffolding step in whole-feature mode).` Do NOT silently fall through to the default branch.
 

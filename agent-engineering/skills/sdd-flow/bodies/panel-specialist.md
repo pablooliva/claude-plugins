@@ -207,7 +207,7 @@ For each optional specialist not yet fully defined above, generate your findings
 
 ### 4.7 Slice Integrity Specialist (per-slice mode only)
 
-**Activation gate:** Only fires when the spec's frontmatter declares `delivery_mode: per-slice`. In whole-feature mode (or when the field is absent), this specialist is skipped silently — no findings, no "checked nothing" report, and no `#### Slice Integrity Findings` sub-header is rendered in the deliverable. The specialist's prompt MUST self-check the activation gate at first action and short-circuit when the gate is closed; it must not produce an "N/A" finding (that would dilute the verdict and contradict the bit-for-bit-preserved deliverable shape for whole-feature reviews).
+**Activation gate:** Only fires when the spec's frontmatter declares `delivery_mode: per-slice`. In whole-feature mode, this specialist is skipped silently — no findings, no "checked nothing" report, and no `#### Slice Integrity Findings` sub-header is rendered in the deliverable. The specialist's prompt MUST self-check the activation gate at first action and short-circuit when the gate is closed; it must not produce an "N/A" finding (that would dilute the verdict and contradict the bit-for-bit-preserved deliverable shape for whole-feature reviews).
 
 **Identity:** Senior architect reviewing the spec's `## Delivery Slices` section for genuine vertical-thread structure.
 
