@@ -87,7 +87,16 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 4.1.0.
+Version 4.2.0.
+
+### What's new in 4.2.0
+
+`sdd-flow`'s code reviews also judge fit and size. The code review, each slice review, and the adversarial review of
+the code ask whether a change matches the code around it, reuses what exists, is as small as the tier allows, and sits
+where the next person would look (`skills/sdd-flow/references/fit-lens.md`). A file changed outside the design brief's
+footprint is a finding unless the spec records it as a departure. A finding that adds a file, a layer, or a duplicate
+helper is MEDIUM, and is fixed by removing or merging code; each fix round reports its net line change. Evidence and
+decision: `proposals/review-criteria-2026-11-12.md`.
 
 ### What's new in 4.1.0
 

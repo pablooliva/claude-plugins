@@ -86,7 +86,7 @@ On a re-review whose fix round the orchestrator snapshotted, your prompt gives t
 
 - **The change** is `git diff --name-only --no-renames SNAPSHOT FIXED -- . ':(exclude)SDD'`, and `git diff SNAPSHOT FIXED -- <file>` for what changed in a file. Both are commits, so a file the slice created and has not committed shows only what the fix did to it. Step 4 still runs as written: the file set is what Step 5.7 refers to.
 - **Every finding of PREVIOUS REVIEW** gets one line in `## Earlier Findings` (template below): `closed` with the evidence — the change that closed it, the test that now fails without it — or `still open`. A finding still open is a finding of this review again, at its severity, numbered with the others, whether or not the code it is about changed.
-- **Step 5 reads the change only.** Specification alignment for the requirements the changed code serves; test alignment and the Test Integrity Lens over the tests the fix added or changed, with `SNAPSHOT` in place of `BASE` for what changed; the Agentic-Surface Lens over the changed files; risk-tiered depth for the modules the change touches; the tier rules over what the fix added. Code the fix did not change was read by the previous review and is not read again: raise nothing there, except a HIGH you see without looking for it.
+- **Step 5 reads the change only.** Specification alignment for the requirements the changed code serves; test alignment and the Test Integrity Lens over the tests the fix added or changed, with `SNAPSHOT` in place of `BASE` for what changed; the Agentic-Surface Lens and the Fit Lens over the changed files; risk-tiered depth for the modules the change touches; the tier rules over what the fix added. Code the fix did not change was read by the previous review and is not read again: raise nothing there, except a HIGH you see without looking for it.
 - **Step 5.5** walks the checklist items the change touches; mark each other one `N/A — unchanged since PREVIOUS REVIEW`.
 - **Step 5.7** compares the change, not the whole git list, with the brief.
 - **The tests you run are the ones the change can affect, not the whole suite.** The scoped set is:
@@ -110,6 +110,8 @@ Apply the following review process to the computed slice file set. The full revi
 
 **Test Integrity Lens (mandatory, every slice).** Item 3 asks whether the slice's tests exist and pass; this lens asks whether they are real — and whether the tests or the code were bent to get the green run. Read the standard at the `TEST_INTEGRITY` path in your prompt and run it **as written**, on this slice's requirements and the test files in this slice's changes: checks T1–T7 (§3), at the depth §4 gives for each module's `Risk:` tier, with `BASE` from your prompt and `### Test Changes` from the IMPLEMENTATION-PLAN. It is an overlay on the 70/20/10 split, and it runs after the slice's tests have passed. Make every mutation and probe in a scratch copy of the working tree (TEST_INTEGRITY §8), never in the working tree. Write the `## Test Integrity` section in the shape §6 gives; its findings are ordinary findings of this review, counted in the marker, each tagged `[needs-code-or-test]`. **A HIGH lens finding rejects the slice.** If your prompt has no `TEST_INTEGRITY` path, return a failure to the orchestrator naming it.
 
+**Fit Lens (mandatory, every slice).** Read the standard at the `FIT` path in your prompt and run it **as written** over this slice's changes: its four questions (§1), reading the code around each changed area and not just the diff, and its grading (§3); Step 5.7 applies its footprint rule (§2). Write the `## Fit and Size` section; its findings are ordinary findings of this review, counted in the marker, and a MEDIUM rejects the slice. If your prompt has no `FIT` path, return a failure to the orchestrator naming it.
+
 **Apply Risk-Tiered Review Depth** per the slice's `Modules touched` field. For each MODULE-XXX in the slice's `Modules touched`, read the `Risk:` field from the SPEC's `## Modules` section and apply the matching depth:
 
 - **`high` risk** — full internals review: examine every function, branch, and data mutation in the module's files; flag any missing error paths, unvalidated inputs, or state-consistency gaps.
@@ -124,7 +126,7 @@ Apply the following review process to the computed slice file set. The full revi
 
 ## Step 5.5: Project Review Checklist Walk (conditional)
 
-Projects often carry their own review checklist — a `CLAUDE.md`/`AGENTS.md` section listing pre-merge checks, a conventions doc, a PR template. **A checklist only fires if the reviewer is told to walk it**, so walking it is a required step here, not a nicety: the review process in Step 5 covers SPEC alignment and code quality, and knows nothing about project-local obligations (register the feature in an index, update a status table, bump a compatibility matrix).
+Projects often carry their own review checklist — a `CLAUDE.md`/`AGENTS.md` section listing pre-merge checks, a conventions doc, a PR template. **A checklist only fires if the reviewer is told to walk it**, so walking it is a required step here, not a nicety: the review process in Step 5 covers SPEC alignment, tests, and fit, and knows nothing about project-local obligations (register the feature in an index, update a status table, bump a compatibility matrix).
 
 **Discovery (bounded — do not scan the whole repo).** In priority order, take the FIRST that exists:
 
@@ -150,11 +152,11 @@ Every finding of this review is numbered once, at its severity, in `## Slice-Spe
 
 When the review document is written, append to `SDD/orchestration/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). `APPROVED` when `h` and `m` are both zero, `REJECTED` otherwise. Always write all three counts, zeros included — the orchestrator reads them from this line. It is a phase-detection marker; do not paraphrase it.
 
-## Step 5.7: Design Brief Check (informational)
+## Step 5.7: Design Brief Check
 
 Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]-[feature-name].md`; your prompt states its approved revision and tier). The user approved it before the spec was written; this step tells them whether the slice stayed inside it. Compare the git list from Step 4 against the areas in the brief's "What changes where" table and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
 
-**Informational only.** Do not raise a finding for an out-of-footprint file on that ground alone, and do not let this section affect the APPROVED / REJECTED decision. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body.
+**A changed file outside the footprint is a fit finding** (FIT §2): raise one per such file, graded by FIT §3, unless the SPEC's `## Deviations from Design Brief` records it. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body.
 
 ## Step 5.8: Tracing Lens (conditional)
 
@@ -217,6 +219,10 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 
 [The table, the mutation list, and the probe list, in the shape TEST_INTEGRITY §6 gives.]
 
+## Fit and Size
+
+[One line per fit finding (FIT §3) — `<#> <MEDIUM|LOW> <question or footprint>: <file:line> — <what to remove or merge>` — or `None.`]
+
 ## Project Review Checklist Walk
 
 **Checklist source:** <path + section heading, or "none found — searched: ...">
@@ -248,13 +254,13 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 ## Design Brief Check
 
 - **Delivers:** [the brief's delivery-outline entry or entries this slice corresponds to, quoted — or "no matching outline entry", with what it is instead]
-- **Outside the approved footprint:** [`None.` — or one line per changed file that falls under no row of the brief's "What changes where" table: the file, and why it was touched]
+- **Outside the approved footprint:** [`None.` — or one line per changed file that falls under no row of the brief's "What changes where" table and no recorded deviation: the file, why it was touched, and the number of its fit finding]
 
-[Informational — not a finding, and no part of the decision below. `No design brief — check skipped.` when the feature has none.]
+[`No design brief — check skipped.` when the feature has none.]
 
 ## Decision: [APPROVED / REJECTED]
 
-[Standard review decision rationale. Any open HIGH or MEDIUM — the Test Integrity Lens, the Tracing Lens, and the Eval Check included — rejects the slice. LOW findings reject nothing.]
+[Standard review decision rationale. Any open HIGH or MEDIUM — the Test Integrity Lens, the Fit Lens, the Tracing Lens, and the Eval Check included — rejects the slice. LOW findings reject nothing.]
 ```
 
 ## Per-Slice Review Iteration Cap (REQ-013, reference — enforced elsewhere)

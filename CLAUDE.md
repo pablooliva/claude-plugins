@@ -60,6 +60,9 @@ agent-engineering/
 │   │   │                           #   test-integrity.md — the ONE definition of a real test and of the reviews' Test Integrity Lens
 │   │   │                           #   (implementer bodies read §1; code review, slice review, impl critical review run it; fixers follow §7;
 │   │   │                           #   §8 = the scratch copy every mutation is made in, by every body);
+│   │   │                           #   fit-lens.md — the ONE definition of the reviews' Fit Lens (fit and size: match, reuse, smaller, next change;
+│   │   │                           #   a file outside the brief's footprint is a finding; MEDIUM for a new file, layer or duplicate helper;
+│   │   │                           #   §4 = fixers remove or merge, never add, and report net lines): code review, slice review, impl critical review, fixers;
 │   │   │                           #   tracing-lens.md — the ONE definition of the reviews' trace check (slice review,
 │   │   │                           #   code review, and the 4e.5 final check read it; never restate it in a body);
 │   │   │                           #   evals.md — the ONE definition of evals (the two kinds, the cases, the eval run, the reviews' Eval Check in §7,
