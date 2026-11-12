@@ -249,7 +249,7 @@ git diff --name-only --no-renames BASE -- . ':(exclude)SDD'
 git ls-files --others --exclude-standard -- . ':(exclude)SDD'
 ```
 
-If your prompt has no `BASE`, use the file paths the IMPLEMENTATION-PLAN lists. Compare that file set against the areas in the brief's "What changes where" table and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
+The new files among them are `git diff --name-only --no-renames --diff-filter=A BASE -- . ':(exclude)SDD'` and the untracked list. If your prompt has no `BASE`, use the file paths the IMPLEMENTATION-PLAN lists. Compare that file set against the brief's "What changes where" table as FIT §2 says — an existing file against its areas, a new file against the paths it names — and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
 
 **A changed file outside the footprint is a fit finding** (FIT §2): raise one per such file, graded by FIT §3, unless the spec's `## Deviations from Design Brief` records it. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body.
 
@@ -463,7 +463,7 @@ If the spec had no `## Modules` section, note: "Risk tiering not available — f
 ## Design Brief Check
 
 - **Delivers:** [the brief's delivery-outline entries this implementation corresponds to, quoted — or "no matching outline entry", with what it is instead]
-- **Outside the approved footprint:** [`None.` — or one line per changed file that falls under no row of the brief's "What changes where" table and no recorded deviation: the file, why it was touched, and the number of its fit finding]
+- **Outside the approved footprint:** [`None.` — or one line per changed file outside the footprint by FIT §2 (an existing file under no area, or a new file no row names) and no recorded deviation: the file, `new` or `changed`, why it was touched, and the number of its fit finding]
 
 [`No design brief — check skipped.` when the feature has none.]
 

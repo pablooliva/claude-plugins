@@ -1,6 +1,6 @@
 ---
 name: simplicity-challenge
-description: "INVOKE THIS SKILL when the user EXPLICITLY asks for a proposal to be challenged for doing or building too much, before it is implemented — via `/simplicity-challenge`, or an unambiguous request like 'challenge the simplicity of this', 'run the simplicity challenge', 'is this over-engineered', 'what is the simplest version of this', 'cut this proposal down', 'what can we defer', 'tier this'. It is user-invoked, NOT an ambient watcher: do not activate just because a plan or proposal appears in the conversation. Applies the tier standard (Tier 1 POC-plus, Tier 2 Standard, Tier 3 Full) to a proposal, plan, design brief, or spec on two axes — what it does (functionality) and how it is built (architecture and code structure) — and reports the smallest version still worth using, a table of cuts with what each one loses and what it would cost to add later, and what it kept because it is unsafe to leave out. It only removes or defers: it NEVER adds requirements, NEVER edits the target, and NEVER implements. On request it rewrites the proposal in reduced form or writes a tier plan. Usage: `/simplicity-challenge [file path | last] [functional | structural]`. NOT for cleaning up code already written (use the built-in `/simplify`), NOT for finding what a proposal is missing (use `/critical-review`), and NOT for surveying existing code for shallow modules (use `improve-codebase-architecture`)."
+description: "INVOKE THIS SKILL when the user EXPLICITLY asks for a proposal to be challenged for doing or building too much, before it is implemented — via `/simplicity-challenge`, or an unambiguous request like 'challenge the simplicity of this', 'run the simplicity challenge', 'is this over-engineered', 'what is the simplest version of this', 'cut this proposal down', 'what can we defer', 'tier this'. It is user-invoked, NOT an ambient watcher: do not activate just because a plan or proposal appears in the conversation. Applies the tier standard (Tier 1 POC-plus, Tier 2 Standard, Tier 3 Full) to a proposal, plan, design brief, or spec on two axes — what it does (functionality) and how it is built (architecture and code structure) — and reports the smallest version still worth using, a table of cuts with what each one loses and what it would cost to add later, and what it kept because it is unsafe to leave out. It only removes or defers: it NEVER adds requirements, NEVER edits the target, and NEVER implements. On request it rewrites the proposal in reduced form or writes a tier plan. Usage: `/simplicity-challenge [file path | last] [functional | structural] [--brief <path>]`. NOT for cleaning up code already written (use the built-in `/simplify`), NOT for finding what a proposal is missing (use `/critical-review`), and NOT for surveying existing code for shallow modules (use `improve-codebase-architecture`)."
 ---
 
 # Simplicity Challenge
@@ -35,7 +35,7 @@ Check the report against these before emitting it:
 
 ## When to Activate
 
-- `/simplicity-challenge`, bare (the most recent proposal in the conversation), with a file path, or with `functional` or `structural` to limit the axis.
+- `/simplicity-challenge`, bare (the most recent proposal in the conversation), with a file path, or with `functional` or `structural` to limit the axis. With `--brief <path>` when the target is a spec written from an approved design brief — `sdd-flow`'s stop after the spec prints the command with it.
 - An explicit request to cut a proposal down before it is built: "challenge the simplicity of this", "is this over-engineered?", "what's the simplest version?", "what can we defer?", "tier this".
 
 ## When NOT to Activate
@@ -52,6 +52,7 @@ Check the report against these before emitting it:
 - **A file path** → read that file: a proposal, a plan, a design brief, a spec.
 - **`last`, or no argument** → the most recent proposal, plan, or proposed solution in the conversation.
 - **`functional` or `structural`** → limit the challenge to that axis. Default: both.
+- **`--brief <path>`** → the design brief the target was written from, which its owner approved. Read it too. It changes two things: each Cuts row is marked against it (Step 6), and anything the target does or adds that the brief neither states nor implies is a cut candidate in its own right — it grew after the owner approved the design. Without `--brief`, nothing is marked.
 
 Then read `references/tiers.md` in this skill's directory.
 
@@ -87,6 +88,8 @@ Under 60 lines, counting every line of the report, in this order:
    |---|---|---|---|---|---|
    | [thing the proposal does] | function | Tier 2 · Tier 3 · cut | [the cut test that placed it] | [one phrase] | cheap / moderate / expensive |
    | [part the proposal adds] | structure | remove | [the cut test that removed it] | [one phrase] | cheap / moderate / expensive |
+
+   With `--brief`, start the Item cell of a row with **needs your call** when the cut would undo something the owner decided in the brief — a Key decision, an answered question, the chosen tier, or a delivery-outline entry — and with **not in the brief** when the item is something the brief neither states nor implies. A row may carry neither. The owner takes or leaves every cut; the marks say which ones reverse their own earlier decision.
 
    This table is the short form. The full record of a deferral — including how the case fails if it is reached — is written only in a rewrite or a tier plan (Step 7).
 

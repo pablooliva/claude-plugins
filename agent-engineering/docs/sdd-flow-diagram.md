@@ -1,6 +1,6 @@
 # sdd-flow — the development cycle at a glance
 
-A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 4.1.0. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
+A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 4.3.0. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
 
 **How to read it.** Rounded boxes are work done by a spawned subagent. Red boxes are places the flow **stops and waits for you**. Grey boxes are things the orchestrator (the main conversation) does itself: commits, running a script, recording state.
 
@@ -60,26 +60,26 @@ flowchart TD
     gate -- "answers or changes" --> s25c("2.5c — Revise the brief")
     s25c --> gate
     gate -- "approve" --> m1["Look again for the tracing foundation<br/>Write the accepted ADRs<br/>Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
-    m1 --> s3a("Step 3a — Specification<br/>covers the approved tier only<br/>lists what is deferred<br/>no meaningful slices: whole-feature,<br/>and you are told why")
-    s3a --> s3c("3b capture ADRs<br/>3c specialist panel, in parallel<br/>then one synthesis")
+    m1 --> s3a("Step 3a — Specification<br/>covers the approved tier only<br/>lists what is deferred<br/>no meaningful slices: whole-feature,<br/>with the reason shown at 3g")
+    s3a --> s3c("3b capture ADRs<br/>3c specialist panel, in parallel —<br/>only the areas the change touches, at most 3<br/>scope beyond the brief is proposed, never added<br/>then one synthesis")
     s3c -- "findings" --> fix3("fix the spec, re-run the panel<br/>at most 3 rounds")
     fix3 --> s3c
     fix3 -- "no progress" --> halt3["STOP — panel halt<br/>you fix the spec by hand"]:::stop
     s3c -- "proceed" --> s3d("3d critical review of the spec<br/>3e fix HIGH and MEDIUM findings<br/>3e.5 check the fix")
     s3d -- "still open after one more fix" --> halt3e["STOP — fix-check halt<br/>you fix the spec by hand"]:::stop
     s3d --> c3["3f commit planning"]:::orch
-    c3 --> s3g{"3g — does the spec depart<br/>from the approved brief?"}
-    s3g -- "yes" --> dev["STOP<br/>deviations shown, you accept or edit"]:::stop
-    dev --> s4
-    s3g -- "no" --> s4{"Step 4 — Implementation<br/>route on delivery mode"}
+    c3 --> s3g["3g — STOP after the spec, every time<br/>departures from the brief, the panel's proposals<br/>run /simplicity-challenge --brief, then<br/>approve, or cut / accept to change the spec"]:::stop
+    s3g -- "cut or accept" --> fixg("change the spec as asked,<br/>commit it, stop again")
+    fixg --> s3g
+    s3g -- "approve" --> s4{"Step 4 — Implementation<br/>route on delivery mode"}
     s4 -- "per-slice" --> slices("Per-slice cycle<br/>see the next diagram")
     s4 -- "whole-feature" --> wf("4a implement, security rules proven by test<br/>4b code review, incl. fit and size and the brief's footprint<br/>4c fix HIGH and MEDIUM<br/>tracing on: 4b also compares a real run with the planned calls<br/>evals on: 4b also checks what the model really answered")
     slices --> eof
     wf --> eof("4d critical review of the code, 4e fix<br/>4e.5 final check — every tier, on the second model<br/>security verification, whole suite, last look at the tests<br/>tracing on: and the trace check, once more<br/>evals on: and every eval case, once more<br/>4f completion: summary, tier plan updated")
     eof -- "still open after 2 fix rounds" --> halt45["STOP — final check halt<br/>you resolve, then continue"]:::stop
     eof --> m2["Mirror: tier in review"]:::orch
-    m2 --> q4h{"4h — does a requirement<br/>wait for your sign-off?<br/>evals on only"}
-    q4h -- "yes" --> s4h["STOP — scores shown<br/>yes commits and accepts"]:::stop
+    m2 --> q4h{"4h — does a requirement wait for your sign-off<br/>(evals on only), or is the feature over<br/>1.5× its growth budget?"}
+    q4h -- "yes" --> s4h["STOP — scores and growth shown<br/>yes commits and accepts"]:::stop
     s4h --> c4
     q4h -- "no" --> c4["4i commit implementation"]:::orch
     c4 --> done["4j — Mirror: tier done<br/>short report: shipped, deferred,<br/>LOW findings listed, diff size<br/>progress file rotated"]:::orch
@@ -103,7 +103,7 @@ flowchart TD
     halt -- "continue" --> review
     review -- "approved" --> retro("4c.5 — slice retrospective<br/>updates the learnings ledger")
     retro --> commit["4c.6 — mark the slice complete<br/>and commit it"]:::orch
-    commit --> pause["STOP — slice pause, every slice<br/>what to run and what you should see<br/>the brief check line<br/>re-plan advice, when there is any<br/>LOW findings, when there are any<br/>evals on: and the eval run's line<br/>after the first slice: reminds you<br/>of /worth-building recheck"]:::stop
+    commit --> pause["STOP — slice pause, every slice<br/>what to run and what you should see<br/>the brief check line<br/>growth so far against the budget<br/>re-plan advice, when there is any<br/>LOW findings, when there are any<br/>evals on: and the eval run's line<br/>after the first slice: reminds you<br/>of /worth-building recheck"]:::stop
     pause -- "you ask for a re-plan" --> replan(["back to the design gate (2.5)<br/>with the request, then planning again"])
     pause -- "more slices" --> impl
     pause -- "last slice done" --> eof(["end-of-feature steps"])
@@ -129,10 +129,10 @@ flowchart TD
 | 0 Scope | Decides whether the request fits one cycle. `--next-tier` instead reads the tier plan and copies task comments into its Feedback, and makes no scope check — the design brief cuts the tier to fit one cycle | Sonnet subagent | `flow/DECOMPOSITION-*` (only when too large) | Always, when the feature is too large |
 | 1.5 Clarification | An interview that gets your design concept written down. On a next-tier cycle it is a feedback interview instead | You, with `/research-clarify` | `research/CLARIFICATION-*` | Every time — yes or no — unless the file exists |
 | 2 Research | Investigates the codebase; finds cross-cutting decisions and lists them as ADR candidates for the design gate; adversarial review; fixes | Sonnet subagents; a second model for the review | `research/RESEARCH-*`, `reviews/CRITICAL-RESEARCH-*` | — |
-| 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, footprint, tiers, questions. Then waits. It also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*`, `adr/*` (on approval) | **Every time the brief is written or rewritten.** `approve` is refused while a question is open |
-| 3 Planning | Writes the spec for the approved tier; specialist panel and adversarial review; fixes. The spec must record every departure from the brief | Sonnet subagents for the spec and the panel, Opus for the panel's synthesis; a second model for the adversarial review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, when the spec departs from the brief** |
-| 4 Implementation | Builds the feature (whole, or slice by slice); the implementer proves each security rule with a test that fails when its guard is removed. Code review and adversarial review — of the spec, the tests, and fit and size — and fixes. A review passes with no HIGH or MEDIUM finding; LOW findings are listed for you, not fixed. A review after a fix round checks the earlier findings and reads what the fix changed; a slice re-review runs only the tests the fix can affect, and the whole suite and the trace check when it would pass the slice. Then the final check: a second model reads every security rule for a path on which it does not hold, runs the whole suite, reads the tests once more, and with the gates on repeats the trace and eval checks; at most two fix rounds. Completion | Sonnet subagents; a second model for the reviews and the final check | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/CRITICAL-IMPL-*`, `reviews/FINAL-CHECK-*` | Slice pauses (per-slice). Slice fix-loop halt. Final check halt. 4h before the final commit, only when a requirement waits for your sign-off |
-| Done | Tier marked shipped in the tier plan; task set to done; a short report: what shipped, what was deferred, the LOW findings listed and not fixed, anything left unproven, the diff size | Orchestrator | updated `flow/TIERS-*` | — |
+| 2.5 Design gate | Writes the one planning document meant for you: what will be built, decisions, the existing code it builds on, footprint (every new file by name), a growth budget, tiers, questions. Then waits. It also lists the proposed ADRs; approving writes them, and you can drop any by name | Opus subagent writes; you approve | `requirements/DESIGN-*`, `flow/TIERS-*`, `adr/*` (on approval) | **Every time the brief is written or rewritten.** `approve` is refused while a question is open |
+| 3 Planning | Writes the spec for the approved tier; specialist panel (only the areas the change touches; scope beyond the brief is proposed to you, never added) and adversarial review; fixes. The spec must record every departure from the brief, a new file the brief does not name included | Sonnet subagents for the spec and the panel, Opus for the panel's synthesis; a second model for the adversarial review | `requirements/SPEC-*`, `reviews/PANEL-*`, `reviews/CRITICAL-SPEC-*` | Panel halt after 3 rounds or no progress. **3g, every time: you approve the spec, after cutting it down if you choose** |
+| 4 Implementation | Builds the feature (whole, or slice by slice); the implementer proves each security rule with a test that fails when its guard is removed. Code review and adversarial review — of the spec, the tests, and fit and size — and fixes. A review passes with no HIGH or MEDIUM finding; LOW findings are listed for you, not fixed. A review after a fix round checks the earlier findings and reads what the fix changed; a slice re-review runs only the tests the fix can affect, and the whole suite and the trace check when it would pass the slice. Then the final check: a second model reads every security rule for a path on which it does not hold, runs the whole suite, reads the tests once more, and with the gates on repeats the trace and eval checks; at most two fix rounds. Completion | Sonnet subagents; a second model for the reviews and the final check | code and tests, `implementation/*`, `reviews/REVIEW-*`, `reviews/CRITICAL-IMPL-*`, `reviews/FINAL-CHECK-*` | Slice pauses (per-slice). Slice fix-loop halt. Final check halt. 4h before the final commit, only when a requirement waits for your sign-off or the feature is over its growth budget |
+| Done | Tier marked shipped in the tier plan; task set to done; a short report: what shipped, what was deferred, the LOW findings listed and not fixed, anything left unproven, the diff size and the growth against the budget | Orchestrator | updated `flow/TIERS-*` | — |
 
 ## What the stops are for
 
@@ -144,12 +144,12 @@ flowchart TD
 | Tracing or evals asked for and not possible (3c) | when it applies | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the brief was approved, or one of the two fields holds a value other than `auto`, `true`, `false`. You change the field in the spec; nothing is reviewed until you do. It cannot fire with both fields left at `auto` |
 | Panel halt (3c) | when it applies | The spec did not pass the specialist panel in 3 rounds, or a round made no progress. You fix the spec by hand |
 | Fix-check halt (3e.5) | when it applies | The check after the spec fix still found a HIGH or MEDIUM finding open after one more fix. You fix the spec by hand |
-| Deviation check (3g) | if deviations | The spec is no longer what you approved |
+| Stop after the spec (3g) | every time | The spec may have grown since you approved the brief. It shows the departures from the brief and the scope the panel proposed but did not add, and points you to `/simplicity-challenge` with the brief. `approve` starts building; `cut …` or `accept …` changes the spec first, and the stop is shown again |
 | Slice fix-loop halt (4c) | when it applies | A slice did not pass its review in 3 fix rounds, or a round made no progress. A test failure that only the whole-suite run at the end of a re-review found does not count against progress. A LOW finding is listed, not fixed, and cannot cause this stop. You resolve the findings; `continue` re-reviews the slice |
-| Slice pause | after every slice | Try the slice while it is small: it says what to run and what you should see, the brief check, the LOW findings the review listed, and the retrospective's re-plan advice when there is any. `continue` starts the next slice; ask for a re-plan in words and the brief is revised, the design gate stops for you, and planning runs again |
+| Slice pause | after every slice | Try the slice while it is small: it says what to run and what you should see, the brief check, the growth so far against the budget, the LOW findings the review listed, and the retrospective's re-plan advice when there is any. `continue` starts the next slice; ask for a re-plan in words and the brief is revised, the design gate stops for you, and planning runs again |
 | Eval run could not be made (before a review, evals on) | when it applies | The application's model could not be reached, twice, when the flow ran the feature's eval cases before a review. Nothing is reviewed until it can be: you fix the network, the key, or the provider's limit, and continue. It costs no fix round |
 | Final check halt (4e.5) | when it applies | The final check still has a HIGH or MEDIUM finding after 2 fix rounds — most often a path on which a security rule does not hold; with tracing on, a difference between the planned calls and a real run; with evals on, a case checked by rule that the application still fails. It also covers the completion step finding something that needs code or tests changed after that check. You resolve the findings; `continue` runs the final check again |
-| Sign-off before the final commit (4h) | only when evals are on and the spec leaves a requirement about a model's answers for you to accept | It shows each such requirement with the judge's scores and where the outputs are; yes both commits and accepts. Otherwise the flow commits without stopping and ends with a short report |
+| Sign-off or size before the final commit (4h) | only when evals are on and the spec leaves a requirement about a model's answers for you to accept, or the feature adds more than 1.5× the source or test lines in its growth budget | It shows each such requirement with the judge's scores and where the outputs are, and the growth against the budget; yes commits and accepts. Otherwise the flow commits without stopping and ends with a short report |
 | A stop record `continue` does not recognise | always | A stop left by another version. It is shown to you as written; the flow never guesses what it was waiting for |
 | A subagent failed twice | always | The same step failed, was retried with more context, and failed again |
 | Broken install or old folder layout | always | A file the flow ships — the OWASP catalog included — is missing, or the repo still uses the 1.x `SDD/` layout. Not resumable until fixed |

@@ -154,7 +154,7 @@ When the review document is written, append to `SDD/orchestration/progress.md` e
 
 ## Step 5.7: Design Brief Check
 
-Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]-[feature-name].md`; your prompt states its approved revision and tier). The user approved it before the spec was written; this step tells them whether the slice stayed inside it. Compare the git list from Step 4 against the areas in the brief's "What changes where" table and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
+Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]-[feature-name].md`; your prompt states its approved revision and tier). The user approved it before the spec was written; this step tells them whether the slice stayed inside it. Compare the git list from Step 4 against the brief's "What changes where" table as FIT §2 says — a file that existed at `BASE` against its areas, a file the slice adds (the untracked list from Step 4, and `git diff --name-only --no-renames --diff-filter=A BASE -- . ':(exclude)SDD'`) against the paths it names — and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
 
 **A changed file outside the footprint is a fit finding** (FIT §2): raise one per such file, graded by FIT §3, unless the SPEC's `## Deviations from Design Brief` records it. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body.
 
@@ -254,7 +254,7 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 ## Design Brief Check
 
 - **Delivers:** [the brief's delivery-outline entry or entries this slice corresponds to, quoted — or "no matching outline entry", with what it is instead]
-- **Outside the approved footprint:** [`None.` — or one line per changed file that falls under no row of the brief's "What changes where" table and no recorded deviation: the file, why it was touched, and the number of its fit finding]
+- **Outside the approved footprint:** [`None.` — or one line per changed file outside the footprint by FIT §2 (an existing file under no area, or a new file no row names) and no recorded deviation: the file, `new` or `changed`, why it was touched, and the number of its fit finding]
 
 [`No design brief — check skipped.` when the feature has none.]
 

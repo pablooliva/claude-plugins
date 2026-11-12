@@ -74,7 +74,7 @@ Three tools question a proposal before it is built, each from a different side. 
 2. **`/simplicity-challenge`** — the work is worth doing; what is the smallest version still worth using? It cuts or defers item by item, on what the proposal does and on how it is built, and keeps the floor (data safety, security, loud failure) on purpose.
 3. **`/critical-review`** — argues the opposite case: what is missing or wrong. Run it on the reduced version, so the gaps it finds are gaps in what will really be built.
 
-In `sdd-flow` the natural moment is the design gate, before you approve the brief — the last point before a spec is written. The flow reminds you of `worth-building` there and after a plan's first slice (`/worth-building recheck`, with the measured cost in place of the estimate); it runs none of the three itself.
+In `sdd-flow` the natural moments are the design gate, before you approve the brief, and the stop after the spec, which prints the `/simplicity-challenge` command with the brief for you. The flow reminds you of `worth-building` there and after a plan's first slice (`/worth-building recheck`, with the measured cost in place of the estimate); it runs none of the three itself.
 
 For code that already exists, use something else: the built-in `/simplify` cleans up a diff, and `improve-codebase-architecture` finds shallow modules in a codebase.
 
@@ -87,7 +87,33 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 4.2.0.
+Version 4.3.0.
+
+### What's new in 4.3.0
+
+`sdd-flow` bounds the size of a change before any code is written. The 4.2.0 fit review, run again on an earlier
+feature, caught a duplicated test helper and a stray file but not the feature's size: the spec and brief had approved
+it. So the size work moves before code.
+
+- **The design brief names every new file and sets a growth budget.** Each new source or test file gets its own row in
+  "What changes where" (an area row now covers changes to existing files only), with a line estimate; `## Builds on`
+  lists the existing modules and helpers the change extends; `## Growth budget` gives the source lines, test lines
+  and new files you approve with the brief.
+- **A new file the brief does not name is outside the footprint** — a MEDIUM fit finding in the code reviews, unless
+  the spec records it as a departure.
+- **The specialist panel reviews only what the change touches** — at most three specialists, plus `agent-security`
+  and `slice-integrity` when they apply. Scope beyond the brief is proposed to you as an addition, never added to the
+  spec by a fix.
+- **A stop after the spec, every time (3g).** It shows the spec's departures from the brief, the panel's proposed
+  additions, the panel that ran and the delivery mode, and points you to
+  `/simplicity-challenge <spec> --brief <brief>`. `approve` starts building; `cut …` or `accept …` changes the spec,
+  commits it, and shows the stop again. It replaces the deviation check that stopped only when the spec departed from
+  the brief.
+- **`/simplicity-challenge --brief <path>`** marks a cut that would undo a decision of the brief "needs your call",
+  and an item the brief never asked for "not in the brief".
+- **Growth is measured** by `scripts/growth.py` (source and test lines added, new files, unnamed new files) at every
+  slice pause and before the final commit. A feature over 1.5× either line estimate stops at 4h; yes commits at that
+  size. The end report shows the growth.
 
 ### What's new in 4.2.0
 

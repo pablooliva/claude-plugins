@@ -61,7 +61,7 @@ agent-engineering/
 │   │   │                           #   (implementer bodies read §1; code review, slice review, impl critical review run it; fixers follow §7;
 │   │   │                           #   §8 = the scratch copy every mutation is made in, by every body);
 │   │   │                           #   fit-lens.md — the ONE definition of the reviews' Fit Lens (fit and size: match, reuse, smaller, next change;
-│   │   │                           #   a file outside the brief's footprint is a finding; MEDIUM for a new file, layer or duplicate helper;
+│   │   │                           #   a file outside the brief's footprint is a finding — a new file counts only when the brief names it; MEDIUM for a new file, layer or duplicate helper;
 │   │   │                           #   §4 = fixers remove or merge, never add, and report net lines): code review, slice review, impl critical review, fixers;
 │   │   │                           #   tracing-lens.md — the ONE definition of the reviews' trace check (slice review,
 │   │   │                           #   code review, and the 4e.5 final check read it; never restate it in a body);
@@ -74,6 +74,8 @@ agent-engineering/
 │   │                               #   `snapshot.py scratch` copies it outside the repo for a mutation check (test-integrity.md §8);
 │   │                               #   second-model-review.py — settles the cycle's reviewer and runs one review step on codex (the only second model);
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
+│   │                               #   growth.py — measures a feature's growth (source/test lines added, new files, new files the brief does not name)
+│   │                               #   against the design brief's `## Growth budget`; run at the slice pause and at 4h (stops over 1.5×);
 │   │                               #   trace-tree.py — renders a trace run's span file as call trees and call counts
 │   │                               #   (loads observability-init/scripts/check-span-file.py by path — keep both in step)
 │   │                               #   (tests: python3 -m unittest discover -s scripts/tests — they include test_eval_runner.py, which
@@ -82,7 +84,8 @@ agent-engineering/
 │   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)
 │   ├── rephrase/               # restates an end-of-work report as Done / Pending / Blocking / Next
-│   ├── simplicity-challenge/   # user-invoked: cuts a proposal down before it is built (function + structure);
+│   ├── simplicity-challenge/   # user-invoked: cuts a proposal down before it is built (function + structure); `--brief <path>` marks cuts
+│   │                       #   against an approved design brief (sdd-flow's stop after the spec, 3g, prints the command with it);
 │   │                       #   references/tiers.md is the plugin's ONE tier standard (tiers, floor, cut tests,
 │   │                       #   tier-plan template) — anything that works in tiers reads it, never restates it
 │   ├── worth-building/     # user-invoked: asks whether the work should be built as planned at all — six questions

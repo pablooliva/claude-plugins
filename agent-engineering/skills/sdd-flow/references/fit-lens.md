@@ -26,10 +26,17 @@ speed concern the spec does not raise.
 
 ## 2. The footprint
 
-A review that has a design brief compares the changed files (`SDD/` left out) with the areas of the brief's
-"What changes where" table. **A changed file under none of those areas is a fit finding**, unless the spec's
-`## Deviations from Design Brief` records it — those are departures the owner already saw. Name the file and
-why it was touched.
+A review that has a design brief compares the changed files (`SDD/` left out) with the brief's "What changes where"
+table. **A changed file outside the footprint is a fit finding**, unless the spec's `## Deviations from Design Brief`
+records it — those are departures the owner already saw. A file is outside the footprint when:
+
+- it **existed** before the work and falls under none of the table's areas; or
+- it is **new** — added since the work began — and no row names it by its own path. An area row covers changes to
+  existing files only, so a new file under `tests/` or `src/page/` is outside the footprint unless the table names
+  it.
+
+Name the file and why it was touched. The brief's `## Builds on` lists the existing helpers and patterns the change
+was to extend: a duplicate of one of them is a Reuse finding (§1).
 
 ## 3. Grading
 

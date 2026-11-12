@@ -178,37 +178,43 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 
 ---
 
-## 4h. Commit Checkpoint (stops only for a sign-off)  *(shared)*
+## 4h. Commit Checkpoint (stops only for a sign-off or a growth overrun)  *(shared)*
 
-**When it stops.** Only when a sign-off is asked for; otherwise go straight to the commit (4i). An unresolved finding never reaches this step: it stopped the flow earlier (the fix-loop and final-check halts).
+**When it stops.** Only when a sign-off is asked for, or the feature is over its growth budget; otherwise go straight to the commit (4i). An unresolved finding never reaches this step: it stopped the flow earlier (the fix-loop and final-check halts).
+
+**The growth check.** Run `python3 "$SKILL_ROOT/scripts/growth.py" --base <BASE> --brief SDD/requirements/DESIGN-[###]-[feature-name].md`, `BASE` = the `Base commit:` under `## Feature - Implementing`. The feature is **over its growth budget** when the third line it prints is `Over budget: yes` — source or test lines added are more than one and a half times the estimate the user approved with the brief. Keep the three lines for this step and for 4j. Exit 3 (the brief has no budget) is never over; 4j says the budget was missing. Exit 2 is a failed script: tell the user, and go on as not over.
 
 **A sign-off is asked for** when the evals gate is on and the SPEC has at least one line that starts `- [ ] **Sign-off: ` — the orchestrator runs `grep -E '^- \[ \] \*\*Sign-off: ' <SPEC>` and reads no more of the spec for it. Each such line names a requirement about what the model says that no rule can check: a judge model scored real outputs, and only a person's answer meets it (EVALS §9). With the gate off the lines are not looked for.
 
-When it stops, append this block to `progress.md`, then pause with the message below:
+When it stops, append this block to `progress.md` — with the `Sign-off asked for:` line only when a sign-off is asked for, and the `Over budget:` line only when the feature is over its budget — then pause with the message below:
 
 ```markdown
 ## Awaiting Commit Approval
 
-Implementation of SPEC-[###] is complete and uncommitted, waiting for the sign-off (4h).
+Implementation of SPEC-[###] is complete and uncommitted, waiting for your answer (4h).
 Summary: <IMPLEMENTATION-SUMMARY path>
 Sign-off asked for: <the requirement IDs on the lines found>   Eval results: <the final EVAL_RESULTS path — the one 4f was given>
+Over budget: <the growth script's first line>
 ```
 
-> **Implementation complete — your sign-off is asked for before the commit.**
+> **Implementation complete — your answer is needed before the commit.**
 > Brief check: [whole-feature: outside the approved footprint: none | list] [per-slice: N of M slices stayed inside the approved footprint; exceptions: …]
 > [If the summary's `### LOW Findings (listed, not fixed)` lists any:] LOW findings, listed and not fixed: [n] — in the summary under `### LOW Findings (listed, not fixed)`.
-> No rule can check the requirement(s) below, so a judge model scored what the application really answered. A score is a measurement, not a verdict — read the outputs before you answer.
+> [Over budget only — the growth part:] **The feature is over the growth budget you approved:** [the growth script's first line]. [Its second line, when it names files.] The code is reviewed and the tests pass; this asks whether the size is acceptable. Answering no leaves it uncommitted; the flow does not shrink it for you.
+> [Sign-off only — the sign-off part:] No rule can check the requirement(s) below, so a judge model scored what the application really answered. A score is a measurement, not a verdict — read the outputs before you answer.
 > [The `Sign-off requirements` table and the `Judge:` line of the implementation summary's `### Evals` part, as written there: one row per judged case, lowest score first.]
 > Every run's output, with the judge's sentence: `[the final EVAL_RESULTS path]` → `## Judged cases`
-> **Commit, and do you accept [the requirement IDs] on these outputs?** (y/n)
+> [Sign-off asked for:] **Commit, and do you accept [the requirement IDs] on these outputs?** (y/n) [Over budget only:] **Commit at this size?** (y/n) [Both: one question naming both — a yes accepts both.]
 
-The orchestrator takes the table and the line from the summary document — the file, not a subagent's return — and never opens the eval results: they hold what the model answered, and reading them is the user's part here. A summary with no such table is a completion that did not finish its work: handle it as a failed 4f spawn (Error Handling, `phases/protocols.md`), never by asking without the scores.
+When a sign-off is asked for, the orchestrator takes the table and the line from the summary document — the file, not a subagent's return — and never opens the eval results: they hold what the model answered, and reading them is the user's part here. A summary with no such table, when a sign-off is asked for, is a completion that did not finish its work: handle it as a failed 4f spawn (Error Handling, `phases/protocols.md`), never by asking without the scores. When the checkpoint stops only for the growth budget, the sign-off part is left out and no table is looked for.
 
 Wait for the answer before committing.
 
-- **y** → first append `## Sign-off - <the requirement IDs> accepted at 4h` to `progress.md` — one line. One yes accepts every requirement listed; there is no accepting some of them. Then 4i. Its `## Implementation - Committed` line answers the block.
+- **y** → first append, to `progress.md`, `## Sign-off - <the requirement IDs> accepted at 4h` when a sign-off was asked for, and `## Growth - accepted at 4h: <the growth script's first line>` when the feature was over its budget — one line each. One yes accepts every requirement listed and the size; there is no accepting some of them. Then 4i. Its `## Implementation - Committed` line answers the block.
 - **n** → nothing is committed and nothing is accepted; stop with the block pending. The user may change the code or the artifacts by hand first; a change that touches a security rule's guard is theirs to raise — the flow does not re-review after 4h. Nor does it make an eval run after 4h: the scores this checkpoint shows stay those of the final check, whatever is changed afterwards, and a change the user wants scored is one they run themselves, with the eval command in `SDD/OBSERVABILITY.md`.
 - **Session ends with no answer** → the block is still the latest one.
+
+When the checkpoint is shown again, the growth check runs again: a feature that is no longer over its budget, with no sign-off asked for, goes straight to 4i.
 
 In the last two cases `/sdd-flow continue` re-shows this checkpoint (`phases/protocols.md` → `## Awaiting Commit Approval`).
 
@@ -238,6 +244,7 @@ The flow ends with this short report — no stop came before the commit unless a
 > LOW findings, listed and not fixed: [each line of the summary's `### LOW Findings (listed, not fixed)`, one line each — or "none"].
 > Not proven: [the harvested-cases line below, when it applies — or "nothing"].
 > Diff: [the output of `git diff --shortstat <BASE> HEAD`, with `BASE` = the `Base commit:` under `## Feature - Implementing` — files changed, lines added and removed by the whole feature].
+> Growth: [the growth script's first line from 4h, and its second when it names files — or "the brief had no growth budget"][ — accepted by you at 4h, when 4h wrote a `## Growth - ` line].
 > Brief check: [the 4h brief-check line].
 > [If 4h wrote a `## Sign-off - ` line:] Accepted by you at the commit checkpoint: [the requirement IDs], on the scores and outputs in `[the final EVAL_RESULTS path]`.
 > [Part of `Not proven`, if this cycle's IMPLEMENTATION-PLAN has a `Harvested, before any change:` line that does not end `failed`:] Harvested cases not seen to fail before the change made for them: [each such case, with what its line says]. A stand-in that passed, or only got scores, may not reproduce what its trace showed — a later cycle can rewrite it, or keep it as a guard (`references/evals.md` §2).

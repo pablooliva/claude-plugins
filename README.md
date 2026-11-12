@@ -36,11 +36,11 @@ Context management for Claude Code as a personal agent. PACE keeps Claude operat
 - `/continue` — reloads that state in a new session
 - `/commit` — saves work to version control
 
-### 3. Agent Engineering — v4.2.0
+### 3. Agent Engineering — v4.3.0
 
 Cross-cutting skills and commands for disciplined AI-assisted software development, based on JD Forsythe's [10 Claude Code Principles](https://jdforsythe.github.io/10-principles/). It provides both cross-cutting guardrail skills that compound quality over time (each independently usable in any session) **and** `sdd-flow`, a self-contained SDD lifecycle orchestrator. As of 1.0.0, `sdd-flow` is a permanent fork of the SDD methodology — it ships its own agents, hooks, and phase bodies, so the `sdd` plugin is **not** required at runtime.
 
-**v4.2.0 highlights:** `sdd-flow`'s code reviews also judge fit and size: does the change match and reuse the code around it, and is it as small as the tier allows. A file outside the design brief's footprint is a finding; a new file, layer, or duplicate helper is MEDIUM and is fixed by removing code, never adding it.
+**v4.3.0 highlights:** `sdd-flow` bounds a change's size before code: the design brief names every new file, lists the existing code it builds on, and sets a growth budget you approve; the panel reviews only what the change touches and proposes extra scope instead of adding it; and the flow always stops after the spec so you can cut it down with `/simplicity-challenge --brief`. A feature over 1.5× its budget stops before the final commit.
 
 **v4.1.0 highlights:** `sdd-flow` stops counting enforcement sites. One adversarial security check on Codex at the end of the feature reads every security rule for a path where it does not hold, and each gap is fixed with a test that fails without its guard (at most two rounds). LOW findings are listed for you, not fixed. Mutation checks run in a scratch copy outside the repository.
 

@@ -1,4 +1,4 @@
-# Phase: Planning — Step 2.5 (Design Gate) · Steps 3a–3g
+# Phase: Planning — Step 2.5 (Design Gate) · Steps 3a–3g (Stop After the Spec)
 
 Read when research's last step (2e) is done. Phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file (`Reads: 0/15`) + the `planning-compact.md` compact body path. Body paths are `SKILL_ROOT/bodies/<file>.md`, resolved absolute. A review step run on the second model carries none of the three (`references/second-model-review.md` §3).
 
@@ -43,6 +43,7 @@ Re-plan: <no | yes — triggering retrospective: <retro-path>>
 > [The brief's "In one paragraph", verbatim]
 > **Tiers:** building **Tier [N]** — [one line]. Left for later: Tier 2 — [one line]; Tier 3 — [one line]. [Or: "Tiers: not applicable — [the brief's reason]".]
 > **Decisions made:** [D1 title — chosen option] · [D2 …]
+> **Growth budget:** [the brief's three `## Growth budget` lines, on one line] — new files: [each path the table names as new]. Approving the brief approves this budget: when the finished feature adds more than one and a half times either line estimate, the flow stops before its final commit.
 > **Questions for you:** [Q1 — options — recommended (a)] · [Q2 …] [Or: "None."]
 > **Research review:** [one line: critical-review severity and whether findings were resolved] [· ADRs captured: [numbers] — only when an `## ADR Capture - Done` line that names any already follows the latest `## ADR Candidates` entry, as at a re-plan's gate. Otherwise omit this part.]
 > **Tracing foundation:** [the brief's `## Tracing foundation` line — only when the brief has that section. Otherwise omit this line.]
@@ -99,9 +100,9 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning.md`
 - **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/orchestration/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **the observability line** copied verbatim, **TRACING** and **EVALS** when that line says `present`, **HARVEST** when there is one (derived as at 2.5a, again just before this spawn), and on a next-tier cycle the previous tier's research document.
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, append `progress.md`.
-- **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (default includes `module-depth`), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force. The body's **tracing rule** applies: the spec carries `tracing:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when the observability line says `present` and the field is not `false` — a `### Planned call graph` under `## Modules` with every entry point, LLM call, and external call marked, plus a `Traced nodes:` line per slice in per-slice mode; otherwise neither. The body's **evals rule** applies: the spec carries `evals:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when evals are on for this spec by the table under `evals:` in the body — an `### Evals` sub-section under `## Validation Strategy` with every case written out, a `Sign-off:` line under `### Manual Verification` for each requirement only a person can accept, and an `Evals:` line per slice in per-slice mode; otherwise none of the three.
+- **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (only the specialists whose area the change touches, at most three; `agent-security` and `slice-integrity` are added outside the three), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force. The body's **tracing rule** applies: the spec carries `tracing:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when the observability line says `present` and the field is not `false` — a `### Planned call graph` under `## Modules` with every entry point, LLM call, and external call marked, plus a `Traced nodes:` line per slice in per-slice mode; otherwise neither. The body's **evals rule** applies: the spec carries `evals:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when evals are on for this spec by the table under `evals:` in the body — an `### Evals` sub-section under `## Validation Strategy` with every case written out, a `Sign-off:` line under `### Manual Verification` for each requirement only a person can accept, and an `Evals:` line per slice in per-slice mode; otherwise none of the three.
 
-**If the practicality gate fired** — the subagent's return says so — the spec now says `delivery_mode: whole-feature` with a `Slicing not applicable: <reason>` line. Do not stop: tell the user in the next user-facing message that the feature will be built in one piece, quoting the reason, and carry on.
+**If the practicality gate fired** — the subagent's return says so — the spec now says `delivery_mode: whole-feature` with a `Slicing not applicable: <reason>` line. Do not stop: the stop after the spec (3g) shows the reason.
 
 Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning-complete.md`
@@ -125,7 +126,7 @@ If `cross_cutting_decisions:` is empty/absent, skip this step.
 
 ## 3c. Specialist Panel Review — two stages
 
-Panel composition comes from the spec's `review_panel:` frontmatter. If absent or empty, apply the **default panel**: `security`, `performance`, `data-modeling`, `api-contract`, `module-depth` — plus `slice-integrity` when the spec declares `delivery_mode: per-slice`, plus `agent-security` when the spec's `agent_security:` gate is open (see below). (Other available values: `reliability`, `accessibility`, `cost`, `privacy`.)
+Panel composition comes from the spec's `review_panel:` frontmatter: the specialists whose area the change touches, at most three (`bodies/planning.md` → `review_panel:`). If it is absent or empty, the panel is `module-depth` alone. To the chosen values add `slice-integrity` when the spec declares `delivery_mode: per-slice`, and `agent-security` when the spec's `agent_security:` gate is open (see below); neither counts toward the three. A `review_panel:` with more than three other values is not cut by the orchestrator: planning-complete (3a) checks the field, and the stop after the spec (3g) shows the panel that ran.
 
 **`agent-security` gate.** Read the spec's `agent_security:` frontmatter — `auto` (default when absent), `true`, or `false`:
 - `true` → include `agent-security` in the panel, and the specialist skips its own scope gate. It can only skip it if it is told: pass the line `agent_security: true` in its prompt.
@@ -189,7 +190,7 @@ Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, m
 
 Each spawn gets:
 - **Body:** `bodies/panel-specialist.md` ("apply ONLY the Section your panel value names").
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, the panel value, and the resolved PANEL-FINDINGS output path. For the `agent-security` value, also pass the resolved **CATALOG** path (`SKILL.md` → SKILL_ROOT resolution) and the resolved gate value as the line `agent_security: true` or `agent_security: auto` (above). When the spec's frontmatter carries `tier:`, also pass **TIERS** — the body's *Respect the Tier* principle needs it.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier (the body's *Respect the Brief* principle: a finding that adds scope the brief did not ask for is an addition, not a defect), the panel value, and the resolved PANEL-FINDINGS output path. For the `agent-security` value, also pass the resolved **CATALOG** path (`SKILL.md` → SKILL_ROOT resolution) and the resolved gate value as the line `agent_security: true` or `agent_security: auto` (above). When the spec's frontmatter carries `tier:`, also pass **TIERS** — the body's *Respect the Tier* principle needs it.
 - **Output:** `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md`.
 - Each specialist writes exactly one findings file and spawns nothing. (The `slice-integrity` specialist short-circuits unless `delivery_mode: per-slice`.)
 
@@ -197,9 +198,9 @@ Each spawn gets:
 
 After all Stage 1 specialists return, spawn ONE **`agent-engineering:sdd-critical-reviewer`** subagent (Opus — the synthesis is the adversarial work):
 - **Body:** `bodies/panel-synthesis.md`
-- **Inputs:** the exact list of `SDD/reviews/PANEL-FINDINGS-*-[feature-name]-[YYYYMMDD].md` paths written in Stage 1, plus the spec path. (Its counter trigger may be raised to N+5 for an N-specialist panel.)
+- **Inputs:** the exact list of `SDD/reviews/PANEL-FINDINGS-*-[feature-name]-[YYYYMMDD].md` paths written in Stage 1, the spec path, **BRIEF** (to tell a finding from an addition), and **TIERS** when the spec carries `tier:` (the floor). (Its counter trigger may be raised to N+5 for an N-specialist panel.)
 - **Output:** `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`.
-- **Task:** Read each PANEL-FINDINGS file from disk, dedupe cross-specialist overlap, aggregate severity, and emit the verdict. It spawns nothing.
+- **Task:** Read each PANEL-FINDINGS file from disk, dedupe cross-specialist overlap, aggregate severity, and emit the verdict. Collect every `ADDITION` into the review's `## Additions for the owner`, numbered `A1`, `A2`, …; additions carry no severity and never count toward the verdict. It spawns nothing.
 
 ### Act on the verdict
 
@@ -225,6 +226,8 @@ Each iteration:
 ### Brief and tier rules for spec fixes (embed verbatim in the 3c and 3e fix prompts)
 
 > **Stay inside the approved brief.** If a resolution departs from the design brief's Key decisions, Not doing list, or answered questions, add an entry to the spec's `## Deviations from Design Brief` — do not leave that section saying `None.`. Never reopen a question the user has answered.
+>
+> **Additions are not yours to make.** The panel review's `## Additions for the owner` lists scope the brief did not ask for. Do not add any of it to the spec: the owner decides each at the stop after the spec. Resolve only findings.
 >
 > **Deferral is a resolution only for absent scope.** When the spec carries `tier:` and a finding says something is *missing* — an unspecified edge case, variation, or hardening — you may resolve it by adding a row to `## Deferred to Later Tiers` (next free `DEFER-XXX`, `Came from` = `review`) instead of specifying it, provided the tier standard's cut tests place it in a later tier and its floor does not protect it. If this tier can reach the deferred case, add the `FAIL-XXX` entry for its loud failure in the same edit. A finding about behaviour this tier *does* specify is a defect: fix it — it can never be deferred. A finding that says a deferral is unsafe, or that a part is built ahead for a later tier, is resolved by specifying the item or removing the part.
 
@@ -295,23 +298,43 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Pr
 
 ---
 
-## 3g. Deviation Check and Transition
+## 3g. Stop After the Spec
 
-The spec was rewritten up to four times after the brief was approved (3a, the 3c loop, 3e, and 3e.5's one further fix). Before any code is written, check whether it is still what the user agreed to.
+**Fires every time planning reaches this point, and on every return to it. No flag skips it.** The spec was rewritten up to four times after the brief was approved (3a, the 3c loop, 3e, and 3e.5's one further fix), and the panel may have proposed more. Before any code is written the owner sees what the spec has become, and is asked to cut it down.
 
-Read the spec's `## Deviations from Design Brief`: take the first non-empty line of the section's body (the first line after the heading that is not blank, an HTML comment, or a horizontal rule).
+Read, from the files (not from a subagent's return):
 
-- **`None.`** (case-insensitive, trailing period optional) → no pause; route to Step 4 below.
-- **The section is absent or empty** → the spec is malformed: re-spawn the 3a completion subagent to add it (Error Handling's two-failure limit applies). Never read an absent section as "no deviations".
-- **Anything else** → append `## Awaiting Deviation Approval` (with the spec path) to `progress.md` and pause. The halt block is required: `Planning Phase - COMPLETE` was recorded in 3a, so without it `/sdd-flow continue` would route straight to Step 4.
+- the spec's `## Deviations from Design Brief`: the first non-empty line of its body (the first line after the heading that is not blank, an HTML comment, or a horizontal rule). `None.` (case-insensitive, trailing period optional) means none. **An absent or empty section** means the spec is malformed: re-spawn the 3a completion subagent to add it (Error Handling's two-failure limit applies) — never read it as "no deviations";
+- the latest PANEL-SPEC's `## Additions for the owner` — every numbered addition not already marked `accepted` or `declined` in it;
+- the spec's `review_panel:`, `delivery_mode:`, and its `Slicing not applicable:` line when there is one;
+- the brief's `## Growth budget`, and the spec's line count (`wc -l`).
 
-  > **The spec departs from the brief you approved in [N] way(s):**
-  > [each deviation: what the brief said → what the spec says — why]
-  > Reply **y** to accept and start implementation, or **n** to halt and edit the spec.
+Append this block to `progress.md`, emit the message, and STOP:
 
-  - **y** → append `## Design Deviations - ACCEPTED` to `progress.md` and route to Step 4.
-  - **n** → halt with the block pending. `/sdd-flow continue` re-reads the section (the user may have edited the spec) and re-runs this check.
+```markdown
+## Awaiting Spec Approval
 
-A spec written before the design gate shipped has no brief: if no `## Design Brief - ` line exists in `progress.md`, skip this check.
+Spec: SDD/requirements/SPEC-[###]-[feature-name].md   Brief: SDD/requirements/DESIGN-[###]-[feature-name].md
+```
 
-**Route to Step 4.** First append `## Planning - Accepted` to `progress.md` — one line, the spec path. It is the phase-detection marker that planning's reviews and this check are done: `Planning Phase - COMPLETE` alone does not say so, because the completion subagent writes it back in 3a. Then read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint — the design gate covered the decision. The next stops are the slice pauses (per-slice mode); the final commit stops only for a sign-off or an unresolved finding (`phases/implementation-whole-feature.md` → 4h).
+> **The spec is ready. Nothing is built until you approve it.**
+> Spec: `SDD/requirements/SPEC-[###]-[feature-name].md` ([N] lines). Panel: [the panel that ran]. Delivery: [per-slice, [M] slices | in one piece — [the `Slicing not applicable:` reason]].
+> Growth budget you approved: [the brief's three lines, on one line].
+> **Departures from the brief:** [each: what the brief said → what the spec says — why] [or "none"].
+> **Proposed by the panel, not in the spec:** [each open addition: `A[n]` — one line] [or "none"]. `accept A1, A3` adds them; the rest are dropped.
+> **Cut it down:** `/simplicity-challenge SDD/requirements/SPEC-[###]-[feature-name].md --brief SDD/requirements/DESIGN-[###]-[feature-name].md` lists what the spec could drop or defer; a cut that touches a decision you made in the brief is marked "needs your call". Then reply `cut` with the cuts you want, by their rows or in your words. Optional; the flow does not run it for you.
+> Reply `approve` to start building[, accepting the departures above], `cut …` and/or `accept …` to change the spec first, or `stop`.
+
+**The `Cut it down` line is a reminder, not a step.** The orchestrator never invokes `simplicity-challenge` itself and records nothing about whether it was run. Its verdict reaches the flow only as the owner's reply.
+
+Act on the reply:
+
+- **`approve`** → when the spec lists departures, append `## Design Deviations - ACCEPTED` to `progress.md`; mark each open addition `declined` in the PANEL-SPEC's `## Additions for the owner` (the orchestrator edits only that marker); then route to Step 4 (below).
+- **`cut …`, `accept …`, or both** → first append `## Spec Stop Request` to `progress.md`, with the reply verbatim beneath it, so the request survives a session that ends mid-fix. Then spawn an **`agent-engineering:sdd-workhorse`** fix subagent (Safety-Net Rule, a fresh counter, `planning-compact.md`):
+  - **Inputs:** the spec, **BRIEF** with its approved revision and tier, the latest PANEL-SPEC, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, **EVALS** when it is `on`, and the owner's reply **verbatim**.
+  - **Outputs:** updated spec; the accepted additions marked `accepted` in the PANEL-SPEC's `## Additions for the owner`; append `progress.md` (`## Spec Stop Fix - Done`).
+  - **Task:** Make exactly what the reply asks and nothing else; a change the spec already shows (a run interrupted earlier made it) is left as it is. **A cut** of something the spec does is moved to `## Deferred to Later Tiers` (next free `DEFER-XXX`, `Came from` = `owner cut`) when the spec carries `tier:`, or removed; a cut of a part (a module, a layer, an option) is removed. A cut the tier standard's floor protects is not made: say so in the return. When the cut case stays reachable, add its `FAIL-XXX` loud failure in the same edit. **An accepted addition** is specified as the panel review describes it. Record each change that departs from the brief under `## Deviations from Design Brief`. Keep every ID stable that the cut does not remove. Embed the **Call-graph rule for spec fixes** (3c) with `tracing: on` and the **Evals rule for spec fixes** (3c) with `evals: on`.
+  - **Then** the orchestrator commits the spec and the PANEL-SPEC (per `commands/commit.md`, message naming the SPEC and "changes asked for at the stop after the spec") and **shows this stop again**, read afresh from the files. The changed spec is not reviewed again: what the owner asked for is the owner's decision.
+- **`stop`** → leave `## Awaiting Spec Approval` as the latest block and halt. `/sdd-flow continue` shows this stop again; the owner may have edited the spec by hand.
+
+**Route to Step 4.** First append `## Planning - Accepted` to `progress.md` — one line, the spec path. It is the phase-detection marker that planning's reviews and this stop are done: `Planning Phase - COMPLETE` alone does not say so, because the completion subagent writes it back in 3a. Then read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint: the design gate approved the design, and this stop the spec. The next stops are the slice pauses (per-slice mode); the final commit stops only for a sign-off or a growth-budget overrun (`phases/implementation-whole-feature.md` → 4h).

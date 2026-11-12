@@ -72,7 +72,7 @@ Create the specification using this enhanced template:
 
 ```markdown
 ---
-review_panel: [security, performance, data-modeling, api-contract, module-depth]
+review_panel: [module-depth, security]
 cross_cutting_decisions: []
 delivery_mode: per-slice
 agent_security: auto
@@ -339,13 +339,14 @@ handle_upload(req)                              [entry: POST /uploads]
 
 The spec template includes these YAML frontmatter fields, consumed by sdd-flow and related phases. Populate them thoughtfully based on the research foundation:
 
-- **`review_panel:`** — List of specialist reviewers to convene during spec-review-panel. Default includes `module-depth` (deep-module check on the `## Modules` section, depth measured as leverage) and covers API/data-backed features. Adjust based on feature characteristics:
-  - Add `accessibility` for UI features with user-facing interaction.
-  - Add `privacy` for features handling PII, consent, or regulated data.
-  - Add `cost` for data-intensive or high-traffic features.
-  - Add `reliability` for distributed systems, async processing, or retry-heavy flows.
-  - Add `agent-security` for agentic features — see `agent_security:` below, which normally appends this value for you.
-  - Remove specialists that clearly don't apply (e.g., `api-contract` for pure internal tooling). Removing `module-depth` is rare — almost every spec creates or changes modules.
+- **`review_panel:`** — The specialist reviewers to convene during spec-review-panel: **only those whose area this change touches, and at most three.** Two values sit outside the three and are never chosen by hand: `agent-security`, which `agent_security:` below appends, and `slice-integrity`, which the panel adds itself for a per-slice spec. Pick by what the spec actually changes, most at risk first:
+  - `module-depth` — the change creates or reshapes modules (most specs do).
+  - `security` — it handles untrusted input, authentication, authorization, or secrets.
+  - `api-contract` — it adds or changes an interface other code or clients call.
+  - `data-modeling` — it adds or changes stored data or its schema.
+  - `performance`, `reliability`, `cost` — a hot path, a distributed or retrying flow, or high volume.
+  - `accessibility`, `privacy` — a user-facing interface, or personal or regulated data.
+  A value whose area the change does not touch is left out, however generally useful it is: each specialist reviews only for its area, and an unneeded one adds findings the spec does not need.
 
 
 - **`cross_cutting_decisions:`** — List of topic labels (snake_case) for any architectural decisions made during this feature that bind future work across the system. Examples: `orchestration_engine`, `vector_store`, `auth_provider`, `primary_datastore`, `logging_format`. Leave empty `[]` if this feature makes no cross-cutting decisions. During planning-complete, the cross-cutting-adr step will extract details for each label from the research/spec and write ADR files under `SDD/adr/`.
@@ -418,7 +419,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
 2. **Conform to the Brief:**
    - Its Key decisions, Not doing list, and answered questions are binding; its delivery outline is your starting slice order (you may refine it — you run the slice-practicality gate, which the brief did not).
    - Where research or the feasibility arithmetic forces a departure, make it and record it under `## Deviations from Design Brief`. Never depart silently, and never reopen a question the user has answered.
-   - A module or file area the brief's "What changes where" table does not cover is a `footprint` deviation — record it.
+   - A module or file area the brief's "What changes where" table does not cover is a `footprint` deviation — record it. So is every new file the spec plans that the table does not name by its own path: the table names each new file, and an area row covers only changes to existing files.
 
 3. **Scope to the Tier (tiered specs only):**
    - Specify the approved tier and nothing beyond it. Start `## Deferred to Later Tiers` from the tier plan's Deferred rows, keeping their `DEFER-XXX` IDs; a deferral you add takes the next free ID with `Came from` = `proposal`. Apply the cut tests in TIERS to anything the research suggests that the brief did not place.
@@ -561,6 +562,8 @@ Before considering the specification complete:
 - [ ] `### Quantitative Ledger` is populated with every goal and constraint the spec asserts, or carries the single line `No quantitative goals or constraints.`
 - [ ] Each `goal` row's `Bears on` column names the constraints acting on it, and the arithmetic clears — no goal requires more headroom than its constraints permit
 - [ ] `agent_security:` is populated, and when the feature has an agentic surface the value is `true` and `review_panel:` includes `agent-security`
+- [ ] `review_panel:` names only specialists whose area this change touches — at most three, not counting `agent-security` and `slice-integrity`
+- [ ] Every new file the spec plans is named by its own path in the brief's "What changes where" table, or recorded under `## Deviations from Design Brief`
 - [ ] `tracing:` is `auto`, `true`, or `false`
 - [ ] Tracing on: `### Planned call graph` has one tree per entry point the feature adds or changes; every entry point, LLM call, and external call in it is marked in the form *Planned call graph rules* gives; every LLM node states its maximum; a `not exercised in tests` mark carries its reason
 - [ ] Tracing on, `delivery_mode: per-slice`: every slice has a `Traced nodes:` line, and every marked node is in exactly one of them

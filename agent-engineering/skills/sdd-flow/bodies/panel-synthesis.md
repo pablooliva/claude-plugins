@@ -2,7 +2,7 @@
 
 You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
-You are the Stage-2 synthesis subagent for the specialist panel. The per-domain specialists have ALREADY run and each wrote a `PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md` file. Your prompt lists the exact PANEL-FINDINGS file paths to read. Read each from disk, aggregate and dedupe cross-specialist overlap, compute the verdict per the thresholds below, and write the synthesized `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md` document. You spawn nothing and invoke nothing.
+You are the Stage-2 synthesis subagent for the specialist panel. The per-domain specialists have ALREADY run and each wrote a `PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md` file. Your prompt lists the exact PANEL-FINDINGS file paths to read, the spec, the design brief the owner approved, and — for a tiered spec — the tier standard. Read each from disk, aggregate and dedupe cross-specialist overlap, compute the verdict per the thresholds below, and write the synthesized `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md` document. You spawn nothing and invoke nothing.
 
 ## Synthesis Rules
 
@@ -19,6 +19,10 @@ A specialist's output **must not** be "LGTM" or "no issues found" without eviden
 If two specialists flag the same underlying issue (e.g., security and data-modeling both flag the same missing constraint), merge into a single finding with multiple specialist signatures. Do not inflate severity counts through duplication.
 
 `security` and `agent-security` are the most likely pair to overlap — they share a lane boundary (classical appsec vs. agentic risk), and a finding like "untrusted input reaches a privileged operation" can surface in both. Merge them, keep the more specific framing, and count the merged finding once. A merged `security`/`agent-security` finding still qualifies as cross-domain for the verdict rule below.
+
+### Additions Are Collected, Not Graded
+
+A specialist's `**[ADDITION]**` entry proposes scope the brief did not ask for. Do not grade it, do not count it toward the verdict, and do not put it under Recommended Actions. Collect every addition into `## Additions for the owner`, merging duplicates across specialists, numbered `A1`, `A2`, … in the order you list them. A finding a specialist graded that is in fact new scope — the behaviour the brief describes would not be wrong without it — moves to the additions too; a "missing" item the tier standard's floor protects stays a finding. The owner accepts or declines each addition at the stop after the spec, and only the orchestrator writes `accepted` or `declined` after one.
 
 ### Severity Aggregation for the Verdict
 
@@ -82,6 +86,12 @@ SDD/reviews/PANEL-SPEC-[feature-name]-YYYYMMDD.md
 [Output from slice-integrity specialist, verbatim. Render this sub-header ONLY when the spec's frontmatter declares `delivery_mode: per-slice`. Omit the sub-header entirely (do not render an empty section, do not render "n/a") when `delivery_mode: whole-feature` or the field is absent — mirrors the specialist's silent-skip activation gate at section 4.7. This keeps whole-feature panel deliverables bit-for-bit identical to the pre-2.0.0 shape.]
 
 [Any additional specialists from the panel.]
+
+## Additions for the owner
+
+[Scope the specialists would add that the brief did not ask for. Not graded; not part of the verdict; no fix applies them. `None.` when there are none.]
+
+- **A1** — [what it would add] — [specialist(s)] — Why: [one line] — Cost: [one line]
 
 ## Cross-Specialist Observations
 

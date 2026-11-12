@@ -9,6 +9,7 @@ Your spawn prompt names exactly ONE panel value (e.g. `security`). Apply ONLY th
 Your prompt provides:
 - **Spec path:** `SDD/requirements/SPEC-[###]-[feature-name].md` — read this.
 - **Research path:** `SDD/research/RESEARCH-[###]-[feature-name].md` — read this for context.
+- **Brief path:** `SDD/requirements/DESIGN-[###]-[feature-name].md` — the design brief the owner approved; read it before reviewing. See *Respect the Brief* below.
 - **Panel value:** exactly one of `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity`, `accessibility`, `cost`, or `privacy`.
 - **PANEL-FINDINGS path:** absolute path where you must write your output file.
 - **Control-catalog path** (only when your panel value is `agent-security`): absolute path of `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — read it before reviewing.
@@ -50,9 +51,27 @@ Applies only when the spec's frontmatter carries `tier:` (1, 2, or 3). Read the 
 - **Built ahead is a finding.** Raise one for any part that exists only for a later tier: a module, interface member, parameter, option, or dependency that no requirement of this tier uses, or a justification that rests on a later tier's needs. MEDIUM by default; HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal — "a later tier will need it" is not a justification.
 - **Scope.** Everything this tier does specify is held to the full standard of your section. A tier never excuses a defect in what it builds.
 
+### Respect the Brief
+
+The owner approved the brief's scope; the spec is held to it. Your job is to find what is wrong with what the spec does — not to widen what it does.
+
+- **A defect is a finding.** Something the spec specifies that is unsafe, ambiguous, inconsistent, or will fail in your domain — graded HIGH, MEDIUM, or LOW as above.
+- **Scope beyond the brief is an addition, not a finding.** A behaviour, case, option, component, or interface that neither the brief nor the spec asks for, which your domain would recommend, is written as `**[ADDITION]**`, with no severity. It never counts toward the verdict and no fix subagent applies it: the owner decides each one at the stop after the spec.
+- **The floor is never an addition.** What the tier standard's floor protects (TIERS → The floor) — data-loss protection, a security control on an exposed surface, a loud failure for a case this tier can reach — is a finding when missing, at its severity, whether or not the brief mentions it.
+
+When unsure whether something is missing from what the spec does or is new scope, ask: would the behaviour the brief describes be wrong without it? Yes → finding. No → addition.
+
 ## 4. Specialist Prompts
 
 Each specialist below follows the same structure: identity (<50 tokens), vocabulary payload (15-30 precise terms), named anti-patterns with detection/resolution, output schema. No flattery. No superlatives.
+
+**Additions, in every section's output.** After the findings, list any additions (*Respect the Brief*), one per entry, in this form — or omit the list when there are none:
+
+```markdown
+- **[ADDITION]** [What it would add]
+  - Why: [the risk or gain in your domain, citing the spec or research]
+  - Cost: [what it would add to the spec and the code — a requirement, a module, a test]
+```
 
 Apply ONLY the sub-section matching your assigned panel value.
 
