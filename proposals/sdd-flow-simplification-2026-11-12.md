@@ -66,6 +66,9 @@ Input for the prompt that implements the change in a new worktree. Nothing imple
   fit-and-size lens in reviews; "extend before adding" implementer rule; one consolidation pass at the end;
   tests check visible behaviour, not wording or shape; test-to-code ratio shown as a warning.
 - Slim the orchestrator: subagents return verdict + path; target ~15k tokens of core instructions.
+- Decided 2026-11-12 in detail: the site proof becomes one security verification, LOW findings are listed
+  not fixed, mutation checks run in a scratch copy — `proposals/enforcement-site-proof-2026-11-12.md`
+  (evidence) and `proposals/enforcement-site-proof-prompt-2026-11-12.md` (implementing prompt).
 
 ## Settled 2026-11-12
 
