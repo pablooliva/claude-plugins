@@ -180,7 +180,21 @@ before code comes first.
    `## Builds on` and named new files and follow `fit-lens.md` §5; the implementer runs on Opus; fix-round cap of two
    for the slice loop and the spec panel; test rules 5–6 in `test-integrity.md` with T7 findings; tests per source line
    in `growth.py`'s output. Not built: the end-of-feature consolidation pass (left to step 5's review merge).
-5. **Fewer steps and a slimmer orchestrator:** merge the two end-of-feature code reviews, drop the per-slice
+5. **Fewer steps and a slimmer orchestrator** — decided 2026-11-12, to be built in this order, each its own release
+   with a Codex review:
+   - **5a (4.6.0), fewer steps:** merge 4b and 4d into one end-of-feature code review (Codex); drop the per-slice
+     retrospective and the learnings ledger, the slice review ending with one `Re-plan: yes|no — why` line; drop the
+     research review (2c/2d). Check done: neither of tornado's two extra hidden tests came from the research review —
+     one came from the spec panel with the owner's answer (truncation raises in `flush()`), one from the panel alone
+     (`flush()` refuses with a pending tail); inferred from the diffs, no per-test results were recorded.
+   - **5b (4.7.0), records out of git:** reviews, counters, call logs, eval results, trace trees and compaction files
+     go to a git-ignored folder under `SDD/` (e.g. `SDD/.flow/`); brief, spec, ADRs, glossary, tier plan and summary
+     stay committed.
+   - **5c (5.0.0), slim orchestrator:** rewrite `SKILL.md` and the phase files to ~15k tokens read at every step, rare
+     cases (handoffs, halts, re-plans) in files read only when they happen; the owner tries it on a real feature
+     before it reaches main.
+
+   Original item: **Fewer steps and a slimmer orchestrator:** merge the two end-of-feature code reviews, drop the per-slice
    retrospective and the research review, keep process records out of the repository, shorten the instructions.
 6. **Checks.** Check 2 (did evals catch regressions in SPEC-007) only reads records, so run it whenever convenient;
    its answer decides whether the evals gate stays as it is. Check 3, the application-scale comparison, after step 5.
