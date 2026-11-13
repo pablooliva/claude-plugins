@@ -198,6 +198,17 @@ before code comes first.
    - **5c (5.0.0), slim orchestrator:** rewrite `SKILL.md` and the phase files to ~15k tokens read at every step, rare
      cases (handoffs, halts, re-plans) in files read only when they happen; the owner tries it on a real feature
      before it reaches main.
+     - Decided 2026-11-13: the budget is **core + the current phase** — `SKILL.md` cut to ~6k tokens of what every
+       step needs, plus one phase chapter of ≤ ~9k; a resume, handoff, rotation, re-plan, next-tier start or
+       decomposition reads its own file only when it happens. **Same behaviour:** move and tighten wording only;
+       cuts noticed on the way are listed for the owner and built later if approved.
+     - Baseline (4.7.1): `SKILL.md` 45 KB; phases 166 KB (planning 45, whole-feature 41, protocols 35, per-slice 30,
+       setup 10, research 5) — a step reads ~31k tokens today.
+     - Check: a rule inventory (every progress marker, halt heading, owner-table row, body/reference/script path
+       and step label in the orchestrator files: 133 / 6 / 11 / 30 / 25 at 4.7.1) taken before and after; every
+       item must still be present, or be on the owner's list of approved cuts.
+     - Build order, one commit each on the branch: (1) split out the rare-case files; (2) the per-phase chapters;
+       (3) the `SKILL.md` core; (4) cross-references, diagrams, CLAUDE.md, README; Codex review after (4).
 
    Original item: **Fewer steps and a slimmer orchestrator:** merge the two end-of-feature code reviews, drop the per-slice
    retrospective and the research review, keep process records out of the repository, shorten the instructions.
