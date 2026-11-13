@@ -1,6 +1,6 @@
 # Phase: Implementation — end of feature (Steps 4b–4j, both delivery modes)
 
-Read with `phases/implementation-inputs.md` once the feature is implemented: after whole-feature 4a (`## Feature - Implemented`), or after the last slice's commit (per-slice end-of-feature cycle, `phases/implementation-per-slice.md`). The post-implementation steps (4b code review, 4c fixes, 4e.5 final check, 4f completion, 4h checkpoint, 4i commit, 4j announcement — there is no 4g; eval capture was removed in 3.0.0) are shared with per-slice's end-of-feature cycle.
+Read with `phases/implementation-inputs.md` once the feature is implemented: after whole-feature 4a (`## Feature - Implemented`), or after the last slice's commit (per-slice end-of-feature cycle, `phases/implementation-per-slice.md`). Both delivery modes run these steps the same way (there is no 4g; eval capture was removed in 3.0.0).
 
 Phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file + the `implementation-compact.md` compact body path. A review step run on the second model carries none of the three (`references/second-model-review.md` §3). Body paths are `SKILL_ROOT/bodies/<file>.md`, resolved absolute.
 
@@ -26,7 +26,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 - **Inputs:** `SDD/.records/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, the IMPLEMENTATION-PLAN path, the implemented code files, **FIT**.
 - **Outputs:** updated code and tests, updated IMPLEMENTATION-PLAN, "Findings Addressed" appended to the review.
 - **Tracing:** the **tracing inputs** — TRACE_TREE being the file 4b wrote, or none when it wrote none — and, with the gate on, the fix rule.
-- **Evals:** the **evals inputs** — the eval run line and EVAL_RESULTS being those 4b was given — and, with the gate on, the evals fix rule. No run of record follows this fix: the final check (4e.5) makes one before each of its reviews, and that is where an eval finding of 4b is checked again — it is never closed on the fixer's own run. So for an eval finding, the fix means what the evals fix rule says: at most three eval runs of the fixer's own, and a hard case that still fails after them comes back named in its return. The flow goes on to the final check with it all the same; the final check is what stops on it.
+- **Evals:** the **evals inputs** — the eval run line and EVAL_RESULTS being those 4b was given — and, with the gate on, the evals fix rule. No run of record follows this fix: an eval finding of 4b is checked again at the final check (4e.5), which makes one before each of its reviews — never closed on the fixer's own run. The fixer makes at most three eval runs of its own (the evals fix rule) and names in its return a hard case that still fails; the flow goes on to the final check all the same, and that is what stops on it.
 - **Task:** Fix every HIGH and MEDIUM finding — spec misalignment, missing edge/failure handling, test gaps, silent failures, security holes, and everything else — with the scope-of-the-fix rule. (No `## Fix FEATURE` marker here — the final check, 4e.5, runs after all fixes.)
 
 ---
