@@ -195,7 +195,15 @@ before code comes first.
      worktree's records to the main checkout's `SDD/.records/merged/<branch>/`. Brief, spec, plan and slice files,
      ADRs, glossary, tier plan and summary stay committed. The `sdd-flow-eval` harness reads `SDD/orchestration/` and
      must follow before it replays 4.7.0.
-   - **5c (5.0.0), slim orchestrator:** rewrite `SKILL.md` and the phase files to ~15k tokens read at every step, rare
+   - ~~**5c (5.0.0), slim orchestrator**~~ — built as 5.0.0 (2026-11-13). Rare cases in `phases/rare/` (resume,
+     handoff, rotation, re-plan, next tier, decomposition); planning split into `design-gate.md` + `planning.md` with
+     `planning-inputs.md`; Step 4 split into `implementation-whole-feature.md` (4a), `implementation-per-slice.md`, and
+     `end-of-feature.md` (4b–4j) with `implementation-inputs.md`; artifact paths, model routing, and the tier mirror in
+     their own `phases/` files. `SKILL.md` 45 → 28.8 KB; a step reads 33–66 KB (was 50–114). Rule inventory unchanged;
+     one Codex review, four findings fixed. Owner decisions: `SKILL.md` stays above the ~24 KB target — the editing
+     rules ("What a body may do", "Who owns the slice path") stay in it; no separate trial of 5.0.0 — the owner tries
+     all of the new sdd-flow changes together once the proposal's work is done.
+     Planned as: rewrite `SKILL.md` and the phase files to ~15k tokens read at every step, rare
      cases (handoffs, halts, re-plans) in files read only when they happen; the owner tries it on a real feature
      before it reaches main.
      - Decided 2026-11-13: the budget is **core + the current phase** — `SKILL.md` cut to ~6k tokens of what every
