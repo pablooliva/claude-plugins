@@ -70,7 +70,8 @@ agent-engineering/
 │   │   ├── templates/evals/        #   what an application's eval run is rendered from (Python only): run.py, task.py, test_eval_checks.py.
 │   │   │                           #   An application's evals/run.py stays equal to run.py.template apart from three placeholders — a review checks that,
 │   │   │                           #   so what one application needs goes into its task.py or checks.py, never into the template for its sake
-│   │   └── scripts/                #   snapshot.py — saves the working tree as a commit no ref points to, before a fix round and before its re-review;
+│   │   └── scripts/                #   migrate-records.py — one-off move of a pre-4.7.0 repo's SDD/orchestration/ and SDD/reviews/ into SDD/.records/ (dry run unless --apply; never commits);
+│   │                               #   snapshot.py — saves the working tree as a commit no ref points to, before a fix round and before its re-review;
 │   │                               #   `snapshot.py scratch` copies it outside the repo for a mutation check (test-integrity.md §8);
 │   │                               #   second-model-review.py — settles the cycle's reviewer and runs one review step on codex (the only second model);
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;

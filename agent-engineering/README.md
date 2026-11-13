@@ -87,7 +87,16 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 4.7.0.
+Version 4.7.1.
+
+### What's new in 4.7.1
+
+- **`scripts/migrate-records.py` moves an existing repository to the 4.7.0 layout.** From the repository's root:
+  `python3 <plugin>/skills/sdd-flow/scripts/migrate-records.py` prints the plan; `--apply` moves `SDD/orchestration/`,
+  `SDD/reviews/`, and `SDD/implementation/slices/superseded/` into `SDD/.records/`, writes its `.gitignore`, untracks
+  what was committed (the files stay on disk and in past commits), and rewrites the old paths inside the moved records
+  and the implementation plans, so a run stopped on 4.6.0 resumes on 4.7.x. It never commits, and it refuses,
+  changing nothing, when a destination file already exists.
 
 ### What's new in 4.7.0
 
@@ -107,8 +116,8 @@ Version 4.7.0.
 - The compact commands, `/agent-engineering:continue`, `/critical-review`, the standalone agent-security review, the
   subagent-log hook, `observability-init` and `eval-harvest` (which read the progress file), and the `retro` evidence
   list use the new paths.
-- **No migration.** A run started before 4.7.0 is not resumed from `SDD/orchestration/`; finish it on 4.6.0 or start
-  again. Reviews already committed under `SDD/reviews/` stay where they are.
+- **No automatic migration.** A run started before 4.7.0 is not resumed from `SDD/orchestration/`. 4.7.1's
+  `scripts/migrate-records.py` moves the old folders over, after which it resumes.
 
 ### What's new in 4.6.0
 
