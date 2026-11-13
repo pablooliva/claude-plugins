@@ -14,82 +14,15 @@ Your prompt says what you are reviewing: it names the artifact paths and which s
 
 ### SDD Phase Artifacts
 
-Review the research document, specification, or implementation at the paths in your prompt, with the matching section below (Research Phase, Planning Phase, or Implementation Phase). Do not list `SDD/research/`, `SDD/requirements/`, or `SDD/implementation/` to find or choose what to review — a repository holds several of each as soon as a second feature or tier exists, and only the orchestrator knows which is active.
+Review the specification at the paths in your prompt, with the Planning Phase section below. Do not list `SDD/research/`, `SDD/requirements/`, or `SDD/implementation/` to find or choose what to review — a repository holds several of each as soon as a second feature or tier exists, and only the orchestrator knows which is active.
 
 If a path your prompt names is missing or unreadable, return a failure to the orchestrator naming it. Write no review document and no stop note.
 
 ### Ad-Hoc Review
 
-If your prompt names a proposed solution rather than a phase artifact, review that proposal directly (Section 5).
+If your prompt names a proposed solution rather than a phase artifact, review that proposal directly (Section 3).
 
-## 2. Research Phase Critical Review
-
-If reviewing research artifacts (`RESEARCH-XXX-*.md`):
-
-### Design Concept Fidelity
-
-If a corresponding `SDD/research/CLARIFICATION-[###]-[feature-name].md` exists, load it and verify:
-
-- [ ] **Branches addressed** — Does the research address every branch the clarification walked? Identify any branch where the user's intent was captured in clarification but is silent in the research.
-- [ ] **Open questions resolved or escalated** — For every entry in the clarification's "Open Questions" section: did the research resolve it, deliberately defer it (with rationale), or silently drop it? Silent drops are a HIGH finding.
-- [ ] **Constraints honored** — Are the user's must-have / must-not / strong-preference constraints from the clarification reflected in the research's findings and recommendations?
-- [ ] **Out-of-scope respected** — Has the research drifted into areas the clarification explicitly marked out of scope?
-- [ ] **Vocabulary aligned** — Does the research use terms consistent with the clarification (and with `SDD/UBIQUITOUS_LANGUAGE.md` if present), or has it introduced synonyms that fragment the design concept?
-
-If no clarification artifact exists, note this explicitly in the review:
-
-> Design Concept Fidelity gate: skipped — no `CLARIFICATION-[###]` artifact present. The user's design concept was not externalized before research; the research's framing of intent has not been verified against the user's actual concept. Recommend retroactively externalizing the design concept (running a research-clarify pass) before proceeding if the feature's downstream cost is high.
-
-This is not a hard block — research can proceed without clarification — but the gap should appear in the review's executive summary so the user can decide whether to address it.
-
-### Completeness Gaps
-
-- [ ] **Missing stakeholder perspectives** - Which teams/roles weren't consulted?
-- [ ] **Shallow data flow analysis** - Are there paths not traced to their end?
-- [ ] **Undocumented integration points** - What connects to this that wasn't explored?
-- [ ] **Historical blindspots** - What production issues might exist but weren't found?
-- [ ] **Assumed behaviors** - What's stated as fact without verification?
-
-### Logical Weaknesses
-
-- [ ] **Confirmation bias** - Does the research only support a predetermined solution?
-- [ ] **Missing constraints** - What technical/business limits weren't identified?
-- [ ] **Untested assumptions** - What was assumed to work without checking?
-- [ ] **Scope gaps** - What adjacent systems could affect this feature?
-
-### Critical Questions
-
-1. What would break if the research findings are wrong?
-2. Which findings have the weakest evidence?
-3. What scenarios weren't explored?
-4. Who disagrees with these conclusions and why?
-5. What would a competitor or adversary exploit?
-
-### Output Format
-
-```markdown
-## Research Critical Review: [Feature Name]
-
-### Severity: [HIGH/MEDIUM/LOW]
-
-### Critical Gaps Found
-1. **[Gap Name]**: [Description and why it matters]
-   - Evidence: [What's missing]
-   - Risk: [What could go wrong]
-   - Recommendation: [How to address]
-
-### Questionable Assumptions
-1. **[Assumption]**: [Why it's questionable]
-   - Alternative possibility: [What else could be true]
-
-### Missing Perspectives
-- [Role/team]: [What insight they'd provide]
-
-### Recommended Actions Before Proceeding
-1. [Specific action with priority]
-```
-
-## 3. Planning Phase Critical Review
+## 2. Planning Phase Critical Review
 
 If reviewing specification artifacts (`SPEC-XXX-*.md`):
 
@@ -268,83 +201,7 @@ Append `## Fix Check` to the CRITICAL-SPEC document. Its first line is exactly `
 1. [Specific action with priority]
 ```
 
-## 4. Implementation Phase Critical Review
-
-If reviewing implementation work (spec files, prompts, or actual code):
-
-**Not this feature's code: the plugin's own files.** `evals/run.py` and the files `/observability-init` rendered are this plugin's, tested where their templates are made; the checks below are not asked of them, and a missing test of what one does by itself is no finding (TEST_INTEGRITY, *The plugin's own files*). If you believe one of them is wrong, that is a fault of the plugin, not of this feature: write it under Critical Questions for the user, with the file and line, never as a finding a fixer would act on. A plugin file changed beyond its placeholders is the exception — that change is this feature's, and a finding.
-
-### Specification Deviation
-
-- [ ] **Unspecified behaviors** - What was implemented that isn't in the spec?
-- [ ] **Missing requirements** - Which REQ-XXX aren't implemented?
-- [ ] **Edge case gaps** - Which EDGE-XXX scenarios aren't handled?
-- [ ] **Failure handling holes** - Which FAIL-XXX scenarios lack proper handling?
-
-### Technical Issues
-
-- [ ] **Silent failures** - Where do errors get swallowed?
-- [ ] **Race conditions** - What concurrent scenarios weren't considered?
-- [ ] **Resource leaks** - What's acquired but not released?
-- [ ] **Security vulnerabilities** - What input isn't validated? What's exposed?
-- [ ] **Scalability problems** - What breaks at 10x or 100x scale?
-
-### Test Coverage Problems
-
-- [ ] **Missing test cases** - Which scenarios have no tests?
-- [ ] **Weak assertions** - Which tests would pass even if broken?
-- [ ] **Missing negative tests** - What failure paths aren't tested?
-- [ ] **Integration gaps** - What cross-component behaviors aren't verified?
-
-### Test Integrity (the lens, by reading)
-
-The four questions above ask what is not tested. This block asks whether what *is* tested is real, and whether a test or the code was bent to get a green run. When your prompt gives a `TEST_INTEGRITY` path, read that standard and run its lens **by reading**, as its §5 defines — every check but the sampled mutations and probes, which you run only where your reading gives you a reason to doubt a specific test. Use `BASE` and the IMPLEMENTATION-PLAN path from your prompt. Look hardest at what the earlier review could not see: **tests changed since that review by a fix** (was a finding answered by weakening the test that exposed it?), and tests that agree with the code about something the SPEC never said. Each finding is a finding of this review, at the severity the standard gives. With no `TEST_INTEGRITY` path in your prompt, skip the block and say so in one line.
-
-### Fit and Size (the Fit Lens)
-
-When your prompt gives a `FIT` path, read that standard and run its four questions (§1) over the whole assembled feature, reading the code around each changed area and not just the diff, at the severities its §3 gives. Look hardest at what one slice or one review could not see: helpers duplicated across slices, a layer only one caller uses, and code a fix round added. With no `FIT` path in your prompt, skip the block and say so in one line.
-
-### Critical Questions
-
-1. How would you break this implementation?
-2. What happens with malformed/malicious input?
-3. Which paths have no test coverage?
-4. What would fail at production scale?
-5. What assumptions does the code make that could be violated?
-
-### Output Format
-
-```markdown
-## Implementation Critical Review: [Feature Name]
-
-### Severity: [HIGH/MEDIUM/LOW]
-
-### Specification Violations
-1. **[REQ-XXX]**: [How implementation deviates]
-   - Specified: [What spec says]
-   - Implemented: [What code does]
-   - Impact: [Consequence]
-
-### Technical Vulnerabilities
-1. **[Issue type]**: [Location and description]
-   - Attack/failure vector: [How it breaks]
-   - Fix: [What to change]
-
-### Test Gaps
-1. **[Untested scenario]**: [What's not covered]
-   - Risk: [What could slip through]
-
-### Test Integrity
-[The table TEST_INTEGRITY §6 gives, with T4 and T6 marked "by reading" and any mutation or probe you did run listed under it — or `Test integrity: skipped — no TEST_INTEGRITY path in the prompt.`]
-
-### Fit and Size
-[One line per fit finding, as FIT §3 says to write it — or `None.`, or `Fit lens: skipped — no FIT path in the prompt.`]
-
-### Recommended Actions Before Merge
-1. [Specific action with priority]
-```
-
-## 5. Ad-Hoc Solution Critical Review
+## 3. Ad-Hoc Solution Critical Review
 
 When reviewing a proposed solution outside the SDD lifecycle:
 
@@ -405,7 +262,7 @@ When reviewing a proposed solution outside the SDD lifecycle:
 1. [Specific action to address concerns]
 ```
 
-## 6. Review Principles
+## 4. Review Principles
 
 ### Be Adversarial, Not Hostile
 
@@ -424,7 +281,7 @@ A review with no HIGH and no MEDIUM finding passes. A LOW finding is listed, not
 
 ### Respect the Tier
 
-Applies to planning and implementation reviews when the spec's frontmatter carries `tier:` (1, 2, or 3). Read the tier standard at the **TIERS** path in your prompt and the spec's `## Deferred to Later Tiers` first. An untiered spec is reviewed as before.
+Applies to the planning review when the spec's frontmatter carries `tier:` (1, 2, or 3). Read the tier standard at the **TIERS** path in your prompt and the spec's `## Deferred to Later Tiers` first. An untiered spec is reviewed as before.
 
 - **Left out on purpose is not a finding.** Do not raise a finding — a missing edge case, an unhandled scenario, a scale concern — for an item listed under `## Deferred to Later Tiers`, or for the absence of anything the tier standard places in a later tier.
 - **Unsafe to defer is a HIGH finding.** Raise one when a deferred item breaches the standard's floor (TIERS → The floor) — including a deferred case this tier can reach that fails quietly: no `FAIL-XXX` in the spec, or no visible failure in the code. Title it `Unsafe to defer`, and name the `DEFER-XXX` row and the floor rule.
@@ -443,13 +300,11 @@ Applies to planning and implementation reviews when the spec's frontmatter carri
 - Are you being too harsh or too lenient?
 - What expertise would help this review?
 
-## 7. Deliverable
+## 5. Deliverable
 
 Create a review document at the appropriate location:
 
-- Research phase: `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-YYYYMMDD.md`
 - Planning phase: `SDD/reviews/CRITICAL-SPEC-[feature-name]-YYYYMMDD.md`
-- Implementation phase: `SDD/reviews/CRITICAL-IMPL-[feature-name]-YYYYMMDD.md`
 - Ad-hoc: Return findings inline as your bounded response (≤200 words + artifact paths).
 
 ### Always Include

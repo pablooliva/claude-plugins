@@ -1,6 +1,6 @@
 ---
 name: sdd-critical-reviewer
-description: Adversarial reviewer for SDD-flow phase artifacts (research, specification, panel synthesis, implementation). Defaults to Opus for adversarial reasoning. Used by /sdd-flow Steps 2c (research critical review), 3c Stage 2 (spec-panel synthesis), 3d (spec critical review), 4d (implementation critical review), and per-slice end-of-feature critical review — and for finishing any of these when an earlier run handed it off mid-way. Distinct from per-specialist panel reviewers (which use the sdd-spec-*-specialist types) — this agent handles the *adversarial* and *synthesis* roles where Opus is load-bearing.
+description: Adversarial reviewer for SDD-flow phase artifacts (specification, panel synthesis, the feature's code). Defaults to Opus for adversarial reasoning. Used by /sdd-flow Steps 3c Stage 2 (spec-panel synthesis), 3d (spec critical review), 3e.5 (check of the spec fix), and 4b (the feature code review, both delivery modes) when they run on Claude — and for finishing any of these when an earlier run handed it off mid-way. Distinct from per-specialist panel reviewers (which use the sdd-spec-*-specialist types) — this agent handles the *adversarial* and *synthesis* roles where Opus is load-bearing.
 model: opus
 ---
 

@@ -70,7 +70,7 @@ Otherwise ask, every time:
 > Reply **y** to clarify first, or **n** to proceed directly and accept the design-concept risk (crisp tickets / very small changes).
 
 - **y** → write an `## Awaiting Clarification` block (with the resolved identifiers: `[###]=<value>`, `[feature-name]=<value>` — use these exact values with `/research-clarify` so the artifact path aligns) to `progress.md`, tell the user to run `/research-clarify` and then `/sdd-flow continue`, and **STOP**. Session Resumption picks up at Step 2 once the artifact exists.
-- **n** → write a `## Clarification Skipped (user opt-out)` block to `progress.md` so Step 2c records the gate-skip, and proceed to Step 2.
+- **n** → write a `## Clarification Skipped (user opt-out)` block to `progress.md` so the record shows the gate was skipped, and proceed to Step 2.
 
 ### Orchestrator-discipline note
 

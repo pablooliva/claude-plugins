@@ -1,6 +1,6 @@
-# Phase: Research — Steps 2a–2e
+# Phase: Research — Steps 2a, 2b, 2e
 
-Read at the Step 2 boundary. All spawns follow the SKILL's spawn-prompt checklist; phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file (`Reads: 0/15`) + the `research-compact.md` compact body path. Body paths below are `SKILL_ROOT/bodies/<file>.md`, resolved absolute. A review step run on the second model carries none of the three (`references/second-model-review.md` §3).
+Read at the Step 2 boundary. All spawns follow the SKILL's spawn-prompt checklist; phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file (`Reads: 0/15`) + the `research-compact.md` compact body path. Body paths below are `SKILL_ROOT/bodies/<file>.md`, resolved absolute. Research has no review step: the owner judges the design built on it at the design gate (2.5).
 
 ---
 
@@ -33,26 +33,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 
 **There is no confirmation stop here, and no record is written here.** The candidates are shown at the design gate (`phases/planning.md` → 2.5b), which always stops: `approve` accepts them and a reply may drop any by title; the accepted ones are written right after approval, before 3a. A decision record is never written, or committed, before the design it belongs to is approved.
 
-If no cross-cutting decisions are detected, the entry is appended with `none`. Continue to 2c.
-
----
-
-## 2c. Research Critical Review Subagent
-
-Run this review by the cycle's **review route** (`references/second-model-review.md`). On the Claude route, spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus by frontmatter). Either route is given:
-- **Body:** `bodies/critical-review.md` — apply its **Research Phase** section.
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present, for the Design Concept Fidelity check), `SDD/UBIQUITOUS_LANGUAGE.md` (if present, for vocabulary-alignment).
-- **Outputs:** `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`.
-- **Task:** Adversarial review of the research document. Apply the Design Concept Fidelity block first — verify every CLARIFICATION branch is addressed and every open question resolved or explicitly deferred. If no CLARIFICATION exists (gate skipped), record the gate-skip note in the executive summary.
-
----
-
-## 2d. Address Research Review Findings
-
-Spawn an **`agent-engineering:sdd-workhorse`** subagent (fix subagent — no body file; brief inline):
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md` AND `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-[YYYYMMDD].md`.
-- **Outputs:** updated RESEARCH document, append `progress.md`.
-- **Task:** Resolve every HIGH and MEDIUM finding — fill gaps, strengthen weak evidence, add missing perspectives, address questionable assumptions. A LOW finding is listed, not fixed. After fixing, append a "Findings Addressed" section to the review document noting how each was resolved.
+If no cross-cutting decisions are detected, the entry is appended with `none`. Continue to 2e.
 
 ---
 
@@ -60,7 +41,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent (fix subagent — no bod
 
 The **orchestrator** runs the commit directly (not a subagent), per `commands/commit.md` conventions — **no co-author attribution**. No decision record exists yet — 2b only lists candidates; the accepted ones are committed at 3f.
 
-**Then append `## Research - Accepted` to `progress.md`** — one line, the research document's path. It is the phase-detection marker that research is done: review, fixes, and commit included. The orchestrator writes it, here and nowhere earlier; the note the completion subagent leaves in 2a ("Research phase complete…") is not a marker and nothing matches it.
+**Then append `## Research - Accepted` to `progress.md`** — one line, the research document's path. It is the phase-detection marker that research is done, its commit included. The orchestrator writes it, here and nowhere earlier; the note the completion subagent leaves in 2a ("Research phase complete…") is not a marker and nothing matches it.
 
 If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation) — a phase-boundary commit is a quiet point.
 

@@ -4,12 +4,12 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 
 You are conducting a per-slice code review for a single `SLICE-XXX` within a feature whose SPEC declares `delivery_mode: per-slice`.
 
-## Active-Slice Resolution Convention (shared with slice-start, slice-retro, and the per-slice commit)
+## Active-Slice Resolution Convention (shared with slice-start and the per-slice commit)
 
 Per SPEC MODULE-002 active-slice fallback asymmetry:
 
 1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}[a-z]?$` BEFORE interpolating into any path (REQ-024 / SEC-003 path-traversal prevention).
-2. **IMPLEMENTATION-PLAN's `## Slice Progress` row** at `In Progress` or `Acceptance Check Passing` — this review covers implemented code, so it expects a non-`Not Started`, non-`Complete` row.
+2. **IMPLEMENTATION-PLAN's `## Slice Progress` row** at `In Progress` — this review covers implemented code, so it expects that row.
 3. **Error** — never silently pick. If priority 2 yields multiple candidates, return a failure to the orchestrator listing them. Write no stop note to `SDD/orchestration/progress.md`.
 
 ## Inert-Mode Gate
@@ -39,29 +39,29 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}[a-z]?$` BEFORE being interpolated into any read or write path. On regex mismatch, refuse with the REQ-007 message-discipline shape: `Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (three digits, optionally one lowercase letter).`
 
-> **Canonical regex source (resolves L-4):** see `bodies/slice-start.md` § "Slice-ID Validation" — that section is the canonical home for this regex. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across `bodies/slice-start.md`, `bodies/slice-review.md`, `bodies/slice-retro.md`, `phases/protocols.md`, `phases/implementation-per-slice.md`, and `SCOPE_RE` in `scripts/site-diff.py` in a single commit.
+> **Canonical regex source (resolves L-4):** see `bodies/slice-start.md` § "Slice-ID Validation" — that section is the canonical home for this regex. Any future change (e.g., 4-digit slice IDs) MUST be coordinated across `bodies/slice-start.md`, `bodies/slice-review.md`, `phases/protocols.md`, `phases/implementation-per-slice.md`, and `SCOPE_RE` in `scripts/site-diff.py` in a single commit.
 
 ## `## Slice Progress` Table — Binding Schema (REQ-022, reference)
 
 - **Columns:** `SLICE-ID | Name | Status | Acceptance check | Test result | Notes`.
-- **Status enum:** `Not Started`, `In Progress`, `Acceptance Check Passing`, `Complete`.
-- This review does NOT modify the table directly; slice-retro updates `Status`/`Test result`/`Notes` after fix-and-rerun loops.
+- **Status enum:** `Not Started`, `In Progress`, `Complete`.
+- This review does NOT modify the table; the orchestrator sets `Complete`, `Test result`, and `Notes` at the per-slice commit (4c.6).
 
 ## Step 3: Resolve the active SLICE-XXX
 
-Apply the **Active-Slice Resolution Convention** above. Expected statuses for this review: `In Progress` or `Acceptance Check Passing`.
+Apply the **Active-Slice Resolution Convention** above. Expected status for this review: `In Progress`.
 
-- **`[SLICE-ID]` provided:** verify the row exists in `## Slice Progress` and is at `In Progress`/`Acceptance Check Passing`. If at `Not Started`, fail per EDGE-003: `No implementation found for SLICE-XXX. Run slice-start SLICE-XXX and implement the slice before review.`
+- **`[SLICE-ID]` provided:** verify the row exists in `## Slice Progress` and is at `In Progress`. If at `Not Started`, fail per EDGE-003: `No implementation found for SLICE-XXX. Run slice-start SLICE-XXX and implement the slice before review.`
 - **No argument, single matching row:** use it.
 - **No argument, multiple matching rows:** return a failure to the orchestrator listing the candidate rows; write no review and no stop note.
-- **No argument, zero matching rows:** fail with: `No slice currently In Progress or Acceptance Check Passing in <IMPLEMENTATION-PLAN-XXX-...md>. Run slice-start <SLICE-XXX> first.`
+- **No argument, zero matching rows:** fail with: `No slice currently In Progress in <IMPLEMENTATION-PLAN-XXX-...md>. Run slice-start <SLICE-XXX> first.`
 
 ## Step 4: Compute the slice's file set (REQ-004)
 
 The slice's reviewable file set is computed as the **intersection** of:
 
 1. The SPEC's `## Delivery Slices` → `### SLICE-XXX:` → `Modules touched` field — for each MODULE-XXX listed there, expand to the file paths the SPEC's `## Modules` section attributes to that module.
-2. The files actually modified for this slice (the **git list**). **The slice is uncommitted while you review it** (the per-slice commit lands only after review, fixes, and retro), so compare the working tree against the slice's base commit `BASE` — never `BASE..HEAD`, which compares two identical commits and is always empty. SDD artifacts are excluded; they are not slice code:
+2. The files actually modified for this slice (the **git list**). **The slice is uncommitted while you review it** (the per-slice commit lands only after review and fixes), so compare the working tree against the slice's base commit `BASE` — never `BASE..HEAD`, which compares two identical commits and is always empty. SDD artifacts are excluded; they are not slice code:
 
    ```bash
    git diff --name-only --no-renames BASE -- . ':(exclude)SDD'           # tracked files modified, deleted, or renamed (old and new path)
@@ -105,7 +105,7 @@ On a re-review whose fix round the orchestrator snapshotted, your prompt gives t
 Apply the following review process to the computed slice file set. The full review priority order applies:
 
 1. **Specification Alignment (70%)** — verify the slice's REQ/EDGE/FAIL coverage from the SPEC. Restrict to REQ-XXX/EDGE-XXX/FAIL-XXX entries the slice's `Acceptance check` and `Modules touched` cite (a slice need not cover ALL of the feature's REQs — only its own).
-2. **Context Engineering (20%)** — verify the slice's section in the IMPLEMENTATION-PLAN's `## Slice Progress` table reflects the work done; verify subagent calls (if any) are logged under `SDD/orchestration/subagent-calls/`; verify ledger consistency (no orphan references to slice work that the slice itself didn't capture).
+2. **Context Engineering (20%)** — verify the slice's section in the IMPLEMENTATION-PLAN's `## Slice Progress` table reflects the work done; verify subagent calls (if any) are logged under `SDD/orchestration/subagent-calls/`.
 3. **Test Specification Alignment (10%)** — verify tests exist and pass for the slice's contribution; verify test type coverage (unit / integration / E2E) is appropriate for the slice's surface.
 
 **Test Integrity Lens (mandatory, every slice).** Item 3 asks whether the slice's tests exist and pass; this lens asks whether they are real — and whether the tests or the code were bent to get the green run. Read the standard at the `TEST_INTEGRITY` path in your prompt and run it **as written**, on this slice's requirements and the test files in this slice's changes: checks T1–T7 (§3), at the depth §4 gives for each module's `Risk:` tier, with `BASE` from your prompt and `### Test Changes` from the IMPLEMENTATION-PLAN. It is an overlay on the 70/20/10 split, and it runs after the slice's tests have passed. Make every mutation and probe in a scratch copy of the working tree (TEST_INTEGRITY §8), never in the working tree. Write the `## Test Integrity` section in the shape §6 gives; its findings are ordinary findings of this review, counted in the marker, each tagged `[needs-code-or-test]`. **A HIGH lens finding rejects the slice.** If your prompt has no `TEST_INTEGRITY` path, return a failure to the orchestrator naming it.
@@ -176,6 +176,10 @@ Your prompt carries the line `evals: on` or `evals: off` — the decision the or
 
 The spec states cases — written examples, and what must be true of what the model answers to them — and assigns each to a slice. Before this review the flow's main session put the cases built so far to the running application, and that run's last line and results are in your prompt. This step reads the run and the eval files against the spec. **You do not make an eval run yourself;** the one command of it you may run is `--self-test`, which calls no model (EVALS §4). Its findings come only from the fixed table in EVALS §7, at the severities given there. They are ordinary findings of this review: number them with the others, count them in the progress marker, and let a HIGH reject the slice. **A sign-off requirement** — one the spec lists under `### Manual Verification` with a line starting `- [ ] **Sign-off: ` — counts as met in every part of this review when it is implemented and its judged eval has its scores in the run of record (EVALS §9); that the user has not accepted it yet is not a finding.
 
+## Step 5.10: Re-plan
+
+Answer one question about the plan, not the code: **should the rest of the plan change before the next slice is built?** `yes` when what this slice showed means a later slice, the slice order, or the spec is wrong as written — a later slice rests on an assumption this slice disproved, a module will not fit where the spec puts it, a requirement cannot hold as stated, or the slice cost far more than the plan expects of the slices left. `no` otherwise — a finding the fix round can close is never a reason. The orchestrator shows the line at the slice pause and does nothing else with it; the owner decides.
+
 ## Step 6: Write the per-slice review document
 
 Write the review output to:
@@ -186,7 +190,7 @@ SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-iter<N>-<YYYY-MM-DD>.md
 
 `N` is the `ITER` in your prompt: one document per iteration, so a re-review never overwrites the review its fix answered.
 
-Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across the new artifact families introduced by this feature — RETROSPECTIVE-SLICE, REVIEW-SLICE; resolves panel deferred LOW-13).
+Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across the slice artifact families — REVIEW-SLICE; resolves panel deferred LOW-13).
 
 The review document follows the standard review template (`SDD/reviews/REVIEW-XXX-...md` shape) with these slice-specific additions:
 
@@ -258,6 +262,10 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 
 [`No design brief — check skipped.` when the feature has none.]
 
+## Re-plan
+
+Re-plan: [yes | no] — [why, one sentence]
+
 ## Decision: [APPROVED / REJECTED]
 
 [Standard review decision rationale. Any open HIGH or MEDIUM — the Test Integrity Lens, the Fit Lens, the Tracing Lens, and the Eval Check included — rejects the slice. LOW findings reject nothing.]
@@ -265,18 +273,17 @@ The review document follows the standard review template (`SDD/reviews/REVIEW-XX
 
 ## Per-Slice Review Iteration Cap (REQ-013, reference — enforced elsewhere)
 
-This review itself can be re-run any number of times. The **iteration cap of 2 with progress-stall check** (HIGH must strictly decrease across iterations; or MEDIUM when HIGH is zero) is enforced by the orchestrator's per-slice 4b/4c loop, NOT by this review. The fix step runs on HIGH and MEDIUM findings only. On cap or stall the flow stops and the findings go to the rolling ledger's `Open recommendations awaiting user decision` section. The loop is defined in `phases/implementation-per-slice.md` → 4c.
+This review itself can be re-run any number of times. The **iteration cap of 2 with progress-stall check** (HIGH must strictly decrease across iterations; or MEDIUM when HIGH is zero) is enforced by the orchestrator's per-slice 4b/4c loop, NOT by this review. The fix step runs on HIGH and MEDIUM findings only. On cap or stall the flow stops on `## Awaiting Slice Resolution`, naming this review. The loop is defined in `phases/implementation-per-slice.md` → 4c.
 
 ## Flag Inventory (REQ-025 — applies to slice review)
 
-This review introduces NO flags of its own (per SPEC MODULE-002 + REQ-025: `slice-review [SLICE-ID]` — no flags introduced by this feature). The slice-start and slice-retro flags do NOT apply here.
+This review introduces NO flags of its own (per SPEC MODULE-002 + REQ-025: `slice-review [SLICE-ID]` — no flags introduced by this feature). The slice-start flag does NOT apply here.
 
-For reference, the slice-command flag inventory across all four slice commands (REQ-025):
+For reference, the slice-command flag inventory across the slice bodies (REQ-025):
 
 | Flag | Command | Default | Notes |
 |------|---------|---------|-------|
 | `--resume SLICE-XXX` | `slice-start` | Off | Re-attach to In Progress slice. |
-| `--reconcile-ledger SLICE-XXX` | `slice-retro` | Off | Rebuild ledger from on-disk retros. |
 
 ## Path Conventions (REQ-016)
 
@@ -284,7 +291,6 @@ This review emits paths under the SDD 2.0.0 layout:
 
 - `SDD/requirements/SPEC-XXX-[feature-name].md`
 - `SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md`
-- `SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md` (kebab-case feature-name slug per CLARIFICATION OQ-B)
 - `SDD/reviews/REVIEW-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md`
 - `SDD/orchestration/subagent-calls/`
 

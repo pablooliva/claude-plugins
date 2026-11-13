@@ -1,7 +1,6 @@
 # The Fit Lens — fit and size
 
-The one definition of the fit-and-size check. The slice review and the code review (4b) and the implementation
-critical review (4d) run it; every fix spawn of Step 4 follows §4; the implementers follow §5. A body reads this file at the `FIT` path in its
+The one definition of the fit-and-size check. The slice review and the feature code review (4b, both delivery modes) run it; every fix spawn of Step 4 follows §4; the implementers follow §5. A body reads this file at the `FIT` path in its
 prompt and never restates it.
 
 A change can meet its spec and still be too big, or not fit the code it lands in. Each round of findings tends

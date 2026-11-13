@@ -1,6 +1,6 @@
 # Test Integrity — What a Real Test Is, and the Lens That Checks It
 
-The one definition of the flow's **Test Integrity Lens**. The implementer bodies read §1; the code review, the slice review, and the implementation critical review run the lens (§2–§6), and the final check runs its last-look checks (§5); fix subagents follow §7; every body that breaks code to prove a test does it in a scratch copy (§8). No body restates it. The path reaches each of them as **TEST_INTEGRITY** in its prompt.
+The one definition of the flow's **Test Integrity Lens**. The implementer bodies read §1; the code review and the slice review run the lens (§2–§6), and the final check runs its last-look checks (§5); fix subagents follow §7; every body that breaks code to prove a test does it in a scratch copy (§8). No body restates it. The path reaches each of them as **TEST_INTEGRITY** in its prompt.
 
 **Why this exists.** The flow's gates are green test runs: a slice is delivered when its acceptance check passes, a review approves at 100%. An author that is rewarded for green has two ways to get there — make the code right, or make the test agree with the code. The second is cheaper and looks identical in a pass count. It takes several forms: a test whose expected value was copied from what the code happened to return, a test that asserts nothing that could be false, a mock standing where the logic should be, an existing test loosened until it stopped failing, code that recognises the test's inputs. Each one leaves a requirement marked as verified that nothing verifies — and with it goes the tests' second job, which is to make wrong business logic and a badly placed boundary show up as a failure. This standard closes it for every requirement; the security verification (`references/security-verification.md`) adds an adversarial pass over the security rules at the end of the feature.
 
@@ -28,8 +28,7 @@ And three things the implementer never does to reach a green run:
 | Review | Runs | Changes it reads |
 |---|---|---|
 | Per-slice 4b (`bodies/slice-review.md`) | the full lens, on the slice's requirements | working tree against the slice's `BASE`; a re-review after a snapshotted fix round, the tests the fix added or changed, against `SNAPSHOT` (it runs the tests that change can affect, and the whole suite only when it would pass the slice — `bodies/slice-review.md` Step 4.5) |
-| Whole-feature 4b (`bodies/code-review.md`) | the full lens, on every requirement | working tree against `BASE` |
-| 4d implementation critical review (`bodies/critical-review.md`) | the lens **by reading** (§5) | working tree against `BASE`; in per-slice mode, the committed slices since `BASE` |
+| Feature code review, 4b in both delivery modes (`bodies/code-review.md`) | the full lens, on every requirement | working tree against `BASE`; in per-slice mode, the committed slices since `BASE` with it |
 | 4e.5 final check (`bodies/final-check.md`) | the **last-look checks** (§5) — after the last fix round | working tree against `BASE` |
 
 It has no gate: it runs in every cycle. Inputs, all from the prompt: **TEST_INTEGRITY** (this file), the SPEC, the IMPLEMENTATION-PLAN (for `### Test Changes`), and `BASE`. A review with no `BASE` runs every check except T1 and says so.
@@ -99,9 +98,7 @@ T1, T2, and T7 cover every test the changes touch. T3 and T5 cover every test of
 
 Choose the requirements where a wrong answer costs most — money, permissions, data written, a decision shown to a person — before the ones that are easiest to break. A sample that turns up a HIGH is widened to every requirement of that module.
 
-## 5. The lens by reading (4d), and the last-look checks (4e.5)
-
-The implementation critical review runs T1, T2, T3, T5, T7, the reading half of T4 (the assertions that cannot be false), and the reading half of T6 (the four signs) over the whole feature. It runs a T4 mutation or a T6 probe only where its reading gives it a reason to doubt a specific test, and it says which. It does not re-sample: the 4b review did that, and this pass is there to catch what a second reader sees and what the fixes after 4b changed. T1 here has a particular target — **tests changed by a fix subagent since the 4b review**, where a finding may have been answered by weakening the test that exposed it.
+## 5. The last-look checks (4e.5)
 
 **The last-look checks** are what the 4e.5 final check runs, in every cycle, because it is the only review after the last fix round: **T1, T2, T3, and the reading half of T4** — no mutation, no probe. T1 and T2 catch a pre-existing test weakened or left out. T3 and the reading half of T4 are there for the tests **this feature added**: T1 cannot see a change to them (their files are new since `BASE`, and the work is uncommitted, so there is no earlier version to compare with), so a fix that changed an expected value or loosened an assertion in one is caught by reading it again against the SPEC — is the expected value still the spec's, can the assertion still be false.
 
@@ -132,7 +129,7 @@ Lens findings are ordinary findings of the review: listed with the others at the
 
 - **By making the test real or the code right — never by removing the evidence.** A test that could not fail is given an assertion that can, with an expected value from the SPEC. A mocked-away module is run for real. Fitted code is replaced by the rule the SPEC states.
 - **A weakened test is restored** to what it asserted at `BASE` (`git show BASE:<path>`), and the code is fixed until it passes — unless the SPEC requires the new behaviour, in which case the missing `### Test Changes` line is added, citing the requirement.
-- **A fix never weakens a test either.** §1's three "never" rules bind a fix subagent exactly as they bind the implementer; the 4d pass reads what the fixes before it changed (§5), and the 4e.5 final check, which always runs, reads the tests once more after the fixes that follow it (the last-look checks, §5).
+- **A fix never weakens a test either.** §1's three "never" rules bind a fix subagent exactly as they bind the implementer; the 4e.5 final check, which always runs, reads the tests once more after the fixes that follow it (the last-look checks, §5).
 - **When the expected value cannot be found in the SPEC,** the fix does not invent one. It records the gap under `### Implementation Deviations` in the IMPLEMENTATION-PLAN — the requirement, the question the spec leaves open, the value assumed and why — so the gap reaches the completion summary and the user.
 
 ## 8. The scratch copy (every mutation, in every body)

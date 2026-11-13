@@ -87,7 +87,27 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 4.5.0.
+Version 4.6.0.
+
+### What's new in 4.6.0
+
+`sdd-flow` has fewer steps. Each removed step either repeated another review or wrote a record nobody used.
+
+- **One code review of the whole feature.** The code review (4b) and the implementation critical review (4d) are
+  merged. The merged review is `bodies/code-review.md`, with a new **Adversarial Pass** (silent failures, concurrency,
+  resources, input, scale, assumptions, negative paths). It runs on Codex, or on the Opus reviewer when Codex is not
+  available, and its findings are fixed once (4c) before the final check (4e.5). Per-slice mode runs the same review
+  once after its last slice, in place of its old end-of-feature critical review. 4d and 4e are gone.
+- **No slice retrospective and no learnings ledger.** Each slice review ends with one line,
+  `Re-plan: yes|no — why`, and the slice pause shows it. Removed with them: `bodies/slice-retro.md`, step 4c.5, the
+  `Retrospective Complete` / `Retro Matched` / `Halt Note Recorded` markers, the re-plan matcher, and the
+  `Acceptance Check Passing` row state. A slice goes from `In Progress` to `Complete` at its commit. In the trial run,
+  all 37 slice retrospectives said "Re-plan: no".
+- **Research is not reviewed.** The research critical review (2c) and its fix (2d) are gone. You check the design built
+  on the research at the design gate, which always stops. In the tornado trial, the two extra hidden tests the flow
+  found came from the spec panel, not from the research review.
+
+**Not exercised on a real cycle.**
 
 ### What's new in 4.5.0
 
@@ -385,7 +405,7 @@ Tracing inside `sdd-flow` — the second of four build steps of the tracing-and-
 - **One gate, settled once per cycle.** Step 0 records whether `SDD/OBSERVABILITY.md` exists. The spec gains `tracing: auto | true | false`; at 3c the orchestrator turns that and the Step 0 record into `## Gates - tracing: on|off` in `progress.md`, and every later spawn is passed that line. `tracing: true` with no foundation, or an invalid value, stops planning with `## Awaiting Tracing Decision`.
 - **The spec plans the calls.** With the gate on, `## Modules` gains `### Planned call graph`: one tree per entry point, with entry points, model calls (each with a maximum number of calls per request), and calls to other systems marked. Each slice names the marked nodes it builds. The spec's critical review checks the graph.
 - **The implementer follows the tracing standard** for what it adds, and checks its marked nodes against the application's trace run. A difference from the plan is recorded as a deviation; the plan is never edited to match.
-- **Reviews compare the plan with a real run — the Tracing Lens.** Defined once in `skills/sdd-flow/references/tracing-lens.md` and run by the slice review, the whole-feature code review, and the final check. The reviewer runs the trace run, renders its span file with the new `skills/sdd-flow/scripts/trace-tree.py` into `SDD/reviews/TRACE-TREE-*`, and compares the tree with the marked nodes in scope. Findings come from a fixed table: a header or secret on a span, more model calls in one request than planned, or a trace run that cannot be read (HIGH); a call the plan does not show, a marked node the run does not show, an entry point not traced (MEDIUM); three kinds of misuse of the tracing API in the application's own code (LOW). A model call is matched by the function that made it; where the tree cannot tell two nodes apart the review says so instead of passing them.
+- **Reviews compare the plan with a real run — the Tracing Lens.** Defined once in `skills/sdd-flow/references/tracing-lens.md` and run by the slice review, the feature code review, and the final check. The reviewer runs the trace run, renders its span file with the new `skills/sdd-flow/scripts/trace-tree.py` into `SDD/reviews/TRACE-TREE-*`, and compares the tree with the marked nodes in scope. Findings come from a fixed table: a header or secret on a span, more model calls in one request than planned, or a trace run that cannot be read (HIGH); a call the plan does not show, a marked node the run does not show, an entry point not traced (MEDIUM); three kinds of misuse of the tracing API in the application's own code (LOW). A model call is matched by the function that made it; where the tree cannot tell two nodes apart the review says so instead of passing them.
 - **The last check comes after the last fix.** With the gate on, the final check (4e.5) always runs and repeats the comparison for the whole feature. Completion reads the final tree for the summary's `## Monitoring & Observability` and changes no code or test; if it finds something that needs either, the flow stops on the final check's halt and re-runs the final check after you resume.
 - **The tracing rules are not a feature's security rules** unless a spec restates one with a `SEC-` ID.
 - **`trace-tree.py`** turns a span file into a document: requests grouped by entry point, the fewest and most model and external calls in one request, each distinct tree of calls drawn once (at most ten per entry point), and a scan for headers and secret values. It prints names and counts, never recorded text.
@@ -458,7 +478,7 @@ Two linked changes to `sdd-flow`, aimed at one problem: the volume of what an ag
 
 - **Design gate (new Step 2.5).** The flow used to pause after research with a summary of findings and "Proceed to planning? (y/n)" — a decision without the material to make it — and then had no human pause anywhere in planning. That pause (Step 2f) is removed. In its place a subagent on Opus writes a design brief (`SDD/requirements/DESIGN-[###]-[feature-name].md`, new body `bodies/design-brief.md`) and the flow stops. The stop fires every time the brief is written or rewritten, and no flag skips it. You answer its questions, ask for changes (a revision round, as many as you want), or approve; `approve` is refused while a question is open.
 - **The spec is held to the brief.** The spec gains `## Deviations from Design Brief`. Planning, the panel fix loop, and the combined fix must record every departure from the brief's decisions, exclusions, and answered questions; the spec critical review has a Design Brief Fidelity block (an unrecorded departure is HIGH); and Step 3g stops when any deviation is recorded, before a line of code is written.
-- **Brief check on every code review.** The slice review and the whole-feature code review write a `## Design Brief Check` section: which outline entry was delivered, and which changed files fall outside the approved footprint. It is quoted at each slice pause, at the pre-commit checkpoint, and in the completion announcement. Information only — it never blocks a slice.
+- **Brief check on every code review.** The slice review and the feature code review write a `## Design Brief Check` section: which outline entry was delivered, and which changed files fall outside the approved footprint. It is quoted at each slice pause, at the pre-commit checkpoint, and in the completion announcement. Information only — it never blocks a slice.
 - **Tiered delivery.** The brief carries a `## Tiers` section and the gate a tiers line; reply `tier 2` or `tier 3` to build more, or pass `--tier N`. The spec gains `tier:` frontmatter and `## Deferred to Later Tiers` (`DEFER-XXX` rows, behaviour only). Deferred items are not requirements, so every existing "each REQ / each EDGE" rule keeps working; a deferred case the tier can reach gets a `FAIL-XXX` for its loud failure. A spec with no `tier:` behaves exactly as before.
 - **Reviews respect the tier.** Panel specialists, the critical review, the code review, and the slice review do not flag what is on the deferred list; they do flag, at HIGH, a deferral that breaches the tier standard's floor, and they flag anything built ahead for a later tier. Spec fix subagents may resolve a finding about *absent* scope by deferring it; a finding about behaviour the tier builds is always fixed.
 - **Tier plan and next tier.** `SDD/flow/TIERS-[feature-name].md` records what shipped, what was deferred, sketches of the later tiers, and feedback. The brief subagent writes it; the completion subagent updates it. `/sdd-flow --next-tier <feature>` starts the next tier as a new cycle: `/research-clarify` becomes a feedback interview, research is a delta on the previous tier's, and the brief opens with what was learned.

@@ -2,7 +2,7 @@
 
 You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
-You are initiating implementation work on a single vertical slice (`SLICE-XXX`) within a feature whose SPEC declares `delivery_mode: per-slice`. This body is one of three slice bodies — `slice-start`, `slice-review`, `slice-retro` — which, with the orchestrator's per-slice commit (step 4c.6; conventions in `commands/commit.md`), make up the per-slice cycle. Each is inert outside per-slice mode.
+You are initiating implementation work on a single vertical slice (`SLICE-XXX`) within a feature whose SPEC declares `delivery_mode: per-slice`. This body is one of two slice bodies — `slice-start` and `slice-review` — which, with the orchestrator's per-slice commit (step 4c.6; conventions in `commands/commit.md`), make up the per-slice cycle. Each is inert outside per-slice mode.
 
 ## Active-Slice Resolution Convention (shared across all four slice primitives)
 
@@ -11,7 +11,7 @@ The four slice primitives resolve the active slice via the SAME priority chain �
 1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}[a-z]?$` BEFORE interpolating into any path (per REQ-024 path-traversal prevention; see "Slice-ID Validation" below).
 2. **IMPLEMENTATION-PLAN's `## Slice Progress` row matching the primitive's expected status:**
    - `slice-start` → first row at `Not Started` (you can't start what's already running).
-   - `slice-review` / `slice-retro` / the per-slice commit (4c.6) → row at `In Progress` or `Acceptance Check Passing` (you can't review/retro/commit something not yet implemented).
+   - `slice-review` / the per-slice commit (4c.6) → row at `In Progress` (you can't review or commit something not yet implemented).
 3. **Error** — never silently pick. If priority 2 yields multiple candidates, return a failure to the orchestrator listing all candidates. Write no stop note to `SDD/orchestration/progress.md` — the orchestrator names the slice and re-spawns.
 
 ## Inert-Mode Gate
@@ -45,7 +45,7 @@ The canonical enum is exactly `{whole-feature, per-slice}` (lowercase, hyphenate
 
 ## Slice-ID Validation (REQ-024 / SEC-003) — canonical regex shared across slice primitives
 
-> **Canonical regex (single source of truth — resolves L-4):** the slice-ID validation regex `^SLICE-\d{3}[a-z]?$` is duplicated verbatim across `bodies/slice-start.md`, `bodies/slice-review.md`, `bodies/slice-retro.md`, `phases/protocols.md`, and `phases/implementation-per-slice.md`. **`slice-start` is the canonical home** for this regex; the other copies SHOULD cross-reference this section rather than re-deriving the pattern. Future changes (e.g., allowing 4-digit slice IDs `SLICE-####`) MUST be coordinated across all of them in a single commit; a drift between them would produce inconsistent regex enforcement at primitive boundaries. The optional single lowercase letter (`SLICE-005a`, `SLICE-005b`) exists for slices split during re-planning; it cannot carry `/`, `.`, or any other path character, so the traversal guarantee is unchanged.
+> **Canonical regex (single source of truth — resolves L-4):** the slice-ID validation regex `^SLICE-\d{3}[a-z]?$` is duplicated verbatim across `bodies/slice-start.md`, `bodies/slice-review.md`, `phases/protocols.md`, and `phases/implementation-per-slice.md`. **`slice-start` is the canonical home** for this regex; the other copies SHOULD cross-reference this section rather than re-deriving the pattern. Future changes (e.g., allowing 4-digit slice IDs `SLICE-####`) MUST be coordinated across all of them in a single commit; a drift between them would produce inconsistent regex enforcement at primitive boundaries. The optional single lowercase letter (`SLICE-005a`, `SLICE-005b`) exists for slices split during re-planning; it cannot carry `/`, `.`, or any other path character, so the traversal guarantee is unchanged.
 
 Slice-ID arguments MUST be validated against the regex `^SLICE-\d{3}[a-z]?$` BEFORE being interpolated into any read or write path. This prevents directory-traversal attacks (a malicious arg like `../../etc/passwd` would otherwise bypass the path templates).
 
@@ -60,12 +60,11 @@ Invalid SLICE-ID argument '<arg>'. SLICE-ID must match the pattern SLICE-### (th
 The IMPLEMENTATION-PLAN's `## Slice Progress` table is the source of truth for slice state during implementation. Its schema is BINDING:
 
 - **Columns:** `SLICE-ID | Name | Status | Acceptance check | Test result | Notes`.
-- **Status enum (4 states, forward-only — no backwards transitions):** `Not Started`, `In Progress`, `Acceptance Check Passing`, `Complete`.
+- **Status enum (3 states, forward-only — no backwards transitions):** `Not Started`, `In Progress`, `Complete`.
 - **Column-write authority:**
   - The implementation scaffolding step scaffolds the table (one row per `SLICE-XXX` from the SPEC's `## Delivery Slices` section).
   - `slice-start` flips `Status` from `Not Started` → `In Progress` for the active slice.
-  - `slice-retro` updates `Status`, `Test result`, and `Notes` only — NEVER `SLICE-ID`, `Name`, or `Acceptance check` (those are SPEC-derived and immutable from this side).
-  - The orchestrator sets `Status` to `Complete` (terminal state) as its last edit before the per-slice commit (step 4c.6), so that commit carries it. No slice body sets `Complete`.
+  - The orchestrator sets `Status` to `Complete` (terminal state), with `Test result` and `Notes`, as its last edit before the per-slice commit (step 4c.6), so that commit carries it. No slice body sets `Complete`.
 - **FIRST-WRITE-WINS rule:** at most ONE slice may be at `Status: In Progress` at any time. Enforced by the EDGE-012 conflict check below.
 - **SLICE-XXX uniqueness invariant:** SLICE-XXX values within a single IMPLEMENTATION-PLAN's `## Slice Progress` table MUST be unique; duplicate detection is the human reviewer's responsibility (tooling does not enforce).
 
@@ -86,14 +85,14 @@ Apply the **Active-Slice Resolution Convention** above. For `slice-start`, the e
 - **`[SLICE-ID]` provided:** use it (after regex validation). Verify the SLICE-XXX row exists in `## Slice Progress`; if missing, fail with: `SLICE-XXX not found in <IMPLEMENTATION-PLAN-XXX-...md>'s ## Slice Progress table. Available slice IDs: <list>. Either correct the argument or update the SPEC's ## Delivery Slices section and re-run the implementation scaffolding step.`
 - **No argument, single `Not Started` row:** use it.
 - **No argument, multiple `Not Started` rows (EDGE-010):** return a failure to the orchestrator listing all `Not Started` SLICE-IDs and Names; write no stop note. Do NOT silently pick the first.
-- **No argument, zero `Not Started` rows:** if all slices are `Complete`, fail with: `All slices in <IMPLEMENTATION-PLAN-XXX-...md> are already Complete. Nothing to start.` If any are `In Progress` / `Acceptance Check Passing`, fall through to the EDGE-012 conflict check.
+- **No argument, zero `Not Started` rows:** if all slices are `Complete`, fail with: `All slices in <IMPLEMENTATION-PLAN-XXX-...md> are already Complete. Nothing to start.` If any is `In Progress`, fall through to the EDGE-012 conflict check.
 
-## Step 5: EDGE-012 conflict — another slice is `In Progress` (or `Acceptance Check Passing`)
+## Step 5: EDGE-012 conflict — another slice is `In Progress`
 
-If ANY row in `## Slice Progress` is at `In Progress` OR `Acceptance Check Passing` and is NOT the row being started, refuse with the friendly message naming the in-progress slice (per EDGE-012 spec text):
+If ANY row in `## Slice Progress` is at `In Progress` and is NOT the row being started, refuse with the friendly message naming the in-progress slice (per EDGE-012 spec text):
 
 ```
-Cannot start <requested SLICE-XXX>: <other SLICE-XXX> is currently <state>. Resume the in-progress slice first (see slice-review, slice-retro, and the per-slice commit, step 4c.6), or mark it abandoned by manually editing the Slice Progress row to a terminal state. Use slice-start --resume <other SLICE-XXX> to re-attach to the in-progress slice if context was lost.
+Cannot start <requested SLICE-XXX>: <other SLICE-XXX> is currently <state>. Resume the in-progress slice first (see slice-review and the per-slice commit, step 4c.6), or mark it abandoned by manually editing the Slice Progress row to a terminal state. Use slice-start --resume <other SLICE-XXX> to re-attach to the in-progress slice if context was lost.
 ```
 
 This body does NOT regress the in-progress slice's state, does NOT silently switch active slice, and does NOT overwrite either row's transition timestamp. The forward-only invariant in REQ-022 holds at the primitive boundary.
@@ -105,22 +104,14 @@ This body does NOT regress the in-progress slice's state, does NOT silently swit
 If the requested SLICE-XXX row is at `Status: Complete`, REFUSE and return a failure to the orchestrator, with no partial state writes and no stop note:
 
 ```
-SLICE-XXX is already Complete. A finished slice is not re-started: its row, review, and retrospective are the record of what was committed. Change its behaviour in a later slice, or re-plan.
+SLICE-XXX is already Complete. A finished slice is not re-started: its row and review are the record of what was committed. Change its behaviour in a later slice, or re-plan.
 ```
 
-Re-starting a `Complete` slice would overwrite acceptance-check evidence on the row and create ambiguity in the ledger. There is no override flag.
+Re-starting a `Complete` slice would overwrite acceptance-check evidence on the row. There is no override flag.
 
-## Step 7: Load the rolling ledger (audit-trail-only context propagation per OQ-6)
+## Step 7: What the earlier slices left
 
-```bash
-ls SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md
-```
-
-(Where `[feature-name]` is the kebab-case slug derived from the SPEC filename — e.g., `LEARNINGS-FEATURE-vertical-slicing-step-c.md`. Resolved per CLARIFICATION OQ-B.)
-
-If present, read it into context. The ledger is the ONLY propagated context for slice work (per OQ-6 — strictly the ledger). Individual `RETROSPECTIVE-SLICE-XXX-...md` files can be read from disk on demand when deeper audit trail is needed, but the prompt path is the ledger only.
-
-If the ledger does not yet exist (this is the first slice of the feature), continue without loading — `slice-retro` will create it after this slice's retrospective.
+The earlier slices are committed; their code is the only context carried from one slice to the next. Read it where this slice touches it, as Step 10 says.
 
 ## Step 8: Update the `## Slice Progress` table — flip Status to `In Progress`
 
@@ -202,7 +193,6 @@ Return a bounded result (≤200 words + artifact paths) summarizing:
 
 - The active SLICE-XXX, its Name, and its Acceptance check (verbatim from the row), and whether it passes.
 - The `Modules touched` field from the SPEC's `### SLICE-XXX:` block (read SPEC's `## Delivery Slices` section).
-- The ledger summary (if loaded): one line per ledger section with entry counts.
 - The security rules you proved, by ID.
 - With `tracing: on`: whether every node on the slice's `Traced nodes:` line showed in the trace run's tree, and any difference you recorded under `### Implementation Deviations`.
 - With `evals: on`: the cases you built, and the `Result:` line of your own eval run — or that it ended `UNAVAILABLE`, or that the slice's `Evals:` line is `none`.
@@ -227,7 +217,6 @@ This body emits paths under the SDD 2.0.0 layout:
 
 - `SDD/requirements/SPEC-XXX-[feature-name].md`
 - `SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md`
-- `SDD/implementation/slices/LEARNINGS-FEATURE-[feature-name].md` (kebab-case feature-name slug per CLARIFICATION OQ-B; uniform with REQ-003, REQ-005, REQ-016, MODULE-007, EDGE-007, FAIL-003)
 - `SDD/orchestration/progress.md`
 
 ## Refusal-Message Discipline (REQ-007 / UX-001)

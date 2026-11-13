@@ -182,7 +182,9 @@ before code comes first.
    in `growth.py`'s output. Not built: the end-of-feature consolidation pass (left to step 5's review merge).
 5. **Fewer steps and a slimmer orchestrator** — decided 2026-11-12, to be built in this order, each its own release
    with a Codex review:
-   - **5a (4.6.0), fewer steps:** merge 4b and 4d into one end-of-feature code review (Codex); drop the per-slice
+   - ~~**5a (4.6.0), fewer steps**~~ — built as 4.6.0 (the merged review is `bodies/code-review.md` with an
+     Adversarial Pass, on Codex or the Opus reviewer; per-slice runs it once after the last slice; the
+     `Acceptance Check Passing` row state went with the retrospective). Decided: merge 4b and 4d into one end-of-feature code review (Codex); drop the per-slice
      retrospective and the learnings ledger, the slice review ending with one `Re-plan: yes|no — why` line; drop the
      research review (2c/2d). Check done: neither of tornado's two extra hidden tests came from the research review —
      one came from the spec panel with the owner's answer (truncation raises in `flush()`), one from the panel alone

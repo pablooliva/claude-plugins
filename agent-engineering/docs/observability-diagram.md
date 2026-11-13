@@ -97,7 +97,7 @@ flowchart TD
     review -- "no HIGH or MEDIUM" --> commit["4c.6 commit the slice"]:::orch
     commit --> pause["Slice pause<br/>evals: shows the last line of the slice's eval run"]:::stop
     pause -- "more slices" --> impl
-    pause -- "last slice done" --> crit("4d critical review of the code, 4e fix")
+    pause -- "last slice done" --> crit("4b code review of the whole feature<br/>tracing: trace check; evals: eval run checked<br/>4c fix")
     crit --> final("4e.5 Final check, always runs<br/>tracing: whole call graph compared<br/>evals: every case run again, and checked")
     final -- "HIGH or MEDIUM" --> ffix("fix, check again<br/>what the fix changed<br/>trace and evals in full<br/>at most 2 rounds")
     ffix --> final

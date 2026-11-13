@@ -16,7 +16,7 @@ The design brief is the one planning document written for the human. They will r
 6. **TIER_PLAN** — the tier plan, at the path in your prompt (`SDD/flow/TIERS-[feature-name].md`). If the file exists, this is a later-tier cycle: its Deferred table and Feedback notes are your starting point.
 7. **The observability line** — `Observability record: present` or `Observability record: absent` in your prompt: whether this application has the tracing foundation (`SDD/OBSERVABILITY.md`) that tracing and evals need, as the orchestrator found it just before this run. A prompt with no such line is read as `absent`. When it is `present`, your prompt also gives **EVALS**, the evals reference; read its §1 (the two kinds of eval) if rule 11 applies, and §2's *A case harvested from a real trace* if rule 12 does.
 8. **HARVEST** — only when your prompt has a `HARVEST:` line: harvest files written by `/eval-harvest`, each with the cases still open in it, by trace. Read those cases only (rule 12).
-9. **Revision runs:** inputs 1–8 again, plus the existing brief and the user's reply (verbatim in your prompt). On a re-plan, also the rolling ledger and the latest slice retrospective.
+9. **Revision runs:** inputs 1–8 again, plus the existing brief and the user's reply (verbatim in your prompt). On a re-plan, also the latest slice review.
 
 ## Rules
 
@@ -117,7 +117,7 @@ Write `## Questions for you` with the single line `None.` when there are none.
 3. Append to `## Answers and changes` (create it as the last section if absent): the revision number, the user's reply quoted verbatim, and what you changed in response.
 4. Increment `revision:`. Do not record approval anywhere in the brief — approval state lives in `progress.md`.
 5. If the user's reply shows the research is wrong on a point of fact, correct the research document as well and say so in your return.
-6. On a re-plan (a `RE-PLAN:` line in your prompt — the user's request, verbatim), add `## What changed since revision N` directly under the title: what the request, the ledger, and the retrospective showed, and which decisions or outline entries changed.
+6. On a re-plan (a `RE-PLAN:` line in your prompt — the user's request, verbatim), add `## What changed since revision N` directly under the title: what the request and the slice review showed, and which decisions or outline entries changed.
 
 ## Progress and return
 

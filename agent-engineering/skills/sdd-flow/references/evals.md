@@ -173,7 +173,7 @@ A hard eval is a test, and `references/test-integrity.md` §1 binds it as it bin
 
 ## 7. The review's eval check
 
-Run by the per-slice review (`bodies/slice-review.md`), the whole-feature code review (`bodies/code-review.md`), and every review of the final check (`bodies/final-check.md`, at `FEATURE`), each at the scope its prompt gives, when the prompt carries the line `evals: on`. With `evals: off`, or no such line, do not run it: write the one line `Eval check skipped — evals: off` in the review and move on (a final check writes nothing about evals then).
+Run by the per-slice review (`bodies/slice-review.md`), the feature code review (`bodies/code-review.md`, 4b in both delivery modes), and every review of the final check (`bodies/final-check.md`, at `FEATURE`), each at the scope its prompt gives, when the prompt carries the line `evals: on`. With `evals: off`, or no such line, do not run it: write the one line `Eval check skipped — evals: off` in the review and move on (a final check writes nothing about evals then).
 
 It checks what no test checks: that the run of record says what it must, and that the cases and checks in the application are the spec's and can tell a good answer from a bad one. It is not a second look at whether the spec's cases are the right ones — the spec review settled that, and here the spec's cases are the reference.
 

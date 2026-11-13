@@ -81,10 +81,9 @@ Use the following template:
 - Implementation considerations: [Technical details that affect the spec]
 
 ## Critical Review Status
-[Check for critical review documents in SDD/reviews/CRITICAL-SPEC-*.md and CRITICAL-RESEARCH-*.md]
+[Check for critical review documents in SDD/reviews/CRITICAL-SPEC-*.md]
 - Review performed: [yes/no - check for CRITICAL-SPEC-*.md]
 - Review document: [path to CRITICAL-SPEC-*.md if exists]
-- Prior research review: [path to CRITICAL-RESEARCH-*.md if exists]
 - Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
 - Actions taken: [findings already addressed during this session]
 - Pending actions: [findings that still need attention on continuation]

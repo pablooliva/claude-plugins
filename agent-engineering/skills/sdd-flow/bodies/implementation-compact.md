@@ -56,10 +56,10 @@ Use the following template:
 - Performance considerations: [optimization decisions]
 
 ## Critical Review Status
-[Check for critical review documents in SDD/reviews/CRITICAL-IMPL-*.md, CRITICAL-SPEC-*.md, and CRITICAL-RESEARCH-*.md]
-- Review performed: [yes/no - check for CRITICAL-IMPL-*.md]
-- Review document: [path to CRITICAL-IMPL-*.md if exists]
-- Prior phase reviews: [paths to CRITICAL-SPEC-*.md and CRITICAL-RESEARCH-*.md if they exist]
+[Check for review documents of this feature in SDD/reviews/: REVIEW-SLICE-*, REVIEW-[###]-* (the feature code review), FINAL-CHECK-FEATURE-*, CRITICAL-SPEC-*]
+- Review performed: [yes/no — which of the reviews above exist]
+- Review document: [path to the latest code review, slice review, or final check]
+- Prior phase reviews: [path to CRITICAL-SPEC-*.md if it exists]
 - Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
 - Actions taken: [findings already addressed during this session]
 - Pending actions: [findings that still need attention in next session]
@@ -70,7 +70,7 @@ Use the following template:
 - Specification: [path to spec document]
 - Related architecture: [path if applicable]
 - Key implementation file: [path to core file]
-- Critical review (if exists): SDD/reviews/CRITICAL-IMPL-[feature-name]-YYYYMMDD.md
+- Latest code review (if exists): SDD/reviews/REVIEW-[###]-[feature-name]-YYYYMMDD.md
 
 ## Continuation Priorities
 
