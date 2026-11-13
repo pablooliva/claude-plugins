@@ -166,7 +166,8 @@ A cycle in progress finishes on the version that started it (already the rule si
      halts; the upstream model was switched twice.
    - **Reading:** the gate caught real defects, all in prompts written in the same feature or in handling a real
      model's output; it caught no regression of code that already worked, beyond one it caused itself. A large share
-     of its cost was variance and infrastructure. Whether the gate stays as it is: owner's decision.
+     of its cost was variance and infrastructure.
+   - **Decided 2026-11-13: the evals gate stays as it is**; check 3 measures what evals catch again.
 3. **An application-scale comparison.** Build a small app with a model in it to Tier 1 and then Tier 2, once with
    sdd-flow and once with plain Claude Code, from the same owner answers. Measure:
    - acceptance tests the owner writes before either run;
