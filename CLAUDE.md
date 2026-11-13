@@ -42,7 +42,7 @@ agent-engineering/
 │                                   #   adr-capture, prompt-doctor, research-clarify,
 │                                   #   critical-review, continue, commit, and four compact commands
 │                                   #   (adhoc-compact + research/planning/implementation-compact) that
-│                                   #   share ONE contract with continue: file under SDD/orchestration/compacted/,
+│                                   #   share ONE contract with continue: file under SDD/.records/compacted/,
 │                                   #   its path recorded in progress.md (adhoc Skip: handed to the user instead),
 │                                   #   a `## Continuation Priorities` section,
 │                                   #   a pending `## Awaiting` block kept latest — change one, check all five

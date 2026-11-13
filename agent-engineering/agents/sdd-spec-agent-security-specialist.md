@@ -26,7 +26,7 @@ If none is present, short-circuit: write a one-line note to your PANEL-FINDINGS 
    - **HIGH** — production failures, security breaches, data integrity loss, irreversible-state risk, or major rework.
    - **MEDIUM** — confusion, technical debt, missing edge cases, ambiguity that will cause implementation arguments.
    - **LOW** — best-practice deviation, style issue, minor improvement.
-6. **Bounded return to the orchestrator.** ≤200 words: severity, finding counts (HIGH/MED/LOW), top-3 finding titles, and the PANEL-FINDINGS path you wrote (provided in your prompt; form `SDD/reviews/PANEL-FINDINGS-agent-security-<feature>-<YYYYMMDD>.md`).
+6. **Bounded return to the orchestrator.** ≤200 words: severity, finding counts (HIGH/MED/LOW), top-3 finding titles, and the PANEL-FINDINGS path you wrote (provided in your prompt; form `SDD/.records/reviews/PANEL-FINDINGS-agent-security-<feature>-<YYYYMMDD>.md`).
 
 ## Output schema
 

@@ -12,7 +12,7 @@ The four slice primitives resolve the active slice via the SAME priority chain �
 2. **IMPLEMENTATION-PLAN's `## Slice Progress` row matching the primitive's expected status:**
    - `slice-start` → first row at `Not Started` (you can't start what's already running).
    - `slice-review` / the per-slice commit (4c.6) → row at `In Progress` (you can't review or commit something not yet implemented).
-3. **Error** — never silently pick. If priority 2 yields multiple candidates, return a failure to the orchestrator listing all candidates. Write no stop note to `SDD/orchestration/progress.md` — the orchestrator names the slice and re-spawns.
+3. **Error** — never silently pick. If priority 2 yields multiple candidates, return a failure to the orchestrator listing all candidates. Write no stop note to `SDD/.records/progress.md` — the orchestrator names the slice and re-spawns.
 
 ## Inert-Mode Gate
 
@@ -125,7 +125,7 @@ Edit the IMPLEMENTATION-PLAN in place:
 
 ## Step 9: Update `progress.md`
 
-Append an entry to `SDD/orchestration/progress.md` recording the slice start:
+Append an entry to `SDD/.records/progress.md` recording the slice start:
 
 ```markdown
 ## Slice <SLICE-XXX> - In Progress
@@ -217,7 +217,7 @@ This body emits paths under the SDD 2.0.0 layout:
 
 - `SDD/requirements/SPEC-XXX-[feature-name].md`
 - `SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md`
-- `SDD/orchestration/progress.md`
+- `SDD/.records/progress.md`
 
 ## Refusal-Message Discipline (REQ-007 / UX-001)
 

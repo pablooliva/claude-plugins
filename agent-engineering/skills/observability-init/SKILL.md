@@ -72,7 +72,7 @@ git rev-parse --show-toplevel                 # fails → not a repo; stop
 git status --short | head                     # not clean → say so: the diff should be this skill's alone
 ls SDD/OBSERVABILITY.md 2>/dev/null           # present → audit mode
 ls pyproject.toml requirements*.txt setup.py 2>/dev/null
-tail -40 SDD/orchestration/progress.md 2>/dev/null
+tail -40 SDD/.records/progress.md 2>/dev/null
 ```
 
 - **A cycle is running** when `progress.md` names a feature in progress, or its latest block is a pending `## Awaiting …`. Stop and tell the user.

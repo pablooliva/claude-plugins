@@ -49,7 +49,7 @@ Execute in order. Quote every path. Make no model call.
 
 ```bash
 git rev-parse --show-toplevel                           # fails → not a repo; stop
-tail -40 SDD/orchestration/progress.md 2>/dev/null
+tail -40 SDD/.records/progress.md 2>/dev/null
 cat SDD/OBSERVABILITY.md 2>/dev/null
 ls SDD/flow/TIERS-*.md SDD/flow/HARVEST-*.md 2>/dev/null
 ls evals/cases.jsonl 2>/dev/null

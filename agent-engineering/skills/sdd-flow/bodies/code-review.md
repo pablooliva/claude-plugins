@@ -29,7 +29,7 @@ Code that misses the specification fails. Code that meets it passes only when it
 3. **IMPLEMENTATION-PLAN Files** (`SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-*.md`)
    - All AI-generated code has associated prompt files
    - Context management approach documented
-   - Subagent usage logged (check `SDD/orchestration/subagent-calls/`)
+   - Subagent usage logged (check `SDD/.records/subagent-calls/`)
    - Progress summaries for each implementation phase
    - Context engineering decisions and handoff points between phases recorded
 
@@ -197,7 +197,7 @@ Like the Agentic-Surface Lens, this walk is an overlay on the 70/20/10 budget, n
 
 ## Agentic-Surface Lens (conditional)
 
-**Gate:** your spawn prompt carries the resolved gate value and, whenever the gate may be open, the absolute path of the control catalog (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) and of the spec's panel review (`SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`).
+**Gate:** your spawn prompt carries the resolved gate value and, whenever the gate may be open, the absolute path of the control catalog (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) and of the spec's panel review (`SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`).
 
 - `agent_security: true` → run this lens.
 - `agent_security: auto` → run the scope test below and run the lens only if it passes.
@@ -241,7 +241,7 @@ If your prompt gives a catalog path but no gate value, read `agent_security:` fr
 
 **A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list in the end report — and nothing sends it to a fix round.
 
-When your review document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` — all three counts, zeros included (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). It is a phase-detection marker; do not paraphrase it.
+When your review document is written, append to `SDD/.records/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` — all three counts, zeros included (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). It is a phase-detection marker; do not paraphrase it.
 
 ## Delivery Tier (tiered specs only)
 
@@ -275,7 +275,7 @@ Use the research document, specification, and IMPLEMENTATION-PLAN paths in your 
 
 ```bash
 # Check subagent logs
-ls SDD/orchestration/subagent-calls/
+ls SDD/.records/subagent-calls/
 ```
 
 ### Step 2: Read Specification First
@@ -453,7 +453,7 @@ Your review must produce:
 
 ### 1. Review Summary Document
 
-Create `SDD/reviews/REVIEW-XXX-[feature-name]-YYYYMMDD.md`:
+Create `SDD/.records/reviews/REVIEW-XXX-[feature-name]-YYYYMMDD.md`:
 
 ```markdown
 # Code Review: [Feature Name]

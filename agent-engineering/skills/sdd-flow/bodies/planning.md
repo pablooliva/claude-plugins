@@ -9,7 +9,7 @@ Starting planning phase based on completed research.
 ## Initial Context Load
 
 1. **Read Progress File:**
-   - Load `SDD/orchestration/progress.md` to understand research completion status
+   - Load `SDD/.records/progress.md` to understand research completion status
    - The research document is the path in your prompt — do not take it from this file, which may also reference earlier features' research
    - Note any important context from the research phase
 
@@ -30,7 +30,7 @@ Starting planning phase based on completed research.
    - When it is `present`, your prompt also gives the path of the evals reference (**EVALS**). Read it only when evals are on for this spec (the table under `evals:`, Specification Frontmatter Fields) — then its §1, §2, and §6: the two kinds of eval, how a case is written, and what binds a case once it is written (Planning Process → *Eval rules*). When your prompt has a `HARVEST:` line, read §2's *A case harvested from a real trace* whether evals are on or off (*Eval rules* → Harvested cases).
 
 6. **Update Progress for Planning Phase:**
-   - Add a new planning section to `SDD/orchestration/progress.md`
+   - Add a new planning section to `SDD/.records/progress.md`
    - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
    - Add reference to the SPEC document being created
    - Document the transition from research to planning phase

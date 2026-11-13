@@ -2,7 +2,7 @@
 
 You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
-You are reading this because your Reads-counter safety-net tripped mid-phase. Follow these compaction instructions to write `SDD/orchestration/compacted/research-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` with the compaction file path and where you left off, then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
+You are reading this because your Reads-counter safety-net tripped mid-phase. Follow these compaction instructions to write `SDD/.records/compacted/research-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `SDD/.records/progress.md` with the compaction file path and where you left off, then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
 
 ---
 
@@ -14,7 +14,7 @@ Context is getting overloaded during research phase. Create permanent compaction
 
 ### 1. Create Timestamped Compaction File
 
-Write to: `SDD/orchestration/compacted/research-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
+Write to: `SDD/.records/compacted/research-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
 
 - `[YYYY-MM-DD_HH-MM-SS]` is the current timestamp (24-hour time)
 - Example: `research-compacted-2025-10-01_14-30-45.md`
@@ -94,7 +94,7 @@ Use the following template:
 
 ### 3. Update Current Progress
 
-Also update `SDD/orchestration/progress.md` with:
+Also update `SDD/.records/progress.md` with:
 
 - Latest research state
 - Current blocking questions
@@ -117,6 +117,6 @@ This preserves complete research journey while enabling fresh context continuati
 
 ## After Compaction
 
-After writing the compaction file and appending the `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md`, return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required, including the compaction file path and the exact point where work stopped.
+After writing the compaction file and appending the `## PARTIAL: needs continuation` block to `SDD/.records/progress.md`, return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required, including the compaction file path and the exact point where work stopped.
 
 Research phase is incomplete — the orchestrator will spawn a continuation agent to resume from the compaction record.

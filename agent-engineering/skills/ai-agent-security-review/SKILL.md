@@ -82,8 +82,8 @@ scope* and move on — do not develop it into a finding here.
 
 ## 5. Write the findings document
 
-**Path:** `SDD/reviews/AGENT-SECURITY-[target-slug]-[YYYYMMDD].md` when an `SDD/` tree exists
-(create `SDD/reviews/` if absent). Otherwise report inline in the conversation and offer to write
+**Path:** `SDD/.records/reviews/AGENT-SECURITY-[target-slug]-[YYYYMMDD].md` when an `SDD/` tree exists
+(create `SDD/.records/reviews/` if absent; a new `SDD/.records/` gets a `.gitignore` holding the one line `*` — the report is a process record and stays out of git). Otherwise report inline in the conversation and offer to write
 the file — do not create an `SDD/` tree in a repo that has none.
 
 ```markdown

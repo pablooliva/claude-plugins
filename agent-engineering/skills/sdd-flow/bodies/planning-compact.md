@@ -2,13 +2,13 @@
 
 You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
-You are reading this because your Reads-counter safety-net tripped mid-phase. Follow these compaction instructions to write `SDD/orchestration/compacted/planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` with the compaction file path and where you left off, then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
+You are reading this because your Reads-counter safety-net tripped mid-phase. Follow these compaction instructions to write `SDD/.records/compacted/planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `SDD/.records/progress.md` with the compaction file path and where you left off, then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
 
 ## Process
 
 ### 1. Create Timestamped Compaction File
 
-Write to: `SDD/orchestration/compacted/planning-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
+Write to: `SDD/.records/compacted/planning-compacted-[YYYY-MM-DD_HH-MM-SS].md` where:
 
 - `[YYYY-MM-DD_HH-MM-SS]` is the current timestamp (24-hour time)
 - Example: `planning-compacted-2025-10-01_14-30-45.md`
@@ -81,7 +81,7 @@ Use the following template:
 - Implementation considerations: [Technical details that affect the spec]
 
 ## Critical Review Status
-[Check for critical review documents in SDD/reviews/CRITICAL-SPEC-*.md]
+[Check for critical review documents in SDD/.records/reviews/CRITICAL-SPEC-*.md]
 - Review performed: [yes/no - check for CRITICAL-SPEC-*.md]
 - Review document: [path to CRITICAL-SPEC-*.md if exists]
 - Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
@@ -95,7 +95,7 @@ Use the following template:
 - Specification in progress: SDD/requirements/SPEC-[###]-[feature-name].md:[lines]
 - Related architecture docs: [path if applicable]
 - Integration contracts: [API specs, interfaces if relevant]
-- Critical review (if exists): SDD/reviews/CRITICAL-SPEC-[feature-name]-YYYYMMDD.md
+- Critical review (if exists): SDD/.records/reviews/CRITICAL-SPEC-[feature-name]-YYYYMMDD.md
 
 ## Inline Investigation Performed
 [Document the file discovery / analysis you did inline during planning]
@@ -149,7 +149,7 @@ Use the following template:
 
 ### 3. Update Current Progress
 
-Also update `SDD/orchestration/progress.md` with:
+Also update `SDD/.records/progress.md` with:
 
 - Latest specification state (sections completed vs remaining)
 - Key decisions made during this session
@@ -180,6 +180,6 @@ Before compacting, ensure:
 
 ## Handoff
 
-After writing the compaction file and updating `SDD/orchestration/progress.md`, append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` recording the compaction file path and where you left off. When you are a subagent of the flow — your prompt named a body file or a step — the block also carries one line that names the step you were running: `Step: <the body file your prompt told you to read first — when that was the continue body, the STEP BODY your prompt named; when your prompt named no body of the step's own — a fix, or the continuation of one — the step's name as your prompt gives it>`, followed on the same line by the `MODE`, `SCOPE`, and `ITER` your prompt gave, each only if it gave one. A later session finds the step to continue by this line. A compaction a person runs by hand, through a compact command, writes no such line. Then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
+After writing the compaction file and updating `SDD/.records/progress.md`, append a `## PARTIAL: needs continuation` block to `SDD/.records/progress.md` recording the compaction file path and where you left off. When you are a subagent of the flow — your prompt named a body file or a step — the block also carries one line that names the step you were running: `Step: <the body file your prompt told you to read first — when that was the continue body, the STEP BODY your prompt named; when your prompt named no body of the step's own — a fix, or the continuation of one — the step's name as your prompt gives it>`, followed on the same line by the `MODE`, `SCOPE`, and `ITER` your prompt gave, each only if it gave one. A later session finds the step to continue by this line. A compaction a person runs by hand, through a compact command, writes no such line. Then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
 
 Planning phase is incomplete — the orchestrator will spawn a continuation agent to resume from the compaction record.

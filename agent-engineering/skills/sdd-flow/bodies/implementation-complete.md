@@ -36,7 +36,7 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 **IMPORTANT: Load these documents BEFORE proceeding with any completion tasks.**
 
 1. **Progress File:**
-   - Load `SDD/orchestration/progress.md`
+   - Load `SDD/.records/progress.md`
    - Verify implementation phase is active
    - Check for any incomplete items or blockers
    - Note any recent compaction files referenced
@@ -53,11 +53,11 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
    - Verify all REQ-XXX, PERF-XXX, SEC-XXX, UX-XXX items
 
 4. **Recent Compaction (if exists):**
-   - Only the one `progress.md` names for this feature: the compaction file path in its latest `## PARTIAL: needs continuation` block for the implementation phase. Do not list `SDD/orchestration/compacted/` and pick "the most recent" — files there belong to other phases, earlier handoffs, and other features.
+   - Only the one `progress.md` names for this feature: the compaction file path in its latest `## PARTIAL: needs continuation` block for the implementation phase. Do not list `SDD/.records/compacted/` and pick "the most recent" — files there belong to other phases, earlier handoffs, and other features.
    - If one is named, load it to understand any pending items, and review its "Specification Validation Remaining" section. If none is named, skip this step.
 
 5. **The Final Check and the LOW Findings:**
-   - Your prompt provides **FINAL_CHECK** — the last final-check review (`SDD/reviews/FINAL-CHECK-FEATURE-*`), the one that let the loop end — **SECURITY** (`references/security-verification.md`, read §5), and **REVIEWS**, the review documents of this feature.
+   - Your prompt provides **FINAL_CHECK** — the last final-check review (`SDD/.records/reviews/FINAL-CHECK-FEATURE-*`), the one that let the loop end — **SECURITY** (`references/security-verification.md`, read §5), and **REVIEWS**, the review documents of this feature.
    - Copy FINAL_CHECK's `## Security Verification` table into the summary's `### Security Verification` (template below). A rule whose row is not `holds, proven` is an incomplete item.
    - Copy every LOW finding from the `LOW Findings (listed, not fixed)` sections of REVIEWS into the summary's `### LOW Findings (listed, not fixed)` — one line each, with the review it came from — and write `None.` when there are none. The owner reads this list in the end report.
    - **Change no code and no test in this run.** FINAL_CHECK reviewed the code and the tests as they stand; a change made after it would be completed without that check. Wherever this body tells you to fix a failing test, write a missing test, or complete an implementation, list the item as incomplete instead and return it (Error Recovery → Save Progress), saying in the return that it needs code or tests changed. Completion documents — the plan, the spec's summary, the tier plan, the glossary, the implementation summary — are yours to write.
@@ -518,7 +518,7 @@ Accepted by the user at the commit checkpoint — not yet asked when this summar
 
 ### 4. Update Progress File
 
-Append to `SDD/orchestration/progress.md` — this entry and nothing more, written after step 5 so its Glossary line is final. Progress entries are capped at 10 lines; the final status, metrics, and deployment detail live in the IMPLEMENTATION-SUMMARY you just wrote, referenced here by path. Keep the header line exactly as shown — it is a phase-detection marker.
+Append to `SDD/.records/progress.md` — this entry and nothing more, written after step 5 so its Glossary line is final. Progress entries are capped at 10 lines; the final status, metrics, and deployment detail live in the IMPLEMENTATION-SUMMARY you just wrote, referenced here by path. Keep the header line exactly as shown — it is a phase-detection marker.
 
 ```markdown
 ## Implementation Phase - COMPLETE ✓
@@ -549,7 +549,7 @@ Implementation phase COMPLETE for [Feature Name]. Return a bounded result (≤20
 - `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[date].md` (finalized)
 - `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md` (created)
 - `SDD/flow/TIERS-[feature-name].md` (tiered specs only — updated: tier shipped, deferrals reconciled). For a tiered spec, also state in your return which tier shipped and, in one line each, what the tier plan leaves for the later tiers.
-- `SDD/orchestration/progress.md` (updated)
+- `SDD/.records/progress.md` (updated)
 - `SDD/UBIQUITOUS_LANGUAGE.md` (updated if glossary deltas were captured, or note "no glossary changes")
 
 The feature is specification-validated, thoroughly tested, and ready for deployment.
@@ -569,7 +569,7 @@ When requirements are not met:
    ```
 
 2. **Save Progress:**
-   - Append the blockers list to `SDD/orchestration/progress.md`
+   - Append the blockers list to `SDD/.records/progress.md`
    - Return a bounded result listing all incomplete items and required actions
 
 3. **Address Blockers:**

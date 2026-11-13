@@ -11,12 +11,12 @@ You are a continuation subagent spawned because a prior phase subagent tripped t
 ### 1. Load Progress and Compaction Files
 
 1. **Read Main Progress File:**
-   - Load `SDD/orchestration/progress.md`
+   - Load `SDD/.records/progress.md`
    - Identify current phase (research/planning/implementation)
    - Note completion status and next priorities
 
 2. **Read the Compaction File Named in Your Prompt:**
-   - Load that one file, at the exact path given. It lives under `SDD/orchestration/compacted/`; do not list that directory, and do not pick "the most recent" file yourself — other compaction files there belong to earlier handoffs, other phases, or other features.
+   - Load that one file, at the exact path given. It lives under `SDD/.records/compacted/`; do not list that directory, and do not pick "the most recent" file yourself — other compaction files there belong to earlier handoffs, other phases, or other features.
    - Its name tells you the phase being continued:
      - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
      - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
@@ -32,7 +32,7 @@ Before resuming work, verify from the compaction file:
 - [ ] Any blocking items or unresolved questions are documented
 - [ ] Priority list provides clear next steps
 
-If any critical information is missing, note the gap in `SDD/orchestration/progress.md` and proceed with the best available context.
+If any critical information is missing, note the gap in `SDD/.records/progress.md` and proceed with the best available context.
 
 ### 3. Phase-Specific Context Loading
 
@@ -102,7 +102,7 @@ Complete this checklist before starting work:
 - [ ] Previous session's critical learnings are understood
 - [ ] Blocking items or questions are noted
 
-If an essential file cannot be loaded — a phase artifact named in your prompt, or a file the compaction file lists under "Essential Files to Reload" that is missing or unreadable — return a failure to the orchestrator naming it. Do not resume on partial context, and write no stop note. If any other check fails (a thin priority list, an unclear learning), document the issue in `SDD/orchestration/progress.md` and proceed with the best available information.
+If an essential file cannot be loaded — a phase artifact named in your prompt, or a file the compaction file lists under "Essential Files to Reload" that is missing or unreadable — return a failure to the orchestrator naming it. Do not resume on partial context, and write no stop note. If any other check fails (a thin priority list, an unclear learning), document the issue in `SDD/.records/progress.md` and proceed with the best available information.
 
 ### 5. Resume Work
 
@@ -113,7 +113,7 @@ If an essential file cannot be loaded — a phase artifact named in your prompt,
    - Perform all file reads and code searches inline in your own context
 
 2. **Update Progress File:**
-   - Add new accomplishments to `SDD/orchestration/progress.md`
+   - Add new accomplishments to `SDD/.records/progress.md`
    - Update "Continuation Priorities" section
    - Note any new blocking items discovered
    - **IMPORTANT: DO NOT reset or delete previous phase information — append to it**
@@ -122,8 +122,8 @@ If an essential file cannot be loaded — a phase artifact named in your prompt,
 
 The Safety-Net Rule in your prompt applies here as it did to the prior subagent, with the fresh counter file you were given. (A review continued on a second model since 3.14.2 has no Safety-Net Rule in its prompt: then there is no read limit, and this section does not apply.) If it trips again, stop and follow the compact body named in your prompt (under "Compact instructions — use only if the Safety-Net trips") — that file, not this section, says what to do. In short, it has you:
 
-1. Write a new compaction file under `SDD/orchestration/compacted/`, named for the current phase (e.g., `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`)
-2. Append a `## PARTIAL: needs continuation` block to `SDD/orchestration/progress.md` with the compaction file path and where you left off
+1. Write a new compaction file under `SDD/.records/compacted/`, named for the current phase (e.g., `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`)
+2. Append a `## PARTIAL: needs continuation` block to `SDD/.records/progress.md` with the compaction file path and where you left off
 3. Return ≤100 words stating a Mid-Phase Handoff is required
 
 Where this summary and the compact body differ, the compact body wins.
@@ -143,23 +143,23 @@ If the phase completes fully, return a bounded result (≤200 words + artifact p
    - Trust the work documented in compaction files
 
 3. **Document Incremental Progress:**
-   - Update `SDD/orchestration/progress.md` after each significant milestone
+   - Update `SDD/.records/progress.md` after each significant milestone
    - Note any new discoveries or blockers immediately
    - Keep "Continuation Priorities" current
 
 ## Important Notes
 
-- `SDD/orchestration/progress.md` is the primary continuation point across all phases
+- `SDD/.records/progress.md` is the primary continuation point across all phases
 - Compaction files provide detailed context from the prior subagent's run
 - Each phase builds upon previous phases — maintain continuity
 - Read only the compaction file named in your prompt, even when others exist beside it
-- Never reset or overwrite previous phase information in `SDD/orchestration/progress.md`
+- Never reset or overwrite previous phase information in `SDD/.records/progress.md`
 
 ## Error Recovery
 
 If continuation context is unclear:
 
 1. Re-read the compaction file named in your prompt — never a different one. If it is missing or unreadable, return a failure to the orchestrator (Process step 1)
-2. Verify `SDD/orchestration/progress.md` exists and contains phase information
+2. Verify `SDD/.records/progress.md` exists and contains phase information
 3. If phase is ambiguous, examine the compaction file header and progress.md together to determine it
 4. If next task is unclear, derive it from the compaction file's "Continuation Priorities" section — its "Current Focus" and numbered priority list

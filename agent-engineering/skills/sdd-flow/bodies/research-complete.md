@@ -88,7 +88,7 @@ If the research is purely infrastructural and introduces no domain vocabulary, c
 
 ## 4. Record Phase Transition
 
-Append a brief transition note to `SDD/orchestration/progress.md` (append-only — do not overwrite existing content):
+Append a brief transition note to `SDD/.records/progress.md` (append-only — do not overwrite existing content):
 
 "Research phase complete. RESEARCH-[###]-[feature-name].md finalized. Glossary updated (or: no glossary changes). Ready for planning phase."
 
@@ -102,4 +102,4 @@ Return a summary of ≤200 words confirming phase completion. Include:
 Artifact paths to reference in your return:
 - `SDD/research/RESEARCH-[###]-[feature-name].md`
 - `SDD/UBIQUITOUS_LANGUAGE.md`
-- `SDD/orchestration/progress.md`
+- `SDD/.records/progress.md`

@@ -8,7 +8,7 @@ Context is getting high during work. Create a lightweight compaction record to p
 
 **Before proceeding, check if an SDD development phase is currently active.**
 
-Read `SDD/orchestration/progress.md` (if it exists) and decide from **what this session has been working on**, not from which files exist — finished features leave their research, spec, and plan documents behind, so the files alone prove nothing:
+Read `SDD/.records/progress.md` (if it exists) and decide from **what this session has been working on**, not from which files exist — finished features leave their research, spec, and plan documents behind, so the files alone prove nothing:
 
 - `progress.md` shows a feature in progress (a `## Flow Started - ` record with no `Finished:` line, or phase entries with no completion), **and** this session's work was on that feature → a phase is active. Which one: research (no accepted research yet), planning (a spec being written or reviewed), or implementation (code being written against a spec).
 - This session's work was something else — a follow-up, a fix, a review, plugin or tooling work — → no phase is active for this compaction, whatever `progress.md` holds.
@@ -27,7 +27,7 @@ Read `SDD/orchestration/progress.md` (if it exists) and decide from **what this 
 
 The phase-specific commands are `/agent-engineering:research-compact`, `/agent-engineering:planning-compact`, and `/agent-engineering:implementation-compact`. They share their instruction sets with `sdd-flow`'s compaction bodies, so a manual compaction produces the same artifact an orchestrated run would. Use the `/agent-engineering:` prefix — the bare names also exist in the `sdd` plugin, which ships the older, frozen copies.
 
-All four commands follow one contract, which `/agent-engineering:continue` relies on: the file goes under `SDD/orchestration/compacted/`; its full path is recorded in `SDD/orchestration/progress.md` (or, when the user picks Skip in step 3 below, handed to them as an explicit `/agent-engineering:continue <path>` command); it carries a `## Continuation Priorities` section holding **Essential Files to Reload**, **Current Focus**, and a numbered priority list; and a pending `## Awaiting …` block in `progress.md` stays the latest block. The one exception to the last point is a deliberate abandonment — step 3's "Archive everything, start fresh", taken only on the user's explicit yes.
+All four commands follow one contract, which `/agent-engineering:continue` relies on: the file goes under `SDD/.records/compacted/` (creating `SDD/.records/` writes `SDD/.records/.gitignore` holding the one line `*`, so nothing in it is ever committed); its full path is recorded in `SDD/.records/progress.md` (or, when the user picks Skip in step 3 below, handed to them as an explicit `/agent-engineering:continue <path>` command); it carries a `## Continuation Priorities` section holding **Essential Files to Reload**, **Current Focus**, and a numbered priority list; and a pending `## Awaiting …` block in `progress.md` stays the latest block. The one exception to the last point is a deliberate abandonment — step 3's "Archive everything, start fresh", taken only on the user's explicit yes.
 
 | Use `/adhoc-compact` when:            | Use phase-specific when:              |
 | ------------------------------------- | ------------------------------------- |
@@ -40,7 +40,7 @@ All four commands follow one contract, which `/agent-engineering:continue` relie
 
 ### 1. Create Timestamped Compaction File
 
-Write to: `SDD/orchestration/compacted/compact-[YYYY-MM-DD_HH-MM-SS].md`
+Write to: `SDD/.records/compacted/compact-[YYYY-MM-DD_HH-MM-SS].md`
 
 Format: `compact-YYYY-MM-DD_HH-MM-SS.md` (24-hour time)
 Example: `compact-2025-10-01_14-30-45.md`
@@ -79,7 +79,7 @@ Use the following streamlined template:
 - [Discovery 2]
 
 ## Critical Review Status
-[Check for critical review documents in SDD/reviews/CRITICAL-*.md]
+[Check for critical review documents in SDD/.records/reviews/CRITICAL-*.md]
 - Review performed: [yes/no]
 - Review document(s): [paths to any CRITICAL-*.md files if they exist]
 - Unresolved findings: [list any HIGH/MEDIUM findings not yet addressed]
@@ -110,7 +110,7 @@ Use the following streamlined template:
 
 ### 3. Update Progress File
 
-**Before updating `SDD/orchestration/progress.md`, check its contents:**
+**Before updating `SDD/.records/progress.md`, check its contents:**
 
 1. **Read existing progress.md** (if it exists)
 2. **Determine relevance:**
@@ -122,8 +122,8 @@ Use the following streamlined template:
 **STOP and ask the user first.** Present options:
 
 1. **Append** - Add current task as a new section in existing progress.md. Right when the other work is still wanted — for example an `sdd-flow` feature that is part-way through and will be resumed. Its entries are not leftovers: they are what `/sdd-flow continue` resumes from. [recommended in that case]
-2. **Rotate, then append** - Move the unrelated, *resolved* history to `SDD/orchestration/progress-archive/` by the step 4 procedure, then add the current task. Pending `## Awaiting *` / `## PARTIAL*` blocks and an active feature's phase-state lines stay in the live file — an `sdd-flow` run resumes from them. Right when the file has grown long and the other work is still wanted.
-3. **Archive everything, start fresh** - A deliberate abandonment, not a rotation: it is the one operation allowed to take pending blocks out of the live file. Right when the other work is finished or **abandoned** and its entries really are leftovers. Move the whole file to `SDD/orchestration/progress-archive/progress-set-aside-[YYYY-MM-DD_HH-MM-SS].md` (create the folder if absent) and create a fresh `progress.md` with only the current task. Nothing is deleted: moving the file back restores it. **If the file holds an unfinished `sdd-flow` feature** — a `## Flow Started - ` record with no `## Feature - Done` after it; or any pending `## Awaiting *` / `## PARTIAL*` block; or, in a file written by an older version with no `## Flow Started - ` line, any research, planning, or implementation entry for a feature that has no `## Feature - Done` or `Finished:` line — say so before doing it, naming the feature and the step it stopped at, and that `/sdd-flow continue` will no longer resume it unless the file is moved back. Proceed only on an explicit yes. In the fresh file's `## Current State`, add the line `Set aside: <archive path>` so the earlier work can be found.
+2. **Rotate, then append** - Move the unrelated, *resolved* history to `SDD/.records/progress-archive/` by the step 4 procedure, then add the current task. Pending `## Awaiting *` / `## PARTIAL*` blocks and an active feature's phase-state lines stay in the live file — an `sdd-flow` run resumes from them. Right when the file has grown long and the other work is still wanted.
+3. **Archive everything, start fresh** - A deliberate abandonment, not a rotation: it is the one operation allowed to take pending blocks out of the live file. Right when the other work is finished or **abandoned** and its entries really are leftovers. Move the whole file to `SDD/.records/progress-archive/progress-set-aside-[YYYY-MM-DD_HH-MM-SS].md` (create the folder if absent) and create a fresh `progress.md` with only the current task. Nothing is deleted: moving the file back restores it. **If the file holds an unfinished `sdd-flow` feature** — a `## Flow Started - ` record with no `## Feature - Done` after it; or any pending `## Awaiting *` / `## PARTIAL*` block; or, in a file written by an older version with no `## Flow Started - ` line, any research, planning, or implementation entry for a feature that has no `## Feature - Done` or `Finished:` line — say so before doing it, naming the feature and the step it stopped at, and that `/sdd-flow continue` will no longer resume it unless the file is moved back. Proceed only on an explicit yes. In the fresh file's `## Current State`, add the line `Set aside: <archive path>` so the earlier work can be found.
 4. **Skip** - Don't update progress.md, only create the compaction file. Whatever compaction path `progress.md` already names stays the one a bare `/continue` loads — and if it names none, `/continue` would have to guess among the files in the folder — so the next session must be given this one explicitly: tell the user to run `/agent-engineering:continue <the file's full path>`, and put that exact command in your final message.
 
 Never overwrite or delete `progress.md`: it may hold the state of a feature that is still being built, and option 3 clears the live file just as well without losing anything.
@@ -141,7 +141,7 @@ Update/create with:
 ```markdown
 ## Current State
 
-- Last compaction: SDD/orchestration/compacted/compact-[timestamp].md
+- Last compaction: SDD/.records/compacted/compact-[timestamp].md
 - Working on: [task description]
 - Next step: [what to do next]
 ```
@@ -152,7 +152,7 @@ Update/create with:
 
 Compaction shrinks the *session*; `progress.md` is durable state that every future session and subagent re-reads — compacting context without rotating an oversized progress file re-imports the same cost next session. If `progress.md` exceeds **~500 lines**:
 
-1. Create `SDD/orchestration/progress-archive/` if absent; move completed-feature history and verbose *resolved* blocks (including completed-phase history of the still-active feature) to `progress-archive/progress-[scope]-[YYYY-MM-DD_HH-MM-SS].md`.
+1. Create `SDD/.records/progress-archive/` if absent; move completed-feature history and verbose *resolved* blocks (including completed-phase history of the still-active feature) to `progress-archive/progress-[scope]-[YYYY-MM-DD_HH-MM-SS].md`.
 2. Rewrite the live head as a bounded `## Current State` (active feature, phase status with canonical phase-state lines carried verbatim, artifact pointers, "History archived to <path>"). **When the file holds an `sdd-flow` feature that is not finished, follow the full procedure in `skills/sdd-flow/phases/protocols.md` → Progress Rotation, not this summary:** that feature keeps its Step 0 record (the `## Flow Started - ` line and the lines under it — mode, flags, paths), its phase-state lines verbatim and in their original order, and every block of the phase still in progress. Only the history of phases already marked done is moved.
 3. **Carry forward verbatim, as the latest blocks, anything still pending** (any `## Awaiting *` or `## PARTIAL*` header — prefix match, not a fixed list) — resumption matches the latest block in the live file and never reads archives.
 4. Note the rotation in the new head.

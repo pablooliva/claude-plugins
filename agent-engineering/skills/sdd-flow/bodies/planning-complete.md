@@ -206,7 +206,7 @@ Maintenance is incremental — do not rewrite stable entries. If the spec uses a
 
 ## 6. Update Progress File for Phase Transition
 
-Update `SDD/orchestration/progress.md` with planning completion and implementation handoff:
+Update `SDD/.records/progress.md` with planning completion and implementation handoff:
 
 ```markdown
 ## Planning Phase - COMPLETE
@@ -276,7 +276,7 @@ Return a bounded result (≤200 words) summarizing:
 - Glossary changes applied (or "no glossary changes")
 - Any blocking items that must be resolved before implementation begins
 
-Include the path to `SDD/orchestration/progress.md` as an artifact path in your return.
+Include the path to `SDD/.records/progress.md` as an artifact path in your return.
 
 ---
 

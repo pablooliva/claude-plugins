@@ -23,15 +23,15 @@ WORK IN PROGRESS        CONTEXT ~40%             CLEAR SESSION         FRESH STA
   [working] ──────────► [compact command] ───────► [/clear] ───────────► [/continue]
                              │                                              │
                              └─ writes one file under                       │
-                                SDD/orchestration/compacted/                │
+                                SDD/.records/compacted/                     │
                                 and records its path in progress.md ◄─ reads both
 ```
 
-- **Compact**: when context approaches 40%, run one of the four compact commands. Each writes exactly one file under `SDD/orchestration/compacted/` and records that file's path in `SDD/orchestration/progress.md` (the one exception: `/adhoc-compact`'s Skip option, which hands you the path to pass to this command instead).
+- **Compact**: when context approaches 40%, run one of the four compact commands. Each writes exactly one file under `SDD/.records/compacted/` and records that file's path in `SDD/.records/progress.md` (the one exception: `/adhoc-compact`'s Skip option, which hands you the path to pass to this command instead).
 - **Commit (optional)**: `/commit` saves work before the session is cleared. Do **not** commit implementation work while an `sdd-flow` run is implementing a feature — the flow commits each slice or feature once, after its review, and a commit made earlier puts unreviewed code into history and splits that one commit in two.
 - **Clear**, then **Continue**: `/agent-engineering:continue` in a fresh session reads `progress.md` and the compaction file it names. Use the prefix — the `sdd` plugin ships an older `/continue` that looks in a different place.
 
-| Compact command | File it writes (under `SDD/orchestration/compacted/`) |
+| Compact command | File it writes (under `SDD/.records/compacted/`) |
 |---|---|
 | `/adhoc-compact` | `compact-[YYYY-MM-DD_HH-MM-SS].md` |
 | `/agent-engineering:research-compact` | `research-compacted-[YYYY-MM-DD_HH-MM-SS].md` |
@@ -45,7 +45,7 @@ All four templates carry the same `## Continuation Priorities` section — **Ess
 ### 1. Load Progress and Compaction Files
 
 1. **Read Main Progress File:**
-   - Load `SDD/orchestration/progress.md`
+   - Load `SDD/.records/progress.md`
    - Identify current phase (research/planning/implementation)
    - Note completion status and next priorities
    - Check for any subagent delegations that need follow-up
@@ -53,7 +53,7 @@ All four templates carry the same `## Continuation Priorities` section — **Ess
 2. **Locate the Compaction File** — one rule, in this order; stop at the first that applies:
    1. **A path given with the command** (`/agent-engineering:continue <path>`) → load that file.
    2. **The path `progress.md` names.** Every compact command records it there: the latest `## PARTIAL: needs continuation` block (phase-specific commands) or the `Last compaction:` line under `## Current State` (`/adhoc-compact`). Whichever is later in the file wins. Load exactly that file. **If the named file is missing, stop and tell the user** — do not substitute another file; a different file is different work.
-   3. **`progress.md` names none** → list `SDD/orchestration/compacted/` for these names, newest first by the timestamp in the name (`YYYY-MM-DD_HH-MM-SS`, 24-hour):
+   3. **`progress.md` names none** → list `SDD/.records/compacted/` for these names, newest first by the timestamp in the name (`YYYY-MM-DD_HH-MM-SS`, 24-hour):
       - Research phase: `research-compacted-[YYYY-MM-DD_HH-MM-SS].md`
       - Planning phase: `planning-compacted-[YYYY-MM-DD_HH-MM-SS].md`
       - Implementation phase: `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`
@@ -66,7 +66,7 @@ All four templates carry the same `## Continuation Priorities` section — **Ess
    - An `## Awaiting …` block is pending when it is the latest block in `progress.md` — or when the only things after it are compaction records (`## Current State`, `## PARTIAL: needs continuation`), which older compact commands appended below it. No `## Halt Resolved - ` line or later flow entry follows a pending block.
    - If one is pending, an `sdd-flow` run is stopped waiting for an answer. Show the block to the user and tell them `/sdd-flow continue` is what resumes it. Do not do that feature's work past the stop from here. Work the compaction file describes that is separate from the stopped flow can go on.
 
-**If `progress.md` exceeds ~500 lines**, rotate it before resuming — same procedure as `/adhoc-compact` step 4: archive completed-feature history and resolved blocks (including completed-phase history of the still-active feature) to `SDD/orchestration/progress-archive/`, keep a bounded `## Current State` carrying canonical phase-state lines verbatim, and carry any pending `## Awaiting *` / `## PARTIAL*` blocks (prefix match, not a fixed list) forward verbatim as the latest blocks. Everything kept in the live file must stay byte-identical — never retype or summarize it.
+**If `progress.md` exceeds ~500 lines**, rotate it before resuming — same procedure as `/adhoc-compact` step 4: archive completed-feature history and resolved blocks (including completed-phase history of the still-active feature) to `SDD/.records/progress-archive/`, keep a bounded `## Current State` carrying canonical phase-state lines verbatim, and carry any pending `## Awaiting *` / `## PARTIAL*` blocks (prefix match, not a fixed list) forward verbatim as the latest blocks. Everything kept in the live file must stay byte-identical — never retype or summarize it.
 
 ### 2. Pre-Continuation Quality Check
 
@@ -261,7 +261,7 @@ To ensure smooth continuation:
 
 If continuation fails or context is unclear:
 
-1. Re-run the file lookup in Process step 1, in its order — a path the user gives, then the path `progress.md` names, then the candidates in `SDD/orchestration/compacted/` (`compact-*.md`, `research-compacted-*.md`, `planning-compacted-*.md`, `implementation-compacted-*.md`) shown to the user to choose from. Never substitute a file for one that is named and missing.
+1. Re-run the file lookup in Process step 1, in its order — a path the user gives, then the path `progress.md` names, then the candidates in `SDD/.records/compacted/` (`compact-*.md`, `research-compacted-*.md`, `planning-compacted-*.md`, `implementation-compacted-*.md`) shown to the user to choose from. Never substitute a file for one that is named and missing.
 2. Verify progress.md exists and contains phase information
 3. Ask user which phase to continue if ambiguous
 4. Request specific guidance on next task if priorities are unclear

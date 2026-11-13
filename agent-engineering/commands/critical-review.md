@@ -349,11 +349,11 @@ Applies to every kind of review. Do the target's own numbers permit its own goal
 
 ## 7. Deliverable
 
-Create a review document at the appropriate location:
+Create a review document at the appropriate location (a new `SDD/.records/` gets a `.gitignore` holding the one line `*` — reviews are process records and stay out of git):
 
-- Research phase: `SDD/reviews/CRITICAL-RESEARCH-[feature-name]-YYYYMMDD.md`
-- Planning phase: `SDD/reviews/CRITICAL-SPEC-[feature-name]-YYYYMMDD.md`
-- Implementation phase: `SDD/reviews/CRITICAL-IMPL-[feature-name]-YYYYMMDD.md`
+- Research phase: `SDD/.records/reviews/CRITICAL-RESEARCH-[feature-name]-YYYYMMDD.md`
+- Planning phase: `SDD/.records/reviews/CRITICAL-SPEC-[feature-name]-YYYYMMDD.md`
+- Implementation phase: `SDD/.records/reviews/CRITICAL-IMPL-[feature-name]-YYYYMMDD.md`
 - Ad-hoc: Present findings directly in conversation
 
 ### Always Include

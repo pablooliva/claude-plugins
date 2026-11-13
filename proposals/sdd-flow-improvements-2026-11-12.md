@@ -189,9 +189,12 @@ before code comes first.
      research review (2c/2d). Check done: neither of tornado's two extra hidden tests came from the research review —
      one came from the spec panel with the owner's answer (truncation raises in `flush()`), one from the panel alone
      (`flush()` refuses with a pending tail); inferred from the diffs, no per-test results were recorded.
-   - **5b (4.7.0), records out of git:** reviews, counters, call logs, eval results, trace trees and compaction files
-     go to a git-ignored folder under `SDD/` (e.g. `SDD/.flow/`); brief, spec, ADRs, glossary, tier plan and summary
-     stay committed.
+   - ~~**5b (4.7.0), records out of git**~~ — built as 4.7.0 (owner decisions 2026-11-13): reviews, counters, call
+     logs, eval results, trace trees, compaction files and `progress.md` go to `SDD/.records/` (not `SDD/.flow/`, too
+     close to the committed `SDD/flow/`), which ignores itself with its own `.gitignore`; `worktree-merge` copies a
+     worktree's records to the main checkout's `SDD/.records/merged/<branch>/`. Brief, spec, plan and slice files,
+     ADRs, glossary, tier plan and summary stay committed. The `sdd-flow-eval` harness reads `SDD/orchestration/` and
+     must follow before it replays 4.7.0.
    - **5c (5.0.0), slim orchestrator:** rewrite `SKILL.md` and the phase files to ~15k tokens read at every step, rare
      cases (handoffs, halts, re-plans) in files read only when they happen; the owner tries it on a real feature
      before it reaches main.

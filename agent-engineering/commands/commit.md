@@ -50,7 +50,7 @@ You are tasked with creating git commits for the changes made during this sessio
 
 ## Per-slice atomic commits (`delivery_mode: per-slice`)
 
-When the orchestrator runs the per-slice commit (per-slice cycle step 4c.6), the commit is **ATOMIC PER SLICE**: ONE commit covering everything the slice produced — slice code + tests + the IMPLEMENTATION-PLAN (with the slice's row already `Complete`) + per-slice review doc + fix-findings notes. One slice = one commit, so the slice's contribution is traceable in `git log` and reversible with a single `git revert <SHA>`.
+When the orchestrator runs the per-slice commit (per-slice cycle step 4c.6), the commit is **ATOMIC PER SLICE**: ONE commit covering everything the slice produced — slice code + tests + the IMPLEMENTATION-PLAN (with the slice's row already `Complete`). The slice's review and every other record under `SDD/.records/` is git-ignored and never staged. One slice = one commit, so the slice's contribution is traceable in `git log` and reversible with a single `git revert <SHA>`.
 
 **Staging (looser default):** the per-slice commit does NOT enforce that the working tree contains only slice-scoped files (this is hostile to legitimate "I fixed an unrelated typo while here" workflows). The orchestrator stages the slice's files explicitly with `git add <specific paths>` (never `-A` or `.`); it may first show `git status` and confirm the staged set looks slice-scoped.
 
@@ -65,7 +65,7 @@ slice: SLICE-XXX — <concentrated function summary in imperative mood, ≤60 ch
 Slice scope: <one-line description of what this slice delivers>
 SPEC: SDD/requirements/SPEC-XXX-<feature-name>.md
 Acceptance check: <verbatim acceptance check, or "see Slice Progress row"> — PASSING
-Per-slice review: SDD/reviews/REVIEW-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md
+Per-slice review: SDD/.records/reviews/REVIEW-SLICE-XXX-<feature-name>-<YYYY-MM-DD>.md
 
 <body — 3-6 lines: implementation decisions, deviations from SPEC, key per-slice review findings. Plain prose, imperative mood.>
 EOF
@@ -74,4 +74,4 @@ EOF
 
 **Before the commit**, the orchestrator — never a slice subagent — sets the IMPLEMENTATION-PLAN `## Slice Progress` row `Status` to `Complete` (terminal, forward-only), `Test result` to `passing`, and `Notes` to the slice's last review path. It is the last edit before the commit, so the commit carries it.
 
-**After the commit lands**, the orchestrator appends `## Slice <SLICE-XXX> - Committed` to `SDD/orchestration/progress.md` — one line, the SHA. Order and resume behaviour: `skills/sdd-flow/phases/implementation-per-slice.md` → 4c.6.
+**After the commit lands**, the orchestrator appends `## Slice <SLICE-XXX> - Committed` to `SDD/.records/progress.md` — one line, the SHA. Order and resume behaviour: `skills/sdd-flow/phases/implementation-per-slice.md` → 4c.6.

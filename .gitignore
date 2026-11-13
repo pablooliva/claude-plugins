@@ -3,8 +3,10 @@
 .idea
 
 # sdd-flow session state for THIS repo. On macOS's case-insensitive filesystem,
-# SDD/orchestration/ physically lands inside the frozen `sdd` plugin directory
+# SDD/orchestration/ (SDD/.records/ since agent-engineering 4.7.0) physically lands inside the frozen `sdd` plugin directory
 # (sdd/orchestration/) — never commit it into the plugin. Both spellings listed
 # so the rule also holds on case-sensitive clones.
 /SDD/orchestration/
 /sdd/orchestration/
+/SDD/.records/
+/sdd/.records/

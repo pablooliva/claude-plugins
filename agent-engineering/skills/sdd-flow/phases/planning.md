@@ -98,7 +98,7 @@ A re-plan is asked for in words, at a slice pause (`phases/implementation-per-sl
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning.md`
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/orchestration/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **the observability line** copied verbatim, **TRACING** and **EVALS** when that line says `present`, **HARVEST** when there is one (derived as at 2.5a, again just before this spawn), and on a next-tier cycle the previous tier's research document.
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/.records/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **the observability line** copied verbatim, **TRACING** and **EVALS** when that line says `present`, **HARVEST** when there is one (derived as at 2.5a, again just before this spawn), and on a next-tier cycle the previous tier's research document.
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, append `progress.md`.
 - **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (only the specialists whose area the change touches, at most three; `agent-security` and `slice-integrity` are added outside the three), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force. The body's **tracing rule** applies: the spec carries `tracing:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when the observability line says `present` and the field is not `false` — a `### Planned call graph` under `## Modules` with every entry point, LLM call, and external call marked, plus a `Traced nodes:` line per slice in per-slice mode; otherwise neither. The body's **evals rule** applies: the spec carries `evals:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when evals are on for this spec by the table under `evals:` in the body — an `### Evals` sub-section under `## Validation Strategy` with every case written out, a `Sign-off:` line under `### Manual Verification` for each requirement only a person can accept, and an `Evals:` line per slice in per-slice mode; otherwise none of the three.
 
@@ -191,15 +191,15 @@ Spawn **one subagent per `review_panel:` value, IN PARALLEL** (single message, m
 Each spawn gets:
 - **Body:** `bodies/panel-specialist.md` ("apply ONLY the Section your panel value names").
 - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier (the body's *Respect the Brief* principle: a finding that adds scope the brief did not ask for is an addition, not a defect), the panel value, and the resolved PANEL-FINDINGS output path. For the `agent-security` value, also pass the resolved **CATALOG** path (`SKILL.md` → SKILL_ROOT resolution) and the resolved gate value as the line `agent_security: true` or `agent_security: auto` (above). When the spec's frontmatter carries `tier:`, also pass **TIERS** — the body's *Respect the Tier* principle needs it.
-- **Output:** `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md`.
+- **Output:** `SDD/.records/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md`.
 - Each specialist writes exactly one findings file and spawns nothing. (The `slice-integrity` specialist short-circuits unless `delivery_mode: per-slice`.)
 
 ### Stage 2 — synthesis
 
 After all Stage 1 specialists return, spawn ONE **`agent-engineering:sdd-critical-reviewer`** subagent (Opus — the synthesis is the adversarial work):
 - **Body:** `bodies/panel-synthesis.md`
-- **Inputs:** the exact list of `SDD/reviews/PANEL-FINDINGS-*-[feature-name]-[YYYYMMDD].md` paths written in Stage 1, the spec path, **BRIEF** (to tell a finding from an addition), and **TIERS** when the spec carries `tier:` (the floor). (Its counter trigger may be raised to N+5 for an N-specialist panel.)
-- **Output:** `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`.
+- **Inputs:** the exact list of `SDD/.records/reviews/PANEL-FINDINGS-*-[feature-name]-[YYYYMMDD].md` paths written in Stage 1, the spec path, **BRIEF** (to tell a finding from an addition), and **TIERS** when the spec carries `tier:` (the floor). (Its counter trigger may be raised to N+5 for an N-specialist panel.)
+- **Output:** `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`.
 - **Task:** Read each PANEL-FINDINGS file from disk, dedupe cross-specialist overlap, aggregate severity, and emit the verdict. Collect every `ADDITION` into the review's `## Additions for the owner`, numbered `A1`, `A2`, …; additions carry no severity and never count toward the verdict. It spawns nothing.
 
 ### Act on the verdict
@@ -213,7 +213,7 @@ Each iteration:
 
 1. **Record iteration state** in `progress.md` under `## Panel Review Iterations`: iteration number, HIGH/MEDIUM/LOW counts, verdict, timestamp.
 2. **Spawn a fix subagent** (`agent-engineering:sdd-workhorse`):
-   - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
+   - **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
    - **Outputs:** updated spec (in place), "Findings Addressed" appended to the panel review.
    - **Task:** Resolve every HIGH and MEDIUM finding; each resolution cites the specific spec change made. Do NOT claim resolution without an actual edit. Embed the **Brief and tier rules for spec fixes** (below) verbatim, and beneath them the **Call-graph rule for spec fixes** with `tracing: on` and the **Evals rule for spec fixes** with `evals: on`.
 3. **Re-run Step 3c** (both stages — fresh PANEL-FINDINGS + a fresh synthesis) over the updated spec, producing a new/overwritten `PANEL-SPEC-*`.
@@ -250,8 +250,8 @@ Each iteration:
 > Final verdict: [STOP AND RECONSIDER | REVISE BEFORE PROCEEDING]
 > Unresolved HIGH findings: [count]
 > Unresolved MEDIUM findings: [count]
-> Latest panel review: `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`
-> Iteration history: `SDD/orchestration/progress.md` → "Panel Review Iterations"
+> Latest panel review: `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`
+> Iteration history: `SDD/.records/progress.md` → "Panel Review Iterations"
 > The fix subagent could not resolve findings autonomously. Address the remaining HIGH/MEDIUM issues manually in the spec (they likely require design judgment), then run `/sdd-flow continue` to resume.
 
 ---
@@ -260,8 +260,8 @@ Each iteration:
 
 Run this review by the cycle's **review route** (`references/second-model-review.md`). On the Claude route, spawn an **`agent-engineering:sdd-critical-reviewer`** subagent (Opus). Either route is given:
 - **Body:** `bodies/critical-review.md` — apply its **Planning Phase** section.
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
-- **Outputs:** `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
+- **Outputs:** `SDD/.records/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`.
 - **Task:** Adversarial review of the spec — the Design Brief Fidelity block (is the spec what the user approved?), ambiguities, untestable criteria, dropped research findings, contradictions, the feasibility-arithmetic gate over the spec's `### Quantitative Ledger` (do the spec's own numeric constraints permit its own numeric goals?), and the body's **Planned Call Graph** block (with `tracing: on`: is every entry point, LLM call, and external call the spec describes a marked node, and assigned to a slice? with `tracing: off`: is the spec free of one?), and the body's **Evals** block (with `evals: on`: does every requirement about what the model says have a hard eval, or a judged eval and a sign-off line, and can each case be applied as written? with `evals: off`: is the spec free of evals?). Complementary to the panel: critical-review is generalist/adversarial; the panel was domain-specialist.
 
 ---
@@ -269,7 +269,7 @@ Run this review by the cycle's **review route** (`references/second-model-review
 ## 3e. Address Spec Review Findings (panel + critical, combined)
 
 Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/.records/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, and **EVALS** when it is `on`.
 - **Outputs:** updated SPEC, append `progress.md`.
 - **Task:** Resolve every HIGH and MEDIUM finding from BOTH reviews (a LOW finding is listed, not fixed) — clarify ambiguous requirements, make criteria testable, add missing edge cases or record them as deferred, resolve contradictions, address panel anti-patterns, incorporate dropped research findings. Append "Findings Addressed" sections to both review documents. Embed the **Brief and tier rules for spec fixes** (3c) verbatim, and beneath them the **Call-graph rule for spec fixes** (3c) with `tracing: on` and the **Evals rule for spec fixes** (3c) with `evals: on`.
 
@@ -279,7 +279,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 
 3e changed the spec after both reviews read it, and nothing has read those changes. Run one check by the cycle's **review route** (`references/second-model-review.md`; on the Claude route an **`agent-engineering:sdd-critical-reviewer`** subagent, Opus):
 - **Body:** `bodies/critical-review.md` — its **Fix Check** section, with the line `FIX CHECK` in the prompt.
-- **Inputs:** the same as 3d, plus `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md` and the PANEL-SPEC, each with its `Findings Addressed`.
+- **Inputs:** the same as 3d, plus `SDD/.records/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md` and the PANEL-SPEC, each with its `Findings Addressed`.
 - **Outputs:** a `## Fix Check` section appended to the CRITICAL-SPEC document.
 - **Then** the orchestrator appends `## Spec Fix Check - CONFIRMED` or `## Spec Fix Check - OPEN (<h> HIGH, <m> MEDIUM)` to `progress.md`, from the section's first line (on the second-model route only after the run's `## Review Route` line).
   - **`CONFIRMED`** → 3f.
@@ -334,7 +334,7 @@ Act on the reply:
   - **Inputs:** the spec, **BRIEF** with its approved revision and tier, the latest PANEL-SPEC, **TIERS** when the spec carries `tier:`, the tracing gate as the line `tracing: on` or `tracing: off`, **TRACING** when it is `on`, the evals gate as the line `evals: on` or `evals: off`, **EVALS** when it is `on`, and the owner's reply **verbatim**.
   - **Outputs:** updated spec; the accepted additions marked `accepted` in the PANEL-SPEC's `## Additions for the owner`; append `progress.md` (`## Spec Stop Fix - Done`).
   - **Task:** Make exactly what the reply asks and nothing else; a change the spec already shows (a run interrupted earlier made it) is left as it is. **A cut** of something the spec does is moved to `## Deferred to Later Tiers` (next free `DEFER-XXX`, `Came from` = `owner cut`) when the spec carries `tier:`, or removed; a cut of a part (a module, a layer, an option) is removed. A cut the tier standard's floor protects is not made: say so in the return. When the cut case stays reachable, add its `FAIL-XXX` loud failure in the same edit. **An accepted addition** is specified as the panel review describes it. Record each change that departs from the brief under `## Deviations from Design Brief`. Keep every ID stable that the cut does not remove. Embed the **Call-graph rule for spec fixes** (3c) with `tracing: on` and the **Evals rule for spec fixes** (3c) with `evals: on`.
-  - **Then** the orchestrator commits the spec and the PANEL-SPEC (per `commands/commit.md`, message naming the SPEC and "changes asked for at the stop after the spec") and **shows this stop again**, read afresh from the files. The changed spec is not reviewed again: what the owner asked for is the owner's decision.
+  - **Then** the orchestrator commits the spec (per `commands/commit.md`, message naming the SPEC and "changes asked for at the stop after the spec") and **shows this stop again**, read afresh from the files. The changed spec is not reviewed again: what the owner asked for is the owner's decision.
 - **`stop`** → leave `## Awaiting Spec Approval` as the latest block and halt. `/sdd-flow continue` shows this stop again; the owner may have edited the spec by hand.
 
 **Route to Step 4.** First append `## Planning - Accepted` to `progress.md` — one line, the spec path. It is the phase-detection marker that planning's reviews and this stop are done: `Planning Phase - COMPLETE` alone does not say so, because the completion subagent writes it back in 3a. Then read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint: the design gate approved the design, and this stop the spec. The next stops are the slice pauses (per-slice mode); the final commit stops only for a sign-off or a growth-budget overrun (`phases/implementation-whole-feature.md` → 4h).

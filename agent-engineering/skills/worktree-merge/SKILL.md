@@ -109,10 +109,10 @@ For each duplicated number, the side to renumber is **this branch's** — the ta
 New number = the highest in use across the whole tree, plus one (four digits for ADRs; the width the repo already uses for features), assigned in ascending order when several collide. Then show the plan and **wait for a yes** before changing anything:
 
 - the **old → new mapping** (`ADR-0011 → ADR-0013`, `SPEC-045 → SPEC-047`);
-- the **renames**: every branch-added file carrying the old number — for an ADR, `SDD/adr/NNNN-slug.md`; for a feature, each `SDD/**` artifact with that `[###]` and this feature's name (`CLARIFICATION-`, `RESEARCH-`, `SPEC-`, `DECOMPOSITION-`, `IMPLEMENTATION-PLAN-`, `REVIEW-`, `SLICE-`), plus the branch-added `IMPLEMENTATION-SUMMARY-[###]-*`;
+- the **renames**: every branch-added file carrying the old number — for an ADR, `SDD/adr/NNNN-slug.md`; for a feature, each `SDD/**` artifact with that `[###]` and this feature's name (`CLARIFICATION-`, `RESEARCH-`, `SPEC-`, `DECOMPOSITION-`, `IMPLEMENTATION-PLAN-`, `SLICE-`), plus the branch-added `IMPLEMENTATION-SUMMARY-[###]-*`;
 - the **reference edits**: hits for the old identifiers (`ADR-0011`, `0011-slug`, `SPEC-045`, `RESEARCH-045`, …) from `git grep -n` over the files this branch added or modified (`git diff --name-only "<target>" HEAD`), code and docs included.
 
-On confirmation: `git mv` each rename; in files the branch **added**, replace throughout; in files the branch only **modified** (`SDD/adr/README.md`, `SDD/orchestration/progress.md`, the glossary, source comments), change only lines this branch added (`git diff -U0 "<target>" HEAD -- <file>`) — the same identifier on any other line belongs to the feature that landed first. Re-run the detection (it must print nothing), then commit the renumbering on the branch as its own commit so Step 4 verifies it.
+On confirmation: `git mv` each rename; in files the branch **added**, replace throughout; in files the branch only **modified** (`SDD/adr/README.md`, the glossary, source comments), change only lines this branch added (`git diff -U0 "<target>" HEAD -- <file>`) — the same identifier on any other line belongs to the feature that landed first. Re-run the detection (it must print nothing), then commit the renumbering on the branch as its own commit so Step 4 verifies it.
 
 If the user declines, stop and say the duplicates are still there; land them only on an explicit instruction to do so.
 
@@ -145,6 +145,16 @@ Git-ignored files are invisible to `git status` and are not on the branch. List 
 git -C "<WT>" status --porcelain --ignored           # "!!" entries
 git -C "<MAIN>" ls-files -o -i --exclude-from=.worktreeinclude 2>/dev/null   # what provisioning copies from MAIN
 ```
+
+**SDD records first.** When WT has an `SDD/.records/` folder holding any file (an `sdd-flow` run's process records — progress, reviews, call logs; git-ignored by its own `.gitignore`), copy the whole folder, without asking per file, to `<MAIN>/SDD/.records/merged/<BRANCH with / replaced by ->/`:
+
+```bash
+dest="<MAIN>/SDD/.records/merged/$(printf %s "<BRANCH>" | tr / -)"
+[ -e "<MAIN>/SDD/.records/.gitignore" ] || { mkdir -p "<MAIN>/SDD/.records" && printf '*\n' > "<MAIN>/SDD/.records/.gitignore"; }
+mkdir -p "$dest" && cp -Rp "<WT>/SDD/.records/." "$dest/"
+```
+
+A folder per branch means it never overwrites MAIN's own records, its live `progress.md` included (a copied progress file is history, never resume state). A second merge of the same branch copies over its earlier copy. Report the destination and the file count; leave `SDD/.records/` out of the classification below.
 
 Classify each ignored **file** in WT:
 

@@ -23,7 +23,7 @@ You are an adversarial reviewer for an SDD-flow phase artifact. You are NOT a va
 - Read the input artifact whose path is in your prompt (research doc, spec, implementation files, or — in synthesis mode — the per-specialist PANEL-FINDINGS files).
 - Read the body file your prompt names (under `skills/sdd-flow/bodies/`, e.g. `critical-review.md` or `panel-synthesis.md`) — it is your complete rubric. Apply the phase-specific section your prompt points you to. When the body your prompt names is `continue.md` and the prompt also names a **STEP BODY**, you are finishing a review an earlier run handed off: `continue.md` says how to pick the work up, and the STEP BODY is the rubric.
 - Write a `CRITICAL-*` or `PANEL-SPEC-*` review document to the path given in the prompt.
-- Append a `### Step <N> — <phase> critical review run` block to `SDD/orchestration/progress.md` (append-only; never overwrite or delete existing content; **≤10 lines** — findings live in your review document, not in progress.md).
+- Append a `### Step <N> — <phase> critical review run` block to `SDD/.records/progress.md` (append-only; never overwrite or delete existing content; **≤10 lines** — findings live in your review document, not in progress.md).
 - Return your bounded summary.
 
 ## What you don't do
@@ -36,7 +36,7 @@ You are an adversarial reviewer for an SDD-flow phase artifact. You are NOT a va
 
 ## Synthesis-mode (Step 3c Stage 2 — spec-panel synthesis)
 
-When your prompt is the Step 3c Stage 2 synthesis run, the per-domain specialists have **already** run in parallel and each wrote a `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md` file. Your prompt lists the exact PANEL-FINDINGS paths. **Read those findings files from disk** — you do NOT spawn the specialists (the flat-orchestration contract forbids it). Then deduplicate cross-specialist overlap and emit a verdict per the `panel-synthesis.md` body's Synthesis Rules:
+When your prompt is the Step 3c Stage 2 synthesis run, the per-domain specialists have **already** run in parallel and each wrote a `SDD/.records/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md` file. Your prompt lists the exact PANEL-FINDINGS paths. **Read those findings files from disk** — you do NOT spawn the specialists (the flat-orchestration contract forbids it). Then deduplicate cross-specialist overlap and emit a verdict per the `panel-synthesis.md` body's Synthesis Rules:
 
 - **Any HIGH finding** → verdict `STOP AND RECONSIDER`.
 - **3+ MEDIUM findings OR any cross-domain MEDIUM (same issue flagged by 2+ specialists)** → verdict `REVISE BEFORE PROCEEDING`.
@@ -46,7 +46,7 @@ The synthesis is the adversarial work — you're judging whether the specialist 
 
 ## Counter file + safety-net (when applicable)
 
-If your prompt assigns a counter file path under `SDD/orchestration/counters/`, update the file (one line, `Reads: 0/15`) after every Read. The default safety-net trigger is Reads >15. For synthesis runs that must read N specialist findings files, your prompt may raise the trigger to N+5. There is no nested-subagent counter — you must not spawn.
+If your prompt assigns a counter file path under `SDD/.records/counters/`, update the file (one line, `Reads: 0/15`) after every Read. The default safety-net trigger is Reads >15. For synthesis runs that must read N specialist findings files, your prompt may raise the trigger to N+5. There is no nested-subagent counter — you must not spawn.
 
 If you trip the safety-net, read the compact-body path your prompt provides and follow it — write a compaction file, append `## PARTIAL: needs continuation` to `progress.md`, and return.
 

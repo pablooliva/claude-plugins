@@ -15,7 +15,7 @@ from typing import Any
 # Constants
 DEFAULT_TRANSCRIPT_LINES = 50
 MAX_LINE_LENGTH = 10000  # Prevent memory issues with extremely long lines
-LOG_SUBDIR = Path("SDD") / "orchestration" / "subagent-calls"
+LOG_SUBDIR = Path("SDD") / ".records" / "subagent-calls"
 
 
 def load_hook_input() -> dict[str, Any]:
@@ -128,6 +128,10 @@ def save_subagent_log(log_content: str) -> Path:
 
         log_dir = Path(project_root) / LOG_SUBDIR
         log_dir.mkdir(parents=True, exist_ok=True)
+        # SDD/.records/ holds process records only; its own .gitignore keeps all of it out of git
+        ignore = log_dir.parent / ".gitignore"
+        if not ignore.exists():
+            ignore.write_text("*\n")
 
         # Generate unique filename atomically using temp file
         filename = generate_log_filename()

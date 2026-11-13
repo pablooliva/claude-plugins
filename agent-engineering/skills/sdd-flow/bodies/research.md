@@ -6,7 +6,7 @@ RESEARCH PHASE INITIALIZATION
 
 Starting research phase for new feature/issue.
 
-IMPORTANT: `SDD/orchestration/progress.md` is append-only. It already holds the orchestrator's Step 0 record for this task (resolved identifiers, SKILL_ROOT and the other resolved paths, flags, any `Next-tier cycle` lines) and the outcome of the clarification gate; it may also hold an earlier feature's history. Later steps and resumed sessions read all of it. Never reset, rewrite, or archive the file, and never ask whether to — clearing it is the orchestrator's rotation, not yours. Append your entry at the end, as every other body does.
+IMPORTANT: `SDD/.records/progress.md` is append-only. It already holds the orchestrator's Step 0 record for this task (resolved identifiers, SKILL_ROOT and the other resolved paths, flags, any `Next-tier cycle` lines) and the outcome of the clarification gate; it may also hold an earlier feature's history. Later steps and resumed sessions read all of it. Never reset, rewrite, or archive the file, and never ask whether to — clearing it is the orchestrator's rotation, not yours. Append your entry at the end, as every other body does.
 
 ## Pre-Research Clarification (if available)
 

@@ -9,7 +9,7 @@ Starting implementation phase based on completed specification.
 ## Initial Context Load
 
 1. **Read Progress File:**
-   - Load `SDD/orchestration/progress.md` to understand planning completion status
+   - Load `SDD/.records/progress.md` to understand planning completion status
    - The specification is the path in your prompt — do not take it from this file, which may also reference earlier features' specs
    - Note any important context from the planning phase
 
@@ -18,7 +18,7 @@ Starting implementation phase based on completed specification.
    - If the glossary does not exist, proceed without it.
 
 3. **Update Progress for Implementation Phase:**
-   - Add a new implementation section to `SDD/orchestration/progress.md`
+   - Add a new implementation section to `SDD/.records/progress.md`
    - IMPORTANT: Preserve all research and planning phase information - do NOT delete or reset it
    - Add reference to the IMPLEMENTATION-PLAN document being created
    - Document the transition from planning to implementation phase
@@ -31,7 +31,7 @@ Starting implementation phase based on completed specification.
      - Exact match `whole-feature` → continue with the **whole-feature branch** below.
      - Exact match `per-slice` → continue with the **per-slice branch** below.
      - Any other value (typos like `per_slice`, `PerSlice`, `vertical-thread`, `whole_feature`, etc.) → fail fast with: `Invalid delivery_mode value '<value>' in <spec-path>. Allowed values: whole-feature, per-slice. Edit the spec frontmatter and re-run implementation-start.` Do NOT silently fall through to the default branch.
-   - Record the resolved mode in the implementation tracker's Executive Summary (a `**Delivery mode:**` field below `**Status:**`) and in `SDD/orchestration/progress.md`.
+   - Record the resolved mode in the implementation tracker's Executive Summary (a `**Delivery mode:**` field below `**Status:**`) and in `SDD/.records/progress.md`.
 
 ## Implementation Setup
 

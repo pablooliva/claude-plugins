@@ -4,7 +4,7 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
 
 Your prompt names the input doc (research doc or spec), the existing `SDD/adr/` directory, and your mode:
 
-- **PROPOSE mode** (detection at research, Step 2b): write no ADR and no stop note. Append ONE `## ADR Candidates` entry to `SDD/orchestration/progress.md` listing each candidate's title and chosen option — or `none` — and return. The user sees the candidates at the design gate; the accepted ones are written later by an AUTO-mode run.
+- **PROPOSE mode** (detection at research, Step 2b): write no ADR and no stop note. Append ONE `## ADR Candidates` entry to `SDD/.records/progress.md` listing each candidate's title and chosen option — or `none` — and return. The user sees the candidates at the design gate; the accepted ones are written later by an AUTO-mode run.
 - **AUTO mode** (candidates the user accepted at the design gate; frontmatter-declared decisions, which are pre-approved): write every ADR that passes the scope test directly, then regenerate `SDD/adr/README.md`. **When your prompt lists accepted candidate titles, write exactly those** — derive each from the input doc as usual, and do not scan for others. If no cross-cutting decision is detected, write nothing and return a no-op note.
 
 ---
@@ -174,7 +174,7 @@ Chosen as the team's default tool because [reason]. Future ADR should revisit if
 
 **In AUTO mode:** write the file directly to `SDD/adr/NNNN-slug.md`. Use the Write tool; do not overwrite existing files (if by some race the number is taken, re-run Step 3).
 
-**In PROPOSE mode:** do NOT write any ADR file, and do not number or render one. After every candidate has been through Steps 1, 2, and 4, append ONE entry to `SDD/orchestration/progress.md` (append-only — never overwrite existing content) covering all of them:
+**In PROPOSE mode:** do NOT write any ADR file, and do not number or render one. After every candidate has been through Steps 1, 2, and 4, append ONE entry to `SDD/.records/progress.md` (append-only — never overwrite existing content) covering all of them:
 
 ```markdown
 ## ADR Candidates
@@ -273,10 +273,10 @@ A decision can be *deprecated* without supersession — the old convention is no
 
 ## Progress File Rules
 
-When writing to `SDD/orchestration/progress.md`:
+When writing to `SDD/.records/progress.md`:
 
 - **Append only.** Never overwrite or truncate existing content.
 - **PROPOSE mode:** write the single `## ADR Candidates` entry at the end of the file — one entry for the whole scan, however many candidates it found. Never write an `## Awaiting …` block: this body writes no stop note in either mode.
 - **AUTO mode:** append one short entry naming the ADR files written (or "no ADR written" and why).
 - Every entry stays within the 10-line cap, except that an `## ADR Candidates` entry lists every candidate.
-- If `SDD/orchestration/` does not exist, create it before writing.
+- If `SDD/.records/` does not exist, create it before writing.

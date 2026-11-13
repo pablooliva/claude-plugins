@@ -32,7 +32,7 @@ for line in sys.stdin.read().splitlines():
     elif verb == "INCOMPLETE":
         final = "REVIEW: INCOMPLETE — the tests could not be run"
     elif verb == "HANDOFF":
-        final = "REVIEW: HANDOFF — SDD/orchestration/compacted/x.md"
+        final = "REVIEW: HANDOFF — SDD/.records/compacted/x.md"
     elif verb == "SILENT":
         final = "all good, nothing to add"
     elif verb == "SPAWN":
@@ -57,7 +57,7 @@ class SecondModelReviewTest(unittest.TestCase):
         self.bin.mkdir()
         self.repo = root / "repo"
         (self.repo / "src").mkdir(parents=True)
-        (self.repo / "SDD" / "orchestration" / "reviewer-calls").mkdir(parents=True)
+        (self.repo / "SDD" / ".records" / "reviewer-calls").mkdir(parents=True)
         (self.repo / "src" / "app.py").write_text("guard()\n")
         (self.repo / "src" / "uncommitted.py").write_text("new work\n")
         git = ["git", "-C", str(self.repo), "-c", "user.name=t", "-c", "user.email=t@t"]
@@ -78,10 +78,10 @@ class SecondModelReviewTest(unittest.TestCase):
         return done.returncode, done.stdout.splitlines()[0] if done.stdout else done.stderr
 
     def review(self, prompt: str, *expect: str, timeout: str = "30") -> tuple[int, str]:
-        prompt_file = self.repo / "SDD" / "orchestration" / "reviewer-calls" / "4b-1.prompt.md"
+        prompt_file = self.repo / "SDD" / ".records" / "reviewer-calls" / "4b-1.prompt.md"
         prompt_file.write_text(prompt)
         args = ["run", "--prompt-file", str(prompt_file), "--cwd", str(self.repo)]
-        for path in expect or ("SDD/reviews/REVIEW.md",):
+        for path in expect or ("SDD/.records/reviews/REVIEW.md",):
             args += ["--expect", path]
         return self.call(*args, "--timeout", timeout)
 
@@ -99,10 +99,10 @@ class SecondModelReviewTest(unittest.TestCase):
 
     def test_run_counts_when_the_review_file_is_written(self) -> None:
         self.install("codex", FAKE_CODEX)
-        status, line = self.review("WRITE SDD/reviews/REVIEW.md")
+        status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md")
         self.assertEqual(status, 0, line)
         self.assertTrue(line.startswith("Result: OK — codex reviewed; return: "), line)
-        calls = self.repo / "SDD" / "orchestration" / "reviewer-calls"
+        calls = self.repo / "SDD" / ".records" / "reviewer-calls"
         self.assertEqual((calls / "4b-1.return.md").read_text(), "REVIEW: COMPLETE\nall good")
         self.assertTrue((calls / "4b-1.log").is_file())
 
@@ -114,7 +114,7 @@ class SecondModelReviewTest(unittest.TestCase):
 
     def test_run_fails_on_a_review_file_left_from_an_earlier_run(self) -> None:
         self.install("codex", FAKE_CODEX)
-        stale = self.repo / "SDD" / "reviews" / "REVIEW.md"
+        stale = self.repo / "SDD" / ".records" / "reviews" / "REVIEW.md"
         stale.parent.mkdir(parents=True)
         stale.write_text("# Old review\n")
         status, line = self.review("nothing to do")
@@ -123,7 +123,7 @@ class SecondModelReviewTest(unittest.TestCase):
 
     def test_run_fails_when_the_reviewer_says_incomplete(self) -> None:
         self.install("codex", FAKE_CODEX)
-        status, line = self.review("WRITE SDD/reviews/REVIEW.md\nINCOMPLETE now")
+        status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md\nINCOMPLETE now")
         self.assertEqual(status, 1)
         self.assertIn("REVIEW: INCOMPLETE — the tests could not be run", line)
 
@@ -131,7 +131,7 @@ class SecondModelReviewTest(unittest.TestCase):
         self.install("codex", FAKE_CODEX)
         status, line = self.review("BREAK src/app.py\nHANDOFF now")
         self.assertEqual(status, 4, line)
-        self.assertTrue(line.startswith("Result: HANDOFF — codex: REVIEW: HANDOFF — SDD/orchestration/compacted/x.md"), line)
+        self.assertTrue(line.startswith("Result: HANDOFF — codex: REVIEW: HANDOFF — SDD/.records/compacted/x.md"), line)
         self.assertEqual((self.repo / "src" / "app.py").read_text(), "guard()\n")
 
     def test_run_puts_back_a_tracked_file_that_gitignore_also_matches(self) -> None:
@@ -142,7 +142,7 @@ class SecondModelReviewTest(unittest.TestCase):
         (self.repo / ".gitignore").write_text("*.cfg\n")
         subprocess.run(git + ["add", ".gitignore"], check=True)
         subprocess.run(git + ["commit", "-qm", "settings"], check=True)
-        status, line = self.review("BREAK src/settings.cfg\nWRITE SDD/reviews/REVIEW.md")
+        status, line = self.review("BREAK src/settings.cfg\nWRITE SDD/.records/reviews/REVIEW.md")
         self.assertEqual(status, 0, line)
         self.assertIn("src/settings.cfg", line)
         self.assertEqual((self.repo / "src" / "settings.cfg").read_text(), "mode = strict\n")
@@ -161,7 +161,7 @@ class SecondModelReviewTest(unittest.TestCase):
 
     def test_run_fails_when_the_answer_has_no_status_line(self) -> None:
         self.install("codex", FAKE_CODEX)
-        status, line = self.review("WRITE SDD/reviews/REVIEW.md\nSILENT now")
+        status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md\nSILENT now")
         self.assertEqual(status, 1, line)
         self.assertIn("no `REVIEW: ` status line", line)
 
@@ -178,11 +178,11 @@ class SecondModelReviewTest(unittest.TestCase):
         import signal
         import time
         self.install("codex", FAKE_CODEX)
-        prompt = self.repo / "SDD" / "orchestration" / "reviewer-calls" / "4b-1.prompt.md"
+        prompt = self.repo / "SDD" / ".records" / "reviewer-calls" / "4b-1.prompt.md"
         prompt.write_text("BREAK src/app.py\nHANG now")
         env = dict(os.environ, PATH=f"{self.bin}{os.pathsep}/usr/bin{os.pathsep}/bin")
         proc = subprocess.Popen([sys.executable, str(SCRIPT), "run", "--prompt-file", str(prompt),
-                                 "--cwd", str(self.repo), "--expect", "SDD/reviews/REVIEW.md"],
+                                 "--cwd", str(self.repo), "--expect", "SDD/.records/reviews/REVIEW.md"],
                                 stdout=subprocess.PIPE, text=True, env=env)
         deadline = time.time() + 20
         while (self.repo / "src" / "app.py").read_text() != "mutated\n" and time.time() < deadline:
@@ -195,21 +195,21 @@ class SecondModelReviewTest(unittest.TestCase):
 
     def test_run_fails_when_the_cli_exits_non_zero(self) -> None:
         self.install("codex", FAKE_CODEX)
-        status, line = self.review("WRITE SDD/reviews/REVIEW.md\nEXIT 7")
+        status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md\nEXIT 7")
         self.assertEqual(status, 1)
         self.assertIn("the codex CLI exited 7", line)
 
     def test_run_puts_back_code_the_reviewer_left_changed(self) -> None:
         self.install("codex", FAKE_CODEX)
         status, line = self.review(
-            "BREAK src/app.py\nDELETE src/uncommitted.py\nBREAK src/stray.py\nWRITE SDD/reviews/REVIEW.md"
+            "BREAK src/app.py\nDELETE src/uncommitted.py\nBREAK src/stray.py\nWRITE SDD/.records/reviews/REVIEW.md"
         )
         self.assertEqual(status, 0, line)
         self.assertIn("put back 3 file(s) it left changed: src/app.py, src/stray.py, src/uncommitted.py", line)
         self.assertEqual((self.repo / "src" / "app.py").read_text(), "guard()\n")
         self.assertEqual((self.repo / "src" / "uncommitted.py").read_text(), "new work\n")
         self.assertFalse((self.repo / "src" / "stray.py").exists())
-        self.assertTrue((self.repo / "SDD" / "reviews" / "REVIEW.md").is_file())
+        self.assertTrue((self.repo / "SDD" / ".records" / "reviews" / "REVIEW.md").is_file())
 
     def test_run_puts_code_back_after_a_failed_run_too(self) -> None:
         self.install("codex", FAKE_CODEX)
@@ -221,26 +221,26 @@ class SecondModelReviewTest(unittest.TestCase):
     def test_run_leaves_the_git_index_alone(self) -> None:
         self.install("codex", FAKE_CODEX)
         before = subprocess.run(["git", "-C", str(self.repo), "status", "--porcelain", "--", "src"], capture_output=True, text=True)
-        self.review("BREAK src/app.py\nWRITE SDD/reviews/REVIEW.md")
+        self.review("BREAK src/app.py\nWRITE SDD/.records/reviews/REVIEW.md")
         after = subprocess.run(["git", "-C", str(self.repo), "status", "--porcelain", "--", "src"], capture_output=True, text=True)
         self.assertEqual(before.stdout, after.stdout)
 
     def argv(self) -> str:
         """The arguments the fake codex was started with."""
-        return (self.repo / "SDD" / "orchestration" / "reviewer-calls" / "argv.txt").read_text()
+        return (self.repo / "SDD" / ".records" / "reviewer-calls" / "argv.txt").read_text()
 
     def test_run_gives_codex_network_access_by_default(self) -> None:
         self.install("codex", FAKE_CODEX)
-        status, line = self.review("WRITE SDD/reviews/REVIEW.md")
+        status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md")
         self.assertEqual(status, 0, line)
         self.assertIn("-c sandbox_workspace_write.network_access=true", self.argv())
 
     def test_run_appends_the_reviewer_args(self) -> None:
         self.install("codex", FAKE_CODEX)
-        prompt_file = self.repo / "SDD" / "orchestration" / "reviewer-calls" / "4b-1.prompt.md"
-        prompt_file.write_text("WRITE SDD/reviews/REVIEW.md")
+        prompt_file = self.repo / "SDD" / ".records" / "reviewer-calls" / "4b-1.prompt.md"
+        prompt_file.write_text("WRITE SDD/.records/reviews/REVIEW.md")
         status, line = self.call("run", "--prompt-file", str(prompt_file), "--cwd", str(self.repo),
-                                 "--expect", "SDD/reviews/REVIEW.md", env={"SDD_FLOW_REVIEWER_ARGS": "-m gpt-x --skip-git-repo-check"})
+                                 "--expect", "SDD/.records/reviews/REVIEW.md", env={"SDD_FLOW_REVIEWER_ARGS": "-m gpt-x --skip-git-repo-check"})
         self.assertEqual(status, 0, line)
         self.assertTrue(self.argv().endswith("-m gpt-x --skip-git-repo-check -"), self.argv())
 

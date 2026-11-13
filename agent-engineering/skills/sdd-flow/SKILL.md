@@ -35,7 +35,7 @@ Consequences that shape this whole skill:
 
 ## SKILL_ROOT resolution (Step 0)
 
-At Step 0 the orchestrator resolves **SKILL_ROOT** = the absolute path of this skill's own directory, and records it in `SDD/orchestration/progress.md` so resumed sessions re-derive every body path. Resolution order:
+At Step 0 the orchestrator resolves **SKILL_ROOT** = the absolute path of this skill's own directory, and records it in `SDD/.records/progress.md` so resumed sessions re-derive every body path. Resolution order:
 
 1. **Plugin cache:** `~/.claude/plugins/cache/pablooliva/agent-engineering/<latest-version>/skills/sdd-flow` (pick the highest version dir).
 2. **Dev/repo checkout:** the `agent-engineering/skills/sdd-flow` directory of the working repo.
@@ -69,22 +69,22 @@ Every subagent MUST use these exact paths; the orchestrator resolves `[###]`/`[f
 | Tier plan | `SDD/flow/TIERS-[feature-name].md` (one per feature across all its tiers — a next-tier cycle keeps the first tier's name) | Design-brief subagent; Completion (4f) | Planning, the next tier's cycle |
 | Specification | `SDD/requirements/SPEC-[###]-[feature-name].md` | Planning subagent | Panel, Planning review, Implementation |
 | Observability record | `SDD/OBSERVABILITY.md` — only in an application that has the tracing foundation | The user, by running `/observability-init` outside the flow. A flow subagent writes one line of it: with the evals gate on, the implementer that builds the first eval fills its `Eval command` row | Orchestrator (before each design-brief spawn and on approval: is it there?; with the evals gate on, its `Eval command` row before each review); with the evals gate on, the implementer, the reviews (the 4e.5 final check included), and fix subagents — for the env file and the eval command; with the tracing gate on, the implementer, the reviews (the 4e.5 final check included), and fix subagents — for the trace run command, the span file, the env file, and the entry-point test — and the completion subagent, for where traces go |
-| **Panel findings (per specialist)** | `SDD/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md` | Each specialist (Stage 1) | Panel synthesis (Stage 2) |
-| Spec panel review | `SDD/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md` | Panel synthesis (Stage 2) | Planning fix |
-| Spec critical review | `SDD/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md` | Planning review | Planning fix |
+| **Panel findings (per specialist)** | `SDD/.records/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md` | Each specialist (Stage 1) | Panel synthesis (Stage 2) |
+| Spec panel review | `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md` | Panel synthesis (Stage 2) | Planning fix |
+| Spec critical review | `SDD/.records/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md` | Planning review | Planning fix |
 | ADRs / ADR index | `SDD/adr/NNNN-slug.md`, `SDD/adr/README.md` | adr-capture subagent | Future runs, humans |
 | Implementation plan | `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` | Implementation subagent | Code review, Completion |
-| Trace tree (tracing gate on) | `SDD/reviews/TRACE-TREE-<SLICE-XXX\|FEATURE>-[feature-name]-[YYYYMMDD].md`, and `TRACE-TREE-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` for the final check — the call tree a real run recorded, rendered by `scripts/trace-tree.py` | The review that runs the Tracing Lens (per-slice 4b, the feature code review 4b, and each 4e.5 final check) | The fix subagent that answers that review; the completion subagent (the last 4e.5 tree) |
-| Eval results (evals gate on) | `SDD/reviews/EVAL-RESULTS-<SLICE-XXX\|FEATURE>-[feature-name]-iter<N>-[YYYYMMDD].md`, with a `.json` file of the same name beside it — what the model answered to each case in the run a review reads, written by the application's eval run | Orchestrator, by running the application's eval command before each review (per-slice 4b, the feature code review 4b, and each 4e.5 final check) | That review; the fix subagent that answers it; the completion subagent (the last 4e.5 run's results); the user at the commit checkpoint (4h), when the spec has a sign-off requirement |
-| Final check review | `SDD/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` | 4e.5 final check | 4e.5 fix, completion |
+| Trace tree (tracing gate on) | `SDD/.records/reviews/TRACE-TREE-<SLICE-XXX\|FEATURE>-[feature-name]-[YYYYMMDD].md`, and `TRACE-TREE-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` for the final check — the call tree a real run recorded, rendered by `scripts/trace-tree.py` | The review that runs the Tracing Lens (per-slice 4b, the feature code review 4b, and each 4e.5 final check) | The fix subagent that answers that review; the completion subagent (the last 4e.5 tree) |
+| Eval results (evals gate on) | `SDD/.records/reviews/EVAL-RESULTS-<SLICE-XXX\|FEATURE>-[feature-name]-iter<N>-[YYYYMMDD].md`, with a `.json` file of the same name beside it — what the model answered to each case in the run a review reads, written by the application's eval run | Orchestrator, by running the application's eval command before each review (per-slice 4b, the feature code review 4b, and each 4e.5 final check) | That review; the fix subagent that answers it; the completion subagent (the last 4e.5 run's results); the user at the commit checkpoint (4h), when the spec has a sign-off requirement |
+| Final check review | `SDD/.records/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` | 4e.5 final check | 4e.5 fix, completion |
 | Slice file | `SDD/implementation/slices/SLICE-[###]-[NN]-[slice-name]-[YYYY-MM-DD].md` | slice-start subagent | per-slice cycle |
-| Slice review | `SDD/reviews/REVIEW-SLICE-*` (its `Re-plan:` line is shown at the slice pause) | Slice review | Slice fix, slice pause, end-of-feature |
-| Code review | `SDD/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md` — the one review of the whole feature's code, both delivery modes | Code review (4b) | Code review fix (4c) |
+| Slice review | `SDD/.records/reviews/REVIEW-SLICE-*` (its `Re-plan:` line is shown at the slice pause) | Slice review | Slice fix, slice pause, end-of-feature |
+| Code review | `SDD/.records/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md` — the one review of the whole feature's code, both delivery modes | Code review (4b) | Code review fix (4c) |
 | Implementation summary | `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md` | Completion | — |
-| Reviewer call (second-model route) | `SDD/orchestration/reviewer-calls/[step-id]-[iter]-[YYYY-MM-DD_HH-MM-SS].{prompt.md, log, return.md}` | Orchestrator (prompt); `scripts/second-model-review.py` (log, return) | The reviewer's CLI (prompt); orchestrator (return) |
-| Counter file | `SDD/orchestration/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` | Orchestrator (per spawn) | The spawned subagent only |
-| Compaction file | `SDD/orchestration/compacted/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md` | Subagent on Safety-Net trip | Continuation subagent |
-| Progress file | `SDD/orchestration/progress.md` | All subagents (append only) | All subagents, orchestrator |
+| Reviewer call (second-model route) | `SDD/.records/reviewer-calls/[step-id]-[iter]-[YYYY-MM-DD_HH-MM-SS].{prompt.md, log, return.md}` | Orchestrator (prompt); `scripts/second-model-review.py` (log, return) | The reviewer's CLI (prompt); orchestrator (return) |
+| Counter file | `SDD/.records/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` | Orchestrator (per spawn) | The spawned subagent only |
+| Compaction file | `SDD/.records/compacted/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md` | Subagent on Safety-Net trip | Continuation subagent |
+| Progress file | `SDD/.records/progress.md` | All subagents (append only) | All subagents, orchestrator |
 
 ```
 SDD/
@@ -97,13 +97,17 @@ SDD/
 ├── implementation/
 │   ├── IMPLEMENTATION-PLAN-*.md
 │   ├── slices/SLICE-*.md   # per-slice mode only
-│   │   └── superseded/[YYYY-MM-DD_HH-MM-SS]/   # a replaced plan's slice reviews — kept, never read
 │   └── summaries/IMPLEMENTATION-SUMMARY-*.md
-├── orchestration/{progress.md, subagent-calls/, reviewer-calls/, counters/, compacted/}
-└── reviews/{PANEL-FINDINGS-*, PANEL-SPEC-*, CRITICAL-SPEC-*,
-            REVIEW-*, REVIEW-SLICE-*, FINAL-CHECK-*,
-            TRACE-TREE-*, EVAL-RESULTS-*}.md
+└── .records/                             # git-ignored: process records, never committed
+    ├── .gitignore                        # the one line `*`
+    ├── {progress.md, progress-archive/, subagent-calls/, reviewer-calls/, counters/, compacted/}
+    └── reviews/
+        ├── {PANEL-FINDINGS-*, PANEL-SPEC-*, CRITICAL-SPEC-*, REVIEW-*, REVIEW-SLICE-*,
+        │    FINAL-CHECK-*, TRACE-TREE-*, EVAL-RESULTS-*}.md
+        └── superseded/[YYYY-MM-DD_HH-MM-SS]/   # a replaced plan's slice reviews — kept, never read
 ```
+
+**Records stay out of git.** Everything under `SDD/.records/` — progress, reviews, counters, reviewer and subagent call logs, eval results, trace trees, compaction files — is a process record: it is git-ignored and no commit ever includes it. Whoever creates `SDD/.records/` first (Step 0, a compact command, the subagent-log hook) writes `SDD/.records/.gitignore` holding the one line `*`. The brief, spec, plan, slice files, ADRs, glossary, tier plan, and summary are what history keeps. The records live only in the checkout that ran the flow; `worktree-merge` copies a worktree's records into the main checkout before the worktree goes away.
 
 ## Orchestrator Discipline (the load-bearing core)
 
@@ -178,7 +182,7 @@ Three things hold whichever model reviews, and an edit to a review step is check
 
 `progress.md` sits in the read path of nearly every spawn and of phase detection — its size is paid on every read. Three rules keep it bounded:
 
-1. **Rotate at feature completion (Step 4j).** Move the finished feature's full history — its `## Flow Started - ` record and everything after it — to `SDD/orchestration/progress-archive/progress-SPEC-[###]-[YYYY-MM-DD_HH-MM-SS].md`; leave one line, `Finished: SPEC-[###] [feature-name] — <outcome>; history: <archive path>`. That line carries no `## ` header and no phase marker, so no resume rule can match a finished feature. The live file carries full history ONLY for the active feature.
+1. **Rotate at feature completion (Step 4j).** Move the finished feature's full history — its `## Flow Started - ` record and everything after it — to `SDD/.records/progress-archive/progress-SPEC-[###]-[YYYY-MM-DD_HH-MM-SS].md`; leave one line, `Finished: SPEC-[###] [feature-name] — <outcome>; history: <archive path>`. That line carries no `## ` header and no phase marker, so no resume rule can match a finished feature. The live file carries full history ONLY for the active feature.
 2. **Checkpoint on size.** If the live file exceeds **~500 lines**, rotate at the next quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6): archive resolved verbose blocks (including completed-phase history of the still-active feature), rewrite the head as a bounded `## Current State` (artifact pointers, archive path), then keep the active feature's `## Flow Started - ` record and, after it, its canonical phase-state lines verbatim and in order. **Pending halt blocks (`## Awaiting *`, `## PARTIAL*` — prefix match, not a fixed list) are carried forward verbatim as the latest blocks** — phase detection matches the latest block in the live file and never scans archives. Everything kept in the live file stays byte-identical; only the new head and rotation stamp are newly written text.
 3. **Bounded appends.** Subagent progress entries are **≤10 lines**: status, artifact paths, one-line key decision, anything pending. Narrative belongs in the artifact the subagent wrote, referenced by path. (One exception: an `## ADR Candidates` entry lists every candidate, one line each, however many — it is the only record the design gate reads.)
 
@@ -190,11 +194,11 @@ A review run on the second model carries none of it — no rule, counter file, o
 
 > **Bail-out trigger (a trigger, not a budget to spend):** you have Read more than **15** files (implementation chunks: more than **20**).
 >
-> **When it fires, stop immediately.** Read the compact-body path given in your prompt (under "Compact instructions — use only if the Safety-Net trips") and follow it: write `SDD/orchestration/compacted/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `progress.md` with the compaction file path and where you left off, and return ≤100 words stating a Mid-Phase Handoff is required.
+> **When it fires, stop immediately.** Read the compact-body path given in your prompt (under "Compact instructions — use only if the Safety-Net trips") and follow it: write `SDD/.records/compacted/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `progress.md` with the compaction file path and where you left off, and return ≤100 words stating a Mid-Phase Handoff is required.
 >
 > **Counter tracking.** You cannot inspect your own tool-call history. The orchestrator gives you a **dedicated counter file** (path in your prompt under "Your counter file"). It holds exactly one line: `Reads: 0/15`. Update it immediately after each Read; check it (cheap Read) before each new Read — that is the trigger evaluation. The counter file is scoped to your run only; never shared, never written to `progress.md`.
 
-**Orchestrator obligation per spawn of a phase-execution / fix / continuation subagent:** (1) embed the Safety-Net Rule verbatim; (2) create the counter file at `SDD/orchestration/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with the single line `Reads: 0/15` (use `/20` for implementation chunks) and pass its path under "Your counter file"; (3) pass the matching compact body path (`SKILL_ROOT/bodies/[phase]-compact.md`) under "Compact instructions — use only if the Safety-Net trips". Counter is **Reads-only** — subagents are contractually barred from spawning (a platform limit on Claude Code ≤2.1.171, a deliberate design rule from 2.1.172 onward), so there is no nested-subagent count. Defaults (15 / 20) are tunable without changing the protocol.
+**Orchestrator obligation per spawn of a phase-execution / fix / continuation subagent:** (1) embed the Safety-Net Rule verbatim; (2) create the counter file at `SDD/.records/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with the single line `Reads: 0/15` (use `/20` for implementation chunks) and pass its path under "Your counter file"; (3) pass the matching compact body path (`SKILL_ROOT/bodies/[phase]-compact.md`) under "Compact instructions — use only if the Safety-Net trips". Counter is **Reads-only** — subagents are contractually barred from spawning (a platform limit on Claude Code ≤2.1.171, a deliberate design rule from 2.1.172 onward), so there is no nested-subagent count. Defaults (15 / 20) are tunable without changing the protocol.
 
 ### Spawn-prompt construction checklist
 

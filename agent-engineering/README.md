@@ -61,7 +61,7 @@ These are **interactive commands you run yourself** (depth 0, so they may delega
 - **`/prompt-doctor`** — Manual entry point for the `prompt-doctor` skill. Takes a pasted prompt, a file path, or the last draft in the conversation.
 - **`/research-clarify`** — Structured interview that externalizes your design concept before any codebase research. Satisfies the `sdd-flow` Step 1.5 clarification gate. On a next-tier cycle it interviews for feedback on the tier already shipped instead.
 - **`/critical-review`** — Standalone adversarial review of a research doc, spec, or implementation.
-- **`/continue`** — Resume a session after any of the four compact commands below: loads the compaction file that `progress.md` names (under `SDD/orchestration/compacted/`), or the one whose path you pass, and continues from its `## Continuation Priorities`.
+- **`/continue`** — Resume a session after any of the four compact commands below: loads the compaction file that `progress.md` names (under `SDD/.records/compacted/`), or the one whose path you pass, and continues from its `## Continuation Priorities`.
 - **`/adhoc-compact`** — Generic mid-phase compaction, for ad-hoc or follow-up work. Detects an active SDD phase and redirects to the phase-specific command below.
 - **`/research-compact`**, **`/planning-compact`**, **`/implementation-compact`** — Phase-specific compaction. Thin wrappers that read `sdd-flow`'s own compaction bodies (`skills/sdd-flow/bodies/<phase>-compact.md`) and run them interactively, so a manual compaction produces the same artifact an orchestrated run would — no second copy of the templates to drift.
 - **`/commit`** — Commit conventions (no co-author attribution), including atomic per-slice commits.
@@ -87,7 +87,28 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 4.6.0.
+Version 4.7.0.
+
+### What's new in 4.7.0
+
+`sdd-flow`'s process records no longer go into git.
+
+- **One git-ignored folder, `SDD/.records/`.** Progress, reviews (panel, spec, code, slice, final check), trace trees,
+  eval results, counters, reviewer and subagent call logs, and compaction files are written there, in the same
+  sub-structure as before (`reviews/`, `reviewer-calls/`, `subagent-calls/`, `counters/`, `compacted/`,
+  `progress-archive/`). Whoever creates the folder first writes `SDD/.records/.gitignore` holding `*`, so no
+  repository needs a `.gitignore` change. Replaces `SDD/orchestration/` and `SDD/reviews/`.
+- **What is committed:** the brief, spec, implementation plan and slice files, ADRs, glossary, tier plan, and
+  summary. The per-slice and end-of-feature commits no longer carry reviews, trace trees, or eval results; a sign-off
+  line still names the eval results file it was given on. A re-plan moves the replaced slice reviews to
+  `SDD/.records/reviews/superseded/<stamp>/` with a plain `mv`.
+- **Records outlive a worktree through `worktree-merge`.** Before the worktree goes away, it copies `SDD/.records/` to
+  the main checkout's `SDD/.records/merged/<branch>/` — never over the main checkout's own records.
+- The compact commands, `/agent-engineering:continue`, `/critical-review`, the standalone agent-security review, the
+  subagent-log hook, `observability-init` and `eval-harvest` (which read the progress file), and the `retro` evidence
+  list use the new paths.
+- **No migration.** A run started before 4.7.0 is not resumed from `SDD/orchestration/`; finish it on 4.6.0 or start
+  again. Reviews already committed under `SDD/reviews/` stay where they are.
 
 ### What's new in 4.6.0
 
@@ -139,7 +160,7 @@ the version that started it.
   line from before 3.12.1. A halt block with no resume rule is still shown to you and not passed.
 - **The legacy 1.x layout check is gone.**
 - **A spec without `delivery_mode:` is an error,** not a whole-feature spec; the planning check now asks for the field.
-- **`/agent-engineering:continue`** no longer looks in `SDD/orchestration/` for compaction files, or reads the
+- **`/agent-engineering:continue`** no longer looks in `SDD/.records/` for compaction files, or reads the
   pre-3.5.1 section names.
 
 ### What's new in 4.3.0
@@ -353,7 +374,7 @@ Evals inside `sdd-flow` — the third of four build steps of the tracing-and-eva
 - **The cases are written in the spec, before any code.** `### Evals` under `## Validation Strategy`: each eval names one requirement and writes its cases out in full — an invented input, and what the output must and must not contain, or a rubric for the judge. Each slice names the evals it must pass. The spec's critical review checks that every requirement about what the model says has a hard eval, or is listed for you to accept and has a judged one. An implementer that wrote its own cases would write the ones its code passes.
 - **The implementer builds them.** The first work with an eval renders the eval run from templates (`skills/sdd-flow/templates/evals/`, Python only, standard library only): `evals/run.py`, `evals/task.py` — which calls the application's own code, with the real model — `evals/cases.jsonl`, and a test of the checks. Every hard case carries an answer its check must reject and one it must accept, and the run calls no model until each check does both.
 - **Every case is run three times.** A hard case passes only when its check holds on all three, so a behaviour the model shows only some of the time fails — as `unsteady`, told apart from `never passed`. In a trial on a scratch copy of the trial application, it stated a result it is meant to lead a student to in 2 answers of 7.
-- **The flow makes the run a review reads.** Before each slice review, the code review, and each verification of the final check, the orchestrator runs the application's eval command and hands the review the results (`SDD/reviews/EVAL-RESULTS-*`). The review's Eval Check reads that run and the eval files against the spec, from a fixed list of fifteen findings — among them a hard case that failed, a case weakened or removed, a check that passed a bad answer, an application taught its cases, and an eval task that does not go through the application's own code. A reviewer never makes the run: a review on a second model may sit where no model can be reached.
+- **The flow makes the run a review reads.** Before each slice review, the code review, and each verification of the final check, the orchestrator runs the application's eval command and hands the review the results (`SDD/.records/reviews/EVAL-RESULTS-*`). The review's Eval Check reads that run and the eval files against the spec, from a fixed list of fifteen findings — among them a hard case that failed, a case weakened or removed, a check that passed a bad answer, an application taught its cases, and an eval task that does not go through the application's own code. A reviewer never makes the run: a review on a second model may sit where no model can be reached.
 - **Runs go to Opik,** one experiment per review, by plain HTTP requests — no SDK and no new dependency in the application. A failed upload is a warning; the results files in the repository are the record.
 - **The last check comes after the last fix.** The final check (4e.5) puts every case to the application again before each of its verifications, and an eval finding counts toward its three-round cap and its stop. Completion reads the final results for the summary and changes no code or test.
 - **A person accepts what only a judge can score.** A requirement no rule can check is a *sign-off requirement*. With one in the spec, the commit checkpoint (4h) stops for it — the one reason it stops: it shows each such requirement with its judged scores and the path to the outputs, and yes both commits and accepts. In per-slice mode each slice pause shows the last line of the slice's eval run.
@@ -405,7 +426,7 @@ Tracing inside `sdd-flow` — the second of four build steps of the tracing-and-
 - **One gate, settled once per cycle.** Step 0 records whether `SDD/OBSERVABILITY.md` exists. The spec gains `tracing: auto | true | false`; at 3c the orchestrator turns that and the Step 0 record into `## Gates - tracing: on|off` in `progress.md`, and every later spawn is passed that line. `tracing: true` with no foundation, or an invalid value, stops planning with `## Awaiting Tracing Decision`.
 - **The spec plans the calls.** With the gate on, `## Modules` gains `### Planned call graph`: one tree per entry point, with entry points, model calls (each with a maximum number of calls per request), and calls to other systems marked. Each slice names the marked nodes it builds. The spec's critical review checks the graph.
 - **The implementer follows the tracing standard** for what it adds, and checks its marked nodes against the application's trace run. A difference from the plan is recorded as a deviation; the plan is never edited to match.
-- **Reviews compare the plan with a real run — the Tracing Lens.** Defined once in `skills/sdd-flow/references/tracing-lens.md` and run by the slice review, the feature code review, and the final check. The reviewer runs the trace run, renders its span file with the new `skills/sdd-flow/scripts/trace-tree.py` into `SDD/reviews/TRACE-TREE-*`, and compares the tree with the marked nodes in scope. Findings come from a fixed table: a header or secret on a span, more model calls in one request than planned, or a trace run that cannot be read (HIGH); a call the plan does not show, a marked node the run does not show, an entry point not traced (MEDIUM); three kinds of misuse of the tracing API in the application's own code (LOW). A model call is matched by the function that made it; where the tree cannot tell two nodes apart the review says so instead of passing them.
+- **Reviews compare the plan with a real run — the Tracing Lens.** Defined once in `skills/sdd-flow/references/tracing-lens.md` and run by the slice review, the feature code review, and the final check. The reviewer runs the trace run, renders its span file with the new `skills/sdd-flow/scripts/trace-tree.py` into `SDD/.records/reviews/TRACE-TREE-*`, and compares the tree with the marked nodes in scope. Findings come from a fixed table: a header or secret on a span, more model calls in one request than planned, or a trace run that cannot be read (HIGH); a call the plan does not show, a marked node the run does not show, an entry point not traced (MEDIUM); three kinds of misuse of the tracing API in the application's own code (LOW). A model call is matched by the function that made it; where the tree cannot tell two nodes apart the review says so instead of passing them.
 - **The last check comes after the last fix.** With the gate on, the final check (4e.5) always runs and repeats the comparison for the whole feature. Completion reads the final tree for the summary's `## Monitoring & Observability` and changes no code or test; if it finds something that needs either, the flow stops on the final check's halt and re-runs the final check after you resume.
 - **The tracing rules are not a feature's security rules** unless a spec restates one with a `SEC-` ID.
 - **`trace-tree.py`** turns a span file into a document: requests grouped by entry point, the fewest and most model and external calls in one request, each distinct tree of calls drawn once (at most ten per entry point), and a scan for headers and secret values. It prints names and counts, never recorded text.
@@ -458,7 +479,7 @@ A review of `sdd-flow` as a whole (`proposals/sdd-flow-review-findings-2026-10-0
 - **A re-plan no longer collides with the plan it replaces.** The old plan's slice retrospectives and reviews move to `SDD/implementation/slices/superseded/<timestamp>/` — kept, not deleted — and resume, fix-round caps, and the learnings ledger read only the new plan's.
 - **Removed: re-starting a finished slice.** The `--force` flag on slice start, `--confirm-restart`, and `## Awaiting Re-start Decision` were half-built and had no user-facing entry point. Change a finished slice in a later slice, or re-plan.
 - **Panel values without a shipped specialist** (`accessibility`, `privacy`, `cost`) run on the general worker with the panel body instead of naming an agent that does not exist.
-- **The compact commands and `/continue` follow one contract.** All four compact commands write under `SDD/orchestration/compacted/`, record the file's full path in `progress.md` (or, with `/adhoc-compact`'s Skip option, hand you the path to pass to `/continue`), carry the same `## Continuation Priorities` section, and leave a pending `## Awaiting …` block as the latest block so a stopped flow is still found (unless you tell `/adhoc-compact` to set the whole file aside). `/continue` loads the file `progress.md` names (it used to look in the wrong folder) or a path you give it, stops rather than substituting when that file is missing, asks when several unrecorded files exist, gains a branch for generic compactions, and points at `/sdd-flow continue` when a flow is stopped waiting for an answer. Run it as `/agent-engineering:continue` when the `sdd` plugin is also installed. `/adhoc-compact` no longer offers to overwrite `progress.md` — it can set the whole file aside in `progress-archive/` instead, and asks first when that file holds an unfinished feature — and `/implementation-compact` no longer commits during a flow.
+- **The compact commands and `/continue` follow one contract.** All four compact commands write under `SDD/.records/compacted/`, record the file's full path in `progress.md` (or, with `/adhoc-compact`'s Skip option, hand you the path to pass to `/continue`), carry the same `## Continuation Priorities` section, and leave a pending `## Awaiting …` block as the latest block so a stopped flow is still found (unless you tell `/adhoc-compact` to set the whole file aside). `/continue` loads the file `progress.md` names (it used to look in the wrong folder) or a path you give it, stops rather than substituting when that file is missing, asks when several unrecorded files exist, gains a branch for generic compactions, and points at `/sdd-flow continue` when a flow is stopped waiting for an answer. Run it as `/agent-engineering:continue` when the `sdd` plugin is also installed. `/adhoc-compact` no longer offers to overwrite `progress.md` — it can set the whole file aside in `progress-archive/` instead, and asks first when that file holds an unfinished feature — and `/implementation-compact` no longer commits during a flow.
 - **Runs started on 3.5.0 keep resuming.** Each new marker has a stated reading for a run that never wrote it.
 - **Legacy-layout message corrected.** It named a `/sdd-migrate-layout` command this plugin does not ship; it now points at the `sdd` plugin's.
 
@@ -574,7 +595,7 @@ Phase-specific compaction is reachable again from an interactive session:
 
 OWASP AI Agent Security review, as one catalog with two entry points:
 
-- **New skill `ai-agent-security-review`** — standalone, target-detecting (explicit path → active SDD artifact → working diff → repo), writes `SDD/reviews/AGENT-SECURITY-*.md` with the same severity rubric and verdict thresholds as the sdd-flow panel.
+- **New skill `ai-agent-security-review`** — standalone, target-detecting (explicit path → active SDD artifact → working diff → repo), writes `SDD/.records/reviews/AGENT-SECURITY-*.md` with the same severity rubric and verdict thresholds as the sdd-flow panel.
 - **Vendored control catalog** — `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`, split into spec-level checks (§3), code-level checks (§4), and the abuse-case test matrix (§5). Deliberately not fetched at review time: reviews must be deterministic and offline-safe. Refresh by re-reading the source and bumping the retrieval date.
 - **`sdd-flow` hook points** — `agent-security` panel value (Step 3c, new `sdd-spec-agent-security-specialist` agent, Sonnet); Agentic-Surface Lens in `code-review.md` and `slice-review.md` (Step 4b — a HIGH finding is a rejection criterion); abuse-case seeding in `eval-capture.md` (Step 4g, including an abuse-case-only mode when `eval_required: false`).
 - **New spec frontmatter field `agent_security:`** — `auto` (default) | `true` | `false`. The planning body resolves `auto` by agentic-surface detection and appends `agent-security` to `review_panel:`.
@@ -592,7 +613,7 @@ Hardening from the first live test of the 1.0.2 rotation procedure (three real-f
 
 ### What's new in 1.0.2
 
-- **Progress hygiene.** `progress.md` no longer grows unboundedly (it sits in the read path of nearly every spawn): feature-completion rotation archives a finished feature's history to `SDD/orchestration/progress-archive/`, leaving a one-line summary; a ~500-line size checkpoint fires at phase-boundary commits; pending halt blocks always carry forward verbatim (phase detection never scans archives). Subagent progress entries are bounded to ≤10 lines — narrative belongs in artifacts. The interactive `/adhoc-compact` and `/continue` commands apply the same rotation in manual sessions.
+- **Progress hygiene.** `progress.md` no longer grows unboundedly (it sits in the read path of nearly every spawn): feature-completion rotation archives a finished feature's history to `SDD/.records/progress-archive/`, leaving a one-line summary; a ~500-line size checkpoint fires at phase-boundary commits; pending halt blocks always carry forward verbatim (phase detection never scans archives). Subagent progress entries are bounded to ≤10 lines — narrative belongs in artifacts. The interactive `/adhoc-compact` and `/continue` commands apply the same rotation in manual sessions.
 
 ### What's new in 1.0.1
 

@@ -304,7 +304,7 @@ Applies to the planning review when the spec's frontmatter carries `tier:` (1, 2
 
 Create a review document at the appropriate location:
 
-- Planning phase: `SDD/reviews/CRITICAL-SPEC-[feature-name]-YYYYMMDD.md`
+- Planning phase: `SDD/.records/reviews/CRITICAL-SPEC-[feature-name]-YYYYMMDD.md`
 - Ad-hoc: Return findings inline as your bounded response (≤200 words + artifact paths).
 
 ### Always Include

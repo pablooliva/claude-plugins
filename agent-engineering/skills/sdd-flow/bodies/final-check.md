@@ -6,7 +6,7 @@ This is the last review of the feature, run after every fix has landed. It reads
 
 ## Inputs (all from your prompt)
 
-Always: `SCOPE = FEATURE`, `ITER = <k>`, the SPEC, the IMPLEMENTATION-PLAN, `BASE` (the commit the feature started from), **SECURITY** (`references/security-verification.md`), **TEST_INTEGRITY**, and the gate lines `tracing: on|off` and `evals: on|off`. With the `agent_security` gate open: **CATALOG** and the panel review `SDD/reviews/PANEL-SPEC-*`. With `tracing: on`: **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE** (a file named for this iteration). With `evals: on`: **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not). On a later round, `SNAPSHOT`, `FIXED`, and `PREVIOUS REVIEW` (below).
+Always: `SCOPE = FEATURE`, `ITER = <k>`, the SPEC, the IMPLEMENTATION-PLAN, `BASE` (the commit the feature started from), **SECURITY** (`references/security-verification.md`), **TEST_INTEGRITY**, and the gate lines `tracing: on|off` and `evals: on|off`. With the `agent_security` gate open: **CATALOG** and the panel review `SDD/.records/reviews/PANEL-SPEC-*`. With `tracing: on`: **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE** (a file named for this iteration). With `evals: on`: **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not). On a later round, `SNAPSHOT`, `FIXED`, and `PREVIOUS REVIEW` (below).
 
 If an input the gates call for is missing, return a failure to the orchestrator naming it. Do not list `SDD/` to find one.
 
@@ -32,10 +32,10 @@ After a fix round your prompt gives `SNAPSHOT` (the working tree before the fix)
 
 ## The review document and the marker
 
-Write `SDD/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<k>-[YYYYMMDD].md` containing, in order: a `Reviewed by:` line; `## Earlier Findings` (later rounds only); `## Security Verification`; `## Test Integrity`; `## Tracing Lens` and `## Eval Check` when their gates are on; one numbered `## Findings` list holding every finding of every part, each with its severity and its part; `## LOW Findings (listed, not fixed)` — one line per LOW, or `None.`; and `## Decision: [APPROVED/REJECTED]`.
+Write `SDD/.records/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<k>-[YYYYMMDD].md` containing, in order: a `Reviewed by:` line; `## Earlier Findings` (later rounds only); `## Security Verification`; `## Test Integrity`; `## Tracing Lens` and `## Eval Check` when their gates are on; one numbered `## Findings` list holding every finding of every part, each with its severity and its part; `## LOW Findings (listed, not fixed)` — one line per LOW, or `None.`; and `## Decision: [APPROVED/REJECTED]`.
 
 **A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: the owner sees it in the end report.
 
-When the document is written, append to `SDD/orchestration/progress.md` exactly `## Review FEATURE iter <k> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` — all three counts, zeros included (`k` = the `ITER` in your prompt; with no `ITER`, return a failure rather than guess one). It is a phase-detection marker; do not paraphrase it.
+When the document is written, append to `SDD/.records/progress.md` exactly `## Review FEATURE iter <k> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` — all three counts, zeros included (`k` = the `ITER` in your prompt; with no `ITER`, return a failure rather than guess one). It is a phase-detection marker; do not paraphrase it.
 
 Bounded return: ≤200 words — the decision, the three counts, the document path, and with `tracing: on` the trace-tree path.

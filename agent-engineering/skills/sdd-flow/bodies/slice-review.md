@@ -10,7 +10,7 @@ Per SPEC MODULE-002 active-slice fallback asymmetry:
 
 1. **Explicit `[SLICE-ID]` argument** — if provided, use it. Validate against `^SLICE-\d{3}[a-z]?$` BEFORE interpolating into any path (REQ-024 / SEC-003 path-traversal prevention).
 2. **IMPLEMENTATION-PLAN's `## Slice Progress` row** at `In Progress` — this review covers implemented code, so it expects that row.
-3. **Error** — never silently pick. If priority 2 yields multiple candidates, return a failure to the orchestrator listing them. Write no stop note to `SDD/orchestration/progress.md`.
+3. **Error** — never silently pick. If priority 2 yields multiple candidates, return a failure to the orchestrator listing them. Write no stop note to `SDD/.records/progress.md`.
 
 ## Inert-Mode Gate
 
@@ -105,7 +105,7 @@ On a re-review whose fix round the orchestrator snapshotted, your prompt gives t
 Apply the following review process to the computed slice file set. The full review priority order applies:
 
 1. **Specification Alignment (70%)** — verify the slice's REQ/EDGE/FAIL coverage from the SPEC. Restrict to REQ-XXX/EDGE-XXX/FAIL-XXX entries the slice's `Acceptance check` and `Modules touched` cite (a slice need not cover ALL of the feature's REQs — only its own).
-2. **Context Engineering (20%)** — verify the slice's section in the IMPLEMENTATION-PLAN's `## Slice Progress` table reflects the work done; verify subagent calls (if any) are logged under `SDD/orchestration/subagent-calls/`.
+2. **Context Engineering (20%)** — verify the slice's section in the IMPLEMENTATION-PLAN's `## Slice Progress` table reflects the work done; verify subagent calls (if any) are logged under `SDD/.records/subagent-calls/`.
 3. **Test Specification Alignment (10%)** — verify tests exist and pass for the slice's contribution; verify test type coverage (unit / integration / E2E) is appropriate for the slice's surface.
 
 **Test Integrity Lens (mandatory, every slice).** Item 3 asks whether the slice's tests exist and pass; this lens asks whether they are real — and whether the tests or the code were bent to get the green run. Read the standard at the `TEST_INTEGRITY` path in your prompt and run it **as written**, on this slice's requirements and the test files in this slice's changes: checks T1–T7 (§3), at the depth §4 gives for each module's `Risk:` tier, with `BASE` from your prompt and `### Test Changes` from the IMPLEMENTATION-PLAN. It is an overlay on the 70/20/10 split, and it runs after the slice's tests have passed. Make every mutation and probe in a scratch copy of the working tree (TEST_INTEGRITY §8), never in the working tree. Write the `## Test Integrity` section in the shape §6 gives; its findings are ordinary findings of this review, counted in the marker, each tagged `[needs-code-or-test]`. **A HIGH lens finding rejects the slice.** If your prompt has no `TEST_INTEGRITY` path, return a failure to the orchestrator naming it.
@@ -120,7 +120,7 @@ Apply the following review process to the computed slice file set. The full revi
 
 **Implausible-tier override:** if a module is marked `low` but you observe it touches state that is irreversible, security-sensitive, or financial, escalate to `medium` or `high` and note the override in the Module Review Log.
 
-**Agentic-Surface Lens (conditional).** Your prompt carries the resolved gate value. `agent_security: true` → run the lens over this slice's file set. `agent_security: auto` → run it only if this slice's files contain an agentic surface (model call, tool/MCP definition, agent memory or retrieval store, inter-agent messaging, or a model output driving an external action). **No catalog path in your prompt** → the gate is closed for this run (the spec says `false`): skip the lens. (A catalog path with no gate value: read `agent_security:` from the SPEC's frontmatter; absent means `auto`.) When it runs, read the control catalog at the path your prompt provides (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) and apply **Section 4 (Code-Level Checks)** only — Section 3 is spec-level and was covered at Step 3c. Also read the panel review named in your prompt (`SDD/reviews/PANEL-SPEC-*`): its `#### AI Agent Security Findings` block and that block's **Abuse cases to cover**. Code in this slice that contradicts a finding the spec panel resolved is a spec-to-code regression — raise it, at least MEDIUM. Report findings under a `## AI Agent Security` heading in the slice review document, with `file:line` evidence and concrete code resolutions; a HIGH finding rejects the slice. When the lens is skipped, record the one-line reason instead. Close the lens with the catalog Section 5 abuse cases this slice's files make relevant — starting from the panel review's **Abuse cases to cover** rows that this slice's files reach — each with its expected denial and the test that covers it. A test covers a case only if it performs the attack and asserts the expected denial. Raise every uncovered case as a HIGH finding (Resolution: the test to add) — it rejects the slice like any other HIGH.
+**Agentic-Surface Lens (conditional).** Your prompt carries the resolved gate value. `agent_security: true` → run the lens over this slice's file set. `agent_security: auto` → run it only if this slice's files contain an agentic surface (model call, tool/MCP definition, agent memory or retrieval store, inter-agent messaging, or a model output driving an external action). **No catalog path in your prompt** → the gate is closed for this run (the spec says `false`): skip the lens. (A catalog path with no gate value: read `agent_security:` from the SPEC's frontmatter; absent means `auto`.) When it runs, read the control catalog at the path your prompt provides (`skills/ai-agent-security-review/references/owasp-ai-agent-controls.md`) and apply **Section 4 (Code-Level Checks)** only — Section 3 is spec-level and was covered at Step 3c. Also read the panel review named in your prompt (`SDD/.records/reviews/PANEL-SPEC-*`): its `#### AI Agent Security Findings` block and that block's **Abuse cases to cover**. Code in this slice that contradicts a finding the spec panel resolved is a spec-to-code regression — raise it, at least MEDIUM. Report findings under a `## AI Agent Security` heading in the slice review document, with `file:line` evidence and concrete code resolutions; a HIGH finding rejects the slice. When the lens is skipped, record the one-line reason instead. Close the lens with the catalog Section 5 abuse cases this slice's files make relevant — starting from the panel review's **Abuse cases to cover** rows that this slice's files reach — each with its expected denial and the test that covers it. A test covers a case only if it performs the attack and asserts the expected denial. Raise every uncovered case as a HIGH finding (Resolution: the test to add) — it rejects the slice like any other HIGH.
 
 **Respect the tier (tiered specs only).** When the SPEC's frontmatter carries `tier:` (the delivery tier — not a module's `Risk:` tier), read the tier standard at the **TIERS** path in your prompt and the SPEC's `## Deferred to Later Tiers` before raising findings. Do not raise a finding for behaviour that section lists as deferred — it was left out on purpose. Do raise one, at HIGH and titled `Unsafe to defer`, when the code breaches the standard's floor for a deferred item: most often a deferred case the code can reach that fails quietly instead of visibly. And raise one for anything **built ahead** — an abstraction, parameter, option, hook, flag, or dependency that no requirement of this tier uses: MEDIUM by default, HIGH when it adds a moving part (a dependency, stored state, a background process). The resolution is removal; "a later tier will need it" is not a justification. Everything this tier does build is reviewed in full.
 
@@ -150,7 +150,7 @@ Items outside the slice's file set still apply when the checklist item is about 
 
 Every finding of this review is numbered once, at its severity, in `## Slice-Specific Findings`. **A review with no open HIGH and no open MEDIUM passes the slice.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list at the slice pause and in the end report — and nothing sends it to a fix round.
 
-When the review document is written, append to `SDD/orchestration/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). `APPROVED` when `h` and `m` are both zero, `REJECTED` otherwise. Always write all three counts, zeros included — the orchestrator reads them from this line. It is a phase-detection marker; do not paraphrase it.
+When the review document is written, append to `SDD/.records/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). `APPROVED` when `h` and `m` are both zero, `REJECTED` otherwise. Always write all three counts, zeros included — the orchestrator reads them from this line. It is a phase-detection marker; do not paraphrase it.
 
 ## Step 5.7: Design Brief Check
 
@@ -185,14 +185,14 @@ Answer one question about the plan, not the code: **should the rest of the plan 
 Write the review output to:
 
 ```
-SDD/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-iter<N>-<YYYY-MM-DD>.md
+SDD/.records/reviews/REVIEW-SLICE-<SLICE-XXX>-<feature-name>-iter<N>-<YYYY-MM-DD>.md
 ```
 
 `N` is the `ITER` in your prompt: one document per iteration, so a re-review never overwrites the review its fix answered.
 
 Note the **hyphenated date format** `[YYYY-MM-DD]` (uniform across the slice artifact families — REVIEW-SLICE; resolves panel deferred LOW-13).
 
-The review document follows the standard review template (`SDD/reviews/REVIEW-XXX-...md` shape) with these slice-specific additions:
+The review document follows the standard review template (`SDD/.records/reviews/REVIEW-XXX-...md` shape) with these slice-specific additions:
 
 ```markdown
 # Slice Review: SLICE-<XXX> — [slice name]
@@ -291,8 +291,8 @@ This review emits paths under the SDD 2.0.0 layout:
 
 - `SDD/requirements/SPEC-XXX-[feature-name].md`
 - `SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md`
-- `SDD/reviews/REVIEW-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md`
-- `SDD/orchestration/subagent-calls/`
+- `SDD/.records/reviews/REVIEW-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md`
+- `SDD/.records/subagent-calls/`
 
 ## Refusal-Message Discipline (REQ-007 / UX-001)
 

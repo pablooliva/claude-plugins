@@ -121,6 +121,6 @@ Write `## Questions for you` with the single line `None.` when there are none.
 
 ## Progress and return
 
-Append to `SDD/orchestration/progress.md` (≤10 lines): the header `## Design Brief - Drafted (revision N)` exactly — it is a phase-detection marker — then the brief's path, its line count, the recommended tier (`1`, `2`, `3`, or `none` when tiers are not applicable), the number of decisions, and the number of open questions.
+Append to `SDD/.records/progress.md` (≤10 lines): the header `## Design Brief - Drafted (revision N)` exactly — it is a phase-detection marker — then the brief's path, its line count, the recommended tier (`1`, `2`, `3`, or `none` when tiers are not applicable), the number of decisions, and the number of open questions.
 
 Return ≤200 words: the brief's path, the tier plan's path (or "no tier plan"), the one-paragraph summary, the decision titles, and the questions.
