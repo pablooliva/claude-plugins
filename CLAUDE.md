@@ -48,8 +48,12 @@ agent-engineering/
 │                                   #   a pending `## Awaiting` block kept latest — change one, check all five
 ├── skills/
 │   ├── sdd-flow/                   # SLIM SKILL.md orchestrator core +
-│   │   ├── phases/                 #   per-phase chapters (setup, research, planning,
-│   │   │                           #   implementation-whole-feature, implementation-per-slice, protocols)
+│   │   ├── phases/                 #   one chapter per step, read with SKILL.md (the ~6k-token core every step reads):
+│   │   │                           #   setup, research, design-gate, planning (+ planning-inputs.md), implementation-whole-feature
+│   │   │                           #   (4a), implementation-per-slice, end-of-feature (4b–4j) (+ implementation-inputs.md for all
+│   │   │                           #   three), protocols (errors); read only when needed: artifact-paths, model-routing, tier-mirror,
+│   │   │                           #   and rare/ (resume, handoff, rotation, replan, next-tier, decomposition). A step reads SKILL.md +
+│   │   │                           #   its chapter (+ inputs file) — keep that under ~15k tokens; a rare case goes in rare/, not a chapter
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
 │   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
 │   │   ├── references/             #   security-verification.md — the ONE definition of the final check's security pass (what a security rule is,

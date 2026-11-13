@@ -87,7 +87,20 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 4.7.1.
+Version 5.0.0.
+
+### What's new in 5.0.0
+
+- **sdd-flow reads about half as much per step, with the same behaviour.** `SKILL.md` is a core of what every step
+  needs (45 KB → 29 KB), and each step reads it plus one chapter: setup, research, the design gate, planning, whole-feature
+  4a, the per-slice cycle, or the end of the feature (4b–4j, shared by both delivery modes) — with
+  `planning-inputs.md` or `implementation-inputs.md` beside it. A step read 50–114 KB before (a per-slice step
+  read the whole-feature chapter too); now 33–66 KB.
+- **Rare cases have their own files**, under `phases/rare/`: resume (`/sdd-flow continue`, phase detection, every halt
+  block's resume rule), mid-step handoff, progress rotation, re-plan, next tier, and decomposition. The artifact table,
+  the model-routing table, and the tier task mirror moved to `phases/` files read only when needed.
+- **Nothing a run does changed.** Text was moved or reworded only; every progress marker, halt heading, owner-table row,
+  path, and step label is still where a run looks for it. A run stopped on 4.7.x resumes on 5.0.0.
 
 ### What's new in 4.7.1
 
