@@ -152,6 +152,21 @@ A cycle in progress finishes on the version that started it (already the rule si
      4.2.0's own grading: an existing file changed is LOW.
    - Reviews and prompts: `~/.bb/thread-storage/thr_sb4yjmjp9s/fitcheck-2026-11-12/`.
 2. **Did evals earn their place?** Read SPEC-007's records for regressions the eval run caught.
+   Done 2026-11-13, from eduKate's records only (`SDD/orchestration/`, `SDD/reviews/`), nothing changed there:
+   - 27 runs of record (SLICE-008: 4, SLICE-009: 14, FEATURE: 9); 7 ended FAIL, every one *unsteady* (1 or 2 of 3 runs).
+   - **One regression** of a case that passed before: SLICE-009 iter 3, EVAL-008 (REQ-013), broken by a prompt sentence
+     added in a fix round; dropping the sentence restored it. The same change also broke three pinned unit tests.
+   - **Three real defects, not regressions:** the first drafts of two new prompts (SLICE-008 iter 0: EVAL-001, EVAL-007),
+     and an empty model reply the gateway released as a blank (SLICE-009 iter 7) — the one defect ordinary tests had
+     not considered; fixed in `hold.py`/`hooks.py` with five tests.
+   - **Variance or a too-narrow check, the rest:** SLICE-009 iter 2 and iter 9, and FEATURE iter 1 (fixed by the owner
+     adding Spanish stop words to the language check). Roughly five review or fix rounds and three owner halts went
+     to these; it is why the owner added the confirm re-run (a case failing 1 of 3 runs gets 3 more).
+   - Infrastructure cost: about nine UNAVAILABLE runs (a slow or unreachable model) and four `## Awaiting Eval Run`
+     halts; the upstream model was switched twice.
+   - **Reading:** the gate caught real defects, all in prompts written in the same feature or in handling a real
+     model's output; it caught no regression of code that already worked, beyond one it caused itself. A large share
+     of its cost was variance and infrastructure. Whether the gate stays as it is: owner's decision.
 3. **An application-scale comparison.** Build a small app with a model in it to Tier 1 and then Tier 2, once with
    sdd-flow and once with plain Claude Code, from the same owner answers. Measure:
    - acceptance tests the owner writes before either run;
