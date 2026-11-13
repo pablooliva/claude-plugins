@@ -16,7 +16,7 @@ The user re-invokes `/sdd-flow continue` in a fresh session; the orchestrator re
 
 ### Phase Detection Priority
 
-Rules are evaluated top-to-bottom; the first matching rule fires and short-circuits later rules. Detection operates ONLY on the live `progress.md` — archives under `progress-archive/` are never scanned (Progress Rotation above carries pending blocks forward).
+Rules are evaluated top-to-bottom; the first matching rule fires and short-circuits later rules. Detection operates ONLY on the live `progress.md` — archives under `progress-archive/` are never scanned (Progress Rotation, `phases/rare/rotation.md`, carries pending blocks forward).
 
 **Scope: the current feature only.** Every rule below reads only the lines after the latest `## Flow Started - ` line — the Step 0 record (`phases/setup.md`). Markers above it belong to earlier features and never match, and a finished feature's `Finished:` summary line matches nothing.
 

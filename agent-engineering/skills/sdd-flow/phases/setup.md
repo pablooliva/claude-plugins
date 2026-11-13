@@ -29,7 +29,9 @@ The subagent returns a "proceed" signal. The orchestrator proceeds directly to *
 
 ### If the scope is too large (decomposition needed)
 
-Read `phases/rare/decomposition.md` and follow it — it ends the flow with a stop.
+The subagent writes `SDD/flow/DECOMPOSITION-[###]-[feature-name].md` containing: (1) **Rationale** referencing the heuristics; (2) a **decomposition checklist** of smaller, independently deliverable features, each a self-contained task description suitable as `/sdd-flow` input, with a note on what it delivers and why it is sequenced there, plus any dependencies; (3) a **dependency map**. Put this in the scope spawn's prompt, with the path resolved.
+
+When it returns that the scope is too large, read `phases/rare/decomposition.md` and follow it — it ends the flow with a stop.
 
 ### Starting the next tier (`--next-tier`)
 

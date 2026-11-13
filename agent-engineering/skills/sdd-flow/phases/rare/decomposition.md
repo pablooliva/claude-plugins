@@ -6,7 +6,7 @@ Read this only when the Step 0 scope subagent (`phases/setup.md`) returns that t
 
 ## If the scope is too large (decomposition needed)
 
-The subagent writes `SDD/flow/DECOMPOSITION-[###]-[feature-name].md` containing: (1) **Rationale** referencing the heuristics; (2) a **decomposition checklist** of smaller, independently deliverable features, each a self-contained task description suitable as `/sdd-flow` input, with a note on what it delivers and why it is sequenced there, plus any dependencies; (3) a **dependency map**.
+The subagent has written `SDD/flow/DECOMPOSITION-[###]-[feature-name].md` as `phases/setup.md` (Step 0) tells it.
 
 The orchestrator presents the decomposition to the user:
 
