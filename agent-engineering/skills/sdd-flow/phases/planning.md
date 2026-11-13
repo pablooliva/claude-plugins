@@ -1,96 +1,6 @@
-# Phase: Planning — Step 2.5 (Design Gate) · Steps 3a–3g (Stop After the Spec)
+# Phase: Planning — Steps 3a–3g (Stop After the Spec)
 
-Read when research's last step (2e) is done. Phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file (`Reads: 0/15`) + the `planning-compact.md` compact body path. Body paths are `SKILL_ROOT/bodies/<file>.md`, resolved absolute. A review step run on the second model carries none of the three (`references/second-model-review.md` §3).
-
-Three resolved paths recur below. **BRIEF** = `SDD/requirements/DESIGN-[###]-[feature-name].md`, the design brief. **TIERS** = the tier standard resolved at Step 0 (`SKILL.md` → SKILL_ROOT resolution). **TIER_PLAN** = `SDD/flow/TIERS-[feature-name].md`, the record of what each delivery tier contains — on a next-tier cycle it is the path recorded at Step 0, which carries the first tier's feature name (no `-t2` / `-t3` suffix).
-
-**TRACING** = the tracing standard, from the Step 0 record. **The observability line** = `Observability record: present` or `Observability record: absent` — whether the application has the tracing foundation, `SDD/OBSERVABILITY.md`. Before approval the orchestrator looks for that file just before each design-brief spawn and passes what it found; at approval it looks once more and records the line (2.5b), and from then on that recorded line is the observability line for the cycle — a foundation installed later changes nothing until the next cycle. From 3c on, the **tracing gate** is `on` or `off`, as the latest `## Gates - ` line says; a spawn after 3c in a cycle that has no such line (it was planned before tracing was part of the flow) is passed `tracing: off`.
-
-**EVALS** = the evals reference (`SKILL_ROOT/references/evals.md`, `SKILL.md` → SKILL_ROOT resolution): what an eval is, its two kinds, and how its cases are written. It is passed to the design-brief and planning spawns when the observability line says `present`. From 3c on, the **evals gate** is `on` or `off`, as the `evals:` part of that same `## Gates - ` line says; a line with no `evals:` part (a cycle that passed 3c before evals were part of the flow), or no line at all, is `evals: off`.
-
----
-
-## Step 2.5: Design Gate
-
-Runs after 2e and before 3a. The brief is the human's review surface for planning; the spec is held to it.
-
-### 2.5a. Design-Brief Subagent
-
-Spawn an **`agent-engineering:sdd-workhorse`** subagent **with the per-spawn model override `opus`** (the workhorse's instructions and tools, Opus's judgment — `sdd-critical-reviewer` is also Opus but carries an adversarial reviewer's persona, which is wrong for an author):
-- **Body:** `bodies/design-brief.md`
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), existing `SDD/adr/`, **TIERS**, **TIER_PLAN** (the path, whether or not the file exists yet), `TIER: N` if the user passed `--tier N` or this is a next-tier cycle, **the observability line** copied verbatim, **EVALS** when that line says `present`, **HARVEST** when there is one (below), and on a next-tier cycle the previous tier's research document.
-- **HARVEST** — the harvested eval cases still open (`references/evals.md` §2). Derive it just before this spawn, before every revision run, before 3a, and again on a resumed session; it is not recorded. Take every `SDD/flow/HARVEST-….md` path named under the tier plan's `## Feedback` or in the task description; a file's cases are its `## Case <n> — trace <id>` headings. A case is closed when a spec other than the one this cycle writes has adopted or dropped it: `grep -l -F -e 'harvested: <path>, trace <id>' -e 'dropped: <path>, trace <id>' SDD/requirements/SPEC-*.md` lists one. A deferred case stays open. Pass the open cases as `HARVEST: <path> — traces <id>, <id>; <path> — traces <id>`; none open → no line.
-- **Outputs:** **BRIEF**, **TIER_PLAN** (none when the brief says tiers are not applicable), append `progress.md`.
-- **Task:** Write the design brief. The body's **quality rule** applies: when the observability line says `present` and the feature has a model in it, one Key decision says how the quality of what the model says will be judged; when it says `absent` and the feature has a model in it, the brief's `## Tracing foundation` section recommends running `/observability-init` before approving. Carries the Safety-Net Rule, a fresh counter (`Reads: 0/15`), and `planning-compact.md` as the compact body.
-
-### 2.5b. Gate
-
-**Fires every time the brief is written or rewritten. No flag skips it.**
-
-The orchestrator never edits the brief. Approval state is the latest `## Design Brief - ` line in `progress.md` — `Drafted` (written by the brief subagent: not yet decided) or `APPROVED` (written by the orchestrator, below).
-
-Read the brief — the gate message is built from it, not from the subagent's return. Then append this block to `progress.md`, emit the message, and STOP:
-
-```markdown
-## Awaiting Design Approval
-
-Brief: SDD/requirements/DESIGN-[###]-[feature-name].md (revision N)
-Re-plan: <no | yes — the slice review it follows: <review-path>>
-```
-
-> **Design brief ready. No detailed planning happens until you approve it.**
-> [After a revision round, first: one line stating what changed.]
-> [The brief's "In one paragraph", verbatim]
-> **Tiers:** building **Tier [N]** — [one line]. Left for later: Tier 2 — [one line]; Tier 3 — [one line]. [Or: "Tiers: not applicable — [the brief's reason]".]
-> **Decisions made:** [D1 title — chosen option] · [D2 …]
-> **Growth budget:** [the brief's three `## Growth budget` lines, on one line] — new files: [each path the table names as new]. Approving the brief approves this budget: when the finished feature adds more than one and a half times either line estimate, the flow stops before its final commit.
-> **Questions for you:** [Q1 — options — recommended (a)] · [Q2 …] [Or: "None."]
-> **Research review:** [one line: critical-review severity and whether findings were resolved] [· ADRs captured: [numbers] — only when an `## ADR Capture - Done` line that names any already follows the latest `## ADR Candidates` entry, as at a re-plan's gate. Otherwise omit this part.]
-> **Tracing foundation:** [the brief's `## Tracing foundation` line — only when the brief has that section. Otherwise omit this line.]
-> **ADR candidates:** [title — chosen option] · [title — chosen option] — written as decision records when you approve; name any you want dropped. [Only when the latest `## ADR Candidates` entry lists any and no `## ADR Capture - Done` line follows it. Otherwise omit this line.]
-> Brief ([N] lines): `SDD/requirements/DESIGN-[###]-[feature-name].md`
-> Research: `SDD/research/RESEARCH-[###]-[feature-name].md`
-> **Before you approve:** `/worth-building SDD/requirements/DESIGN-[###]-[feature-name].md` asks whether this should be built as planned at all — the cheapest test that could show the idea does not work, and whether the plan runs it first. Optional; the flow does not run it for you.
-> Reply with your answers and any changes — including `tier 2` or `tier 3` to build more now. `approve` accepts the brief as written, and is available once every question above has an answer. `stop` halts here.
-
-If the brief's first line under its title is `Too large for one brief — recommend decomposition` or `Too large for one cycle — no cut of this tier fits`, show that line and the seams it names in place of the summary, and offer only a change request or `stop` — there is nothing to approve. On a next-tier cycle, the change request is how the user narrows what this cycle builds (for example, "build only the first of those seams now"); do not suggest running a decomposition, whose items would no longer be tied to the tier plan.
-
-**The `Before you approve` line is a reminder, not a step.** It is shown at every gate — a revision round and a re-plan's gate included. The orchestrator never invokes the `worth-building` skill itself, the gate does not wait for it, and nothing is recorded about whether it was run. If the user runs it, its verdict reaches the flow only as their reply: a change request (2.5c), a different tier, or `stop`. Omit the line in both `Too large for one …` cases — there is no plan to judge yet.
-
-Act on the reply:
-
-- **Answers or changes** (including a different tier) → 2.5c.
-- **`approve`** → first look for `SDD/OBSERVABILITY.md` once more. If it is now there and the brief has a `## Tracing foundation` section (it was written while the record was absent, so it holds no decision on how answer quality is judged), do not approve: run 2.5c with the line `OBSERVABILITY: present — apply rules 11 and 13 afresh` in place of a user reply, and the gate fires again. Otherwise the reply is accepted only when the brief's `## Questions for you` is `None.`. Append `## Design Brief - APPROVED (revision N, tier T)` to `progress.md` — `T` is the brief's recommended tier (`1`, `2`, `3`), or `none` when the brief says tiers are not applicable — then append `Observability record: present` or `Observability record: absent` beneath it, from that last look: the cycle's observability line, from which 3c settles the tracing and evals gates. Then proceed to 3a. If any question is still open, **refuse**: reply with the open questions, say that each needs an answer ("use your recommendation" counts as one, given per question), and stay at the gate. Nothing is rewritten and nothing is assumed.
-- **`stop`** → leave `## Awaiting Design Approval` as the latest block and halt. `/sdd-flow continue` re-shows this gate.
-
-**ADR candidates.** Research's ADR step (2b) proposes candidates and writes none; this gate is where the user accepts them. The `ADR candidates:` line is built from the latest `## ADR Candidates` entry in `progress.md`, minus any candidate already dropped.
-
-- **A reply that drops a candidate** — at approval or in an earlier round — is recorded at once: append `## ADR Candidate Dropped - <title>` to `progress.md`, one line per candidate, so the choice survives a stop.
-- **On `approve`**, after the `## Design Brief - APPROVED` line and before 3a: if the entry lists any candidate not dropped, spawn ONE **`agent-engineering:sdd-workhorse`** subagent with `bodies/adr-capture.md` in **AUTO mode**, passing the research document, the existing `SDD/adr/`, and the accepted candidate titles ("write exactly these"). Then append `## ADR Capture - Done (<ADR numbers | none>)` — `none` when every candidate was dropped or the entry said `none`. The records are committed at 3f.
-- A re-plan's gate does not repeat this: a `## ADR Capture - Done` line already follows the candidates.
-
-**Mirror the tiers to BB tasks** on approval, when `T` is not `none` — before spawning 3a, so the task keys the script writes into the tier plan are part of the 3f commit:
-
-```bash
-python3 "$SKILL_ROOT/scripts/tier-mirror.py" sync <TIER_PLAN> --active <T> --brief SDD/requirements/DESIGN-[###]-[feature-name].md
-```
-
-Record and report the result as `SKILL.md` → Tier Task Mirror requires. It creates the tracker project (if the BB project has none), the feature's parent task, and one sub-task per tier; sets the approved tier — and any lower tier not yet shipped, which the same cycle builds — to in progress and the rest to backlog; and attaches the brief, and this thread when the flow runs inside a BB thread.
-
-Pass the approved revision number and tier (`Design brief: revision N, approved, Tier T`) in the prompt of every later spawn that reads the brief.
-
-### 2.5c. Revise
-
-Spawn an **`agent-engineering:sdd-workhorse`** subagent, again with the model override `opus`:
-- **Body:** `bodies/design-brief.md` — its **Revision runs** section.
-- **Inputs:** the 2.5a inputs, the existing brief, and the user's reply **verbatim**.
-- **Outputs:** updated brief and tier plan; updated RESEARCH document only if the reply showed it wrong on a point of fact; append `progress.md` (a new `## Design Brief - Drafted (revision N)` line).
-
-Then return to 2.5b. The loop has no cap — every round is requested by the user.
-
-### Re-plan
-
-A re-plan asked for at a slice pause: read `phases/rare/replan.md` → Running the re-plan.
+Read when the design brief is approved (Step 2.5, `phases/design-gate.md`), with `phases/planning-inputs.md` (the counters and the paths BRIEF, TIERS, TIER_PLAN, TRACING, the observability line, EVALS).
 
 ---
 
@@ -98,7 +8,7 @@ A re-plan asked for at a slice pause: read `phases/rare/replan.md` → Running t
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/planning.md`
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/.records/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **the observability line** copied verbatim, **TRACING** and **EVALS** when that line says `present`, **HARVEST** when there is one (derived as at 2.5a, again just before this spawn), and on a next-tier cycle the previous tier's research document.
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, **BRIEF** with its approved revision and tier, **TIERS** and **TIER_PLAN** (when the approved tier is not `none`), `SDD/.records/progress.md`, existing `SDD/adr/` (to reference accepted ADRs), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), **the observability line** copied verbatim, **TRACING** and **EVALS** when that line says `present`, **HARVEST** when there is one (derived as at 2.5a in `phases/design-gate.md`, again just before this spawn), and on a next-tier cycle the previous tier's research document.
 - **Outputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, append `progress.md`.
 - **Task:** Read the research and the approved design brief and create the full specification. The design brief is binding on Key decisions, Not doing, and answered questions; its delivery outline is the starting slice order. Record every departure in the spec's `## Deviations from Design Brief`; write `None.` when there are none. Specify the approved tier and nothing beyond it: set `tier:` in the frontmatter, and list what is left for later under `## Deferred to Later Tiers` (omit both when the approved tier is `none`). The spec MUST include the YAML frontmatter fields — `review_panel` (only the specialists whose area the change touches, at most three; `agent-security` and `slice-integrity` are added outside the three), `cross_cutting_decisions`, `delivery_mode`, `agent_security` — populated thoughtfully. The body's **agentic-surface detection** applies: resolve `agent_security: auto` against the research and spec, and when the surface is present set the field and append `agent-security` to `review_panel`. The body's **per-slice authoring default** applies: set `delivery_mode: per-slice` unless the feature yields fewer than 2 genuine vertical slices, in which case `whole-feature` with a one-line justification in the spec. The spec MUST include the `## Modules` section with ≥1 `MODULE-XXX` entry (`Public Interface`, `Hides`, `Risk` low/medium/high, `Spec refs`) — prefer deep modules. Use canonical names from the glossary when present. The body's `delivery_mode` value-validation (enum fail-fast) and slice-practicality gate stay in force. The body's **tracing rule** applies: the spec carries `tracing:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when the observability line says `present` and the field is not `false` — a `### Planned call graph` under `## Modules` with every entry point, LLM call, and external call marked, plus a `Traced nodes:` line per slice in per-slice mode; otherwise neither. The body's **evals rule** applies: the spec carries `evals:` (`auto` unless the task description in this prompt, the research, or the brief forces it), and — when evals are on for this spec by the table under `evals:` in the body — an `### Evals` sub-section under `## Validation Strategy` with every case written out, a `Sign-off:` line under `### Manual Verification` for each requirement only a person can accept, and an `Evals:` line per slice in per-slice mode; otherwise none of the three.
 
@@ -337,4 +247,4 @@ Act on the reply:
   - **Then** the orchestrator commits the spec (per `commands/commit.md`, message naming the SPEC and "changes asked for at the stop after the spec") and **shows this stop again**, read afresh from the files. The changed spec is not reviewed again: what the owner asked for is the owner's decision.
 - **`stop`** → leave `## Awaiting Spec Approval` as the latest block and halt. `/sdd-flow continue` shows this stop again; the owner may have edited the spec by hand.
 
-**Route to Step 4.** First append `## Planning - Accepted` to `progress.md` — one line, the spec path. It is the phase-detection marker that planning's reviews and this stop are done: `Planning Phase - COMPLETE` alone does not say so, because the completion subagent writes it back in 3a. Then read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint: the design gate approved the design, and this stop the spec. The next stops are the slice pauses (per-slice mode); the final commit stops only for a sign-off or a growth-budget overrun (`phases/implementation-whole-feature.md` → 4h).
+**Route to Step 4.** First append `## Planning - Accepted` to `progress.md` — one line, the spec path. It is the phase-detection marker that planning's reviews and this stop are done: `Planning Phase - COMPLETE` alone does not say so, because the completion subagent writes it back in 3a. Then read the spec's `delivery_mode:`: `whole-feature` → `phases/implementation-whole-feature.md`; `per-slice` → `phases/implementation-per-slice.md`. There is no other planning checkpoint: the design gate approved the design, and this stop the spec. The next stops are the slice pauses (per-slice mode); the final commit stops only for a sign-off or a growth-budget overrun (`phases/end-of-feature.md` → 4h).

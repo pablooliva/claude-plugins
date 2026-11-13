@@ -45,7 +45,7 @@ Never mutate the working tree itself. Record each mutation as one line: `<key> <
 
 - **A finding is fixed by changing the code and adding a proving test (§3),** and the fix shows the failure — its return and the IMPLEMENTATION-PLAN's `### Security Proofs` list carry the mutation line. A finding is never closed by a test alone when the path is open, nor by a code change with no test.
 - **At most two fix rounds:** verify → fix → verify → fix → verify. A verification after a fix checks the earlier findings first, then reads what the fix changed for new paths.
-- **What is still open after the third verification stops the flow** for the owner (`## Awaiting Final Check Resolution`, `phases/implementation-whole-feature.md` → 4e.5).
+- **What is still open after the third verification stops the flow** for the owner (`## Awaiting Final Check Resolution`, `phases/end-of-feature.md` → 4e.5).
 
 ## 5. What the review writes
 

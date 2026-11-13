@@ -31,7 +31,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Outputs:** one `## ADR Candidates` entry appended to `progress.md`, and nothing else.
 - **Task:** Scan research for cross-cutting decisions with explicit comparison+selection and apply the scope test to each. The subagent writes no ADR and no stop note: it appends one `## ADR Candidates` entry (title and chosen option per candidate, or `none`) and returns.
 
-**There is no confirmation stop here, and no record is written here.** The candidates are shown at the design gate (`phases/planning.md` → 2.5b), which always stops: `approve` accepts them and a reply may drop any by title; the accepted ones are written right after approval, before 3a. A decision record is never written, or committed, before the design it belongs to is approved.
+**There is no confirmation stop here, and no record is written here.** The candidates are shown at the design gate (`phases/design-gate.md` → 2.5b), which always stops: `approve` accepts them and a reply may drop any by title; the accepted ones are written right after approval, before 3a. A decision record is never written, or committed, before the design it belongs to is approved.
 
 If no cross-cutting decisions are detected, the entry is appended with `none`. Continue to 2e.
 
@@ -49,4 +49,4 @@ If `progress.md` exceeds ~500 lines, rotate it now (`phases/rare/rotation.md`) �
 
 ## After 2e
 
-There is no pause here in either mode. The stop that follows research is the **design gate** — Step 2.5, in `phases/planning.md` — where the user sees what will be built, not only what was found. Proceed directly to Step 2.5 → read `phases/planning.md`.
+There is no pause here in either mode. The stop that follows research is the **design gate** — Step 2.5, in `phases/design-gate.md` — where the user sees what will be built, not only what was found. Proceed directly to Step 2.5 → read `phases/design-gate.md` and `phases/planning-inputs.md`.

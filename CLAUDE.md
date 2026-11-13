@@ -109,7 +109,7 @@ agent-engineering/
 │   │                       #   uv run --python 3.12 --with opentelemetry-sdk python -m unittest discover -s scripts/tests)
 │   ├── eval-harvest/       # user-invoked, after a tier is used: answers marked wrong in Opik → invented, user-approved eval cases in
 │   │                       #   SDD/flow/HARVEST-*.md + a tier-plan Feedback line; never writes evals/ or code. How the next cycle settles each case
-│   │                       #   (adopt / defer / drop, per case) is evals.md §2 — phases/planning.md derives HARVEST, design-brief.md rule 12 decides
+│   │                       #   (adopt / defer / drop, per case) is evals.md §2 — phases/design-gate.md derives HARVEST, design-brief.md rule 12 decides
 │   ├── retro/              # user-invoked development-cycle retrospective (environment, not code);
 │   │                       #   scripts/session-digest.py reads session transcripts across /clear
 │   │                       #   (tests: python3 -m unittest discover -s scripts/tests)

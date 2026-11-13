@@ -6,7 +6,7 @@ Read this only after the user asks for a re-plan at a slice pause (`phases/imple
 
 ## Running the re-plan (Step 2.5)
 
-A re-plan is asked for in words, at a slice pause (`phases/implementation-per-slice.md` → PAUSE). The slice before it is already committed. Run 2.5c with the latest slice review (its `## Re-plan` line says what the slice showed) as an extra input and, in place of a user reply, the line `RE-PLAN: <the user's request, verbatim>`. The gate then fires as at 2.5b (`phases/planning.md`), with `Re-plan: yes` in the halt block. On `approve`, continue to 3a with that review in the planning subagent's prompt; the re-plan's planning run ends, like any other, with `## Planning - Accepted` at 3g, and implementation starts at the new plan's first slice not yet `Complete`.
+A re-plan is asked for in words, at a slice pause (`phases/implementation-per-slice.md` → PAUSE). The slice before it is already committed. Run 2.5c with the latest slice review (its `## Re-plan` line says what the slice showed) as an extra input and, in place of a user reply, the line `RE-PLAN: <the user's request, verbatim>`. The gate then fires as at 2.5b (`phases/design-gate.md`), with `Re-plan: yes` in the halt block. On `approve`, continue to 3a with that review in the planning subagent's prompt; the re-plan's planning run ends, like any other, with `## Planning - Accepted` at 3g, and implementation starts at the new plan's first slice not yet `Complete`.
 
 ---
 
