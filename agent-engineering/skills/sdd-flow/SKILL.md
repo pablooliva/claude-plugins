@@ -5,11 +5,13 @@ description: "INVOKE THIS SKILL when the user asks to run end-to-end feature dev
 
 # SDD Flow — End-to-End Feature Development
 
-Takes a task or software requirement and drives it through the complete SDD (Specification-Driven Development) lifecycle: **Research → Design gate → Planning → Implementation → Done**.
+Drives a task through the SDD (Specification-Driven Development) lifecycle: **Research → Design gate → Planning → Implementation → Done**.
 
-This skill is the **single source of truth** for the flow. It is **self-contained**: every per-phase instruction set ("body") lives under `skills/sdd-flow/bodies/`, every spawned agent ships in `agent-engineering/agents/`, and the transcript hook ships in `agent-engineering/hooks/`. The SDD plugin does **not** need to be installed — nothing here reads from it at runtime.
+This skill is the **single source of truth** for the flow, and **self-contained**: bodies (the instruction set of each spawned step) are under `skills/sdd-flow/bodies/`, agents in `agent-engineering/agents/`, the transcript hook in `agent-engineering/hooks/`. Nothing is read from the SDD plugin at runtime.
 
-The main conversation is a lightweight **orchestrator**: it spawns one subagent per phase / review / fix / capture step, giving each a fresh context window so no manual `/clear` is ever needed. A review step is run on a second model through its command-line agent instead of a subagent (Second-Model Review below). All inter-phase communication happens through the **SDD artifact files on disk** (see Artifact Paths). Every spawn prompt hands the subagent resolved paths plus the absolute path of the body file it must read first.
+The main conversation is a lightweight **orchestrator**: it spawns one subagent per phase / review / fix / capture step, each with a fresh context, so no `/clear` is needed. A review step runs on a second model through its command-line agent instead (Second-Model Review below). Steps communicate only through the **SDD files on disk**; every spawn prompt gives resolved paths and the absolute path of the body to read first.
+
+**What to read when.** This file at every step, plus the phase chapter the State Machine names. A rare case — resume, handoff, rotation, re-plan, next tier, decomposition, tier mirror — reads its own file only when it happens. Artifact paths a chapter does not give: `phases/artifact-paths.md`.
 
 ## Usage
 
@@ -21,30 +23,39 @@ The main conversation is a lightweight **orchestrator**: it spawns one subagent 
 /sdd-flow continue
 ```
 
+| Argument | Description |
+|---|---|
+| `<task>` | The task, requirement, or feature description |
+| `--tier N` | Have the design brief recommend Tier N (1, 2, or 3) instead of Tier 1. The tier can still be changed at the design gate |
+| `--next-tier [feature-name]` | Start a new cycle for the next unshipped tier in `SDD/flow/TIERS-[feature-name].md` (`phases/rare/next-tier.md`) |
+| `continue` | Resume from the last interruption point (`phases/rare/resume.md`) |
+
+The flow stops only where the user has something to decide or try: the clarification question, the design gate, a spec that departs from the brief, a pause after each slice, an unresolved finding, and a sign-off. Anything else is said in words at those stops — a re-plan is asked for at a slice pause.
+
 ## The one-level-spawning contract (read this first)
 
-This flow uses **exactly one level of subagent nesting**. Every spawn happens here, at the orchestrator (main-conversation) level. **Spawned subagents must not spawn subagents** and **must not invoke slash commands or skills.**
+**Exactly one level of subagent nesting.** Every spawn happens here, at the orchestrator. **Spawned subagents must not spawn subagents and must not invoke slash commands or skills.** They do their own file discovery **inline** (Grep/Glob/Read). So there is **no nested-subagent counter** — the only safety-net counter is **Reads** — and bodies are pre-adapted for inline execution: the orchestrator passes each body **by path**, never by pasting it.
 
-> **Version note (2026-06-12):** on Claude Code ≤2.1.171 this was a platform limit (the Agent/Task tool was inert inside subagents). From **2.1.172** (2026-06-09) the platform allows nested subagents up to depth 5 — the flow **deliberately does not use it** (flat orchestration keeps every spawn observable and all state in `progress.md`). Do not "fix" bodies or agents to delegate; see `proposals/nested-subagents-analysis-2026-06-12.md` before any refactor.
-
-Consequences that shape this whole skill:
-
-- The orchestrator does discovery sweeps inline only via the subagent it spawns; subagents do their own file discovery **inline** (Grep/Glob/Read), never by delegating.
-- There is **no nested-subagent counter** anywhere. The only safety-net counter is **Reads**.
-- Bodies are pre-adapted for inline execution — there is nothing to "strip" at runtime and no command to embed. The orchestrator passes each body **by path**, never by pasting its content.
+> **Version note (2026-06-12):** on Claude Code ≤2.1.171 this was a platform limit; from **2.1.172** (2026-06-09) nesting to depth 5 is allowed, and the flow **deliberately does not use it** (flat orchestration keeps every spawn observable and all state in `progress.md`). Do not "fix" bodies or agents to delegate; read `proposals/nested-subagents-analysis-2026-06-12.md` before any refactor.
 
 ## SKILL_ROOT resolution (Step 0)
 
-At Step 0 the orchestrator resolves **SKILL_ROOT** = the absolute path of this skill's own directory, and records it in `SDD/.records/progress.md` so resumed sessions re-derive every body path. Resolution order:
+At Step 0 the orchestrator resolves **SKILL_ROOT**, this skill's absolute directory — first the plugin cache `~/.claude/plugins/cache/pablooliva/agent-engineering/<highest-version>/skills/sdd-flow`, else the working repo's `agent-engineering/skills/sdd-flow` — and **PLUGIN_ROOT** = `SKILL_ROOT/../..`. Every body path in a prompt is the resolved absolute `SKILL_ROOT/bodies/<file>.md`; compact bodies are passed the same way (read only if the Safety-Net trips). From them it derives, all resolved absolute:
 
-1. **Plugin cache:** `~/.claude/plugins/cache/pablooliva/agent-engineering/<latest-version>/skills/sdd-flow` (pick the highest version dir).
-2. **Dev/repo checkout:** the `agent-engineering/skills/sdd-flow` directory of the working repo.
+| Name | Path | What it is · passed to |
+|---|---|---|
+| **CATALOG** | `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` | The OWASP AI-agent control catalog · the `agent-security` panel specialist (3c); the agentic lens of the code review and slice review (4b) |
+| **SECURITY** | `SKILL_ROOT/references/security-verification.md` | Security rules, the final check's security verification, proving tests · every implementation spawn, the 4e.5 final check and its fix, the completion spawn |
+| **TEST_INTEGRITY** | `SKILL_ROOT/references/test-integrity.md` | What a real test is; the Test Integrity Lens · every implementation, code-review, slice-review, and fix spawn of Step 4 (`phases/implementation-inputs.md` → Test integrity inputs) |
+| **FIT** | `SKILL_ROOT/references/fit-lens.md` | The Fit Lens (fit and size) · every code-review, slice-review, and fix spawn of Step 4 |
+| **EVALS** | `SKILL_ROOT/references/evals.md` | What an eval is (a written example put to the running application; a check of what the model really answered), its two kinds, its cases, its run · design-brief, planning, and planning-completion spawns when the application has the tracing foundation; with the `evals` gate on, also the spec-review and spec-fix spawns (`phases/planning.md`), every implementation, review, and fix spawn of Step 4 (the 4e.5 final check and its fix included), and the completion spawn (`phases/implementation-inputs.md` → Evals inputs) |
+| **EVAL_TEMPLATES** | `SKILL_ROOT/templates/evals/` | The files an application's eval run is rendered from · with EVALS, to Step 4 spawns |
+| **TIERS** | `PLUGIN_ROOT/skills/simplicity-challenge/references/tiers.md` | The tier standard (tiers, floor, cut tests, tier-plan shape), owned by `simplicity-challenge` · design-brief, planning, spec-review, spec-fix, code-review, completion spawns |
+| **TRACING** | `PLUGIN_ROOT/skills/observability-init/references/tracing.md` | The tracing standard, owned by `observability-init` · the planning spawn when the application has the tracing foundation; with the `tracing` gate on, the spec-review and spec-fix spawns and every implementation, review, and fix spawn of Step 4 |
 
-Every body path in a spawn prompt is the **resolved absolute** `SKILL_ROOT/bodies/<file>.md`. Compact bodies are passed the same way (read only if the Safety-Net trips).
+CATALOG, TIERS, and TRACING are read here and never restated. Record SKILL_ROOT, CATALOG, TIERS, and TRACING in the Step 0 record in `SDD/.records/progress.md`, with the line `Reviewer: …` (Second-Model Review below), so a resumed session re-derives every path; the others are derived from SKILL_ROOT wherever needed and never recorded. Every one of them ships in this plugin: a missing one is a broken install — halt and tell the user.
 
-The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill lives at `<plugin>/skills/sdd-flow/`) and derives **CATALOG** = `PLUGIN_ROOT/skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — the OWASP AI-agent control catalog passed to the `agent-security` panel specialist (3c), and the code-review / slice-review agentic lens (4b). It also derives **SECURITY** = `SKILL_ROOT/references/security-verification.md` — what a security rule is, what the final check's security verification looks for, and what a proving test is — passed to every implementation spawn, the 4e.5 final check and its fix, and the completion spawn; it ships inside this skill, so a missing one is a broken install. It also derives **TEST_INTEGRITY** = `SKILL_ROOT/references/test-integrity.md` — what a real test is, and the Test Integrity Lens the reviews run — passed to every implementation, code-review, slice-review, implementation-critical-review, and fix spawn of Step 4 (`phases/implementation-inputs.md` → Test integrity inputs); it ships inside this skill, so a missing one is a broken install. It also derives **FIT** = `SKILL_ROOT/references/fit-lens.md` — the Fit Lens (fit and size) — passed to every code-review, slice-review, implementation-critical-review, and fix spawn of Step 4; a missing one is a broken install. It also derives **EVALS** = `SKILL_ROOT/references/evals.md` — the one definition of evals (a written example put to the running application, and a check of what the model really answered; the two kinds, how a case is written, what the eval run does and what its result means) — and **EVAL_TEMPLATES** = `SKILL_ROOT/templates/evals/`, the files an application's eval run is rendered from. EVALS is passed to the design-brief, planning, and planning-completion spawns when the application has the tracing foundation, and — when the `evals` gate is on — to the spec-review and spec-fix spawns (`phases/planning.md`) and to every implementation, review, and fix spawn of Step 4 — the 4e.5 final check and its fix included — with EVAL_TEMPLATES, and to the completion spawn (`phases/implementation-inputs.md` → Evals inputs). Both ship inside this skill and are derived from SKILL_ROOT wherever they are needed, so neither is written into the Step 0 record; a missing EVALS is a broken install. It also derives **TIERS** = `PLUGIN_ROOT/skills/simplicity-challenge/references/tiers.md` — the plugin's one tier standard (the three delivery tiers, the floor that is never deferred, the cut tests, the tier-plan shape), owned by the `simplicity-challenge` skill and read here, never restated; it is passed to the design-brief, planning, spec-review, spec-fix, code-review, and completion spawns. It also derives **TRACING** = `PLUGIN_ROOT/skills/observability-init/references/tracing.md` — the plugin's one tracing standard (which calls of an application get a span, what may be recorded on one, what an implementer does for the code it adds), owned by the `observability-init` skill and read here, never restated; it is passed to the planning spawn when the application has the tracing foundation, and — when the `tracing` gate is on — to the spec-review and spec-fix spawns and to every implementation, review, and fix spawn of Step 4. Record CATALOG, TIERS, and TRACING in `progress.md` alongside SKILL_ROOT, with the line `Reviewer: …` — which model family runs this cycle's reviews, settled once here (Second-Model Review below). TIERS, TRACING, and CATALOG ship in this plugin, so a missing one is a broken install: halt and tell the user.
-
-**Whether the application has the tracing foundation** — **OBS_RECORD** = `SDD/OBSERVABILITY.md`, the record `/observability-init` writes into the application — **is settled at the design gate, not at Step 0.** The orchestrator looks for it before each design-brief spawn; when the feature calls a model and the record is absent, the brief recommends running `/observability-init` before approving. On approval the orchestrator looks once more and records `Observability record: present` or `Observability record: absent`; that line decides the `tracing:` and `evals:` gates for the cycle (`phases/design-gate.md` → 2.5b, `phases/planning.md` → 3c). An absent record is not an error: both gates resolve to off and the cycle runs as it does in an application without tracing.
+**Whether the application has the tracing foundation** — **OBS_RECORD** = `SDD/OBSERVABILITY.md`, written by `/observability-init` — **is settled at the design gate, not at Step 0.** The orchestrator looks for it before each design-brief spawn (when the feature calls a model and it is absent, the brief recommends running `/observability-init` before approving), and on approval records `Observability record: present` or `absent`. That line decides the cycle's `tracing:` and `evals:` gates (`phases/design-gate.md` → 2.5b, `phases/planning.md` → 3c). Absent is not an error: both gates are off and the cycle runs as in an application without tracing.
 
 ## Canonical Identifiers (resolved at Step 0)
 
@@ -55,82 +66,41 @@ The orchestrator also resolves **PLUGIN_ROOT** = `SKILL_ROOT/../..` (this skill 
 | `[YYYY-MM-DD]` | Current date | `2026-06-11` |
 | `[YYYY-MM-DD_HH-MM-SS]` | Timestamp (24h, underscores) | `2026-06-11_14-30-45` |
 
-## Artifact Paths
-
-Every subagent MUST use these exact paths; the orchestrator resolves `[###]`/`[feature-name]`/dates before embedding them.
-
-| Artifact | Path | Created By | Read By |
-|---|---|---|---|
-| Scope decomposition | `SDD/flow/DECOMPOSITION-[###]-[feature-name].md` | Scope subagent | User |
-| Clarification doc | `SDD/research/CLARIFICATION-[###]-[feature-name].md` | User (`/research-clarify`) | Research |
-| Ubiquitous glossary | `SDD/UBIQUITOUS_LANGUAGE.md` | research-complete + planning-complete (incremental) | All phase subagents |
-| Research doc | `SDD/research/RESEARCH-[###]-[feature-name].md` | Research subagent | Design brief, Planning |
-| Design brief | `SDD/requirements/DESIGN-[###]-[feature-name].md` | Design-brief subagent (2.5a, 2.5c) | **The user**; Planning, Spec review, Spec fixes, Code review, Slice review |
-| Tier plan | `SDD/flow/TIERS-[feature-name].md` (one per feature across all its tiers — a next-tier cycle keeps the first tier's name) | Design-brief subagent; Completion (4f) | Planning, the next tier's cycle |
-| Specification | `SDD/requirements/SPEC-[###]-[feature-name].md` | Planning subagent | Panel, Planning review, Implementation |
-| Observability record | `SDD/OBSERVABILITY.md` — only in an application that has the tracing foundation | The user, by running `/observability-init` outside the flow. A flow subagent writes one line of it: with the evals gate on, the implementer that builds the first eval fills its `Eval command` row | Orchestrator (before each design-brief spawn and on approval: is it there?; with the evals gate on, its `Eval command` row before each review); with the evals gate on, the implementer, the reviews (the 4e.5 final check included), and fix subagents — for the env file and the eval command; with the tracing gate on, the implementer, the reviews (the 4e.5 final check included), and fix subagents — for the trace run command, the span file, the env file, and the entry-point test — and the completion subagent, for where traces go |
-| **Panel findings (per specialist)** | `SDD/.records/reviews/PANEL-FINDINGS-[panel-value]-[feature-name]-[YYYYMMDD].md` | Each specialist (Stage 1) | Panel synthesis (Stage 2) |
-| Spec panel review | `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md` | Panel synthesis (Stage 2) | Planning fix |
-| Spec critical review | `SDD/.records/reviews/CRITICAL-SPEC-[feature-name]-[YYYYMMDD].md` | Planning review | Planning fix |
-| ADRs / ADR index | `SDD/adr/NNNN-slug.md`, `SDD/adr/README.md` | adr-capture subagent | Future runs, humans |
-| Implementation plan | `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` | Implementation subagent | Code review, Completion |
-| Trace tree (tracing gate on) | `SDD/.records/reviews/TRACE-TREE-<SLICE-XXX\|FEATURE>-[feature-name]-[YYYYMMDD].md`, and `TRACE-TREE-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` for the final check — the call tree a real run recorded, rendered by `scripts/trace-tree.py` | The review that runs the Tracing Lens (per-slice 4b, the feature code review 4b, and each 4e.5 final check) | The fix subagent that answers that review; the completion subagent (the last 4e.5 tree) |
-| Eval results (evals gate on) | `SDD/.records/reviews/EVAL-RESULTS-<SLICE-XXX\|FEATURE>-[feature-name]-iter<N>-[YYYYMMDD].md`, with a `.json` file of the same name beside it — what the model answered to each case in the run a review reads, written by the application's eval run | Orchestrator, by running the application's eval command before each review (per-slice 4b, the feature code review 4b, and each 4e.5 final check) | That review; the fix subagent that answers it; the completion subagent (the last 4e.5 run's results); the user at the commit checkpoint (4h), when the spec has a sign-off requirement |
-| Final check review | `SDD/.records/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<N>-[YYYYMMDD].md` | 4e.5 final check | 4e.5 fix, completion |
-| Slice file | `SDD/implementation/slices/SLICE-[###]-[NN]-[slice-name]-[YYYY-MM-DD].md` | slice-start subagent | per-slice cycle |
-| Slice review | `SDD/.records/reviews/REVIEW-SLICE-*` (its `Re-plan:` line is shown at the slice pause) | Slice review | Slice fix, slice pause, end-of-feature |
-| Code review | `SDD/.records/reviews/REVIEW-[###]-[feature-name]-[YYYYMMDD].md` — the one review of the whole feature's code, both delivery modes | Code review (4b) | Code review fix (4c) |
-| Implementation summary | `SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-[###]-[YYYY-MM-DD_HH-MM-SS].md` | Completion | — |
-| Reviewer call (second-model route) | `SDD/.records/reviewer-calls/[step-id]-[iter]-[YYYY-MM-DD_HH-MM-SS].{prompt.md, log, return.md}` | Orchestrator (prompt); `scripts/second-model-review.py` (log, return) | The reviewer's CLI (prompt); orchestrator (return) |
-| Counter file | `SDD/.records/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` | Orchestrator (per spawn) | The spawned subagent only |
-| Compaction file | `SDD/.records/compacted/[phase]-compacted-[YYYY-MM-DD_HH-MM-SS].md` | Subagent on Safety-Net trip | Continuation subagent |
-| Progress file | `SDD/.records/progress.md` | All subagents (append only) | All subagents, orchestrator |
-
-```
-SDD/
-├── UBIQUITOUS_LANGUAGE.md
-├── OBSERVABILITY.md                      # only after /observability-init — the flow reads it, and writes only its Eval command row
-├── adr/{NNNN-slug.md, README.md}
-├── flow/{DECOMPOSITION-[###]-[feature-name], TIERS-[feature-name]}.md
-├── research/{CLARIFICATION-*, RESEARCH-*}.md
-├── requirements/{DESIGN-[###]-[feature-name], SPEC-[###]-[feature-name]}.md
-├── implementation/
-│   ├── IMPLEMENTATION-PLAN-*.md
-│   ├── slices/SLICE-*.md   # per-slice mode only
-│   └── summaries/IMPLEMENTATION-SUMMARY-*.md
-└── .records/                             # git-ignored: process records, never committed
-    ├── .gitignore                        # the one line `*`
-    ├── {progress.md, progress-archive/, subagent-calls/, reviewer-calls/, counters/, compacted/}
-    └── reviews/
-        ├── {PANEL-FINDINGS-*, PANEL-SPEC-*, CRITICAL-SPEC-*, REVIEW-*, REVIEW-SLICE-*,
-        │    FINAL-CHECK-*, TRACE-TREE-*, EVAL-RESULTS-*}.md
-        └── superseded/[YYYY-MM-DD_HH-MM-SS]/   # a replaced plan's slice reviews — kept, never read
-```
-
 **Records stay out of git.** Everything under `SDD/.records/` — progress, reviews, counters, reviewer and subagent call logs, eval results, trace trees, compaction files — is a process record: it is git-ignored and no commit ever includes it. Whoever creates `SDD/.records/` first (Step 0, a compact command, the subagent-log hook) writes `SDD/.records/.gitignore` holding the one line `*`. The brief, spec, plan, slice files, ADRs, glossary, tier plan, and summary are what history keeps. The records live only in the checkout that ran the flow; `worktree-merge` copies a worktree's records into the main checkout before the worktree goes away.
 
 ## Orchestrator Discipline (the load-bearing core)
 
-**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step runs inside a spawned subagent — even ones that "look small." The orchestrator's only direct work: spawning subagents, running commits (per `commands/commit.md`), taking the fix-round snapshots (`scripts/snapshot.py`), running a review step's second-model reviewer (`scripts/second-model-review.py` — it starts the reviewer, as a spawn would; the review itself is the reviewer's), running the tier task mirror (`scripts/tier-mirror.py` — see Tier Task Mirror below), measuring growth against the brief's budget at the slice pause and before the final commit (`scripts/growth.py`; it prints three lines, and the orchestrator reads no code to get them), with the `evals` gate on making the eval run of record before a review (the application's own eval command, found in one row of `SDD/OBSERVABILITY.md`; the orchestrator reads the last line it prints and never the results — `phases/implementation-inputs.md` → *The eval run of record*), writing user-facing checkpoint messages, recording state in `progress.md`, and the few mechanical edits the phase files give it by name (an addition's `declined` marker in the PANEL-SPEC on `approve` at the stop after the spec; a slice's row to `Complete` before its commit; after a re-plan, archiving the old slice table, and moving the replaced plan's slice files aside). The orchestrator has no `/clear`; subagent boundaries are the only context reset.
+**The orchestrator MUST NOT execute phase, review, fix, capture, or completion work directly.** Every numbered sub-step runs in a spawned subagent, even one that "looks small." The orchestrator's only direct work:
 
-- **Bounded returns.** Every subagent returns **≤200 words + artifact paths**. The orchestrator reads artifact files only when a decision genuinely needs them (e.g. spec frontmatter to route Step 4).
-- **progress.md is append-only.** Never overwrite or delete prior content.
-- **Explicit resolved paths in every spawn prompt** — never let a subagent guess artifact locations.
-- **Per-phase sizing:** Research — single subagent (scope unknown until investigated); pre-split per-layer only if the task obviously cuts across >2 architectural layers. Planning — single subagent; pre-split only if RESEARCH >1000 lines or >3 disjoint subsystems. Implementation (whole-feature) — count SPEC items `REQ-XXX`+`EDGE-XXX`+`FAIL-XXX`; if >8, pre-split into ⌈total/5⌉ sequential chunks, each appending to IMPLEMENTATION-PLAN. **Per-slice mode: one subagent per slice, strict, no bundling** — REQ-count chunking does NOT apply.
+- spawning subagents, and running a review step's second-model reviewer (`scripts/second-model-review.py` — it starts the reviewer, as a spawn would; the review is the reviewer's);
+- commits (per `commands/commit.md`);
+- the fix-round snapshots (`scripts/snapshot.py`);
+- the tier task mirror (`scripts/tier-mirror.py`, `phases/tier-mirror.md`);
+- growth against the brief's budget at the slice pause and before the final commit (`scripts/growth.py`; it prints three lines, and the orchestrator reads no code to get them);
+- with the `evals` gate on, the eval run of record before a review (the application's own eval command, from one row of `SDD/OBSERVABILITY.md`; it reads the last line printed, never the results — `phases/implementation-inputs.md` → *The eval run of record*);
+- user-facing checkpoint messages, and state in `progress.md`;
+- the mechanical edits the phase files give it by name: an addition's `declined` marker in the PANEL-SPEC on `approve` at the stop after the spec; a slice's row to `Complete` before its commit; after a re-plan, archiving the old slice table and moving the replaced plan's slice files aside.
+
+The orchestrator has no `/clear`; subagent boundaries are the only context reset.
+
+- **Bounded returns.** Every subagent returns **≤200 words + artifact paths**. The orchestrator reads an artifact only when a decision needs it (e.g. spec frontmatter to route Step 4).
+- **progress.md is append-only** within a generation — never overwrite or delete prior content. Only the orchestrator rotates it, between spawns: at feature completion (4j) and when it passes **~500 lines** at a quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6); procedure in `phases/rare/rotation.md`. A rotation carries pending halt blocks (`## Awaiting *`, `## PARTIAL*` — prefix match) forward verbatim as the latest blocks, since phase detection reads only the live file. Subagent entries are **≤10 lines** — status, artifact paths, a one-line key decision, anything pending; narrative stays in the artifact. (One exception: an `## ADR Candidates` entry lists every candidate, one line each — it is the only record the design gate reads.)
+- **Explicit resolved paths in every spawn prompt** — never let a subagent guess a location.
+- **Per-phase sizing:** Research — one subagent; pre-split per layer only if the task obviously cuts across >2 architectural layers. Planning — one subagent; pre-split only if RESEARCH >1000 lines or >3 disjoint subsystems. Whole-feature implementation — count SPEC `REQ-XXX`+`EDGE-XXX`+`FAIL-XXX`; if >8, pre-split into ⌈total/5⌉ sequential chunks, each appending to IMPLEMENTATION-PLAN (`phases/implementation-whole-feature.md` → Sizing). **Per-slice: one subagent per slice, strict, no bundling** — REQ-count chunking does NOT apply.
 
 ### What a body may do (the prompt's paths are the only inputs)
 
 The bodies were forked from commands a person runs by hand. Inside the flow every body is held to these rules, and an edit to a body is checked against them:
 
-- **Inputs come from the prompt.** A body never lists a directory to find or choose its spec, research document, or plan — a repository holds several of each as soon as a second feature or tier exists, and only the orchestrator knows which is active.
-- **A body never commits.** Every commit is the orchestrator's (2e, 3f, 4i, per-slice 4c.6). The implementation work stays uncommitted until then: a commit comes after the review of what it contains, never before, and a slice or feature is one commit. (The reviews measure the working tree against the recorded base commit, so an early commit would not hide changes from them — it would put unreviewed code into history and bypass the commit checkpoint.)
-- **A body never resets, rewrites, or archives `progress.md`.** It appends. Rotation is the orchestrator's (Progress Hygiene below).
+- **Inputs come from the prompt.** A body never lists a directory to find or choose its spec, research document, or plan — a repository holds several of each once a second feature or tier exists, and only the orchestrator knows which is active.
+- **A body never commits.** Every commit is the orchestrator's (2e, 3f, 4i, per-slice 4c.6), and comes after the review of what it contains: a slice or feature is one commit. (An early commit would not hide changes from the reviews, which diff against the recorded base commit — it would put unreviewed code into history and bypass the commit checkpoint.)
+- **A body never resets, rewrites, or archives `progress.md`.** It appends.
 - **A body that cannot proceed returns a failure** — an input missing or unreadable, a precondition not met, a choice it has no authority to make — in its bounded return, and writes no stop note. The orchestrator handles it under Error Handling (`phases/protocols.md`).
 - **A body writes only one stop note,** `## PARTIAL: needs continuation` — the compact bodies on a Safety-Net trip. Every `## Awaiting …` block is written by the orchestrator.
 
 ### Who declares a phase done (markers, stops, resume)
 
-**Only the orchestrator declares a phase done, and only after the phase's last step.** A completion subagent's banner (`Planning Phase - COMPLETE`, `Implementation Phase - COMPLETE`) says that subagent's work is finished; the reviews, fixes, and commit that follow are still to come, and a resumed session that read the banner as "done" would skip them. Each phase therefore ends with a marker the orchestrator writes itself:
+**Only the orchestrator declares a phase done, and only after the phase's last step.** A completion subagent's banner (`Planning Phase - COMPLETE`, `Implementation Phase - COMPLETE`) says only that its own work is finished — the reviews, fixes, and commit after it are still to come. Each phase ends with a marker the orchestrator writes:
 
 | Phase | Done when the orchestrator has written | Written at |
 |---|---|---|
@@ -140,53 +110,28 @@ The bodies were forked from commands a person runs by hand. Inside the flow ever
 
 Three rules go with it, and an edit to a phase file is checked against them:
 
-- **Resume reads the current feature only.** Step 0 opens each feature's record with `## Flow Started - [###]-[feature-name]`; Phase Detection reads only what follows the latest one, so an earlier feature's markers never answer for this one.
-- **Every stop that waits for an answer has a halt block, a resume rule, and a diagram row.** The stop writes a block to `progress.md` before it asks; `phases/rare/resume.md` has the rule that resumes it; `docs/sdd-flow-diagram.md` lists it. A latest halt block always wins over a phase rule, and one with no rule of its own falls to the catch-all there: it is shown to the user verbatim, never guessed past. (Stops that need no answer — the slice pause, and terminal stops such as decomposition — write none; `phases/rare/resume.md` lists them.)
-- **A handoff passes what a fresh spawn would.** A continuation or a re-review is given the same inputs — the step's own body and mode, paths, `SCOPE`, `ITER`, the base commit, a fix round's snapshots, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer. A continuation is also the agent type that first spawn was, with its model override (`phases/rare/handoff.md`).
+- **Resume reads the current feature only.** Step 0 opens each feature's record with `## Flow Started - [###]-[feature-name]`; Phase Detection reads only what follows the latest one.
+- **Every stop that waits for an answer has a halt block, a resume rule, and a diagram row.** The stop writes a block to `progress.md` before it asks; `phases/rare/resume.md` has the rule that resumes it; `docs/sdd-flow-diagram.md` lists it. A latest halt block always wins over a phase rule; one with no rule of its own falls to the catch-all there — shown to the user verbatim, never guessed past. (Stops that need no answer — the slice pause, and terminal stops such as decomposition — write none; `phases/rare/resume.md` lists them.)
+- **A handoff passes what a fresh spawn would.** A continuation or a re-review is given the same inputs — the step's body and mode, paths, `SCOPE`, `ITER`, the base commit, a fix round's snapshots, allow-lists — as the first spawn of that step, stated explicitly, and is the agent type that first spawn was, with its model override (`phases/rare/handoff.md`).
 
 The full marker table and the rules are in `phases/rare/resume.md` → Phase Detection Priority.
 
 ### Who owns the slice path (state changes, stops, commits)
 
-**Every slice state change, stop, and commit has a named owner in the phase chapter.** The per-slice path has more hand-offs than any other — a slice's row moves through four states, and its cycle can end in a commit or a fix-loop stop — and a step that each side assumes the other performs is a step nobody performs. Two rules, and an edit to a slice body or to `phases/implementation-per-slice.md` is checked against them:
+**Every slice state change, stop, and commit has a named owner.** The per-slice path has the most hand-offs — a slice's row moves through four states, and its cycle ends in a commit or a fix-loop stop — and a step each side assumes the other performs is a step nobody performs. An edit to a slice body or to `phases/implementation-per-slice.md` is checked against two rules:
 
-- **The owner table in `phases/implementation-per-slice.md` ("Who owns what on the slice path") is complete.** Every row of the slice table's status, every `## Slice SLICE-XXX - …` marker, every stop, and the commit appear there with one owner and one step. A new marker, state, or stop is added to that table in the same edit.
-- **A body describes what it does — never what "the orchestrator may" do.** A body that needs something done outside its own run says what it leaves behind (a status, a marker, a file); the phase chapter says who acts on it and when.
+- **The owner table there ("Who owns what on the slice path") is complete.** Every status of the slice table, every `## Slice SLICE-XXX - …` marker, every stop, and the commit appear with one owner and one step; a new one is added to the table in the same edit.
+- **A body describes what it does — never what "the orchestrator may" do.** A body that needs something done outside its run says what it leaves behind (a status, a marker, a file); the phase chapter says who acts on it and when.
 
-A slice's cycle has exactly two kinds of end: its commit (4c.6, which also sets its row to `Complete`) or a halt block with a resume rule (`## Awaiting Slice Resolution`). A session that ends anywhere between is resumed from the slice markers (`phases/rare/resume.md` → per-slice cycle sub-steps).
-
-### Tier Task Mirror (record-keeping, never silent)
-
-The tier plan file is the record of a feature's tiers; BB tasks mirror it — one parent task for the feature, one sub-task per tier — so a waiting tier shows on the board and feedback can be left on it between cycles. The orchestrator keeps the two in step by running `python3 "$SKILL_ROOT/scripts/tier-mirror.py"` at the four points the phase files name: design-gate approval (`phases/design-gate.md` → 2.5b), before the final commit and at the completion announcement (`phases/end-of-feature.md` → 4h–4j), and the start of a next-tier cycle (`phases/setup.md` → Step 0). It runs only for tiered features (approved tier `1`, `2`, or `3`). When no tracker project is linked to the BB project, the script **creates one** — a missing project is never a reason to skip.
-
-The script's first stdout line is `Result: …`. After every run, append `## Task Mirror - <that line, verbatim>` to `progress.md`, then act on the exit status:
-
-- **0** — done. If the line says a tracker project or tasks were created, tell the user in the next user-facing message, with the keys.
-- **3 (`OFF`)** — there is no `bb` CLI, or the checkout is not inside a BB project, so there is nothing to mirror to. **Tell the user in the next user-facing message**, quoting the line. Do not run the mirror again in this cycle.
-- **1 (`ERROR`)** — a `bb` command failed. Run it once more (it is safe to repeat: it creates only what is missing). If it fails again, **tell the user in the next user-facing message**, quoting the line, and carry on — the tier plan is unaffected, and the next mirror point tries again.
-- **2** — the tier plan is missing or malformed: treat as a failed design-brief (or completion) step and re-spawn it.
-
-The mirror never halts the flow and is never skipped without the user being told. The orchestrator never edits the tier plan itself; the script writes task keys into its `Task` column and copies task comments into its `## Feedback`, and nothing else.
+A slice's cycle has exactly two kinds of end: its commit (4c.6, which also sets its row to `Complete`) or a halt block with a resume rule (`## Awaiting Slice Resolution`). A session that ends between is resumed from the slice markers (`phases/rare/resume.md` → per-slice cycle sub-steps).
 
 ### Second-Model Review (who runs a review)
 
-**A review is run by a different model family than wrote what it reviews.** Everything a cycle produces is written by Claude subagents, and a Claude reviewer shares their blind spots, so each of these review steps — 3d, the 3e.5 check of the spec fix, the slice review, the feature code review (4b), and the 4e.5 final check — is given to a second model through its command-line agent: the Codex CLI. `references/second-model-review.md` is the one definition: the list of review steps (and why the 3c specialist panel is not on it — it stays on Claude subagents, with 3d as the spec's second-model review), how the reviewer is settled at Step 0 and recorded as `Reviewer: …`, the preamble every second-model prompt starts with, the call to `scripts/second-model-review.py`, and what to do with each result. Read it at Step 0 and before the first review step; the phase chapters point to it and never restate it.
+**A review is run by a different model family than wrote what it reviews.** Claude subagents write everything a cycle produces, so each review step — 3d, the 3e.5 check of the spec fix, the slice review, the feature code review (4b), and the 4e.5 final check — goes to a second model through its CLI: the Codex CLI. `references/second-model-review.md` is the one definition (the review steps, and why the 3c panel stays on Claude; how the reviewer is settled at Step 0 and recorded as `Reviewer: …`; the prompt preamble; the call to `scripts/second-model-review.py`; what to do with each result). Read it at Step 0 and before the first review step; phase chapters point to it and never restate it. Whichever model reviews, and an edit to a review step is checked against this:
 
-Three things hold whichever model reviews, and an edit to a review step is checked against them:
-
-- **Same prompt, same outputs, same markers.** The second model is given exactly what the step's Claude spawn would be given, after a fixed preamble; it reads the same body by path, writes the same review document, and appends the same `progress.md` marker. Nothing downstream — fix subagents, caps, phase detection, resume — knows or asks which route ran.
-- **The fallback is never silent and never halts.** No Codex CLI on the machine, or a run that fails twice, puts the review on the Claude subagent the phase chapter names; the line that says so goes to `progress.md` and to the user. Every review document carries a `Reviewed by:` line.
-- **A review changes no code.** The script records the working tree before a second-model run and puts back any file outside `SDD/` the reviewer left changed.
-
-### Progress Hygiene (rotation + bounded appends)
-
-`progress.md` sits in the read path of nearly every spawn and of phase detection — its size is paid on every read. Three rules keep it bounded:
-
-1. **Rotate at feature completion (Step 4j).** Move the finished feature's full history — its `## Flow Started - ` record and everything after it — to `SDD/.records/progress-archive/progress-SPEC-[###]-[YYYY-MM-DD_HH-MM-SS].md`; leave one line, `Finished: SPEC-[###] [feature-name] — <outcome>; history: <archive path>`. That line carries no `## ` header and no phase marker, so no resume rule can match a finished feature. The live file carries full history ONLY for the active feature.
-2. **Checkpoint on size.** If the live file exceeds **~500 lines**, rotate at the next quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6): archive resolved verbose blocks (including completed-phase history of the still-active feature), rewrite the head as a bounded `## Current State` (artifact pointers, archive path), then keep the active feature's `## Flow Started - ` record and, after it, its canonical phase-state lines verbatim and in order. **Pending halt blocks (`## Awaiting *`, `## PARTIAL*` — prefix match, not a fixed list) are carried forward verbatim as the latest blocks** — phase detection matches the latest block in the live file and never scans archives. Everything kept in the live file stays byte-identical; only the new head and rotation stamp are newly written text.
-3. **Bounded appends.** Subagent progress entries are **≤10 lines**: status, artifact paths, one-line key decision, anything pending. Narrative belongs in the artifact the subagent wrote, referenced by path. (One exception: an `## ADR Candidates` entry lists every candidate, one line each, however many — it is the only record the design gate reads.)
-
-Rotation is **orchestrator-only**, happens only between spawns (never mid-subagent), and is recorded in the fresh head. Append-only applies *within* a generation; rotation starts a new one. Full procedure: `phases/rare/rotation.md`.
+- **Same prompt, same outputs, same markers.** The second model gets exactly what the step's Claude spawn would, after a fixed preamble; it reads the same body by path, writes the same review document, and appends the same marker. Nothing downstream knows or asks which route ran.
+- **The fallback is never silent and never halts.** No Codex CLI, or a run that fails twice, puts the review on the Claude subagent the phase chapter names; the line saying so goes to `progress.md` and to the user. Every review document carries a `Reviewed by:` line.
+- **A review changes no code.** The script records the working tree before a second-model run and puts back any file outside `SDD/` the reviewer changed.
 
 ### Subagent Safety-Net Rule (embed verbatim in every phase-execution, fix, and continuation prompt)
 
@@ -198,7 +143,7 @@ A review run on the second model carries none of it — no rule, counter file, o
 >
 > **Counter tracking.** You cannot inspect your own tool-call history. The orchestrator gives you a **dedicated counter file** (path in your prompt under "Your counter file"). It holds exactly one line: `Reads: 0/15`. Update it immediately after each Read; check it (cheap Read) before each new Read — that is the trigger evaluation. The counter file is scoped to your run only; never shared, never written to `progress.md`.
 
-**Orchestrator obligation per spawn of a phase-execution / fix / continuation subagent:** (1) embed the Safety-Net Rule verbatim; (2) create the counter file at `SDD/.records/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` with the single line `Reads: 0/15` (use `/20` for implementation chunks) and pass its path under "Your counter file"; (3) pass the matching compact body path (`SKILL_ROOT/bodies/[phase]-compact.md`) under "Compact instructions — use only if the Safety-Net trips". Counter is **Reads-only** — subagents are contractually barred from spawning (a platform limit on Claude Code ≤2.1.171, a deliberate design rule from 2.1.172 onward), so there is no nested-subagent count. Defaults (15 / 20) are tunable without changing the protocol.
+**Per spawn of a phase-execution / fix / continuation subagent, the orchestrator:** (1) embeds the rule verbatim; (2) creates the counter file `SDD/.records/counters/[step-id]-[chunk-or-iter]-[YYYY-MM-DD_HH-MM-SS].md` holding `Reads: 0/15` (`/20` for implementation chunks) and passes its path under "Your counter file"; (3) passes the matching compact body `SKILL_ROOT/bodies/[phase]-compact.md` under "Compact instructions — use only if the Safety-Net trips". The defaults (15 / 20) are tunable without changing the protocol.
 
 ### Spawn-prompt construction checklist
 
@@ -206,21 +151,9 @@ Every spawn prompt includes: (1) the **absolute body path** `SKILL_ROOT/bodies/<
 
 ## Model Routing
 
-Routing of every writing and fixing step is carried by **shipped agent frontmatter** — no runtime model switching. **This needs Claude Code's Agent tool (its built-in subagents).** Without it the agent types, and with them this table, do not apply. In bb, the Claude Code provider setting `subagentsDisabled` hides that tool; it must be `false` (`bb plugin config provider-claude-code set subagentsDisabled false`). The orchestrator MAY escalate a single spawn via the Agent tool's per-spawn model override. Review steps go to the cycle's second-model reviewer first (Second-Model Review above); the agent types this table gives for them are the **Claude route**, used when the cycle has no second model or a second-model run failed twice.
+Routing of every writing and fixing step is carried by **shipped agent frontmatter** — no runtime model switching. **This needs Claude Code's Agent tool**; without it these agent types do not apply. In bb, the Claude Code provider setting `subagentsDisabled` hides that tool and must be `false` (`bb plugin config provider-claude-code set subagentsDisabled false`). The orchestrator MAY escalate a single spawn with the Agent tool's per-spawn model override. Review steps go to the second-model reviewer first; the agent types below for them are the **Claude route**.
 
-| Spawn site | Agent type | Model |
-|---|---|---|
-| Research, planning, ADR capture, fixes, completion, slice cycle (all but its implementation and review) | `agent-engineering:sdd-workhorse` | sonnet |
-| Implementation — whole-feature 4a and every chunk of it, per-slice 4a | `agent-engineering:sdd-workhorse` | **opus**, by per-spawn override — the code is what the cycle delivers |
-| Slice review, 4e.5 final check — **Claude route** | `agent-engineering:sdd-workhorse` | sonnet |
-| Each panel specialist (Stage 1) with a shipped agent — `security`, `agent-security`, `performance`, `data-modeling`, `api-contract`, `module-depth`, `reliability`, `slice-integrity` | `agent-engineering:sdd-spec-<panel>-specialist` | sonnet |
-| Any other panel value — today `accessibility`, `privacy`, `cost` | `agent-engineering:sdd-workhorse`, with `bodies/panel-specialist.md` and the panel value | sonnet |
-| Panel synthesis (Stage 2) | `agent-engineering:sdd-critical-reviewer` | opus |
-| Spec critical review (3d), the 3e.5 check of the spec fix, the feature code review (4b) — **Claude route** | `agent-engineering:sdd-critical-reviewer` | opus |
-| Design brief — first draft and every revision (2.5a, 2.5c) | `agent-engineering:sdd-workhorse` | **opus**, by per-spawn override — the one planning document a person reads |
-| The successor of any step above after a Mid-Phase Handoff (`bodies/continue.md`) | the agent type that step's row gives, with that row's override | that step's model — a critical review, the feature code review, a panel synthesis, or a design brief is finished on Opus |
-
-The workhorse's escalation protocol stays: if a task needs Opus depth, it surfaces "needed Opus depth" in its bounded return and the orchestrator re-spawns (or per-spawn-overrides) at Opus.
+Writing and fixing steps run on `agent-engineering:sdd-workhorse` (sonnet), with a per-spawn **opus** override for the implementer (whole-feature 4a and its chunks, per-slice 4a) and the design brief (2.5a, 2.5c). Panel specialists run on their shipped `sdd-spec-<panel>-specialist` agents (sonnet); panel synthesis and the Claude route of 3d, 3e.5, and 4b on `agent-engineering:sdd-critical-reviewer` (opus); the Claude route of the slice review and 4e.5 on the workhorse. A continuation after a handoff is the agent type, with the override, of the step it continues. Full table: `phases/model-routing.md`; each phase chapter also names the agent type of every spawn it makes.
 
 ## State Machine
 
@@ -241,37 +174,26 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 | done | Commit (4h stops first only for a sign-off), then a short report | `phases/end-of-feature.md` |
 | `continue` / resumption | Phase detection + the resume rule of every halt block | `phases/rare/resume.md` |
 | handoff / rotation / re-plan / next tier / decomposition | Rare cases, each read only when it happens | `phases/rare/handoff.md`, `rotation.md`, `replan.md`, `next-tier.md`, `decomposition.md` |
+| tier mirror | design-gate approval, 4h–4j, next-tier start (tiered features only) | `phases/tier-mirror.md` |
 | errors | Error handling | `phases/protocols.md` |
-
-## Arguments
-
-| Argument | Description |
-|---|---|
-| `<task>` | The task, requirement, or feature description |
-| `--tier N` | Have the design brief recommend Tier N (1, 2, or 3) instead of Tier 1. The tier can still be changed at the design gate |
-| `--next-tier [feature-name]` | Start a new cycle for the next unshipped tier in `SDD/flow/TIERS-[feature-name].md` (`phases/setup.md` → Step 0) |
-| `continue` | Resume from the last interruption point (see `phases/rare/resume.md`) |
-
-The flow stops only where the user has something to decide or try: the clarification question, the design gate, a spec that departs from the brief, a pause after each slice, an unresolved finding, and a sign-off. Anything else is said in words at those stops — a re-plan is asked for at a slice pause.
 
 ## Key Principles
 
+Each summarizes rules defined in the file it names; that file decides.
+
 1. **Each phase is thorough** — research informs planning; planning constrains implementation.
-2. **Every requirement gets a test — a real one (Principle 14).** Reviews are gates, not checkboxes: a review passes when no HIGH and no MEDIUM finding is open. Fit and size are review criteria like correctness: the code reviews ask whether a change matches and reuses the code around it and is no bigger than the tier needs, a file outside the brief's footprint is a finding, and a fit finding is fixed by removing code (`references/fit-lens.md`). LOW findings are listed, not fixed — the owner sees them at the slice pause and in the end report — because fixing them cost whole review rounds for little gain. A review after a fix round checks that the earlier review's findings are closed and reads what the fix changed, not the whole scope again: the orchestrator snapshots the working tree before and after each fix to tell it what that is, and the eval check still reads a fresh eval run in full. In a per-slice re-review the tests run are the ones the fix can affect, and the whole suite and the trace check run when the review would pass the slice — the trace check also after a tracing finding (`bodies/slice-review.md` → Step 4.5); the final check (4e.5) runs both in full. In a tiered spec, a finding that something is *absent* may be resolved by recording it under `## Deferred to Later Tiers`; a finding about behaviour the tier does build is always fixed.
-3. **Panel STOP/REVISE halts the flow, but the fix loop is bounded** — max 2 iterations; any iteration that fails to strictly decrease the gating finding count halts. Unresolvable findings route back to the human.
+2. **A review passes when no HIGH and no MEDIUM finding is open; LOW findings are listed for the owner, not fixed** (fixing them cost whole review rounds for little gain). Fit and size are review criteria like correctness: a file outside the brief's footprint is a finding, and a fit finding is fixed by removing code (`references/fit-lens.md`). A review after a fix round reads what the fix changed, not the whole scope (`bodies/slice-review.md` → Step 4.5); the final check (4e.5) reads everything. In a tiered spec, a finding that something is *absent* may be resolved under `## Deferred to Later Tiers`; one about behaviour the tier builds is always fixed.
+3. **Panel STOP/REVISE halts the flow, but the fix loop is bounded** — max 2 iterations; an iteration that does not strictly decrease the gating finding count halts. Unresolvable findings go back to the human.
 4. **ADRs compound across features; the spec is the source of truth; document deviations.**
 5. **Never persist PII or secrets in SDD docs. Commit messages have NO co-author attribution.**
 6. **Explicit paths always; the orchestrator never does phase/review/fix/capture/completion work itself.**
-7. **Per-slice cycle is strict** — one subagent per slice, mandatory per-slice review with every HIGH and MEDIUM finding resolved (LOW listed for the owner) before the atomic per-slice commit. The code earlier slices committed is the only context a slice carries forward.
-8. **A stop is for a decision, never for reading code.** The user approves a design and tries each slice; the reviews read the code. The slice review's `Re-plan:` line is shown at the slice pause, and the user asks for a re-plan in words.
-9. **Security rules are checked by an adversarial reader, once, at the end.** The implementer proves each security rule's guard with a test that fails when the guard is removed. The final check (4e.5), on the second model, reads every security rule of the spec for a path on which it does not hold — respellings and aliases, error paths, unset settings, missing configuration, values echoed back — and each gap it finds is fixed with such a test; at most two fix rounds, then the owner decides. Every other rule is held by an ordinary real test (Principle 14). Every mutation is made in a scratch copy of the working tree, never in the repository. Standard: `references/security-verification.md`.
-10. **The user approves a design, and a size; then cuts the spec down.** The design brief is the one planning document written for a person; nothing is specified until it is approved, with every question in it answered. It names every new file, the existing code the change builds on, and a growth budget the user approves with it. The spec is held to the brief; the specialist panel may propose scope beyond it but never adds it. Before any code is written the flow stops after the spec: the user sees its departures from the brief and the panel's proposals, is pointed to `/simplicity-challenge`, and approves the spec or has it cut. A finished feature that adds more than one and a half times its budgeted lines stops before its final commit (`scripts/growth.py`).
-11. **Tiers limit scope; nothing is built ahead.** Each tier is its own cycle with the same reviews and a real test for everything it does. A tier holds the simplest code and structure that serves that tier; a later tier reshaping it is expected. Standard: TIERS.
-12. **The tier plan is the record; BB tasks mirror it.** The flow keeps them in step itself, creates the tracker project when there is none, and tells the user whenever the mirror could not run.
-13. **In a traced application, what was planned to run is checked against what ran.** With the `tracing` gate on, the spec's planned call graph marks every entry point, model call, and external call; the implementer follows the tracing standard for what it adds, and each review compares the marked calls with the tree a real run recorded (`references/tracing-lens.md`) — the last time at the final check (4e.5), after every fix has landed. A difference is fixed in the code or the tests, or recorded as a deviation — the plan is never edited to match the run. An application without the tracing foundation is unaffected.
-
-14. **A green run proves nothing until the tests are shown to be real.** Every implementer and fixer is held to one standard of what a real test is; the code review and each slice review run the Test Integrity Lens against it — were existing tests weakened, is anything kept out of the run, do expected values come from the spec, does each test fail when the behaviour is broken, do stand-ins sit only at the application's edge, was the code fitted to the tests' inputs. The final check (4e.5) always runs and reads the tests once more, so no fix round goes unread. A HIGH lens finding rejects. Standard: `references/test-integrity.md`.
-15. **The reviewer is not the author's model.** Research, spec, code, and tests are each reviewed on a second model family (the specialist panel alone stays on Claude); where none is available the review still runs, on a Claude subagent, and says so in its document, in `progress.md`, and to the user. Standard: `references/second-model-review.md`.
-16. **What a model says is checked on what it really answered, and only a person accepts a judge's score.** With the `evals` gate on, the spec states the cases before any code exists; the implementer builds them and never writes them; and before each slice review, code review, and review of the final check (4e.5) — that last one after every fix has landed — the orchestrator puts every case to the running application, and the review reads that run. A hard case that fails is a failing test: it is fixed in the application, never by weakening the case, and one that cannot be made to pass reaches the user through the fix loop's stop. A judged score blocks nothing and meets nothing: a requirement only a judge can score is accepted by the user at the commit checkpoint (4h), the one reason that checkpoint stops. An application without the tracing foundation is unaffected. Standard: `references/evals.md`.
-
-Session resumption and phase-detection priority live in `phases/rare/resume.md`; mid-phase handoff, progress rotation, re-plan, next tier and decomposition each in their own file under `phases/rare/`, read only when the case happens; error handling in `phases/protocols.md`.
+7. **The per-slice cycle is strict** — one subagent per slice, a mandatory slice review with every HIGH and MEDIUM resolved before the atomic per-slice commit. Earlier slices' committed code is the only context a slice carries forward.
+8. **A stop is for a decision, never for reading code.** The user approves a design and tries each slice; the reviews read the code. A re-plan is asked for in words at a slice pause.
+9. **Security rules are checked by an adversarial reader, once, at the end** — the final check on the second model, after the implementer proved each guard with a test that fails without it; at most two fix rounds, then the owner decides. Every mutation is made in a scratch copy, never in the repository. Standard: `references/security-verification.md`.
+10. **The user approves a design and a size, then cuts the spec down.** Nothing is specified until the design brief — the one planning document written for a person, naming every new file, what the change builds on, and a growth budget — is approved. The spec is held to the brief; the panel may propose scope but never adds it. The flow stops after the spec for approval or cuts (`/simplicity-challenge`), and before the final commit when a feature is over 1.5× its budgeted lines.
+11. **Tiers limit scope; nothing is built ahead.** Each tier is its own cycle with the same reviews, holding the simplest code that serves it. Standard: TIERS.
+12. **The tier plan is the record; BB tasks mirror it**, and the user is told whenever the mirror could not run (`phases/tier-mirror.md`).
+13. **In a traced application, what was planned to run is checked against what ran** (`tracing` gate on): a difference is fixed in the code or tests, or recorded as a deviation — the plan is never edited to match the run. Standard: `references/tracing-lens.md`.
+14. **A green run proves nothing until the tests are shown to be real.** Implementers and fixers are held to one standard of a real test, the code and slice reviews run the Test Integrity Lens, and the final check always reads the tests once more. A HIGH lens finding rejects. Standard: `references/test-integrity.md`.
+15. **The reviewer is not the author's model.** Spec, code, and tests are reviewed on a second model family (the panel alone stays on Claude); a Claude fallback says so in its document, in `progress.md`, and to the user. Standard: `references/second-model-review.md`.
+16. **What a model says is checked on what it really answered, and only a person accepts a judge's score** (`evals` gate on). The spec states the cases before any code; the implementer builds them and never writes them; each review reads a fresh run of every case. A failing hard case is a failing test, fixed in the application, never by weakening the case. A judged score blocks nothing: the user accepts it at the commit checkpoint (4h). Standard: `references/evals.md`.

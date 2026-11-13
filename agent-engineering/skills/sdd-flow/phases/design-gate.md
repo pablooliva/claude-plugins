@@ -69,7 +69,7 @@ Act on the reply:
 python3 "$SKILL_ROOT/scripts/tier-mirror.py" sync <TIER_PLAN> --active <T> --brief SDD/requirements/DESIGN-[###]-[feature-name].md
 ```
 
-Record and report the result as `SKILL.md` → Tier Task Mirror requires. It creates the tracker project (if the BB project has none), the feature's parent task, and one sub-task per tier; sets the approved tier — and any lower tier not yet shipped, which the same cycle builds — to in progress and the rest to backlog; and attaches the brief, and this thread when the flow runs inside a BB thread.
+Record and report the result as `phases/tier-mirror.md` requires. It creates the tracker project (if the BB project has none), the feature's parent task, and one sub-task per tier; sets the approved tier — and any lower tier not yet shipped, which the same cycle builds — to in progress and the rest to backlog; and attaches the brief, and this thread when the flow runs inside a BB thread.
 
 Pass the approved revision number and tier (`Design brief: revision N, approved, Tier T`) in the prompt of every later spawn that reads the brief.
 

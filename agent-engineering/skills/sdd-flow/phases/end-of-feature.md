@@ -114,7 +114,7 @@ In the last two cases `/sdd-flow continue` re-shows this checkpoint (`phases/rar
 
 ## 4i. Commit Implementation  *(shared)*
 
-**Task mirror — in review (both delivery modes).** For a tiered spec, as soon as 4f returns — before the 4h stop when there is one, and always before this commit — run `python3 "$SKILL_ROOT/scripts/tier-mirror.py" sync <TIER_PLAN> --in-review <tier>`; record and report the result per `SKILL.md` → Tier Task Mirror. Running it before the commit means any task key it writes into the tier plan is committed here.
+**Task mirror — in review (both delivery modes).** For a tiered spec, as soon as 4f returns — before the 4h stop when there is one, and always before this commit — run `python3 "$SKILL_ROOT/scripts/tier-mirror.py" sync <TIER_PLAN> --in-review <tier>`; record and report the result per `phases/tier-mirror.md`. Running it before the commit means any task key it writes into the tier plan is committed here.
 
 The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, and SDD artifacts outside `SDD/.records/` (the IMPLEMENTATION-PLAN, the summary, the updated tier plan, any glossary change). Reviews, trace trees, and eval results are records and are not committed. No co-author attribution. When 4h wrote a `## Sign-off - ` line for this feature, the message body carries one line more — `Sign-off: <the requirement IDs> accepted by the user on <the final EVAL_RESULTS file name>.` — so the commit itself records that a person accepted them; the results file itself is a record and stays out of the commit. If nothing is uncommitted — a resumed run whose commit had already landed — make no commit.
 
