@@ -58,7 +58,7 @@ The model this application calls could not be reached, twice. Nothing has been r
 Make it reachable — the network, the key, the provider's limit — then run `/sdd-flow continue`.
 ```
 
-`/sdd-flow continue` — or the user's reply in the same session — makes the run again for the scope and iteration the block names and carries on from step 3 (`phases/protocols.md` → `## Awaiting Eval Run`). The block has no other way out: a review is never started without the run it reads, and the gate is not switched off for a cycle that is under way.
+`/sdd-flow continue` — or the user's reply in the same session — makes the run again for the scope and iteration the block names and carries on from step 3 (`phases/rare/resume.md` → `## Awaiting Eval Run`). The block has no other way out: a review is never started without the run it reads, and the gate is not switched off for a cycle that is under way.
 
 **Test integrity inputs.** **TEST_INTEGRITY** = `SKILL_ROOT/references/test-integrity.md`, resolved absolute — the one definition of what a real test is and of the reviews' Test Integrity Lens. It has no gate: it is passed in every cycle to every implementation spawn (4a, each chunk; per-slice 4a), to the code review and the slice review (4b), and to every fix spawn (4c, the 4e.5 fix, per-slice 4c). The final check (4e.5) is passed it too, with the IMPLEMENTATION-PLAN path and `BASE`, for its last-look checks and the scratch copy its mutations are made in. It ships inside this skill; a missing file is a broken install — halt and tell the user. **Embed this fix rule verbatim in every fix prompt, and pass every fix spawn `BASE`, the SPEC, and the IMPLEMENTATION-PLAN path** — the 4e.5 fix included, with tracing on or off: the rule sends the fixer to the SPEC to decide whether a test may change, and to the plan to record it:
 
@@ -125,7 +125,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** fix subagent:
 
 The last review of the feature, after every fix has landed, run by `bodies/final-check.md`: the **security verification** (SECURITY), the whole test suite, the **last-look test checks** (TEST_INTEGRITY §5), and — with their gates on — the **Tracing Lens** and the **Eval Check**. The trace and eval checks stay in this one review because both must read a run made after the last fix, and this is the one review after it: one loop, one cap, and one stop at the end of the feature, instead of two. With both gates off, only the security verification, the suite, and the last-look checks run.
 
-On first entry — coming from 4c — the orchestrator appends `## Final Check - Started` (the phase-detection anchor for this step); on exit to 4f it appends `## Final Check - Complete`. A run resumed from `## Awaiting Final Check Resolution` re-enters at step 1 **without** writing the anchor again: that halt block is its boundary (`phases/protocols.md`). Loop, starting at `k = 1`:
+On first entry — coming from 4c — the orchestrator appends `## Final Check - Started` (the phase-detection anchor for this step); on exit to 4f it appends `## Final Check - Complete`. A run resumed from `## Awaiting Final Check Resolution` re-enters at step 1 **without** writing the anchor again: that halt block is its boundary (`phases/rare/resume.md`). Loop, starting at `k = 1`:
 
 1. **Eval run of record (`evals: on` only).** Make **the eval run of record** (top of this file) at `SCOPE = FEATURE`, `iter <k>` — so the run is of the application as the last fix left it. Its stop, `## Awaiting Eval Run`, can fire here as before any review, and costs no fix round.
 2. **Review.** By the cycle's **review route** (`references/second-model-review.md`) — on the Claude route, an **`agent-engineering:sdd-workhorse`** subagent with the Safety-Net Rule, a `Reads: 0/15` counter, and `implementation-compact.md` — run `bodies/final-check.md`, passing `SCOPE = FEATURE`, `ITER = k`, the SPEC, the IMPLEMENTATION-PLAN path, `BASE` (the `Base commit:` under `## Feature - Implementing`), **SECURITY**, **TEST_INTEGRITY**, and the two gate lines; when the spec's `agent_security:` gate is `true` or `auto`/absent, **CATALOG**, the resolved gate value, and the panel review `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`; the **tracing inputs** (TRACE_TREE = this iteration's `…-iter<k>-…` file) and the **evals inputs** (that run's eval run line and EVAL_RESULTS) when their gates are on. When iteration k has both snapshots of step 3, also pass `SNAPSHOT` and `FIXED` — its *before fix* and *after fix* SHAs — and `PREVIOUS REVIEW`, the final-check review of iteration k − 1. It writes `SDD/.records/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<k>-[YYYYMMDD].md` and appends `## Review FEATURE iter <k> - APPROVED | REJECTED (h HIGH, m MEDIUM, l LOW)`. **APPROVED — no HIGH and no MEDIUM — goes to 4f**; its LOW findings are listed, not fixed.
@@ -196,7 +196,7 @@ Wait for the answer before committing.
 
 When the checkpoint is shown again, the growth check runs again: a feature that is no longer over its budget, with no sign-off asked for, goes straight to 4i.
 
-In the last two cases `/sdd-flow continue` re-shows this checkpoint (`phases/protocols.md` → `## Awaiting Commit Approval`).
+In the last two cases `/sdd-flow continue` re-shows this checkpoint (`phases/rare/resume.md` → `## Awaiting Commit Approval`).
 
 **Brief-check line** (here and in 4j). Whole-feature: quote the `## Design Brief Check` section of the 4b review document (the file, not a subagent's return). Per-slice: the count across slice reviews (`phases/implementation-per-slice.md` → end-of-feature 4h). Omit the line when the feature has no design brief.
 
@@ -210,7 +210,7 @@ The **orchestrator** runs the commit per `commands/commit.md` — all implementa
 
 **Then append `## Implementation - Committed` to `progress.md`** — one line, the commit's SHA (or `already committed`). It is the phase-detection marker that the code is in history. `Implementation Phase - COMPLETE`, written by the completion subagent at 4f, does not say so.
 
-If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
+If `progress.md` exceeds ~500 lines, rotate it now (`phases/rare/rotation.md`).
 
 ---
 
@@ -235,4 +235,4 @@ The flow ends with this short report — no stop came before the commit unless a
 
 After the announcement, append `## Feature - Done` to `progress.md` — one line, the spec path. It is the marker that the flow has nothing left to do for this feature.
 
-Then perform the **feature-completion rotation** (`phases/protocols.md` → Progress Rotation): archive this feature's full progress history — its `## Flow Started - ` record and everything after it — to `SDD/.records/progress-archive/` and leave the one-line `Finished:` summary in the live `progress.md`.
+Then perform the **feature-completion rotation** (`phases/rare/rotation.md`): archive this feature's full progress history — its `## Flow Started - ` record and everything after it — to `SDD/.records/progress-archive/` and leave the one-line `Finished:` summary in the live `progress.md`.

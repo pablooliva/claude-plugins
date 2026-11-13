@@ -43,7 +43,7 @@ The **orchestrator** runs the commit directly (not a subagent), per `commands/co
 
 **Then append `## Research - Accepted` to `progress.md`** — one line, the research document's path. It is the phase-detection marker that research is done, its commit included. The orchestrator writes it, here and nowhere earlier; the note the completion subagent leaves in 2a ("Research phase complete…") is not a marker and nothing matches it.
 
-If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation) — a phase-boundary commit is a quiet point.
+If `progress.md` exceeds ~500 lines, rotate it now (`phases/rare/rotation.md`) — a phase-boundary commit is a quiet point.
 
 ---
 

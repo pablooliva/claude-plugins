@@ -141,10 +141,10 @@ The bodies were forked from commands a person runs by hand. Inside the flow ever
 Three rules go with it, and an edit to a phase file is checked against them:
 
 - **Resume reads the current feature only.** Step 0 opens each feature's record with `## Flow Started - [###]-[feature-name]`; Phase Detection reads only what follows the latest one, so an earlier feature's markers never answer for this one.
-- **Every stop that waits for an answer has a halt block, a resume rule, and a diagram row.** The stop writes a block to `progress.md` before it asks; `phases/protocols.md` has the rule that resumes it; `docs/sdd-flow-diagram.md` lists it. A latest halt block always wins over a phase rule, and one with no rule of its own falls to the catch-all there: it is shown to the user verbatim, never guessed past. (Stops that need no answer — the slice pause, and terminal stops such as decomposition — write none; `phases/protocols.md` lists them.)
-- **A handoff passes what a fresh spawn would.** A continuation or a re-review is given the same inputs — the step's own body and mode, paths, `SCOPE`, `ITER`, the base commit, a fix round's snapshots, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer. A continuation is also the agent type that first spawn was, with its model override (`phases/protocols.md` → Mid-Phase Handoff).
+- **Every stop that waits for an answer has a halt block, a resume rule, and a diagram row.** The stop writes a block to `progress.md` before it asks; `phases/rare/resume.md` has the rule that resumes it; `docs/sdd-flow-diagram.md` lists it. A latest halt block always wins over a phase rule, and one with no rule of its own falls to the catch-all there: it is shown to the user verbatim, never guessed past. (Stops that need no answer — the slice pause, and terminal stops such as decomposition — write none; `phases/rare/resume.md` lists them.)
+- **A handoff passes what a fresh spawn would.** A continuation or a re-review is given the same inputs — the step's own body and mode, paths, `SCOPE`, `ITER`, the base commit, a fix round's snapshots, allow-lists — as the first spawn of that step, stated explicitly, never left for the subagent to infer. A continuation is also the agent type that first spawn was, with its model override (`phases/rare/handoff.md`).
 
-The full marker table and the rules are in `phases/protocols.md` → Phase Detection Priority.
+The full marker table and the rules are in `phases/rare/resume.md` → Phase Detection Priority.
 
 ### Who owns the slice path (state changes, stops, commits)
 
@@ -153,7 +153,7 @@ The full marker table and the rules are in `phases/protocols.md` → Phase Detec
 - **The owner table in `phases/implementation-per-slice.md` ("Who owns what on the slice path") is complete.** Every row of the slice table's status, every `## Slice SLICE-XXX - …` marker, every stop, and the commit appear there with one owner and one step. A new marker, state, or stop is added to that table in the same edit.
 - **A body describes what it does — never what "the orchestrator may" do.** A body that needs something done outside its own run says what it leaves behind (a status, a marker, a file); the phase chapter says who acts on it and when.
 
-A slice's cycle has exactly two kinds of end: its commit (4c.6, which also sets its row to `Complete`) or a halt block with a resume rule (`## Awaiting Slice Resolution`). A session that ends anywhere between is resumed from the slice markers (`phases/protocols.md` → per-slice cycle sub-steps).
+A slice's cycle has exactly two kinds of end: its commit (4c.6, which also sets its row to `Complete`) or a halt block with a resume rule (`## Awaiting Slice Resolution`). A session that ends anywhere between is resumed from the slice markers (`phases/rare/resume.md` → per-slice cycle sub-steps).
 
 ### Tier Task Mirror (record-keeping, never silent)
 
@@ -186,7 +186,7 @@ Three things hold whichever model reviews, and an edit to a review step is check
 2. **Checkpoint on size.** If the live file exceeds **~500 lines**, rotate at the next quiet point (a phase-boundary commit — 2e, 3f, 4i, per-slice 4c.6): archive resolved verbose blocks (including completed-phase history of the still-active feature), rewrite the head as a bounded `## Current State` (artifact pointers, archive path), then keep the active feature's `## Flow Started - ` record and, after it, its canonical phase-state lines verbatim and in order. **Pending halt blocks (`## Awaiting *`, `## PARTIAL*` — prefix match, not a fixed list) are carried forward verbatim as the latest blocks** — phase detection matches the latest block in the live file and never scans archives. Everything kept in the live file stays byte-identical; only the new head and rotation stamp are newly written text.
 3. **Bounded appends.** Subagent progress entries are **≤10 lines**: status, artifact paths, one-line key decision, anything pending. Narrative belongs in the artifact the subagent wrote, referenced by path. (One exception: an `## ADR Candidates` entry lists every candidate, one line each, however many — it is the only record the design gate reads.)
 
-Rotation is **orchestrator-only**, happens only between spawns (never mid-subagent), and is recorded in the fresh head. Append-only applies *within* a generation; rotation starts a new one. Full procedure: `phases/protocols.md` → Progress Rotation.
+Rotation is **orchestrator-only**, happens only between spawns (never mid-subagent), and is recorded in the fresh head. Append-only applies *within* a generation; rotation starts a new one. Full procedure: `phases/rare/rotation.md`.
 
 ### Subagent Safety-Net Rule (embed verbatim in every phase-execution, fix, and continuation prompt)
 
@@ -238,7 +238,9 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 | 4 · per-slice | per-slice cycle (a pause after every slice) + end-of-feature cycle | `phases/implementation-per-slice.md` |
 | 4e.5 | Final check — security verification, last-look tests, trace and eval checks (both delivery modes) | the matching Step 4 file + `references/security-verification.md` |
 | done | Commit (4h stops first only for a sign-off), then a short report | the matching Step 4 file |
-| `continue` / resumption / handoffs / errors | Phase detection + protocols | `phases/protocols.md` |
+| `continue` / resumption | Phase detection + the resume rule of every halt block | `phases/rare/resume.md` |
+| handoff / rotation / re-plan / next tier / decomposition | Rare cases, each read only when it happens | `phases/rare/handoff.md`, `rotation.md`, `replan.md`, `next-tier.md`, `decomposition.md` |
+| errors | Error handling | `phases/protocols.md` |
 
 ## Arguments
 
@@ -247,7 +249,7 @@ Evaluate top-to-bottom. At each step boundary, **read the named phase file befor
 | `<task>` | The task, requirement, or feature description |
 | `--tier N` | Have the design brief recommend Tier N (1, 2, or 3) instead of Tier 1. The tier can still be changed at the design gate |
 | `--next-tier [feature-name]` | Start a new cycle for the next unshipped tier in `SDD/flow/TIERS-[feature-name].md` (`phases/setup.md` → Step 0) |
-| `continue` | Resume from the last interruption point (see `phases/protocols.md`) |
+| `continue` | Resume from the last interruption point (see `phases/rare/resume.md`) |
 
 The flow stops only where the user has something to decide or try: the clarification question, the design gate, a spec that departs from the brief, a pause after each slice, an unresolved finding, and a sign-off. Anything else is said in words at those stops — a re-plan is asked for at a slice pause.
 
@@ -271,4 +273,4 @@ The flow stops only where the user has something to decide or try: the clarifica
 15. **The reviewer is not the author's model.** Research, spec, code, and tests are each reviewed on a second model family (the specialist panel alone stays on Claude); where none is available the review still runs, on a Claude subagent, and says so in its document, in `progress.md`, and to the user. Standard: `references/second-model-review.md`.
 16. **What a model says is checked on what it really answered, and only a person accepts a judge's score.** With the `evals` gate on, the spec states the cases before any code exists; the implementer builds them and never writes them; and before each slice review, code review, and review of the final check (4e.5) — that last one after every fix has landed — the orchestrator puts every case to the running application, and the review reads that run. A hard case that fails is a failing test: it is fixed in the application, never by weakening the case, and one that cannot be made to pass reaches the user through the fix loop's stop. A judged score blocks nothing and meets nothing: a requirement only a judge can score is accepted by the user at the commit checkpoint (4h), the one reason that checkpoint stops. An application without the tracing foundation is unaffected. Standard: `references/evals.md`.
 
-Session resumption, mid-phase handoff, phase-detection priority, and error handling all live in `phases/protocols.md`.
+Session resumption and phase-detection priority live in `phases/rare/resume.md`; mid-phase handoff, progress rotation, re-plan, next tier and decomposition each in their own file under `phases/rare/`, read only when the case happens; error handling in `phases/protocols.md`.

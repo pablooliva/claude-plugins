@@ -90,7 +90,7 @@ Then return to 2.5b. The loop has no cap — every round is requested by the use
 
 ### Re-plan
 
-A re-plan is asked for in words, at a slice pause (`phases/implementation-per-slice.md` → PAUSE). The slice before it is already committed. Run 2.5c with the latest slice review (its `## Re-plan` line says what the slice showed) as an extra input and, in place of a user reply, the line `RE-PLAN: <the user's request, verbatim>`. The gate then fires as above, with `Re-plan: yes` in the halt block. On `approve`, continue to 3a with that review in the planning subagent's prompt; the re-plan's planning run ends, like any other, with `## Planning - Accepted` at 3g, and implementation starts at the new plan's first slice not yet `Complete`.
+A re-plan asked for at a slice pause: read `phases/rare/replan.md` → Running the re-plan.
 
 ---
 
@@ -178,7 +178,7 @@ The `agent_security:` value also gates Step 4b's agentic-surface code-review len
 
   > **Invalid `evals` value '[value]' in `SDD/requirements/SPEC-[###]-[feature-name].md`.** Allowed values: `auto`, `true`, `false`. Edit the spec frontmatter and run `/sdd-flow continue`.
 
-  No gate line is written — not for the field that could be decided either: the line is written whole or not at all. `/sdd-flow continue` — or the user's reply in the same session — comes back to this decision and reads both fields again (`phases/protocols.md` → `## Awaiting Gate Decision`). When both resolve, the `## Gates - ` line written then is what ends the halt.
+  No gate line is written — not for the field that could be decided either: the line is written whole or not at all. `/sdd-flow continue` — or the user's reply in the same session — comes back to this decision and reads both fields again (`phases/rare/resume.md` → `## Awaiting Gate Decision`). When both resolve, the `## Gates - ` line written then is what ends the halt.
 
 ### Stage 1 — specialists in parallel
 
@@ -294,7 +294,7 @@ A LOW finding of the check is recorded in the section and does not hold the spec
 
 The **orchestrator** runs the commit per `commands/commit.md` — no co-author attribution. Include the design brief, the tier plan, and every ADR change made since the research commit — the records written on approval at the design gate (2.5b) and those written in 3b, with the `SDD/adr/README.md` index and any superseded record edited along the way.
 
-If `progress.md` exceeds ~500 lines, rotate it now (`phases/protocols.md` → Progress Rotation).
+If `progress.md` exceeds ~500 lines, rotate it now (`phases/rare/rotation.md`).
 
 ---
 
