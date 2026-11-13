@@ -174,6 +174,11 @@ A cycle in progress finishes on the version that started it (already the rule si
    - for each slice or step, the diff size and the owner's time to review it and understand it;
    - the Tier 2 cycle as the follow-up change test: its cost, its diff, and what it breaks from Tier 1;
    - regressions the eval run caught, with plain given the same eval cases.
+   - **Decided 2026-11-13:** the app is the Downstream video pipeline (Personal vault: *AI Video Marketing Experiment -
+     Downstream*) — an edition in, a model-written script, a Remotion render out; Python, so the tracing and eval
+     templates apply. Preparing it (Tier 1 and Tier 2 scope, acceptance tests, model, reuse of `multimedia-pipeline/`)
+     happens in that project, not here. This proposal keeps only the measurements above; the two runs start when that
+     preparation is done.
 
 ## Suggested order
 
