@@ -16,12 +16,13 @@ The design brief is the one planning document written for the human. They will r
 6. **TIER_PLAN** — the tier plan, at the path in your prompt (`SDD/flow/TIERS-[feature-name].md`). If the file exists, this is a later-tier cycle: its Deferred table and Feedback notes are your starting point.
 7. **The observability line** — `Observability record: present` or `Observability record: absent` in your prompt: whether this application has the tracing foundation (`SDD/OBSERVABILITY.md`) that tracing and evals need, as the orchestrator found it just before this run. A prompt with no such line is read as `absent`. When it is `present`, your prompt also gives **EVALS**, the evals reference; read its §1 (the two kinds of eval) if rule 11 applies, and §2's *A case harvested from a real trace* if rule 12 does.
 8. **HARVEST** — only when your prompt has a `HARVEST:` line: harvest files written by `/eval-harvest`, each with the cases still open in it, by trace. Read those cases only (rule 12).
-9. **Revision runs:** inputs 1–8 again, plus the existing brief and the user's reply (verbatim in your prompt). On a re-plan, also the latest slice review.
+9. **STATE_MODEL** — the state-model reference, at the path in your prompt. Read its §1 and §2 (rule 16).
+10. **Revision runs:** inputs 1–9 again, plus the existing brief and the user's reply (verbatim in your prompt). On a re-plan, also the latest slice review.
 
 ## Rules
 
 1. **Length.** At most 150 lines; aim for under 100. If the feature cannot be described within the cap, do not compress: write `Too large for one brief — recommend decomposition` as the first line under the title, say where the seams are, and stop (on a later-tier cycle, rule 9 says what to write instead).
-2. **Plain language.** No requirement IDs, no code, no function signatures. Define a project-specific term in a clause the first time it appears. File paths, and the names of the existing modules and helpers in `## Builds on`, are allowed.
+2. **Plain language.** No requirement IDs, no code, no function signatures. Define a project-specific term in a clause the first time it appears. File paths, and the names of the existing modules and helpers in `## Builds on`, are allowed — and so is the state model's Mermaid block (rule 16), the one thing in the brief that is not plain words.
 3. **Decide or ask.** If the research settles something, decide it and record the rejected alternative. Ask the human only where the answer turns on preference, product behaviour, risk appetite, or a trade-off the codebase gives no evidence for.
 4. **Questions.** At most five. Each has concrete options and a recommended answer with its reason. Every question must be answered before the brief can be approved, so ask only what is worth stopping for; anything else is a decision you make and record.
 5. **Clarification conflicts.** If what the research supports conflicts with a constraint in the clarification document, do not resolve it yourself — raise it as a question.
@@ -35,6 +36,7 @@ The design brief is the one planning document written for the human. They will r
 13. **Recommend the tracing foundation** — only when the observability line says `absent` and the feature has a model in it. Write `## Tracing foundation` with one line, in these words: `This application has no tracing foundation, so this cycle will not check what the model really answers. Run /observability-init before you approve if you want it to; the flow looks again when you approve.` The foundation exists for Python only, so when the research shows the application is written in another language, write this line instead, naming that language: `This application is written in [language], and the tracing foundation exists only for Python, so this cycle will not check what the model really answers.` When the research does not say, write the first line — `/observability-init` checks the language itself. On a revision run, apply this rule and rule 11 afresh from the line in your prompt: remove the section when the line now says `present`, and write the rule 11 decision instead.
 14. **Build on what exists.** Before you plan a new file, module, or helper, look for the existing one the change can extend. Write `## Builds on`: the existing modules, helpers, and patterns this change extends or must follow, one line each with a `file:line` reference and what it gives the change — ten lines at most. Every code review reads it: a duplicate of something listed here is a review finding. Write `None — [reason]` only when the change touches no existing code.
 15. **Set the growth budget.** Write `## Growth budget` with exactly three lines, in this form: `- Source lines added: ~[N]`, `- Test lines added: ~[N]`, `- New files: [N]`. The two line counts are the sums of the table's estimates for source rows and for test rows; the file count is the number of new-file rows. Size the tests to the behaviour they prove — what a user or caller can see — not to the code's shape. The human approves this budget with the brief. When the finished feature adds more than one and a half times either line estimate, the flow stops before its final commit and shows the overrun; the budget is a forecast to plan against, not a target to fill.
+16. **Draw the state model, or say there is none.** Decide by STATE_MODEL §1 whether something this feature adds or changes moves through named states over time. If it does, draw it at the end of `## How it will work` as STATE_MODEL §2 says: the Mermaid diagram, where the state is held, and the `**Never:**` list of moves that must not happen. If it does not, end that section with the one line `State model: not applicable — [reason]`. The owner approves the diagram with the brief, and the code is later checked against it.
 
 ## Template
 
@@ -58,6 +60,8 @@ Based on: RESEARCH-[###]-[feature-name].md
 
 ## How it will work
 [The main scenario, step by step, in the order things happen.]
+
+[Rule 16: the state model as STATE_MODEL §2 draws it — or the one line `State model: not applicable — [reason]`.]
 
 ## Key decisions
 ### D1: [title]

@@ -1,6 +1,6 @@
 # sdd-flow — the development cycle at a glance
 
-A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 5.0.1. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
+A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 5.1.0. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
 
 **How to read it.** Rounded boxes are work done by a spawned subagent. Red boxes are places the flow **stops and waits for you**. Grey boxes are things the orchestrator (the main conversation) does itself: commits, running a script, recording state.
 
@@ -55,7 +55,7 @@ flowchart TD
     s0 -- "fits" --> s15["Step 1.5 — Clarification gate<br/>STOP — clarify first? y/n<br/>y: you run /research-clarify"]:::stop
     s15 --> s2("Step 2 — Research<br/>2a research and completeness check<br/>2b ADR candidates listed for the design gate<br/>no review: the design gate is its check")
     s2 --> c2["2e commit research"]:::orch
-    c2 --> s25a("Step 2.5a — Design brief<br/>at most 150 lines, plain language<br/>proposes three tiers, writes the tier plan")
+    c2 --> s25a("Step 2.5a — Design brief<br/>at most 150 lines, plain language<br/>proposes three tiers, writes the tier plan<br/>draws the state model, if things move through states")
     s25a --> gate["Step 2.5b — Design gate<br/>STOP<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve<br/>reminds you of /worth-building<br/>model feature, no tracing foundation:<br/>recommends /observability-init<br/>(not Python: says it is Python only)"]:::stop
     gate -- "answers or changes" --> s25c("2.5c — Revise the brief")
     s25c --> gate
@@ -75,15 +75,15 @@ flowchart TD
     s4 -- "per-slice" --> slices("Per-slice cycle<br/>see the next diagram")
     s4 -- "whole-feature" --> wf("4a implement, security rules proven by test")
     slices --> cr
-    wf --> cr("4b code review of the whole feature, on the second model<br/>spec, fit and size, the brief's footprint,<br/>and an adversarial pass: how would it break?<br/>tracing on: compares a real run with the planned calls<br/>evals on: checks what the model really answered<br/>4c fix HIGH and MEDIUM")
-    cr --> eof("4e.5 final check — every tier, on the second model<br/>security verification, whole suite, last look at the tests<br/>tracing on: and the trace check, once more<br/>evals on: and every eval case, once more<br/>4f completion: summary, tier plan updated")
+    wf --> cr("4b code review of the whole feature, on the second model<br/>spec, fit and size, the brief's footprint,<br/>and an adversarial pass: how would it break?<br/>state model: the code's state writes against it<br/>tracing on: compares a real run with the planned calls<br/>evals on: checks what the model really answered<br/>4c fix HIGH and MEDIUM")
+    cr --> eof("4e.5 final check — every tier, on the second model<br/>security verification, whole suite, last look at the tests<br/>state model: checked once more<br/>tracing on: and the trace check, once more<br/>evals on: and every eval case, once more<br/>4f completion: summary, tier plan updated")
     eof -- "still open after 2 fix rounds" --> halt45["STOP — final check halt<br/>you resolve, then continue"]:::stop
     eof --> m2["Mirror: tier in review"]:::orch
     m2 --> q4h{"4h — does a requirement wait for your sign-off<br/>(evals on only), or is the feature over<br/>1.5× its growth budget?"}
     q4h -- "yes" --> s4h["STOP — scores and growth shown<br/>yes commits and accepts"]:::stop
     s4h --> c4
     q4h -- "no" --> c4["4i commit implementation"]:::orch
-    c4 --> done["4j — Mirror: tier done<br/>short report: shipped, deferred,<br/>LOW findings listed, diff size<br/>reminds you of /retro<br/>progress file rotated"]:::orch
+    c4 --> done["4j — Mirror: tier done<br/>short report: shipped, deferred,<br/>LOW findings listed, diff size<br/>state model: matched, or deviations<br/>reminds you of /retro<br/>progress file rotated"]:::orch
     done --> next(["later: /sdd-flow --next-tier<br/>a new cycle for the next tier"])
 
     classDef stop fill:#fde2e2,stroke:#c0392b,color:#000
@@ -97,7 +97,7 @@ When the spec says `delivery_mode: per-slice` (the default for new specs), this 
 ```mermaid
 flowchart TD
     scaffold("4a.0 — create the slice progress table<br/>once per feature") --> impl("4a — implement one slice<br/>code, tests, security rules proven by test")
-    impl --> review("4b — slice review<br/>includes fit and size: a file outside<br/>the brief's footprint is a finding<br/>tracing on: and the trace check<br/>evals on: and the eval check")
+    impl --> review("4b — slice review<br/>includes fit and size: a file outside<br/>the brief's footprint is a finding<br/>state model: this and earlier slices' moves<br/>tracing on: and the trace check<br/>evals on: and the eval check")
     review -- "HIGH or MEDIUM" --> fix("4c — fix those, then re-review,<br/>at most 2 rounds; LOW is listed, not fixed<br/>the re-review checks the earlier findings,<br/>reads what the fix changed, and runs the tests it can affect<br/>the whole suite and the trace check when it would pass")
     fix --> review
     fix -- "no progress, or 2 rounds used" --> halt["STOP — slice halted<br/>you fix the findings, then continue re-reviews"]:::stop
@@ -123,6 +123,8 @@ flowchart TD
 **Tracing.** In an application that has the tracing foundation (`/observability-init` was run on it), a cycle also plans which calls the feature makes and checks them against a real run: whether the application has it is settled when you approve the design brief, the spec draws a planned call graph (3a), the gate is settled at 3c, the implementer follows the tracing standard (4a), and the slice review, the code review, and the final check each compare the call tree a real run recorded with the plan, writing `SDD/.records/reviews/TRACE-TREE-*`. Without the foundation none of this happens. `observability-diagram.md`, beside this file, draws it.
 
 **Evals.** In such an application, a feature with a model in it is also checked on what the model really answers. You decide at the design gate which behaviours a rule checks and which you will accept yourself; the spec writes the cases out (3a) and the gate is settled at 3c; the implementer builds the cases and, the first time, the eval run (4a). Before the slice review, the code review, and each round of the final check, the flow puts every case to the running application, three times each, and the review reads the results, kept as `SDD/.records/reviews/EVAL-RESULTS-*`. A case checked by rule that fails is a finding, like a failing test. A case scored by a judge model blocks nothing: its scores are shown to you before the final commit (4h) — the one reason that step stops. Without the foundation, or for a feature with no model in it, none of this happens. `observability-diagram.md` draws this as well.
+
+**State model.** When something a feature changes moves through named states — a status, a lifecycle, a job that queues, runs and fails — the design brief draws them as a diagram, with the moves that must never happen listed beneath it, and you approve it with the brief. The spec gives each move a requirement, the implementer tests each one (a forbidden move: that it is refused), and the slice review, the code review, and the final check draw the states from the code's writes and compare. A forbidden move the code allows is a HIGH finding. The end report says whether the code matched. No gate and no new stop: a feature with no states has no state model, and its cycle runs as before.
 
 | Stage | What is done | Who does it | What it writes (under `SDD/`) | Where it can stop |
 |---|---|---|---|---|

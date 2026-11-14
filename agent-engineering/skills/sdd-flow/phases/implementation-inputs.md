@@ -12,6 +12,10 @@ All paths below are resolved absolute. SECURITY, FIT, TEST_INTEGRITY, TRACE_TREE
 
 **FIT** = `SKILL_ROOT/references/fit-lens.md` — the reviews' Fit Lens. No gate: passed in every cycle to the code review and the slice review (4b) and every fix spawn.
 
+**STATE_MODEL** = `SKILL_ROOT/references/state-model.md` — a feature's state model and the reviews' State Check. No gate — the spec decides: passed in every cycle to every implementation spawn, the code review and the slice review (4b), the final check (4e.5), and every fix spawn. A spec with no `### State model` has none, and each of them does nothing for it. **When the spec has one, embed this rule verbatim in every fix prompt:**
+
+> **State model.** Resolve a State Check finding as STATE_MODEL §6 says: close a forbidden move in the code and prove it with a test; a MEDIUM may instead be recorded, with its reason, under `### Implementation Deviations` in the IMPLEMENTATION-PLAN; a HIGH is always fixed. Never edit the spec's `### State model`, its table, or a `State moves:` line.
+
 **The two gates.** The tracing gate and the evals gate are the `tracing:` and `evals:` parts of the latest `## Gates - ` line after the latest `Planning Phase - COMPLETE` in `progress.md` (`phases/planning.md` → 3c); a part that is missing, or a cycle with no such line, is `off`. Every implementation, code-review, final-check (4e.5), fix, and completion spawn of Step 4 is passed each gate as a line: `tracing: on|off`, `evals: on|off`. With a gate off, none of its inputs below is passed and the bodies do nothing about it.
 
 **Tracing inputs** (`tracing: on`; the completion spawn gets OBS_RECORD and the final TRACE_TREE only — it runs nothing):

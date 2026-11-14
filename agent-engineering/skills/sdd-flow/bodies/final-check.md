@@ -6,7 +6,7 @@ This is the last review of the feature, run after every fix has landed. It reads
 
 ## Inputs (all from your prompt)
 
-Always: `SCOPE = FEATURE`, `ITER = <k>`, the SPEC, the IMPLEMENTATION-PLAN, `BASE` (the commit the feature started from), **SECURITY** (`references/security-verification.md`), **TEST_INTEGRITY**, and the gate lines `tracing: on|off` and `evals: on|off`. With the `agent_security` gate open: **CATALOG** and the panel review `SDD/.records/reviews/PANEL-SPEC-*`. With `tracing: on`: **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE** (a file named for this iteration). With `evals: on`: **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not). On a later round, `SNAPSHOT`, `FIXED`, and `PREVIOUS REVIEW` (below).
+Always: `SCOPE = FEATURE`, `ITER = <k>`, the SPEC, the IMPLEMENTATION-PLAN, `BASE` (the commit the feature started from), **SECURITY** (`references/security-verification.md`), **TEST_INTEGRITY**, **STATE_MODEL** (`references/state-model.md`), and the gate lines `tracing: on|off` and `evals: on|off`. With the `agent_security` gate open: **CATALOG** and the panel review `SDD/.records/reviews/PANEL-SPEC-*`. With `tracing: on`: **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE** (a file named for this iteration). With `evals: on`: **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not). On a later round, `SNAPSHOT`, `FIXED`, and `PREVIOUS REVIEW` (below).
 
 If an input the gates call for is missing, return a failure to the orchestrator naming it. Do not list `SDD/` to find one.
 
@@ -18,6 +18,7 @@ If an input the gates call for is missing, return a failure to the orchestrator 
 4. **The gated checks.**
    - **`tracing: on`** — with the suite passing, read LENS and run it at `SCOPE = FEATURE` against every marked node of the spec's `### Planned call graph`. *The code the scope changed* (LENS §4) is everything changed since `BASE`; a difference already under `### Implementation Deviations` in the IMPLEMENTATION-PLAN is listed as recorded and not raised again (LENS §6). Write the `## Tracing Lens` section in the shape LENS §7 gives. With the suite failing, do not run the lens: the section is the one line `Tracing Lens not run — the test suite does not pass (finding <#>)`, and you write no trace tree.
    - **`evals: on`** — read EVALS and run its §7 at `SCOPE = FEATURE`: every case of the spec's `### Evals`, and every older case the application holds. Run it whether or not the suite passed — it reads a run already made. **You make no eval run yourself;** the one command of it you may run is `--self-test` (EVALS §4). The test run §7 speaks of is part 2's. Write the `## Eval Check` section in the shape §7 gives. A sign-off requirement counts as met when it is implemented and its judged eval has its scores in the run of record (EVALS §9).
+   - **The spec has `### State model`** (no gate line: the spec decides) — read STATE_MODEL and run its §5 at `SCOPE = FEATURE`: every move in the spec's model, the as-built model drawn from every write to the state in the repository, whether or not the suite passed — it reads the code. Write the `## State Check` section in the shape §7 gives; its `**State model:**` line is what the end-of-feature report shows the owner. A later round runs it in full. Findings are tagged `[needs-code-or-test]`. With no `### State model`, write nothing about it.
    - With a gate off, do nothing for it and write nothing about it.
 
 ## A later round (only when your prompt gives `SNAPSHOT`)
@@ -32,7 +33,7 @@ After a fix round your prompt gives `SNAPSHOT` (the working tree before the fix)
 
 ## The review document and the marker
 
-Write `SDD/.records/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<k>-[YYYYMMDD].md` containing, in order: a `Reviewed by:` line; `## Earlier Findings` (later rounds only); `## Security Verification`; `## Test Integrity`; `## Tracing Lens` and `## Eval Check` when their gates are on; one numbered `## Findings` list holding every finding of every part, each with its severity and its part; `## LOW Findings (listed, not fixed)` — one line per LOW, or `None.`; and `## Decision: [APPROVED/REJECTED]`.
+Write `SDD/.records/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<k>-[YYYYMMDD].md` containing, in order: a `Reviewed by:` line; `## Earlier Findings` (later rounds only); `## Security Verification`; `## Test Integrity`; `## Tracing Lens` and `## Eval Check` when their gates are on; `## State Check` when the spec has `### State model`; one numbered `## Findings` list holding every finding of every part, each with its severity and its part; `## LOW Findings (listed, not fixed)` — one line per LOW, or `None.`; and `## Decision: [APPROVED/REJECTED]`.
 
 **A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: the owner sees it in the end report.
 

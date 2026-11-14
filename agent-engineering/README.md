@@ -87,7 +87,17 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.0.1.
+Version 5.1.0.
+
+### What's new in 5.1.0
+
+- **A feature's states are approved in the brief and checked in the code** (`skills/sdd-flow/references/state-model.md`).
+  When something a feature changes moves through named states, the design brief draws them as a Mermaid state
+  diagram, with the moves that must never happen listed beneath it; otherwise it says `State model: not applicable`.
+  The spec maps each move to a `REQ` (allowed) or an `EDGE` (forbidden), the implementer tests each one, and the slice
+  review, the code review, and the final check draw the states from every write to them in the code and compare: a
+  forbidden move the code allows is a HIGH. The design gate and the end report each show one line. No gate and no new
+  stop — a spec with no `### State model` runs exactly as before. Proposal: `proposals/state-model-2026-11-14.md`.
 
 ### What's new in 5.0.1
 

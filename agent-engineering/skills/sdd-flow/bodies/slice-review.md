@@ -97,6 +97,7 @@ On a re-review whose fix round the orchestrator snapshotted, your prompt gives t
   Run them with the project's own test command, narrowed to those files. **The scoped set is the whole suite** when the change touches what decides how tests are collected or run (`conftest.py`, `pytest.ini`, the test section of `pyproject.toml`, `jest.config.*`, `package.json` scripts, a CI workflow, a `Makefile` target), or when you cannot tell which tests reach a changed module or read a changed non-code file — a module loaded by name at run time, a plugin registry, a resource found by a pattern. Name the test files you ran, and the pass count, on the `Re-review:` line.
 - **The whole suite at the end, when this review would pass the slice.** When every step is done and your findings are zero HIGH and zero MEDIUM, run the whole suite and then Step 5.8 in full, before you write the marker — when OBS_RECORD's trace run is the whole suite, that one run serves both, and when the scoped set was already the whole suite, that run counts and is not repeated. A test that fails there is a finding of this review: HIGH, `[needs-code-or-test]`, naming the test and the changed code it reaches; a Tracing Lens finding is counted as Step 5.8 says. Whenever you made this run, append `## Whole Suite <SLICE-XXX> iter <N> - <w> HIGH raised` to `progress.md` as the line directly before your marker, in the same append — `w` being the HIGH findings this run raised, zero included. The stall check sets them aside, and reads the line only when it sits directly above the marker it belongs to, so a line left by an earlier attempt at the same review never counts (`phases/implementation-per-slice.md` → 4c). With any finding before that point, make no whole-suite run beyond the two this step requires (a scoped set that is the whole suite; the trace run below): the next re-review reads the code that will be committed, and a slice leaves the loop only through a review that ran the whole suite on it.
 - **Step 5.8 is deferred while findings remain.** This rule takes precedence over Step 5.8's own text and LENS's step 1 on a re-review. Run it in full, as on a first review, when this review would pass the slice (above), or when PREVIOUS REVIEW had a Tracing Lens finding — then its trace run checks that finding, and, when it is the whole suite, it is also the run the bullet above asks for. Otherwise write the body of `## Tracing Lens` as the one line `Deferred — this re-review found <n> finding(s) before it; the trace run is made by the re-review that finds none`.
+- **Step 5.10 runs in full**, as on a first review: a fix anywhere can open a path to a forbidden move, so the as-built model is drawn again from every write to the state.
 - **Step 5.9 runs in full**, as on a first review: it reads the eval run of record the orchestrator made after the fix, so every case in scope is checked again.
 - The marker, the iteration cap, and the stall check are unchanged.
 
@@ -176,7 +177,11 @@ Your prompt carries the line `evals: on` or `evals: off` — the decision the or
 
 The spec states cases — written examples, and what must be true of what the model answers to them — and assigns each to a slice. Before this review the flow's main session put the cases built so far to the running application, and that run's last line and results are in your prompt. This step reads the run and the eval files against the spec. **You do not make an eval run yourself;** the one command of it you may run is `--self-test`, which calls no model (EVALS §4). Its findings come only from the fixed table in EVALS §7, at the severities given there. They are ordinary findings of this review: number them with the others, count them in the progress marker, and let a HIGH reject the slice. **A sign-off requirement** — one the spec lists under `### Manual Verification` with a line starting `- [ ] **Sign-off: ` — counts as met in every part of this review when it is implemented and its judged eval has its scores in the run of record (EVALS §9); that the user has not accepted it yet is not a finding.
 
-## Step 5.10: Re-plan
+## Step 5.10: State Check (only when the SPEC has `### State model`)
+
+No gate line: the SPEC decides. When it has no `### State model`, skip this step and write no `## State Check` section. When it has one, read **STATE_MODEL** at the path in your prompt and run its §5 as written, at `SCOPE = SLICE-XXX`: the moves on this slice's `State moves:` line and on those of every slice before it. Draw the as-built model from every write to the state in the repository, not only the slice's files. Its findings come only from STATE_MODEL §6, at its severities; number them with the others and count them in the progress marker. If the SPEC has one and your prompt has no `STATE_MODEL` path, return a failure to the orchestrator naming it.
+
+## Step 5.11: Re-plan
 
 Answer one question about the plan, not the code: **should the rest of the plan change before the next slice is built?** `yes` when what this slice showed means a later slice, the slice order, or the spec is wrong as written — a later slice rests on an assumption this slice disproved, a module will not fit where the spec puts it, a requirement cannot hold as stated, or the slice cost far more than the plan expects of the slices left. `no` otherwise — a finding the fix round can close is never a reason. The orchestrator shows the line at the slice pause and does nothing else with it; the owner decides.
 
@@ -244,6 +249,10 @@ The review document follows the standard review template (`SDD/.records/reviews/
 ## Eval Check
 
 [When the check ran: the section in the shape EVALS §7 gives — the eval run line, the results path, the table of cases in scope, the judge, and the findings. When it was skipped, the one line: "Eval check skipped — evals: off".]
+
+## State Check
+
+[Only when the SPEC has `### State model`: the section in the shape STATE_MODEL §7 gives. Otherwise omit it.]
 
 ## Module Review Log (Risk-Tiered Depth Applied)
 

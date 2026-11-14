@@ -1,6 +1,8 @@
 # State model — the states a feature allows, approved in the brief and checked in the code (2026-11-14)
 
-**Status:** Draft proposal — not built. Two decisions made by the owner (below); the rest is open.
+**Status:** Tier 1 built as agent-engineering 5.1.0 (2026-11-14), build order steps 1–7. Not yet trialled (step 8). The workflow diagram (Open) and `sdd-lite` were not built.
+
+**Kill test (step 1), 2026-11-14: passed.** State bugs found in the owner's applications: `currents` 62981f42 — a re-fetch moved triaged items `analyzed` → `completed`, they were re-selected, the insert failed, and the batch stranded them forever (18 aborts a day in production); `currents` 9352dded — items of a disabled source stayed `pending` with nothing able to move them; `Boycott.search` dc0976b — a re-crawl left the earlier document active, with no move to retire it (34% of the index).
 **Affects:** `agent-engineering` — `sdd-flow` only (brief, spec, implementer, the three reviews, the final report).
 
 ## Why

@@ -237,6 +237,10 @@ If your prompt gives a catalog path but no gate value, read `agent_security:` fr
 
 **How it interacts with the review budget.** Like the two lenses above, it is an overlay on the 70/20/10 split, not a slice of it. It runs after the test suite has passed (Step 6), because the test of the cases and checks is one of those tests. Its findings are reported in their own section and count in the decision like any other; a HIGH is a rejection criterion.
 
+## State Check (only when the spec has `### State model`)
+
+No gate line: the spec decides. When it has no `### State model`, skip the check and write no `## State Check` section. When it has one, read **STATE_MODEL** at the path in your prompt and run its §5 as written, at `SCOPE = FEATURE`: every move in the spec's model, with the as-built model drawn from every write to the state in the repository. Its findings come only from STATE_MODEL §6, at its severities; like the lenses above it is an overlay on the 70/20/10 split, its findings count in the decision like any other, and a HIGH is a rejection criterion. If the spec has one and your prompt has no `STATE_MODEL` path, return a failure to the orchestrator naming it.
+
 ## Severities and the marker
 
 **A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list in the end report — and nothing sends it to a fix round.
@@ -340,6 +344,10 @@ Run the **Tracing Lens** section above, once the test suite has passed. Every fi
 ### Step 6c: Run the Eval Check
 
 Run the **Eval Check** section above, once the test suite has passed. Every finding it raises goes into the review's findings at the severity EVALS §7 gives it.
+
+### Step 6d: Run the State Check
+
+Run the **State Check** section above, when the spec has `### State model`. Every finding it raises goes into the review's findings at the severity STATE_MODEL §6 gives it.
 
 ## Feedback Templates
 
@@ -521,6 +529,9 @@ Include this section only when the lens ran. When it was skipped, replace it wit
 ## Eval Check (conditional)
 
 [When the check ran: the section in the shape EVALS §7 gives — the eval run line, the results path, the table of cases in scope, the judge, and the findings. When it was skipped, the one line: "Eval check skipped — evals: off".]
+
+## State Check (only when the spec has `### State model`)
+[The section in the shape STATE_MODEL §7 gives. Omit it otherwise.]
 
 ## LOW Findings (listed, not fixed)
 

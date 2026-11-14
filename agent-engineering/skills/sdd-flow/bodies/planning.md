@@ -29,7 +29,10 @@ Starting planning phase based on completed research.
    - When it is `present`, your prompt also gives the path of the tracing standard (**TRACING**). Read its sections *What gets a span — the three traced kinds* and *Adding code to a traced application*: they define the three kinds of call you will mark in the planned call graph (Planning Process → *Planned call graph rules*).
    - When it is `present`, your prompt also gives the path of the evals reference (**EVALS**). Read it only when evals are on for this spec (the table under `evals:`, Specification Frontmatter Fields) — then its §1, §2, and §6: the two kinds of eval, how a case is written, and what binds a case once it is written (Planning Process → *Eval rules*). When your prompt has a `HARVEST:` line, read §2's *A case harvested from a real trace* whether evals are on or off (*Eval rules* → Harvested cases).
 
-6. **Update Progress for Planning Phase:**
+6. **Read the State Model Reference:**
+   - Read **STATE_MODEL** at the path in your prompt, §1 and §3. When the design brief draws a state model at the end of its `## How it will work`, the spec maps it (Planning Process, steps 7 and 8). When the brief says `State model: not applicable`, write no `### State model` — unless the requirements plainly move a thing through named states, in which case draw it by §2 and record it under `## Deviations from Design Brief` (§3).
+
+7. **Update Progress for Planning Phase:**
    - Add a new planning section to `SDD/.records/progress.md`
    - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
    - Add reference to the SPEC document being created
@@ -236,6 +239,17 @@ handle_upload(req)                              [entry: POST /uploads]
 └─ index(document) -> None                      [external: qdrant — not exercised in tests: no test instance]
 ~~~
 
+### State model
+
+> **Only when the design brief draws one** — then copy it unchanged — **or when the brief says `not applicable` and the requirements plainly move a thing through named states** — then draw it by STATE_MODEL §2 and record that as a deviation (§3). Otherwise omit this sub-section entirely.
+
+[The brief's line naming the thing and where its state is held, its Mermaid diagram, and its **Never:** list — copied unchanged.]
+
+| Move | Kind | Required by |
+|------|------|-------------|
+| [from] → [to]: [event] | allowed | REQ-XXX |
+| [from] → [to] | forbidden | EDGE-XXX — [what the refusal does] |
+
 ## Delivery Slices
 
 > **Required only when `delivery_mode: per-slice`.** Omit this section entirely when `delivery_mode: whole-feature` (the default).
@@ -253,6 +267,7 @@ handle_upload(req)                              [entry: POST /uploads]
 - **REQs satisfied:** [REQ-XXX references — full or partial. A slice may partially satisfy a REQ; later slices fill it in. Mark partial coverage explicitly, e.g., "REQ-003 (partial: happy path only)".]
 - **Modules touched:** [MODULE-XXX entries this slice cuts through. Use the `Spec refs:` field on each module as the raw material for this list.]
 - **Traced nodes:** [Only when tracing is on; omit the line otherwise. The marked nodes of `### Planned call graph` that this slice brings into existence, each with its kind — e.g. `handle_upload [entry], store_blob [external]` — or `none`.]
+- **State moves:** [Only when the spec has `### State model`; omit the line otherwise. The moves of its table, allowed and forbidden, that this slice brings into existence (STATE_MODEL §3) — e.g. `pending → analyzed, analyzed → pending (forbidden)` — or `none`.]
 - **Evals:** [Only when evals are on; omit the line otherwise. The cases of `### Evals` this slice is the first to be able to pass — e.g. `EVAL-001, EVAL-003 (case 1)` — or `none`.]
 - **Acceptance check:** [a single, focused test that proves the slice works end-to-end. Ideally an automated test name; manual verification step otherwise.]
 - **Try it:** [for the person who approved the brief, who does not read code: what to run or do to see this slice working, and what they should see — plain words, no test names. When nothing can be seen by hand yet, say so and why, in one line.]
@@ -452,6 +467,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - If a module must be shallow, fill the `Justification (if shallow)` field. Unjustified shallow modules will be flagged by the `module-depth` specialist in spec-review-panel and should be merged, deepened, or removed.
    - Assign each module a **Risk** tier (low/medium/high) — this drives review depth in code review. High-risk = irreversible, financial, security-critical, regulatory. Low-risk = contained, recoverable, boundary-only.
    - Map every REQ-XXX/EDGE-XXX/FAIL-XXX to at least one module via the `Spec refs:` field — every requirement must have a home.
+   - **When the design brief draws a state model — or says `not applicable` for a feature whose requirements plainly move a thing through named states (context load step 6) — write `### State model`** beneath the module entries, as STATE_MODEL §3 says: the brief's diagram and `**Never:**` list unchanged, and every allowed move mapped to a `REQ`, every forbidden one to an `EDGE` stating what the refusal does.
    - **With tracing on, draw `### Planned call graph`** beneath the module entries, following *Planned call graph rules* at the end of this list. It is drawn here, before the slices, so that step 8 can assign its marked nodes and so that it exists whichever way the practicality gate (step 10) goes.
 
 8. **Define Delivery Slices (per-slice mode only):**
@@ -463,6 +479,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - REQs may be split across slices; mark partial coverage explicitly (e.g., `REQ-003 (partial: happy path only)`) so later slices can complete them.
    - Every REQ-XXX / EDGE-XXX / FAIL-XXX should be reachable through some slice in the sequence by the time the last slice lands.
    - **With tracing on, give every slice its `Traced nodes:` line** (*Planned call graph rules* → per-slice mode).
+   - **With a `### State model`, give every slice its `State moves:` line** (STATE_MODEL §3): every move in exactly one slice's line.
    - **With evals on, give every slice its `Evals:` line** (*Eval rules* → per-slice mode).
 
 9. **Validate `delivery_mode:` value (spec ingestion gate):**
