@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Retro
 
-The user has asked for a **retrospective**. You are suggesting improvements to the coding agent's **environment** so future runs go better. You are not reviewing the code the cycle produced (that is `/critical-review` or the flow's code review), and you are not recording what was learned about the feature (that is `sdd-flow`'s per-slice retrospective and its ledger). The question here is: *what about this repo and its setup let the struggle happen, and what check, standard, or tool would stop it happening again?*
+The user has asked for a **retrospective**. You are suggesting improvements to the coding agent's **environment** so future runs go better. You are not reviewing the code the cycle produced (that is `/critical-review` or the flow's code review), and you are not recording what was learned about the feature (that is the `## Lessons Learned` section of `sdd-flow`'s implementation summary). The question here is: *what about this repo and its setup let the struggle happen, and what check, standard, or tool would stop it happening again?*
 
 **Propose only.** Present candidates; change nothing until the user picks one.
 

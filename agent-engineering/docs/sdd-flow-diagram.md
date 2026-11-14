@@ -1,6 +1,6 @@
 # sdd-flow — the development cycle at a glance
 
-A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 5.0.0. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
+A picture of what `/sdd-flow` does, stage by stage, as of agent-engineering 5.0.1. It is a reading aid for people: the flow itself runs from `skills/sdd-flow/SKILL.md` and the files under `skills/sdd-flow/phases/`, and those are the source of truth when this page and they disagree.
 
 **How to read it.** Rounded boxes are work done by a spawned subagent. Red boxes are places the flow **stops and waits for you**. Grey boxes are things the orchestrator (the main conversation) does itself: commits, running a script, recording state.
 
@@ -56,7 +56,7 @@ flowchart TD
     s15 --> s2("Step 2 — Research<br/>2a research and completeness check<br/>2b ADR candidates listed for the design gate<br/>no review: the design gate is its check")
     s2 --> c2["2e commit research"]:::orch
     c2 --> s25a("Step 2.5a — Design brief<br/>at most 150 lines, plain language<br/>proposes three tiers, writes the tier plan")
-    s25a --> gate["Step 2.5b — Design gate<br/>STOP<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve<br/>reminds you of /worth-building<br/>model feature, no tracing foundation:<br/>recommends /observability-init"]:::stop
+    s25a --> gate["Step 2.5b — Design gate<br/>STOP<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve<br/>reminds you of /worth-building<br/>model feature, no tracing foundation:<br/>recommends /observability-init<br/>(not Python: says it is Python only)"]:::stop
     gate -- "answers or changes" --> s25c("2.5c — Revise the brief")
     s25c --> gate
     gate -- "approve" --> m1["Look again for the tracing foundation<br/>Write the accepted ADRs<br/>Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
@@ -83,7 +83,7 @@ flowchart TD
     q4h -- "yes" --> s4h["STOP — scores and growth shown<br/>yes commits and accepts"]:::stop
     s4h --> c4
     q4h -- "no" --> c4["4i commit implementation"]:::orch
-    c4 --> done["4j — Mirror: tier done<br/>short report: shipped, deferred,<br/>LOW findings listed, diff size<br/>progress file rotated"]:::orch
+    c4 --> done["4j — Mirror: tier done<br/>short report: shipped, deferred,<br/>LOW findings listed, diff size<br/>reminds you of /retro<br/>progress file rotated"]:::orch
     done --> next(["later: /sdd-flow --next-tier<br/>a new cycle for the next tier"])
 
     classDef stop fill:#fde2e2,stroke:#c0392b,color:#000

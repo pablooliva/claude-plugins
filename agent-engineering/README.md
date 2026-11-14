@@ -87,7 +87,19 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.0.0.
+Version 5.0.1.
+
+### What's new in 5.0.1
+
+- **The end-of-feature report reminds you of `/retro`.** Step 4j's report gains one line suggesting
+  `/retro <feature>`, which proposes checks, review standards, and tools that would stop this cycle's mistakes from
+  coming back. A reminder only: the flow never runs it, waits for it, or records whether it ran.
+- **No `/observability-init` advice for an application that is not Python.** When a feature calls a model and the
+  application has no tracing foundation, the design brief recommended `/observability-init` — which stops on any
+  language but Python. When the research shows another language, the brief now says the foundation is Python only
+  and that this cycle will not check what the model answers.
+- **`retro` no longer points at removed records.** Its opening named `sdd-flow`'s per-slice retrospective and
+  learnings ledger, both removed in 4.6.0; it now names the implementation summary's `## Lessons Learned`.
 
 ### What's new in 5.0.0
 
