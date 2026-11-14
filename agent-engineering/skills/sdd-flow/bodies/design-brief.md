@@ -22,7 +22,7 @@ The design brief is the one planning document written for the human. They will r
 ## Rules
 
 1. **Length.** At most 150 lines; aim for under 100. If the feature cannot be described within the cap, do not compress: write `Too large for one brief — recommend decomposition` as the first line under the title, say where the seams are, and stop (on a later-tier cycle, rule 9 says what to write instead).
-2. **Plain language.** No requirement IDs, no code, no function signatures. Define a project-specific term in a clause the first time it appears. File paths, and the names of the existing modules and helpers in `## Builds on`, are allowed — and so is the state model's Mermaid block (rule 16), the one thing in the brief that is not plain words.
+2. **Plain language.** No requirement IDs, no code, no function signatures. Define a project-specific term in a clause the first time it appears. File paths, and the names of the existing modules and helpers in `## Builds on`, are allowed — and so are the two Mermaid blocks, the workflow (rule 17) and the state model (rule 16), the only things in the brief that are not plain words.
 3. **Decide or ask.** If the research settles something, decide it and record the rejected alternative. Ask the human only where the answer turns on preference, product behaviour, risk appetite, or a trade-off the codebase gives no evidence for.
 4. **Questions.** At most five. Each has concrete options and a recommended answer with its reason. Every question must be answered before the brief can be approved, so ask only what is worth stopping for; anything else is a decision you make and record.
 5. **Clarification conflicts.** If what the research supports conflicts with a constraint in the clarification document, do not resolve it yourself — raise it as a question.
@@ -37,6 +37,7 @@ The design brief is the one planning document written for the human. They will r
 14. **Build on what exists.** Before you plan a new file, module, or helper, look for the existing one the change can extend. Write `## Builds on`: the existing modules, helpers, and patterns this change extends or must follow, one line each with a `file:line` reference and what it gives the change — ten lines at most. Every code review reads it: a duplicate of something listed here is a review finding. Write `None — [reason]` only when the change touches no existing code.
 15. **Set the growth budget.** Write `## Growth budget` with exactly three lines, in this form: `- Source lines added: ~[N]`, `- Test lines added: ~[N]`, `- New files: [N]`. The two line counts are the sums of the table's estimates for source rows and for test rows; the file count is the number of new-file rows. Size the tests to the behaviour they prove — what a user or caller can see — not to the code's shape. The human approves this budget with the brief. When the finished feature adds more than one and a half times either line estimate, the flow stops before its final commit and shows the overrun; the budget is a forecast to plan against, not a target to fill.
 16. **Draw the state model, or say there is none.** Decide by STATE_MODEL §1 whether something this feature adds or changes moves through named states over time. If it does, draw it at the end of `## How it will work` as STATE_MODEL §2 says: the Mermaid diagram, where the state is held, and the `**Never:**` list of moves that must not happen. If it does not, end that section with the one line `State model: not applicable — [reason]`. The owner approves the diagram with the brief, and the code is later checked against it.
+17. **Draw the workflow when it branches.** When the main scenario has a decision point — a step whose outcome sends it one of two or more ways — or more than one actor — a person, a service, a scheduled job, a model — write `## How it will work` as a Mermaid `flowchart` **in place of** the prose, so the two cannot drift apart. Draw every step in the order it happens; every decision with each of its outcomes labelled; every failure branch the research or the clarification names (a payment declined, an upload too large, a call that times out), each ending where the user or the system is left; and each actor in its own `subgraph`. Keep each node's label to a few plain words. Otherwise — one actor and no decision — keep the prose. The state model (rule 16) still follows it. The diagram is a reading aid for the owner: no review compares it with the code.
 
 ## Template
 
@@ -59,7 +60,7 @@ Based on: RESEARCH-[###]-[feature-name].md
 [The relevant current behaviour, ten lines at most, with a few `file:line` references.]
 
 ## How it will work
-[The main scenario, step by step, in the order things happen.]
+[Rule 17: a Mermaid `flowchart` of the main scenario when it has a decision point or more than one actor — every step, every decision's outcomes, every failure branch, each actor in a `subgraph`. Otherwise the main scenario in prose, step by step, in the order things happen.]
 
 [Rule 16: the state model as STATE_MODEL §2 draws it — or the one line `State model: not applicable — [reason]`.]
 

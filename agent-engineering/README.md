@@ -30,6 +30,7 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **Design gate (3.4.0).** After research, one Opus subagent writes a **design brief** — at most 150 lines, in plain language: what will be built, how it will work, the decisions made and what was rejected, where the changes land, and what you must decide. The flow stops and shows it; nothing is specified until you approve it, and `approve` is refused while any of its questions is unanswered. The spec is then held to the brief: every departure is recorded, checked by the spec critical review, and shown to you before implementation starts. Each code review reports which changed files fall outside the footprint you approved.
 - **Tiered delivery (3.4.0).** The brief proposes three delivery tiers — POC-plus, Standard, Full — and builds Tier 1 unless you choose otherwise. The spec covers the chosen tier only and lists what it deferred; reviewers treat that list as deliberate, and flag anything unsafe to defer or built ahead for a later tier. Every tier is reviewed in full. Each tier is its own cycle: `/sdd-flow --next-tier <feature>` starts the next one from feedback on the last. The rules are the `simplicity-challenge` skill's `references/tiers.md`, read by the flow and not restated.
 - **One security check at the end (4.1.0).** After every fix has landed, a second model reads each security rule of the spec for a path on which it does not hold; each gap is fixed with a test that fails when its guard is removed, at most two rounds before you decide. The same final check runs the whole suite, reads the tests once more, and repeats the trace and eval checks when their gates are on. Every review passes with no HIGH or MEDIUM finding; LOW findings are listed for you, not fixed.
+- **State model and workflow in the brief (5.1.0).** When something a feature changes moves through named states, the brief draws them with the moves that must never happen, and every review compares the code's state writes with that model; when the main scenario branches or has more than one actor, the brief draws it as a flowchart. See [`references/state-model.md`](skills/sdd-flow/references/state-model.md).
 - **A picture of the cycle.** [`docs/sdd-flow-diagram.md`](docs/sdd-flow-diagram.md) draws the stages, what each one does and writes, and every place the flow stops for you.
 - **Progressive disclosure.** `SKILL.md` is a slim orchestrator core; per-phase detail lives in `skills/sdd-flow/phases/` (`setup`, `research`, `planning`, `implementation-whole-feature`, `implementation-per-slice`, `protocols`), read at each phase boundary.
 
@@ -98,6 +99,10 @@ Version 5.1.0.
   review, the code review, and the final check draw the states from every write to them in the code and compare: a
   forbidden move the code allows is a HIGH. The design gate and the end report each show one line. No gate and no new
   stop — a spec with no `### State model` runs exactly as before. Proposal: `proposals/state-model-2026-11-14.md`.
+- **The brief draws the workflow when it branches.** When the main scenario has a decision point or more than one
+  actor, the brief's `## How it will work` is a Mermaid flowchart in place of the prose — every decision's outcomes and
+  every failure branch drawn, each actor in its own box. A reading aid only: no review compares it with the code, and
+  it adds no stop. Otherwise the section stays prose.
 
 ### What's new in 5.0.1
 
