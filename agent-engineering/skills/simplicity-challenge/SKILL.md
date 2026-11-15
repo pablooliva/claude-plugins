@@ -64,6 +64,8 @@ Write one sentence: what the proposal is for, in the user's words where they exi
 
 List the things the proposal does: each behaviour, case handled, option, and output. Run the functional cut tests on each and record the verdict: **keep in Tier 1**, **Tier 2**, **Tier 3**, or **cut** (nothing suggests it will ever be needed). Kept items do not appear in the Cuts table; the Smallest useful version describes them.
 
+An item that changes what input that worked before does, and that the request did not ask for, is not placed by the cut tests: its verdict is **off — beyond the request** (`references/tiers.md` → Beyond the request), and the floor never puts it back (Step 5). Its Test cell says what the input does today and what it would do.
+
 ### Step 4: Challenge how it is built
 
 List the parts the proposal adds: modules, services, dependencies, stored state, background processes, queues, caches, extension points, configuration, abstractions. Skip any part that exists only for a functional item Step 3 deferred or cut — it goes with that item. Run the structural cut tests on the rest and record the verdict: **keep** (the behaviour staying in Tier 1 needs it) or **remove** (it does not). Do not assign a removed part to a later tier: only behaviour is scheduled, and a later tier chooses its own structure when its turn comes (`references/tiers.md` → Cut tests).
@@ -86,10 +88,10 @@ Under 60 lines, counting every line of the report, in this order:
 
    | Item | Kind | Verdict | Test | What you lose | Cost to add later |
    |---|---|---|---|---|---|
-   | [thing the proposal does] | function | Tier 2 · Tier 3 · cut | [the cut test that placed it] | [one phrase] | cheap / moderate / expensive |
+   | [thing the proposal does] | function | Tier 2 · Tier 3 · cut · off — beyond the request | [the cut test that placed it] | [one phrase] | cheap / moderate / expensive |
    | [part the proposal adds] | structure | remove | [the cut test that removed it] | [one phrase] | cheap / moderate / expensive |
 
-   With `--brief`, start the Item cell of a row with **needs your call** when the cut would undo something the owner decided in the brief — a Key decision, an answered question, the chosen tier, or a delivery-outline entry — and with **not in the brief** when the item is something the brief neither states nor implies. A row may carry neither. The owner takes or leaves every cut; the marks say which ones reverse their own earlier decision.
+   With `--brief`, start the Item cell of a row with **needs your call** when the cut would undo something the owner decided in the brief — a Key decision, an answered question, the chosen tier, or a delivery-outline entry — and with **not in the brief** when the item is something the brief neither states nor implies. An **off — beyond the request** row is marked **needs your call** when the brief records the owner's opt-in to that change, and **not in the brief** when the brief leaves it off or does not list it — the target took it up without an opt-in. A row may carry neither. The owner takes or leaves every cut; the marks say which ones reverse their own earlier decision.
 
    This table is the short form. The full record of a deferral — including how the case fails if it is reached — is written only in a rewrite or a tier plan (Step 7).
 

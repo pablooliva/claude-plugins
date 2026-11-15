@@ -17,6 +17,12 @@ A test of a requirement is **real** when all four hold:
 5. **It checks behaviour, not wording.** A test does not pin the exact text of a message, prompt, label, or document unless the SPEC makes that text the requirement. Assert what the text must do — the fact it must carry, the field it must name, that the error is the one a caller sees — so a rewording that keeps the behaviour passes.
 6. **Test helpers get no tests of their own.** A fixture, factory, or assertion helper is tested by the tests that use it. Give it its own test only when it holds real logic a wrong answer could hide behind — a parser, a fake with rules of its own.
 
+**How many tests: one per named case.** A **named case** is one the SPEC states — a requirement, an edge case, a failure scenario, a move of its state model, a security rule, an eval case — and through it the request and the approved brief. Write a behaviour test for each named case, held to the rules above, and stop there:
+
+- **No test of a property nobody asked for.** A performance, timing, determinism, hash-seed, operation-count, or instrumentation test is written only when the brief or the SPEC states a requirement for that property.
+- **No defensive coverage.** A case the SPEC does not name gets no test, however plausible it looks. If it matters, it is a gap in the spec: record it under `### Implementation Deviations` in the IMPLEMENTATION-PLAN, as §7 says for a missing expected value.
+- **No generalized harness.** No parameterized matrix over cases nobody named. A case the SPEC names as a table of inputs may be one parameterized test over exactly those inputs.
+
 And three things the implementer never does to reach a green run:
 
 - **Never weaken a test that fails.** No deleting it, skipping or expected-failing it, loosening its assertion, changing its expected value, or narrowing what the test command collects. A failing test means the code is wrong or the spec changed. If the SPEC really says the behaviour is now different, change the test and record the requirement that says so under `### Test Changes` in the IMPLEMENTATION-PLAN — one line per changed or removed pre-existing test: the test, what changed, the `REQ-XXX` that requires it.
@@ -86,9 +92,11 @@ Each is **HIGH**. Then **probe**: for each requirement in the sample (§4), choo
 
 Neither resolution weakens a test in T1's sense: neither test holds a requirement.
 
+**T8 — No surplus tests.** For each test this feature added, name the case of the SPEC it proves (§1, *How many tests*). A test that maps to no named case — a property test the SPEC does not ask for, defensive coverage, a matrix over cases nobody named — is **LOW**: listed, not fixed, so the owner sees it in the end report. LOW because the lens's own levels, HIGH and MEDIUM, both reject in every review that runs it, and a surplus test hides no defect; LOW is the reviews' one level that does not. Deleting a surplus test is not weakening one in T1's sense — it holds no requirement — but no fix round is sent to do it.
+
 ## 4. How much to check
 
-T1, T2, and T7 cover every test the changes touch. T3 and T5 cover every test of every requirement in scope. T4 and T6's probe are sampled, by the `Risk:` tier of the module that implements the requirement (SPEC `## Modules`):
+T1, T2, T7, and T8 cover every test the changes touch. T3 and T5 cover every test of every requirement in scope. T4 and T6's probe are sampled, by the `Risk:` tier of the module that implements the requirement (SPEC `## Modules`):
 
 | Module risk | T4 mutation and T6 probe |
 |---|---|
@@ -118,6 +126,7 @@ A `## Test Integrity` section in the review document, with this table and the tw
 | T5 Stand-ins at the edge | <n> tests with stand-ins | PASS / FAIL | <#s or —> |
 | T6 Code not fitted to tests | <n> files read; <n> probes | PASS / FAIL | <#s or —> |
 | T7 Tests say what they claim | <n> requirements | PASS / FAIL | <#s or —> |
+| T8 No surplus tests | <n> tests added; <n> map to no named case | PASS / LOW | <#s or —> |
 
 **Mutations (T4):** one line each — `REQ-XXX <file>:<symbol>: <what was broken> → <failing test id>` or `→ NO TEST FAILED → finding <#>`. Run in a scratch copy: yes.
 **Probes (T6):** one line each — `REQ-XXX: input <value> (no test uses it); SPEC says <outcome>; code gave <outcome>` — or `→ finding <#>`.

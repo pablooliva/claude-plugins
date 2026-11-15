@@ -23,6 +23,7 @@ Starting planning phase based on completed research.
 4. **Read the Tier Standard and Tier Plan (tiered features only):**
    - When your prompt gives an approved tier of `1`, `2`, or `3`, read **TIERS** (the tier standard — tiers, the floor, the cut tests) and **TIER_PLAN** (what this feature's tiers contain, with its Deferred table) at the paths in your prompt.
    - When the approved tier is `none`, the feature is untiered: skip this, omit `tier:` from the frontmatter, and omit `## Deferred to Later Tiers`.
+   - Tiered or not, read TIERS → *Beyond the request* (Planning Process, step 2).
 
 5. **Read the Tracing Inputs:**
    - Your prompt carries the line `Observability record: present` or `Observability record: absent` — whether this application has the tracing foundation. A prompt with no such line (a flow that began before tracing was part of the flow) is read as `absent`.
@@ -433,6 +434,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
 2. **Conform to the Brief:**
    - Its Key decisions, Not doing list, and answered questions are binding; its delivery outline is your starting slice order (you may refine it — you run the slice-practicality gate, which the brief did not).
    - Where research or the feasibility arithmetic forces a departure, make it and record it under `## Deviations from Design Brief`. Never depart silently, and never reopen a question the user has answered.
+   - **A change beyond the request stays out** (TIERS → Beyond the request). A Key decision the brief labels `Beyond the request: off` is binding as off: no requirement, edge case, or failure scenario changes what that input does today. Specify it only when the brief's label says `opted in`. A change of that kind that research or a review finding seems to demand is not made: record it under `## Deviations from Design Brief` as a `decision` entry ending `— beyond the request, not specified`, so the owner sees it at the stop after the spec, and leave the spec as the brief says.
    - A module or file area the brief's "What changes where" table does not cover is a `footprint` deviation — record it. So is every new file the spec plans that the table does not name by its own path: the table names each new file, and an area row covers only changes to existing files.
 
 3. **Scope to the Tier (tiered specs only):**
@@ -557,6 +559,7 @@ Before considering the specification complete:
 
 - [ ] All research findings are incorporated, or recorded under `## Deferred to Later Tiers` (tiered specs)
 - [ ] `## Deviations from Design Brief` is present, and is `None.` only if the spec matches every binding part of the brief
+- [ ] No requirement changes what input that worked before does unless the request asks for it or the brief records the opt-in (TIERS → Beyond the request)
 - [ ] Tiered spec: `tier:` matches the approved tier; every Deferred row is behaviour, not structure; every deferred case this tier can reach has a `FAIL-XXX` named in its row; nothing the floor protects is deferred; no module or interface member exists only for a later tier
 - [ ] Requirements are specific and testable
 - [ ] Edge cases have clear expected behaviors

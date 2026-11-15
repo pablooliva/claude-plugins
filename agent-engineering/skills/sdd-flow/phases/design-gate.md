@@ -37,6 +37,7 @@ Re-plan: <no | yes — the slice review it follows: <review-path>>
 > [The brief's "In one paragraph", verbatim]
 > **Tiers:** building **Tier [N]** — [one line]. Left for later: Tier 2 — [one line]; Tier 3 — [one line]. [Or: "Tiers: not applicable — [the brief's reason]".]
 > **Decisions made:** [D1 title — chosen option] · [D2 …]
+> **Beyond the request — off unless you opt in:** [each Key decision whose `Beyond the request:` line says `off`: `D[n]` — today → with the change, from that line] — reply `opt in D[n]` to build one in this tier; `approve` and "use your recommendations" leave them all off. [Then, if any says `opted in`: `Opted in: D[n]`.] [Omit this line when the brief has no such decision — its `## Least sure about` says `Beyond the request: none`.]
 > **State model:** [the brief's state model at the end of `## How it will work`: `drawn — [the thing], [N] states, [M] allowed moves, [K] never — see the brief`, or its `not applicable — [reason]` line. Omit this line when the brief has neither.]
 > **Growth budget:** [the brief's three `## Growth budget` lines, on one line] — new files: [each path the table names as new]. Approving the brief approves this budget: when the finished feature adds more than one and a half times either line estimate, the flow stops before its final commit.
 > **Questions for you:** [Q1 — options — recommended (a)] · [Q2 …] [Or: "None."]
@@ -54,7 +55,7 @@ If the brief's first line under its title is `Too large for one brief — recomm
 
 Act on the reply:
 
-- **Answers or changes** (including a different tier) → 2.5c.
+- **Answers or changes** (including a different tier, and `opt in D[n]` — the only reply that turns on a change beyond the request, `bodies/design-brief.md` rule 18) → 2.5c.
 - **`approve`** → first look for `SDD/OBSERVABILITY.md` once more. If it is now there and the brief has a `## Tracing foundation` section (it was written while the record was absent, so it holds no decision on how answer quality is judged), do not approve: run 2.5c with the line `OBSERVABILITY: present — apply rules 11 and 13 afresh` in place of a user reply, and the gate fires again. Otherwise the reply is accepted only when the brief's `## Questions for you` is `None.`. Append `## Design Brief - APPROVED (revision N, tier T)` to `progress.md` — `T` is the brief's recommended tier (`1`, `2`, `3`), or `none` when the brief says tiers are not applicable — then append `Observability record: present` or `Observability record: absent` beneath it, from that last look: the cycle's observability line, from which 3c settles the tracing and evals gates. Then proceed to 3a. If any question is still open, **refuse**: reply with the open questions, say that each needs an answer ("use your recommendation" counts as one, given per question), and stay at the gate. Nothing is rewritten and nothing is assumed.
 - **`stop`** → leave `## Awaiting Design Approval` as the latest block and halt. `/sdd-flow continue` re-shows this gate.
 

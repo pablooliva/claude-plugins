@@ -37,7 +37,7 @@ If `SDD/requirements/DESIGN-[###]-[feature-name].md` exists, load it. The user r
 - [ ] **Footprint consistent** — Do the spec's modules stay within the brief's "What changes where"? New areas must be recorded as `footprint` deviations.
 - [ ] **Outline recognisable** — Can each brief outline entry be matched to one or more delivery slices? Reordering and splitting are fine when recorded.
 - [ ] **State model faithful** — Read **STATE_MODEL** at the path in your prompt, §3, and run the checks it gives the spec critical review, at its severities: the spec's `### State model` is the brief's, every move has its `REQ` or `EDGE`, every slice has its `State moves:` line, and a feature that plainly moves through named states is not called `not applicable`. When neither the brief nor the spec has a state model and the requirements give no sign of one, write nothing for it.
-- [ ] **Deviations accurate** — Is every recorded deviation real, and is every real deviation recorded? An unrecorded departure from a binding part (Key decisions, Not doing, answered questions) is a HIGH finding.
+- [ ] **Deviations accurate** — Is every recorded deviation real, and is every real deviation recorded? An entry ending `beyond the request, not specified` is not a departure but a record of a change left off as the brief says: check only that the spec really leaves it off. An unrecorded departure from a binding part (Key decisions, Not doing, answered questions) is a HIGH finding.
 
 ### Specification Weaknesses
 

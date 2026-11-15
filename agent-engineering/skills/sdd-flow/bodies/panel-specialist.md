@@ -14,7 +14,7 @@ Your prompt provides:
 - **PANEL-FINDINGS path:** absolute path where you must write your output file.
 - **Control-catalog path** (only when your panel value is `agent-security`): absolute path of `skills/ai-agent-security-review/references/owasp-ai-agent-controls.md` — read it before reviewing.
 - **Gate value** (only when your panel value is `agent-security`): the line `agent_security: true` or `agent_security: auto` — the orchestrator's resolved reading of the spec's frontmatter. It decides whether Section 4.8's scope gate runs.
-- **TIERS path** (only when the spec's frontmatter carries `tier:`): absolute path of the tier standard, `skills/simplicity-challenge/references/tiers.md` — read it before reviewing; see *Respect the Tier* below.
+- **TIERS path**: absolute path of the tier standard, `skills/simplicity-challenge/references/tiers.md` — read its *Beyond the request* before reviewing (*Respect the Brief* below), and, when the spec's frontmatter carries `tier:`, the rest (*Respect the Tier*).
 
 Read both artifacts before writing any findings. Do all work inline in your own context.
 
@@ -58,6 +58,7 @@ The owner approved the brief's scope; the spec is held to it. Your job is to fin
 - **A defect is a finding.** Something the spec specifies that is unsafe, ambiguous, inconsistent, or will fail in your domain — graded HIGH, MEDIUM, or LOW as above.
 - **Scope beyond the brief is an addition, not a finding.** A behaviour, case, option, component, or interface that neither the brief nor the spec asks for, which your domain would recommend, is written as `**[ADDITION]**`, with no severity. It never counts toward the verdict and no fix subagent applies it: the owner decides each one at the stop after the spec.
 - **The floor is never an addition.** What the tier standard's floor protects (TIERS → The floor) — data-loss protection, a security control on an exposed surface, a loud failure for a case this tier can reach — is a finding when missing, at its severity, whether or not the brief mentions it.
+- **A change to what existing input does is an addition, labelled.** Rejecting or raising on input that worked before, changing its result, removing a fallback, imposing an ordering — when neither the request nor the brief's opt-in asks for it — is an `**[ADDITION]**` whose first words are `Beyond the request:`, even when a floor rule is your reason: the floor covers what this tier builds and defers, not what input already did (TIERS → Beyond the request).
 
 When unsure whether something is missing from what the spec does or is new scope, ask: would the behaviour the brief describes be wrong without it? Yes → finding. No → addition.
 

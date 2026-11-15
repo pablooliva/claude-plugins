@@ -33,7 +33,7 @@ Confirm that `SDD/requirements/SPEC-[###]-[feature-name].md` contains all requir
 
 Read the design brief at the path in your prompt (skip this block if your prompt names none).
 
-- [ ] `## Deviations from Design Brief` is present and accurate: it is `None.` only if the spec matches the brief's Key decisions, Not doing list, and answered questions; every real departure has an entry, and every entry is a real departure. If the section is missing, add it — the orchestrator's Step 3g check reads it and treats an absent section as a malformed spec
+- [ ] `## Deviations from Design Brief` is present and accurate: it is `None.` only if the spec matches the brief's Key decisions, Not doing list, and answered questions; every real departure has an entry, and every entry is a real departure — except an entry ending `beyond the request, not specified`, which records a change the spec left off as the brief says (`bodies/planning.md`, Conform to the Brief): keep it. If the section is missing, add it — the orchestrator's Step 3g check reads it and treats an absent section as a malformed spec
 - [ ] Every new file the spec plans is named by its own path in the brief's "What changes where" table, or recorded as a `footprint` deviation
 - [ ] `delivery_mode:` is present and is `whole-feature` or `per-slice`
 - [ ] `review_panel:` names only specialists whose area the change touches, at most three besides `agent-security` and `slice-integrity`; trim any other

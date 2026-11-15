@@ -28,7 +28,17 @@ A tier contains the simplest code and structure that serves that tier. No part e
 2. Security controls on any surface this tier exposes.
 3. Loud failure: a case this tier does not handle fails visibly, never with a quietly wrong result.
 
+**The floor covers what this tier builds and what it defers** — not what input already did before the change. Making old behaviour stricter or safer is not required by the floor; it is a change beyond the request (below), whatever floor rule is given as its reason.
+
 **Costly-to-reverse decisions are not on the floor.** Simplicity wins: take the simplest option for this tier even when changing it later will be expensive (a stored data format, a public interface shape). The duty is disclosure, not prevention — state the reversal cost where the decision is recorded, so the user can overrule it. A later tier's needs may break a tie between options of equal simplicity, and nothing more.
+
+## Beyond the request — off by default
+
+A change to what input that **worked before the change** does is **beyond the request** unless the request asks for it: input newly rejected or raising, a result that changes, a fallback removed, a new ordering or selection rule imposed. The change the request asks for — the bug's own input, the behaviour it names — is not beyond it.
+
+- **Off by default.** It is in no tier's recommended scope and is not a deferral: no Deferred row, no loud failure owed, since nothing this tier was asked to build is left out. The old behaviour stays.
+- **The owner opts in per change, by name.** A general approval — `approve`, "use your recommendations", "go with your defaults" — opts in to none of them.
+- **Disclosed, never silent.** Wherever a proposal, brief, or spec lists such a change, it carries the label `beyond the request`, says what the input does today and what it would do, and gives any floor reason someone raised for it, so the owner can weigh it.
 
 ## Cut tests
 

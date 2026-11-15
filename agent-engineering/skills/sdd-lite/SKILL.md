@@ -33,6 +33,9 @@ project's sdd-flow records were used in later cycles, 2026-11.)
 - The request, and the code it touches. Cite `file:line` for anything the brief says about how things work today.
 - If present: `SDD/UBIQUITOUS_LANGUAGE.md` (use its names exactly), `SDD/adr/` (decisions already binding this work),
   the feature's tier plan under `SDD/flow/TIERS-*.md`, and earlier briefs under `SDD/briefs/` for the same area.
+- `../simplicity-challenge/references/tiers.md` → *Beyond the request* (read it): a change to what input that worked
+  before does — newly rejected or raising, a different result, a fallback removed, a new ordering or selection rule —
+  that the request did not ask for is off unless the owner opts in to it by name.
 - Decide the risk class now (it goes into the brief, so the owner sees what a mistake would touch): **risky** if the
   change touches authentication or authorization, secrets, personal or student data, payments, deletion or migration
   of stored data, an exposed network surface, or an agent's tools or prompts that act on untrusted input, an effect
@@ -44,7 +47,7 @@ project's sdd-flow records were used in later cycles, 2026-11.)
 
 - Ask only what the request, the code and the records above do not settle, and what changes what gets built. Group the
   questions in one message; give each one a recommended answer with its one consequence, so the owner can reply "all
-  recommendations".
+  recommendations". A change beyond the request is never a recommendation: it goes in the brief, off (step 3).
 - Nothing open: say so in one line and go to step 3.
 - **Switch to `/sdd-flow`** (tell the owner, do not do it yourself) when, after one round of answers, the owner is still
   unsure what they want, or the work needs more than about a day of building or more than one independent part. Say
@@ -71,6 +74,10 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
 ## Not now
 - [what is deliberately left out]
 
+## Beyond the request
+- [each change to what input that worked before does that the request did not ask for: today → with the change —
+  off | opted in [date], in the owner's words; or "none"]
+
 ## Done when
 - [the check the owner will run, and the tests that must pass]
 
@@ -84,6 +91,8 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
 - **Decision records are settled here, not later.** A decision that binds later work (a technology, a convention, a
   pattern other features inherit) goes under "Decision records to write" with its alternatives and consequences, asking
   the owner for any that are missing. Approving the brief approves writing exactly those records.
+- **Changes beyond the request stay off** until the owner opts in to one by name (`opt in <change>`). Approving the
+  brief, or "all recommendations", opts in to none; the build leaves today's behaviour for every one marked off.
 - Show it and ask for approval. **Build nothing before the owner approves.** Apply their changes and show it again
   until they do; then set `Status: approved [date]`.
 - The brief is the record of *why*. Keep it short; a brief longer than one page is a sign the work belongs in
@@ -96,12 +105,14 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
   from memory), reading it with these substitutions: "the SPEC" is the approved brief (its outcomes, decisions and
   "Done when" are the requirements a test's expected value comes from), and a changed or removed existing test is
   recorded as one line under a `## Test changes` heading added to the brief (the test, what changed, the brief line that
-  requires it) instead of in an implementation plan. Test behaviour the brief names; do not pin exact wording or file
+  requires it) instead of in an implementation plan. A case the brief does not name gets no test (§1, *How many tests*);
+  if it seems to matter, ask the owner and add the answer to the brief. Test behaviour the brief names; do not pin exact wording or file
   structure unless the brief makes it a requirement.
 - Use the glossary's names in code and tests. A new domain term goes into the glossary in step 6, not into the code
   under a second name.
 - Stay inside the brief. Something the brief does not cover that changes what the owner gets: stop and ask, and add the
-  answer to the brief's Decisions.
+  answer to the brief's Decisions. A change beyond the request that the build seems to need is not made: stop, ask,
+  and add it to `## Beyond the request` — off, or opted in on the owner's yes.
 - Run the whole test suite before step 5.
 
 ### 5. Review: every change, once
@@ -149,5 +160,6 @@ the commit message names the brief.
    check; each further round answers findings with more code, which is how the full flow's code grew.
 6. **Brittle tests.** Tests that pin exact sentences, file layout or call counts the brief does not require.
    Resolution: test behaviour; these tests break on harmless change and slow every later cycle.
-7. **Silent scope growth.** Detection: behaviour in the diff that the brief does not name. Resolution: remove it, or ask
-   and add it to the brief.
+7. **Silent scope growth.** Detection: behaviour in the diff that the brief does not name — or a change to what input
+   that worked before does that `## Beyond the request` does not mark opted in. Resolution: remove it, or ask and add
+   it to the brief.

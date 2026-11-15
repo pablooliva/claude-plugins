@@ -22,7 +22,7 @@ If two specialists flag the same underlying issue (e.g., security and data-model
 
 ### Additions Are Collected, Not Graded
 
-A specialist's `**[ADDITION]**` entry proposes scope the brief did not ask for. Do not grade it, do not count it toward the verdict, and do not put it under Recommended Actions. Collect every addition into `## Additions for the owner`, merging duplicates across specialists, numbered `A1`, `A2`, … in the order you list them. A finding a specialist graded that is in fact new scope — the behaviour the brief describes would not be wrong without it — moves to the additions too; a "missing" item the tier standard's floor protects stays a finding. The owner accepts or declines each addition at the stop after the spec, and only the orchestrator writes `accepted` or `declined` after one.
+A specialist's `**[ADDITION]**` entry proposes scope the brief did not ask for. Do not grade it, do not count it toward the verdict, and do not put it under Recommended Actions. Collect every addition into `## Additions for the owner`, merging duplicates across specialists, numbered `A1`, `A2`, … in the order you list them. A finding a specialist graded that is in fact new scope — the behaviour the brief describes would not be wrong without it — moves to the additions too; a "missing" item the tier standard's floor protects stays a finding — but a change to what input that worked before does, when neither the request nor the brief's opt-in asks for it, is an addition whatever reason is given (TIERS → Beyond the request), and keeps its `Beyond the request:` label. One the request or an opt-in does ask for is approved scope: a finding when missing. The owner accepts or declines each addition at the stop after the spec, and only the orchestrator writes `accepted` or `declined` after one.
 
 ### Severity Aggregation for the Verdict
 
@@ -91,7 +91,7 @@ SDD/.records/reviews/PANEL-SPEC-[feature-name]-YYYYMMDD.md
 
 [Scope the specialists would add that the brief did not ask for. Not graded; not part of the verdict; no fix applies them. `None.` when there are none.]
 
-- **A1** — [what it would add] — [specialist(s)] — Why: [one line] — Cost: [one line]
+- **A1** — [`Beyond the request:` when the specialist labelled it] [what it would add] — [specialist(s)] — Why: [one line] — Cost: [one line]
 
 ## Cross-Specialist Observations
 

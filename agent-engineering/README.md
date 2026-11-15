@@ -30,7 +30,8 @@ Before 1.0.0, `sdd-flow` embedded SDD command bodies at runtime and relied on SD
 - **Design gate (3.4.0).** After research, one Opus subagent writes a **design brief** — at most 150 lines, in plain language: what will be built, how it will work, the decisions made and what was rejected, where the changes land, and what you must decide. The flow stops and shows it; nothing is specified until you approve it, and `approve` is refused while any of its questions is unanswered. The spec is then held to the brief: every departure is recorded, checked by the spec critical review, and shown to you before implementation starts. Each code review reports which changed files fall outside the footprint you approved.
 - **Tiered delivery (3.4.0).** The brief proposes three delivery tiers — POC-plus, Standard, Full — and builds Tier 1 unless you choose otherwise. The spec covers the chosen tier only and lists what it deferred; reviewers treat that list as deliberate, and flag anything unsafe to defer or built ahead for a later tier. Every tier is reviewed in full. Each tier is its own cycle: `/sdd-flow --next-tier <feature>` starts the next one from feedback on the last. The rules are the `simplicity-challenge` skill's `references/tiers.md`, read by the flow and not restated.
 - **One security check at the end (4.1.0).** After every fix has landed, a second model reads each security rule of the spec for a path on which it does not hold; each gap is fixed with a test that fails when its guard is removed, at most two rounds before you decide. The same final check runs the whole suite, reads the tests once more, and repeats the trace and eval checks when their gates are on. Every review passes with no HIGH or MEDIUM finding; LOW findings are listed for you, not fixed.
-- **State model and workflow in the brief (5.1.0).** When something a feature changes moves through named states, the brief draws them with the moves that must never happen, and every review compares the code's state writes with that model; when the main scenario branches or has more than one actor, the brief draws it as a flowchart. See [`references/state-model.md`](skills/sdd-flow/references/state-model.md).
+- **Tests capped by the named cases; changes beyond the request off (5.2.0).** One real test per case the spec names, a LOW for any other; a change to what input that already worked does stays off unless you opt in to it by name at the design gate.
+- **State model and workflow in the brief (5.1.0). When something a feature changes moves through named states, the brief draws them with the moves that must never happen, and every review compares the code's state writes with that model; when the main scenario branches or has more than one actor, the brief draws it as a flowchart. See [`references/state-model.md`](skills/sdd-flow/references/state-model.md).
 - **A picture of the cycle.** [`docs/sdd-flow-diagram.md`](docs/sdd-flow-diagram.md) draws the stages, what each one does and writes, and every place the flow stops for you.
 - **Progressive disclosure.** `SKILL.md` is a slim orchestrator core; per-phase detail lives in `skills/sdd-flow/phases/` (`setup`, `research`, `planning`, `implementation-whole-feature`, `implementation-per-slice`, `protocols`), read at each phase boundary.
 
@@ -88,7 +89,31 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.1.0.
+Version 5.2.0.
+
+### What's new in 5.2.0
+
+From a benchmark of three replayed bug fixes: `sdd-flow`'s diffs were 1.5–3× plain Claude Code's, 73–83% of it tests,
+and every correctness point lost was for a change to input that already worked.
+
+- **One test per named case** (`skills/sdd-flow/references/test-integrity.md` §1, *How many tests*). Each case the
+  spec states gets a real test, and nothing else does: no performance, timing, determinism, hash-seed, operation-count
+  or instrumentation test without a requirement for that property, no defensive coverage of unnamed cases, no
+  parameterized matrix over cases nobody named. The code review and the slice review list a test that maps to no named
+  case as a LOW (new check T8): shown to you in the end report, never sent to a fix round.
+- **Changes beyond the request are off by default** (`skills/simplicity-challenge/references/tiers.md` → *Beyond the
+  request*). A change to what input that worked before does — newly rejected or raising, a different result, a
+  fallback removed, a new ordering rule — that the request did not ask for is written in the brief as a Key decision
+  labelled `beyond the request`, keeping today's behaviour. You turn one on at the design gate with `opt in D<n>`;
+  `approve` and "use your recommendations" leave them all off. The spec leaves them out, the panel proposes them as
+  labelled additions, and the stop after the spec and `/simplicity-challenge --brief` show the same label. The tier
+  floor covers what a tier builds and defers, not what input already did, so a floor reason no longer turns such a
+  change on.
+- **`sdd-lite` follows both.** Its brief gains `## Beyond the request` (each change off until you opt in by name;
+  approving the brief or "all recommendations" opts in to none), and its build writes no test for a case the brief
+  does not name.
+
+**Not exercised on a real cycle.**
 
 ### What's new in 5.1.0
 

@@ -121,7 +121,7 @@ agent-engineering/
 │   │                       #   (tests: python3 -m unittest discover -s scripts/tests)
 │   ├── sdd-lite/           # user-invoked light alternative to sdd-flow: interview → one-page brief (SDD/briefs/, the one gate) →
 │   │                       #   build in the main conversation → one Codex review of every change (one check of fixes, no more) → ADR (cross-cutting-adr), glossary, tier-plan line.
-│   │                       #   No subagents and no process records; reads sdd-flow/references/test-integrity.md §1 by path
+│   │                       #   No subagents and no process records; reads sdd-flow/references/test-integrity.md §1 and simplicity-challenge/references/tiers.md → Beyond the request by path
 │   ├── cross-cutting-adr/, improve-claude-md/,
 │   │                       #   bb-worktree-init/, worktree-merge/
 └── README.md
