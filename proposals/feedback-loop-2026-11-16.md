@@ -52,8 +52,8 @@ JSON object per line:
 | `status` | `fixed`, or `open` — an escape recorded and not yet fixed. Review lines are written `fixed`: the cycle fixes them before it ends |
 | `date` | When the defect was found |
 | `feature` | The feature name, as in `SDD/` |
-| `found_by` | Which loop caught it: `slice-review`, `code-review`, `final-check`, `ci`, `user` |
-| `class` | A short name for the kind of defect (`unhandled-null`, `state-move`, `missing-auth-check`) — free text, reused across lines |
+| `found_by` | Which loop caught it — one of the loops the application declares (below): `slice-review`, `code-review`, `final-check`, `ci`, `user` |
+| `class` | A short name for the kind of defect (`unhandled-null`, `state-move`, `missing-auth-check`) — one of the names the application lists in `SDD/defects-setup.json` (below) |
 | `severity` | `HIGH` or `MEDIUM`, as the review rated it; `user` escapes take the fixer's rating |
 | `where` | The file, or `file:line` |
 | `introduced_by` | The commit that introduced it, when known (always tried for `user`) |
@@ -66,10 +66,29 @@ JSON object per line:
   the fields first — no writer edits the file by hand.
 - **Who writes the review lines:** the orchestrator, at the end-of-feature report (4j), copying each HIGH and MEDIUM
   finding from the cycle's review files. Mechanical: the reviews already rate and locate their findings.
-  `sdd-lite` writes the same lines from its Codex review at close-out.
+  `sdd-lite` writes the same lines from its Codex review at close-out, with `found_by: code-review`.
 - **Who writes the `user` lines:** the bug-fix rule below, or the owner through `/defect-ledger log` (part 3) for
   a bug fixed outside a cycle.
-- **Who writes `ci` lines:** nobody in Tier 1 — the plugin has no hook into CI. A Tier 2 question.
+- **Who writes `ci` lines:** only an application that declares `ci`. When a CI run fails on a change and the
+  change is fixed, the fix records it — inside a cycle the orchestrator, outside one the owner through
+  `/defect-ledger log`. The plugin has no hook into CI; the line is written by hand, through `ledger.py add`.
+
+**Each application declares the loops it has.** One committed file beside the ledger, `SDD/defects-setup.json`:
+
+```json
+{ "loops": ["slice-review", "code-review", "final-check", "user"],
+  "classes": ["unhandled-null", "state-move"] }
+```
+
+- `loops` lists the loops that exist in that application. `user` is always in it: whatever the other loops miss, a
+  user catches. `ci` is added the day the application has CI — and only then; an application without CI never has
+  a `ci` line, and the report says *no CI* rather than *CI caught nothing*.
+- `classes` is the per-repo list of defect-class names (decision 4).
+- `ledger.py add` refuses a `found_by` or a `class` the file does not list. Adding a loop or a class is a one-line
+  edit the owner approves.
+- **Adding a loop needs nothing else from this proposal.** CI, an integration suite, or a test hook in one
+  application is that application's own work, done when the owner chooses; the ledger starts counting it the day
+  it is declared. The ledger is built for the loops that exist now.
 
 ### 2. The bug-fix rule
 
@@ -119,7 +138,7 @@ The owner approves it with the rest of the brief — no new stop.
   line in place. The only edit the format allows; any other change to an earlier line is refused. Git history
   keeps the open version.
 - **`lookup --class <class>`** — the earlier lines of one class, oldest first. What *Seen before* calls.
-- **`summary`** — per application: lines and features counted; the share each loop caught, with `user` as the
+- **`summary`** — per application: the loops it declares; lines and features counted; the share each loop caught, with `user` as the
   escape rate; classes seen in more than one feature; escapes by class with their `introduced_by`; each
   `check_added` with the lines of its class since it was added (none since → "no catches since added"); open
   escapes, oldest first.
@@ -177,8 +196,12 @@ the introducing commit be found?
 ## Tiers
 
 - **Tier 1:** part 1 (review lines and `user` lines, with `check_added`); part 2 (with *Seen before*); part 3 —
-  `ledger.py` (`add`, `lookup`, `summary`), the `defect-ledger` skill, and the monthly report-only automation.
-- **Tier 2:** part 4 (trace index); `ci` lines.
+  `ledger.py` (`add`, `lookup`, `summary`), the `defect-ledger` skill, `SDD/defects-setup.json`, and the monthly
+  report-only automation. `ci` lines for eduKate start once its CI runs (separate work, below).
+- **Tier 2:** part 4 (trace index).
+- **Separate, not part of this proposal:** CI for eduKate (its own work, in its own repo; it runs the existing test
+  and lint commands on every push). Its `SDD/defects-setup.json` gains `ci` when that CI runs. The other four
+  applications get CI if and when the owner decides.
 - **Later, if the report earns it:** a `/defect-ledger` step that turns the summary into proposed moves (this check
   earlier, that one dropped) — only if reading the table proves not enough; reading ledgers across applications
   together;
@@ -195,6 +218,8 @@ the introducing commit be found?
 5. **The automation:** monthly, over Currents, Downstream News, Sift, eduKate and AI-video-marketing; one task a
    month, filed in the claude-plugins BB project.
 6. **The threshold:** 5 features or 30 lines.
+7. **CI:** eduKate only, for now, as separate work. Every application declares its own loops; the ledger counts
+   only those.
 
 ## Costs and risks
 
