@@ -121,7 +121,9 @@ agent-engineering/
 │   │                       #   (tests: python3 -m unittest discover -s scripts/tests)
 │   ├── sdd-lite/           # user-invoked light alternative to sdd-flow: interview → one-page brief (SDD/briefs/, the one gate) →
 │   │                       #   build in the main conversation → one Codex review of every change (one check of fixes, no more) → ADR (cross-cutting-adr), glossary, tier-plan line.
-│   │                       #   No subagents and no process records; reads sdd-flow/references/test-integrity.md §1 and simplicity-challenge/references/tiers.md → Beyond the request by path
+│   │                       #   No subagents and no process records; reads sdd-flow/references/test-integrity.md §1, simplicity-challenge/references/tiers.md → Beyond the request,
+│   │                       #   and for a risky change security-verification.md §3 + test-integrity.md §8 (scratch copy via sdd-flow/scripts/snapshot.py) by path;
+│   │                       #   its brief's `## Builds on` names the code a change extends and every new file (the light form of fit-lens.md §5)
 │   ├── cross-cutting-adr/, improve-claude-md/,
 │   │                       #   bb-worktree-init/, worktree-merge/
 └── README.md

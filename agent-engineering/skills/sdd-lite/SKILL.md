@@ -31,6 +31,10 @@ project's sdd-flow records were used in later cycles, 2026-11.)
 ### 1. Read the ground (no writing)
 
 - The request, and the code it touches. Cite `file:line` for anything the brief says about how things work today.
+- The code around it: the module the change lands in, its neighbours, and the helpers, types and test fixtures it
+  could use. These are what the brief's `## Builds on` names.
+- Note the files already new before you start: `git status --porcelain --untracked-files=all`. Step 5's new-file check
+  leaves these alone — they are the owner's work, not this change's.
 - If present: `SDD/UBIQUITOUS_LANGUAGE.md` (use its names exactly), `SDD/adr/` (decisions already binding this work),
   the feature's tier plan under `SDD/flow/TIERS-*.md`, and earlier briefs under `SDD/briefs/` for the same area.
 - `../simplicity-challenge/references/tiers.md` → *Beyond the request* (read it): a change to what input that worked
@@ -71,6 +75,10 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
 ## How it will work
 - [the shape of the change: routes, files, behaviour; cite file:line for today's code]
 
+## Builds on
+- [the existing modules, helpers and test fixtures the change extends, with file:line]
+- New files: [each new source or test file, and why no existing file can hold it; or "none"]
+
 ## Not now
 - [what is deliberately left out]
 
@@ -83,6 +91,8 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
 
 ## Risk
 - [ordinary | risky, and why]
+- [risky only: each security rule the change must hold — who may do what, what is refused, what may be read,
+  recorded or shown — one per line; or why it has none]
 
 ## Decision records to write
 - [each decision that binds later work: title, the alternatives considered and why they lost, consequences; or "none"]
@@ -101,6 +111,10 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
 ### 4. Build
 
 - Build in this conversation, in small steps, running the tests as you go.
+- **Extend before adding.** Before you add a function, class, file or layer, extend the code the brief's `## Builds on`
+  names, or the module the change lands in. Match the surrounding code's style, naming, helpers and layering, and
+  reuse its helpers and test fixtures instead of writing a second one. A new file is one `## Builds on` names; one the
+  build seems to need: stop, ask, and add it there on the owner's yes.
 - Tests: follow the definition of a real test in `../sdd-flow/references/test-integrity.md` §1 (read it; do not work
   from memory), reading it with these substitutions: "the SPEC" is the approved brief (its outcomes, decisions and
   "Done when" are the requirements a test's expected value comes from), and a changed or removed existing test is
@@ -108,6 +122,11 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
   requires it) instead of in an implementation plan. A case the brief does not name gets no test (§1, *How many tests*);
   if it seems to matter, ask the owner and add the answer to the brief. Test behaviour the brief names; do not pin exact wording or file
   structure unless the brief makes it a requirement.
+- **Risky change: prove each security rule.** Each rule under the brief's `## Risk` gets a guard and a test that fails
+  when the guard is removed: follow `../sdd-flow/references/security-verification.md` §3 (read it), with the brief in
+  place of the SPEC, and make every mutation in a scratch copy, never in the working tree
+  (`../sdd-flow/references/test-integrity.md` §8 — read it; the copy is made by `../sdd-flow/scripts/snapshot.py
+  scratch`). Record each mutation as §3's one line under a `## Security proofs` heading added to the brief.
 - Use the glossary's names in code and tests. A new domain term goes into the glossary in step 6, not into the code
   under a second name.
 - Stay inside the brief. Something the brief does not cover that changes what the owner gets: stop and ask, and add the
@@ -117,15 +136,20 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
 
 ### 5. Review: every change, once
 
+- First, check the new files: every new file in `git status --porcelain --untracked-files=all` (lines starting `??`,
+  or with `A` in either column — staged additions count) outside `SDD/`, and not in step 1's list, is named under the
+  brief's `## Builds on`. One that is not: remove it, folding its code into existing files, or show it to the owner and
+  add it to the brief on their yes. Never remove a file from step 1's list.
 - One review by a second model family, from the repository root: `codex review --uncommitted` (redirect to a file;
   the findings are the last block). Ordinary and risky changes alike: an independent review is the check most likely
   to catch a bug, and the cap below keeps it from growing the code.
 - No Codex CLI: stop, tell the owner and ask whether to go on without a review (for a risky change, say what it
   touches); go on only on their explicit yes, and say "no review: no Codex CLI, owner's decision" in the report.
-- Fix each real finding with a test that fails without the fix; say why a finding was not fixed. Then one check of the
-  fixes (`codex review --uncommitted` again) and no more. If that check still reports a finding at Codex's P0 or P1
-  priority (or one you judge would cause data loss, a security hole or a wrong irreversible action), stop and tell the
-  owner the work needs `/sdd-flow` or their decision; P2 and lower are fixed or listed in the report.
+- Fix each real finding at Codex's P0, P1 or P2 priority with a test that fails without the fix; say why a finding was
+  not fixed. P3 findings are listed in the report, not fixed: each fix is more code for little. Then one check of the
+  fixes (`codex review --uncommitted` again) and no more. If that check still reports a finding at P0 or P1 (or one
+  you judge would cause data loss, a security hole or a wrong irreversible action), stop and tell the owner the work
+  needs `/sdd-flow` or their decision; a P2 is fixed or listed in the report, a P3 listed.
 - Write no review report; the findings and what was done about them go into the final report.
 
 ### 6. Close-out: the records that last
@@ -145,6 +169,11 @@ In the conversation, short: what was built (files, behaviour), test result, revi
 records written (brief, ADRs, glossary terms), what is not done, and the owner's check from "Done when". Offer to commit;
 the commit message names the brief.
 
+End with one line: **Before the next change:** `/retro` (this branch's work; on the default branch it asks for a start
+date) reads this session and proposes what would stop its mistakes from coming back — a lint rule, a test, a review
+standard. Optional; session transcripts are deleted after 30 days by default. A reminder only: never invoke `retro`
+yourself, wait for it, or record whether it ran.
+
 ## Anti-Pattern Watchlist
 
 1. **Rebuilding the full flow.** Writing a spec, a plan or per-step notes "to be safe". Detection: any file under `SDD/`
@@ -161,5 +190,7 @@ the commit message names the brief.
 6. **Brittle tests.** Tests that pin exact sentences, file layout or call counts the brief does not require.
    Resolution: test behaviour; these tests break on harmless change and slow every later cycle.
 7. **Silent scope growth.** Detection: behaviour in the diff that the brief does not name — or a change to what input
-   that worked before does that `## Beyond the request` does not mark opted in. Resolution: remove it, or ask and add
-   it to the brief.
+   that worked before does that `## Beyond the request` does not mark opted in, or a new file `## Builds on` does not
+   name. Resolution: remove it, or ask and add it to the brief.
+8. **A second copy of what exists.** Detection: a new helper, type, fixture or layer that duplicates one in the code
+   around the change. Resolution: delete it and use, or extend, the existing one.

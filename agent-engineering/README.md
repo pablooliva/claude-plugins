@@ -91,6 +91,25 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 Version 5.2.0.
 
+### What's new in 5.3.0
+
+`sdd-lite` takes four of `sdd-flow`'s recent changes, in their light form.
+
+- **It builds on the code around the change** (from 4.3.0 and 4.5.0). Step 1 reads the module a change lands in and
+  its neighbours; the brief gains `## Builds on` — the existing modules, helpers and test fixtures the change extends,
+  and each new file with why no existing one can hold it. The build extends that code before adding, matches its
+  style and reuses its helpers, and asks before adding a file the brief does not name. Before the review, every
+  new file outside `SDD/` — untracked or staged — is checked against the brief. There is no growth budget and no fit review: the
+  Codex review is unchanged.
+- **A risky change proves its security rules** (from 4.1.0). The brief's `## Risk` lists the rules a risky change must
+  hold; each gets a test that fails when its guard is removed, shown in a scratch copy outside the repository
+  (`sdd-flow/references/security-verification.md` §3, `test-integrity.md` §8), with one line per mutation under
+  `## Security proofs` in the brief.
+- **Codex's P3 findings are listed, not fixed** (from 4.1.0). P0–P2 findings are fixed with a test as before.
+- **The report ends with a `/retro` reminder** (from 5.0.1). A reminder only: `sdd-lite` never runs it.
+
+**Not exercised on a real build.**
+
 ### What's new in 5.2.0
 
 From a benchmark of three replayed bug fixes: `sdd-flow`'s diffs were 1.5–3× plain Claude Code's, 73–83% of it tests,
