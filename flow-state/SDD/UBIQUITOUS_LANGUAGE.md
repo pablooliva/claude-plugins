@@ -230,6 +230,46 @@ Argument to `/sdd-flow continue`. Used to resume from the practicality gate by a
 
 ---
 
+## Feedback loop (defect ledger)
+
+Source for every entry here: `research/RESEARCH-002-defect-ledger.md`, from `proposals/feedback-loop-2026-11-16.md`. "SDD/" in these entries is an *application's* folder.
+
+### defect ledger (`SDD/defects.jsonl`)
+An application's committed, one-JSON-object-per-line record of defects (escapes and review catches), written only through `ledger.py` and read by `lookup` and `summary`. Always say **defect ledger**: **the ledger** already names `LEARNINGS-FEATURE-XXX.md` (see **learnings ledger**); the short form "ledger" is acceptable only inside defect-ledger files and the `ledger.py` script.
+- Synonyms to avoid: "bug log", "bug list", "defect log", "ledger" alone.
+- Source: research §System Data Flow, Integration Finding 9 / open point 9.
+
+### `defects-setup.json`
+Per-application file beside the defect ledger: `{"loops": [...], "classes": [...]}`. The owner approves any new loop or class (a one-line edit).
+- Source: research §Files That Matter (Configuration).
+
+### escape
+A defect that got past the loops that should have caught it and reached production, found by the user (`found_by: user`). Contrast with a **review catch**: a finding a review loop raised and the cycle fixed before ending.
+- Synonyms to avoid: "leak", "production bug" (use when speaking of the effect, not the ledger entry), "miss".
+- Source: research §Stakeholder Mental Models; kill-test labels in §Production Edge Cases.
+
+### loop
+A named check an application declares in `defects-setup.json` (`slice-review`, `code-review`, `final-check`, and others such as `ci`); a ledger line's `found_by` names the loop that caught it. A loop that is declared but has no lines is the report's "caught nothing" case.
+- Synonyms to avoid: "gate" (collides with design gate and practicality gate), "stage", "check" alone.
+- Source: research §Production Edge Cases (`found_by`).
+
+### class
+The kind of defect, taken from the application's `classes` list in `defects-setup.json` (e.g. "source content reaching output"). New names only with owner approval; `unclassified` is the standing fallback when a writer meets a new kind with no stop available.
+- Synonyms to avoid: "category", "type", "kind".
+- Source: research §Production Edge Cases (new class mid-cycle), open point 3.
+
+### `check_added`
+Ledger field recorded by `ledger.py close` when a defect moves `open` to `fixed`: the check (test, lint rule, review item) added so the same defect is caught next time. The monthly report flags a `check_added` with "no catches since added".
+- Synonyms to avoid: "regression test" (a check need not be a test), "prevention".
+- Source: research §Testing Strategy; proposal §1.
+
+### *Seen before*
+The brief line a bug-fix design brief carries: earlier ledger entries of the same class (from `ledger.py lookup --class`), read only after the cause is stated. Lives inside the brief's `## Escape` section.
+- Synonyms to avoid: "history", "prior art", "known issues".
+- Source: research §Integration Findings 1-3.
+
+---
+
 ## Glossary discipline
 
 - **Add a term** when this feature or a future feature introduces project-wide vocabulary that satisfies all three scope-rule conditions above. Per-feature jargon belongs in the feature's spec.
