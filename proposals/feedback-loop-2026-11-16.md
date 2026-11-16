@@ -1,6 +1,6 @@
 # Feedback loop — a record of where each defect was caught, and a monthly report on it (2026-11-16)
 
-**Status:** proposal, decisions settled by the owner (2026-11-16). Nothing built; the kill test comes first.
+**Status:** proposal, decisions settled by the owner (2026-11-16); the kill test passed (2026-11-16). Nothing built.
 **Affects:** `agent-engineering` — `sdd-flow` (end-of-feature report, research and design brief for bug-fix work, a
 new `scripts/ledger.py`), `sdd-lite` (interview, brief, close-out), a new `defect-ledger` skill, `retro` (part 4
 only), and one BB automation.
@@ -192,6 +192,21 @@ the introducing commit be found?
 
 - **Mostly yes, and some were escapes** → build Tier 1.
 - **No escapes, or the labels are guesses** → the ledger has nothing to measure. Build only part 4.
+
+**Result (2026-11-16): passed — build Tier 1.** Labels in
+[`feedback-loop-kill-test-2026-11-16.md`](feedback-loop-kill-test-2026-11-16.md); the owner has not yet confirmed
+them. Of 49 fix commits in 628: 22 defects escaped to production or the first real run, 6 test-suite defects were
+found only after merge, 5 were caught by a rehearsal after the reviews passed, and the rest were in-cycle review fixes
+or duplicates. The loop that should have caught each could be named from the commit message, and `git blame` found a
+plausible introducing commit for all but one (an external change); ten were spot-checked.
+
+- **Repeats the ledger would show at once:** source content reaching published output (6), health probes that
+  false-alarm or mislead (5), tests that are not isolated (5), transient errors read as permanent or empty (3),
+  overmatching identity (2).
+- **`currents` has no CI and no pre-commit hook;** the 6 post-merge test-suite defects are what CI on a clean
+  machine catches. The owner decided not to add CI to `currents` yet (2026-11-16).
+- **Limits:** one application, whose commit messages are unusually detailed; introducing commits are `git blame`'s
+  last change to the fixed lines, not a traced root cause.
 
 ## Tiers
 
