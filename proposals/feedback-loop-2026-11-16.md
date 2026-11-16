@@ -194,8 +194,8 @@ the introducing commit be found?
 - **No escapes, or the labels are guesses** → the ledger has nothing to measure. Build only part 4.
 
 **Result (2026-11-16): passed — build Tier 1.** Labels in
-[`feedback-loop-kill-test-2026-11-16.md`](feedback-loop-kill-test-2026-11-16.md); the owner has not yet confirmed
-them. Of 49 fix commits in 628: 22 defects escaped to production or the first real run, 6 test-suite defects were
+[`feedback-loop-kill-test-2026-11-16.md`](feedback-loop-kill-test-2026-11-16.md); the owner confirmed
+them on 2026-11-16. Of 49 fix commits in 628: 22 defects escaped to production or the first real run, 6 test-suite defects were
 found only after merge, 5 were caught by a rehearsal after the reviews passed, and the rest were in-cycle review fixes
 or duplicates. The loop that should have caught each could be named from the commit message, and `git blame` found a
 plausible introducing commit for all but one (an external change); ten were spot-checked.

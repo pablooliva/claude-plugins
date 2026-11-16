@@ -1,6 +1,8 @@
 # Kill test — currents, fix commits 2026-08-16..2026-11-16 (49 candidates, 628 commits)
 
-Labels are a reading of each commit message plus git blame of the lines it changed. Unconfirmed by the owner.
+Labels are a reading of each commit message plus git blame of the lines it changed. The 22 escapes, their classes
+and loops were confirmed by the owner on 2026-11-16, including the borderline ones (942d64b9, bd38f183, 8b224747)
+and the two with no single introducing commit (5291b456, 60a2f970). The class names are `currents`' starting list.
 
 ## Escapes — reached production, or the operator's first real run (22 defects)
 | Fix | Introduced by | Found by | Class | Loop that should have caught it |
