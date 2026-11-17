@@ -268,6 +268,11 @@ The brief line a bug-fix design brief carries: earlier ledger entries of the sam
 - Synonyms to avoid: "history", "prior art", "known issues".
 - Source: research §Integration Findings 1-3.
 
+### finding line
+The fixed first line of every review finding, released as 5.4.0: `FINDING F<n> | HIGH|MEDIUM|LOW | file:line, file or - | open|fixed`. A re-review repeats earlier IDs as `F<n> | open|fixed` under `## Earlier Findings`. `ledger.py reviews` reads it (only at the start of a line) to write one defect-ledger line per HIGH or MEDIUM ID; it is read, never edited, by the defect-ledger feature.
+- Synonyms to avoid: "finding header", "finding marker", "finding ID line".
+- Source: SPEC-002 REQ-004, REQ-007, EDGE-017; DESIGN-002 D2.
+
 ---
 
 ## Glossary discipline
