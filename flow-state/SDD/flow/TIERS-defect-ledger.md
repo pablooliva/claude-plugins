@@ -29,6 +29,7 @@ Parts 1–3 of `proposals/feedback-loop-2026-11-16.md`, reading the finding line
 - When a session's transcript is gone, `/retro` reads that session from the bb trace index, marked as a summary; with Codex sessions it lists them for the same repository and dates. No index → it says so once and carries on.
 - Two branches that added ledger lines at once merge without a hand renumber.
 - The monthly report covers an application whose checkout lives on another machine.
+- An executable flow test harness runs the sdd-flow and sdd-lite Markdown steps against fixtures and asserts the calls and file state, so a refused lookup, instruction-like history and a stop or alternate close-out id are tested, not only read (DEFER-008).
 
 ## Tier 3 — sketch
 - The report can propose moves (a check earlier, a check dropped) when asked.
