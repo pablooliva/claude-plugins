@@ -89,7 +89,28 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.2.0.
+Version 5.4.0.
+
+### What's new in 5.4.0
+
+Every review finding has a stable ID and a state, on one fixed line — the ground for a later defect ledger that a
+script will read.
+
+- **The finding line.** In `sdd-flow`'s slice review, code review and final check, every finding, of any severity and
+  in any section, opens with `FINDING F<n> | HIGH|MEDIUM|LOW | <file:line, or file, or -> | open|fixed` — for example
+  `FINDING F3 | MEDIUM | src/cart.py:42 | open`. Numbers run through one review chain — a slice's reviews, or the
+  code review and the final-check rounds — and are never reused, so you and the re-reviews can refer to F3.
+- **Re-reviews give each earlier ID its state.** `## Earlier Findings` lists each one as `F3 | fixed` or `F3 | open`,
+  then its evidence; `closed` / `still open` are gone. A re-review that runs in full — after you resolve a stop, or
+  when a snapshot is unusable — is now given the review before it too, so its numbers run on.
+- **The first final check closes out the code review.** It is given the code review (4b) and records the state of
+  each of its findings; one still open is raised again at its severity, so an unfixed HIGH or MEDIUM from the code
+  review now blocks the final check. Until now nothing wrote down their final state.
+- **`sdd-lite`'s review uses the same line.** It runs `codex exec -s read-only` with a review prompt in place of
+  `codex review --uncommitted`, which takes no instructions; findings are rated HIGH / MEDIUM / LOW in place of
+  P0–P1 / P2 / P3, and the output goes to a file outside the repository. The one check of the fixes is given the first
+  review and marks each ID `fixed` or `open`. The bar is unchanged: HIGH and MEDIUM are fixed, LOW is listed, and an
+  open HIGH after the check stops for you.
 
 ### What's new in 5.3.0
 
