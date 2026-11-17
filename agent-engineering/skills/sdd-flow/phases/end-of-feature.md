@@ -117,6 +117,16 @@ In the last two cases `/sdd-flow continue` re-shows this checkpoint (`phases/rar
 
 **Task mirror — in review (both delivery modes).** For a tiered spec, as soon as 4f returns — before the 4h stop when there is one, and always before this commit — run `python3 "$SKILL_ROOT/scripts/tier-mirror.py" sync <TIER_PLAN> --in-review <tier>`; record and report the result per `phases/tier-mirror.md`. Running it before the commit means any task key it writes into the tier plan is committed here.
 
+**Defect ledger (both delivery modes).** After the task-mirror sync and before the commit, the orchestrator writes the code review's and the final check's findings to the application's defect ledger: one call over the chain — the 4b code review document, then each 4e.5 final-check round, in iteration order.
+
+```bash
+python3 "$SKILL_ROOT/scripts/ledger.py" reviews --root . --kind feature --input - <<'EOF'
+{"feature": "[###]-[feature-name]", "files": ["SDD/.records/reviews/<the 4b code review>", "SDD/.records/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter1-<date>.md"]}
+EOF
+```
+
+Every value goes in the JSON input through the quoted heredoc, never on the command line; pass no `classes` and no `checks`, so each line is `unclassified` with check `none`. The fields, the loops and the review shapes it reads are defined once, in `ledger.py`'s docstring. Keep its output for 4j. A non-zero exit never stops or changes the commit — its one-line reason goes in 4j. The commit below takes `SDD/defects.jsonl` and `SDD/defects-setup.json` with the other SDD artifacts.
+
 The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, and SDD artifacts outside `SDD/.records/` (the IMPLEMENTATION-PLAN, the summary, the updated tier plan, any glossary change). Reviews, trace trees, and eval results are records and are not committed. No co-author attribution. When 4h wrote a `## Sign-off - ` line for this feature, the message body carries one line more — `Sign-off: <the requirement IDs> accepted by the user on <the final EVAL_RESULTS file name>.` — so the commit itself records that a person accepted them; the results file itself is a record and stays out of the commit. If nothing is uncommitted — a resumed run whose commit had already landed — make no commit.
 
 **Then append `## Implementation - Committed` to `progress.md`** — one line, the commit's SHA (or `already committed`). It is the phase-detection marker that the code is in history. `Implementation Phase - COMPLETE`, written by the completion subagent at 4f, does not say so.
@@ -137,6 +147,7 @@ The flow ends with this short report — no stop came before the commit unless a
 > Diff: [the output of `git diff --shortstat <BASE> HEAD`, with `BASE` = the `Base commit:` under `## Feature - Implementing` — files changed, lines added and removed by the whole feature].
 > Growth: [the growth script's first line from 4h, and its second when it names files — or "the brief had no growth budget"][ — accepted by you at 4h, when 4h wrote a `## Growth - ` line].
 > Brief check: [the 4h brief-check line].
+> Defect ledger: [from the 4i `ledger.py` output: the ids written, each `not written | … | where` line, and `setup file created` when it says so — or the `refused: …` line, when nothing was written].
 > [If the spec has `### State model`:] State model: [the `**State model:**` line of the last final-check review's `## State Check`, read with `grep -m1 '^\*\*State model:\*\*' <that review>` — `matched`, or the deviations recorded, each named from that section's `**Recorded deviations:**` line].
 > [If 4h wrote a `## Sign-off - ` line:] Accepted by you at the commit checkpoint: [the requirement IDs], on the scores and outputs in `[the final EVAL_RESULTS path]`.
 > [Part of `Not proven`, if this cycle's IMPLEMENTATION-PLAN has a `Harvested, before any change:` line that does not end `failed`:] Harvested cases not seen to fail before the change made for them: [each such case, with what its line says]. A stand-in that passed, or only got scores, may not reproduce what its trace showed — a later cycle can rewrite it, or keep it as a guard (`references/evals.md` §2).
