@@ -67,7 +67,7 @@ CATALOG, TIERS, and TRACING are read here and never restated. Record SKILL_ROOT,
 | `[YYYY-MM-DD]` | Current date | `2026-06-11` |
 | `[YYYY-MM-DD_HH-MM-SS]` | Timestamp (24h, underscores) | `2026-06-11_14-30-45` |
 
-**Records stay out of git.** Everything under `SDD/.records/` — progress, reviews, counters, reviewer and subagent call logs, eval results, trace trees, compaction files — is a process record: it is git-ignored and no commit ever includes it. Whoever creates `SDD/.records/` first (Step 0, a compact command, the subagent-log hook) writes `SDD/.records/.gitignore` holding the one line `*`. The brief, spec, plan, slice files, ADRs, glossary, tier plan, and summary are what history keeps. The records live only in the checkout that ran the flow; `worktree-merge` copies a worktree's records into the main checkout before the worktree goes away.
+**Records stay out of git.** Everything under `SDD/.records/` — progress, reviews, counters, reviewer and subagent call logs, eval results, trace trees, compaction files — is a process record: it is git-ignored and no commit ever includes it. Whoever creates `SDD/.records/` first (Step 0, a compact command, the subagent-log hook) writes `SDD/.records/.gitignore` holding the one line `*`. The brief, spec, plan, slice files, ADRs, glossary, tier plan, summary, and the defect ledger (`SDD/defects.jsonl`, `SDD/defects-setup.json`) are what history keeps. The records live only in the checkout that ran the flow; `worktree-merge` copies a worktree's records into the main checkout before the worktree goes away.
 
 ## Orchestrator Discipline (the load-bearing core)
 

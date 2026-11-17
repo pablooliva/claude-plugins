@@ -3,7 +3,7 @@
 
 Usage:
     ledger.py add     --root <app dir> --input <file|->
-    ledger.py reviews --root <app dir> --kind feature --input <file|->
+    ledger.py reviews --root <app dir> --kind feature|slice|lite --input <file|->
 
 Every value goes in ONE JSON object, read from the file `--input` names, or from
 stdin with `--input -`. The command line carries only `--root`, `--kind` and
@@ -18,7 +18,10 @@ quoted heredoc so that no shell parses a value:
 `add` keys: feature, found_by, class, severity, where, source (required); status
 (default open), introduced_by, check_added, date (optional). `check_added` is
 refused on an `open` line and required on a `fixed` one. `reviews` keys: feature,
-files (the review files' paths, in chain order).
+files (the review files' paths, in chain order); brief (the brief's path, --kind lite only);
+classes and checks, optional, each {"F<n>": "<text>"} - a finding's class (else unclassified)
+and, for a finding written fixed, the check its fix added (else none). A key naming an ID that
+appears nowhere in the chain is refused; one for a finding not written is ignored.
 
 Files, under <app dir>:
     SDD/defects.jsonl          the defect ledger, one JSON object per line
@@ -48,17 +51,25 @@ A line has exactly these twelve fields, all strings, in this order:
     Every text value is data: where and source at most 200 characters, printable only (a plain
     space, no Unicode C* or other Z* character), never containing " | " or "===".
 
-Review files (`reviews`). File name -> loop, for --kind feature:
-    REVIEW-<...> (not REVIEW-SLICE-<...>) -> code-review;  FINAL-CHECK-<...> -> final-check.
+Review files (`reviews`). File name -> loop, by --kind:
+    feature: REVIEW-<...> (not REVIEW-SLICE-<...>) -> code-review;  FINAL-CHECK-<...> -> final-check.
+    slice:   REVIEW-SLICE-<...> -> slice-review.
+    lite:    any file name -> code-review; source `codex review of <brief file name>, F<n>`.
+    A file name of another pattern is refused. Text in a fenced block (a line of 3 or more
+    backticks or tildes, closed by a line of the same character at least as long, or by the end
+    of the file) or in a blockquote is never parsed.
     A finding counts only from a line that starts (after at most 3 spaces and an optional `- `)
         FINDING F<n> | HIGH|MEDIUM|LOW | <file:line, file or -> | open|fixed
     outside `## Earlier Findings`, and, inside that section (to the next `## ` heading), from
         F<n> | open|fixed
     Severity and where come from the ID's first FINDING line in the chain; status from its
     latest line. LOW findings are not written; a finding whose source is already in the ledger,
-    or whose where breaks its shape, is skipped. Accepted no-finding forms, a whole line:
+    or whose where breaks its shape, is skipped. A file with no FINDING line must hold one of
+    the accepted no-finding forms, a whole line:
         No findings.
         0 HIGH, 0 MEDIUM, 0 LOW
+    A whole line `<h> HIGH, <m> MEDIUM, <l> LOW` must give the counts of the file's FINDING
+    lines. A file that breaks either rule, or holds two FINDING lines with one ID, is refused.
 
 Output: `add` prints the id alone on its first line (an existing open line's id when the same
 user line is logged again), then any notice. `reviews` prints `D-<n> | <severity> | <class> |
@@ -96,6 +107,8 @@ HEX_RE = re.compile(r"[0-9a-fA-F]{7,40}")
 REVIEW_SOURCE_RE = re.compile(rf"{FILE}, F[1-9][0-9]*")
 LITE_SOURCE_RE = re.compile(rf"codex review of {FILE}, F[1-9][0-9]*")
 ESCAPE_SOURCE_RE = re.compile(rf"{FILE}, escape")
+FENCE_RE = re.compile(r" {0,3}(`{3,}|~{3,})")
+COUNTS_RE = re.compile(r"([0-9]+) HIGH, ([0-9]+) MEDIUM, ([0-9]+) LOW")
 FINDING_RE = re.compile(r" {0,3}(?:- )?FINDING (F[1-9][0-9]*) \| (HIGH|MEDIUM|LOW) \| (.*?) \| (open|fixed)[ \t]*")
 EARLIER_RE = re.compile(r" {0,3}(?:- )?(F[1-9][0-9]*) \| (open|fixed)(?:[ \t].*)?")
 CAPS = {"where": 200, "source": 200, "check_added": 120}
@@ -383,53 +396,111 @@ def cmd_add(root: Path, data: dict) -> int:
     return 0
 
 
+KINDS = {"feature": "REVIEW-... or FINAL-CHECK-...", "slice": "REVIEW-SLICE-...", "lite": "any"}
+
+
 def loop_of(name: str, kind: str) -> str | None:
-    if kind == "feature":
-        if name.startswith("FINAL-CHECK-"):
-            return "final-check"
-        if name.startswith("REVIEW-") and not name.startswith("REVIEW-SLICE-"):
-            return "code-review"
+    if kind == "lite":
+        return "code-review"
+    if kind == "slice":
+        return "slice-review" if name.startswith("REVIEW-SLICE-") else None
+    if name.startswith("FINAL-CHECK-"):
+        return "final-check"
+    if name.startswith("REVIEW-") and not name.startswith("REVIEW-SLICE-"):
+        return "code-review"
     return None
 
 
-def parse_chain(files: list[str], kind: str) -> dict[str, dict]:
-    """Each finding ID of the chain: severity and where from its first FINDING line, status from its latest line."""
+def parsed_lines(text: str):
+    """The lines of a review file outside fenced blocks. A blockquote line (`> ...`) is never read:
+    no rule below matches a line that starts with `>`."""
+    fence = ""
+    for raw in text.splitlines():
+        match = FENCE_RE.match(raw)
+        if fence:
+            if match and match.group(1)[0] == fence[0] and len(match.group(1)) >= len(fence) \
+                    and not raw[match.end():].strip():
+                fence = ""
+            continue
+        if match:
+            fence = match.group(1)
+        else:
+            yield raw
+
+
+def parse_chain(files: list[str], kind: str, lite_brief: str = "") -> tuple[dict[str, dict], set[str]]:
+    """Each finding ID of the chain - severity and where from its first FINDING line, status from its
+    latest line - and every ID the chain names."""
     found: dict[str, dict] = {}
+    named: set[str] = set()
     for path in files:
         name = os.path.basename(path)
         if not FILE_RE.fullmatch(name):
             raise Refused(f"review file {lit(name)}: is not a plain file name", 3)
         loop = loop_of(name, kind)
         if loop is None:
-            raise Refused(f"review file {name}: is not a {kind} review (REVIEW-... or FINAL-CHECK-...)", 3)
+            raise Refused(f"review file {name}: is not a {kind} review ({KINDS[kind]})", 3)
         try:
             text = Path(path).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             raise Refused(f"review file {name}: cannot be read", 3)
-        earlier = False
-        for raw in text.splitlines():
+        earlier, clean, stated, ids = False, False, [], set()
+        tally = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+        for raw in parsed_lines(text):
             if raw.startswith("## "):
-                earlier = raw[3:].strip().startswith("Earlier Findings")
+                earlier = raw[3:].strip() == "Earlier Findings"
                 continue
+            counts = COUNTS_RE.fullmatch(raw.strip())
+            if counts:
+                stated.append(tuple(x.lstrip("0") or "0" for x in counts.groups()))
+            clean = clean or raw.strip() == "No findings."
             match = (EARLIER_RE if earlier else FINDING_RE).fullmatch(raw)
             if not match:
                 continue
             fid, state = match.group(1), match.group(match.lastindex)
+            named.add(fid)
+            if not earlier:
+                if fid in ids:
+                    raise Refused(f"review file {name}: has two FINDING lines for {fid}", 3)
+                ids.add(fid)
+                tally[match.group(2)] += 1
             if fid in found:
                 found[fid]["status"] = state
             elif not earlier:
+                source = f"codex review of {lite_brief}, {fid}" if kind == "lite" else f"{name}, {fid}"
                 found[fid] = {"severity": match.group(2), "where": match.group(3).strip(),
-                              "source": f"{name}, {fid}", "found_by": loop, "status": state}
-    return found
+                              "source": source, "found_by": loop, "status": state}
+        if not ids and not clean and ("0", "0", "0") not in stated:
+            raise Refused(f"review file {name}: has no FINDING line and no `No findings.` line", 3)
+        if any(counts != tuple(str(n) for n in tally.values()) for counts in stated):
+            raise Refused(f"review file {name}: states severity counts that differ from its FINDING lines", 3)
+    return found, named
 
 
 def cmd_reviews(root: Path, kind: str, data: dict) -> int:
     feature, files = data["feature"], data["files"]
+    classes, checks = data.get("classes", {}), data.get("checks", {})
     if not FEATURE_RE.fullmatch(feature):
         raise Refused(f"feature {lit(feature)}: is not a feature name ([###]-[name])")
     if not all(isinstance(path, str) for path in files):
         raise Refused("input: key files: wrong JSON type, expected a list of strings")
-    found = parse_chain(files, kind)
+    if ("brief" in data) != (kind == "lite"):
+        raise Refused("input: key brief: given with --kind lite, and only then")
+    brief = os.path.basename(data.get("brief", ""))
+    if kind == "lite" and not FILE_RE.fullmatch(brief):
+        raise Refused(f"brief {lit(brief)}: is not a plain file name", 3)
+    found, named = parse_chain(files, kind, brief)
+    for key, values in (("classes", classes), ("checks", checks)):
+        for fid, value in values.items():
+            if fid not in named:
+                raise Refused(f"input: {key}: key {lit(fid)} names no finding of this chain")
+            if not isinstance(value, str):
+                raise Refused(f"input: {key}: {fid}: wrong JSON type, expected str")
+            if key == "classes" and not CLASS_RE.fullmatch(value):
+                raise Refused(f"classes: {fid}: is not a kebab-case class name")
+            problem = text_problem(value, CAPS["check_added"]) if key == "checks" else None
+            if problem:
+                raise Refused(f"checks: {fid}: {problem}")
     check_paths(root)
     lock = take_lock(root)
     try:
@@ -438,7 +509,7 @@ def cmd_reviews(root: Path, kind: str, data: dict) -> int:
         known = {line["source"] for line in lines}
         number, today = next_number(lines), datetime.date.today().isoformat()
         new, out, skipped = [], [], 0
-        for finding in found.values():
+        for fid, finding in found.items():
             if finding["severity"] == "LOW":
                 continue
             if finding["source"] in known:
@@ -446,8 +517,9 @@ def cmd_reviews(root: Path, kind: str, data: dict) -> int:
                 continue
             fixed = finding["status"] == "fixed"
             line = {"id": f"D-{number}", "status": finding["status"], "date": today, "feature": feature,
-                    "found_by": finding["found_by"], "class": "unclassified", "severity": finding["severity"],
-                    "where": finding["where"], "introduced_by": "", "check_added": "none",
+                    "found_by": finding["found_by"], "class": classes.get(fid, "unclassified"),
+                    "severity": finding["severity"], "where": finding["where"], "introduced_by": "",
+                    "check_added": checks.get(fid, "none") if fixed else "none",
                     "closed": today if fixed else "", "source": finding["source"]}
             problem = line_problem(line)
             if problem and problem[0] == "where":
@@ -470,12 +542,13 @@ def cmd_reviews(root: Path, kind: str, data: dict) -> int:
     return 0
 
 
+REVIEWS_KEYS = {"feature": str, "files": list, "brief": str, "classes": dict, "checks": dict}
 COMMANDS = {"add": ("--root", "--input"), "reviews": ("--root", "--kind", "--input")}
 
 
 def parse_args(argv: list[str]) -> tuple[str, dict[str, str]]:
     if not argv or argv[0] not in COMMANDS:
-        raise Refused("usage: ledger.py add|reviews --root <app dir> [--kind feature] --input <file|->")
+        raise Refused("usage: ledger.py add|reviews --root <app dir> [--kind feature|slice|lite] --input <file|->")
     command, allowed, opts = argv[0], COMMANDS[argv[0]], {}
     rest = iter(argv[1:])
     for token in rest:
@@ -490,8 +563,8 @@ def parse_args(argv: list[str]) -> tuple[str, dict[str, str]]:
     for flag in allowed:
         if flag not in opts:
             raise Refused(f"argument {flag}: missing")
-    if command == "reviews" and opts["--kind"] != "feature":
-        raise Refused(f"--kind {lit(opts['--kind'])}: allowed: feature")
+    if command == "reviews" and opts["--kind"] not in KINDS:
+        raise Refused(f"--kind {lit(opts['--kind'])}: allowed: {', '.join(KINDS)}")
     return command, opts
 
 
@@ -501,7 +574,7 @@ def main(argv: list[str]) -> int:
         if command == "add":
             data = read_input(opts["--input"], ADD_KEYS, ("feature", "found_by", "class", "severity", "where", "source"))
         else:
-            data = read_input(opts["--input"], {"feature": str, "files": list}, ("feature", "files"))
+            data = read_input(opts["--input"], REVIEWS_KEYS, ("feature", "files"))
         root = Path(opts["--root"])
         if not root.is_dir():
             raise Refused(f"--root {lit(opts['--root'])}: is not a directory")

@@ -253,6 +253,8 @@ For example `FINDING F3 | MEDIUM | src/cart.py:42 | open`; the title and the res
 
 **A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list in the end report — and nothing sends it to a fix round.
 
+**A review with no finding** — no `FINDING` line anywhere in the document — writes the whole line `No findings.` in it, on a line of its own and outside any fenced block, under `## Specification Alignment (70%)`: that line is how the defect ledger (`scripts/ledger.py`) knows a clean review from a malformed one, and refuses a review that has neither.
+
 When your review document is written, append to `SDD/.records/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` — all three counts, zeros included (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). It is a phase-detection marker; do not paraphrase it.
 
 ## Delivery Tier (tiered specs only)

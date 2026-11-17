@@ -106,9 +106,9 @@ class LedgerTest(unittest.TestCase):
         path.write_text(text, encoding="utf-8")
         return str(path)
 
-    def reviews(self, *files: str) -> subprocess.CompletedProcess:
-        return self.run_ledger("reviews", "--root", str(self.root), "--kind", "feature", "--input", "-",
-                               data={"feature": FEATURE, "files": list(files)})
+    def reviews(self, *files: str, kind: str = "feature", **keys: object) -> subprocess.CompletedProcess:
+        return self.run_ledger("reviews", "--root", str(self.root), "--kind", kind, "--input", "-",
+                               data={"feature": FEATURE, "files": list(files), **keys})
 
     def chain(self) -> list[str]:
         return [self.review(CODE_REVIEW, CODE_REVIEW_TEXT), self.review(ROUND_1, ROUND_1_TEXT),
@@ -399,6 +399,147 @@ class LedgerTest(unittest.TestCase):
                 result = self.run_ledger("add", "--root", str(self.root), "--input", "-", *extra, data=stdin)
                 self.assertEqual(result.returncode, 2, result.stdout)
                 self.assertEqual(self.snapshot(), (None, None))
+
+
+    # --- reviews: slice and lite chains, the parse hardening, the refusals (SLICE-002) ---
+
+    def test_slice_chains_with_f1_in_two_slices_give_two_lines(self) -> None:
+        one = self.review("REVIEW-SLICE-SLICE-001-x-iter1-20261117.md", "FINDING F1 | HIGH | src/a.py | open\n")
+        two = self.review("REVIEW-SLICE-SLICE-002-x-iter1-20261117.md", "FINDING F1 | MEDIUM | src/b.py | open\n")
+        for files in ([one], [two]):
+            self.assertEqual(self.reviews(*files, kind="slice").returncode, 0)
+        got = self.lines()
+        self.assertEqual([x["source"] for x in got], ["REVIEW-SLICE-SLICE-001-x-iter1-20261117.md, F1",
+                                                      "REVIEW-SLICE-SLICE-002-x-iter1-20261117.md, F1"])
+        self.assertEqual({x["found_by"] for x in got}, {"slice-review"})
+
+    def test_slice_kind_refuses_a_file_of_another_name(self) -> None:
+        result = self.reviews(self.review(CODE_REVIEW, "FINDING F1 | HIGH | src/a.py | open\n"), kind="slice")
+        self.assertEqual(result.returncode, 3, result.stdout)
+        self.assertIn(CODE_REVIEW, result.stdout)
+        self.assertEqual(self.snapshot(), (None, None))
+
+    def test_lite_chain_from_two_files(self) -> None:
+        first = self.review("sdd-lite-review-1.md", "FINDING F1 | HIGH | src/a.py:4 | open\nThe bug.\n")
+        second = self.review("sdd-lite-review-2.md", "## Earlier Findings\nF1 | fixed\ntest_a fails without it.\n\n"
+                                                     "## Findings\nNo findings.\n")
+        result = self.reviews(first, second, kind="lite", brief="SDD/briefs/BRIEF-x.md")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        [got] = self.lines()
+        self.assertEqual((got["source"], got["found_by"], got["status"], got["where"]),
+                         ("codex review of BRIEF-x.md, F1", "code-review", "fixed", "src/a.py:4"))
+
+    def test_review_with_no_finding_line_is_refused(self) -> None:
+        cases = {"nothing": "# Code Review\n\n## Decision: APPROVED\n",
+                 "counts differ": "FINDING F1 | HIGH | src/a.py | open\n0 HIGH, 1 MEDIUM, 0 LOW\n",
+                 "oversized count": "FINDING F1 | HIGH | src/a.py | open\n" + "9" * 5001 + " HIGH, 0 MEDIUM, 0 LOW\n",
+                 "only fenced": "```\nNo findings.\n```\n"}
+        for name, text in cases.items():
+            with self.subTest(name):
+                good = self.review(ROUND_1, ROUND_1_TEXT)
+                result = self.reviews(good, self.review(CODE_REVIEW, text))
+                self.assertEqual(result.returncode, 3, result.stdout)
+                self.assertIn(CODE_REVIEW, result.stdout)
+                self.assertEqual(self.snapshot(), (None, None))
+
+    def test_clean_review_as_each_body_writes_it_is_accepted(self) -> None:
+        files = {CODE_REVIEW: "# Code Review\n\n## Findings\nNo findings.\n\n## Decision: APPROVED\n",
+                 ROUND_1: "Reviewed by: codex\n\n## Earlier Findings\nF1 | fixed\nalready fixed\n\n"
+                          "## Findings\nNo findings.\n\n## Decision: APPROVED\n",
+                 "REVIEW-SLICE-SLICE-001-x-iter1-20261117.md": "## Slice-Specific Findings\nNo findings.\n"}
+        for name, text in files.items():
+            with self.subTest(name):
+                kind = "slice" if name.startswith("REVIEW-SLICE-") else "feature"
+                result = self.reviews(self.review(name, text), kind=kind)
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertFalse(self.ledger.exists())
+
+    def test_quoted_finding_lines_write_nothing(self) -> None:
+        quoted = "FINDING F9 | HIGH | src/z.py | open"
+        shapes = {"backtick fence": f"```text\n{quoted}\n```\n", "tilde fence": f"~~~\n{quoted}\n~~~\n",
+                  "indented block": f"    {quoted}\n", "blockquote": f"> {quoted}\n",
+                  "unclosed fence": f"````\n{quoted}\n```\n## Findings\n"}
+        for name, block in shapes.items():
+            with self.subTest(name):
+                self.ledger.unlink(missing_ok=True)
+                text = f"FINDING F1 | MEDIUM | src/a.py | open\n{block}"
+                result = self.reviews(self.review(CODE_REVIEW, text))
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertEqual([x["source"] for x in self.lines()], [f"{CODE_REVIEW}, F1"])
+
+    def test_earlier_line_outside_its_section_is_ignored(self) -> None:
+        for heading in ("## Findings", "## Earlier Findings appendix"):
+            with self.subTest(heading):
+                self.ledger.unlink(missing_ok=True)
+                text = f"FINDING F3 | HIGH | src/a.py | open\n{heading}\nF3 | fixed\n"
+                self.assertEqual(self.reviews(self.review(CODE_REVIEW, text)).returncode, 0)
+                self.assertEqual(self.lines()[0]["status"], "open")
+
+    def test_duplicate_finding_id_in_one_file_is_refused(self) -> None:
+        text = "FINDING F1 | HIGH | src/a.py | open\nFINDING F1 | MEDIUM | src/b.py | open\n"
+        result = self.reviews(self.review(CODE_REVIEW, text))
+        self.assertEqual(result.returncode, 3, result.stdout)
+        self.assertIn(CODE_REVIEW, result.stdout)
+        self.assertEqual(self.snapshot(), (None, None))
+
+    def test_ledger_file_shapes_read_without_error(self) -> None:
+        one, two = json.dumps(line()), json.dumps(line(id="D-2", source=f"{CODE_REVIEW}, F2"))
+        shapes = {"crlf": f"{one}\r\n{two}\r\n", "blank lines": f"\n{one}\n\n{two}\n\n",
+                  "no final newline": f"{one}\n{two}"}
+        for name, text in shapes.items():
+            with self.subTest(name):
+                self.write_ledger()
+                self.ledger.write_bytes(text.encode())
+                result = self.add(escape())
+                self.assertEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(result.stdout.splitlines()[0], "D-3")
+                self.assertTrue(self.ledger.read_bytes().endswith(b'"BRIEF-002-x.md, escape"}\n'))
+                self.assertNotIn(b'escape"}\r', self.ledger.read_bytes())
+
+    def test_classes_and_checks_land_in_the_line(self) -> None:
+        self.write_ledger()
+        self.setup_file.write_text(json.dumps({"loops": ["code-review", "final-check", "user"],
+                                               "classes": ["health-probe"]}), encoding="utf-8")
+        self.ledger.unlink()
+        result = self.reviews(*self.chain(), classes={"F1": "health-probe", "F3": "health-probe"},
+                              checks={"F1": "test_probe_fails_closed", "F4": "test_open_one"})
+        self.assertEqual(result.returncode, 0, result.stdout)
+        got = {x["source"]: x for x in self.lines()}
+        f1, f2, f4 = got[f"{CODE_REVIEW}, F1"], got[f"{CODE_REVIEW}, F2"], got[f"{ROUND_1}, F4"]
+        self.assertEqual((f1["class"], f1["check_added"]), ("health-probe", "test_probe_fails_closed"))
+        self.assertEqual((f2["class"], f2["check_added"]), ("unclassified", "none"))
+        self.assertEqual((f4["status"], f4["check_added"]), ("open", "none"))
+        self.assertIn(f"{f1['id']} | HIGH | health-probe | {CODE_REVIEW}, F1", result.stdout.splitlines())
+
+    def test_classes_key_for_a_recorded_finding_is_ignored(self) -> None:
+        files = self.chain()
+        self.reviews(*files)
+        before = self.ledger.read_bytes()
+        result = self.reviews(*files, classes={"F1": "unclassified"}, checks={"F2": "test_b"})
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(self.ledger.read_bytes(), before)
+
+    def test_key_naming_no_finding_of_the_chain_refuses_the_call(self) -> None:
+        for keys in ({"classes": {"F9": "unclassified"}}, {"checks": {"F9": "test_x"}}):
+            with self.subTest(keys):
+                result = self.reviews(*self.chain(), **keys)
+                self.assertEqual(result.returncode, 2, result.stdout)
+                self.assertEqual(self.snapshot(), (None, None))
+
+
+    def test_bad_classes_or_checks_value_is_refused_even_for_an_ignored_id(self) -> None:
+        for keys in ({"classes": {"F3": SENTENCE}}, {"checks": {"F3": "x" * 121}}, {"checks": {"F3": "a | b"}}):
+            with self.subTest(keys):
+                result = self.reviews(*self.chain(), **keys)
+                self.assertEqual(result.returncode, 2, result.stdout)
+                self.assertNotIn(SENTENCE, result.stdout)
+                self.assertEqual(self.snapshot(), (None, None))
+
+    def test_lite_brief_name_with_a_space_is_refused(self) -> None:
+        first = self.review("sdd-lite-review-1.md", "FINDING F1 | HIGH | src/a.py | open\n")
+        result = self.reviews(first, kind="lite", brief="SDD/briefs/BRIEF x.md")
+        self.assertEqual(result.returncode, 3, result.stdout)
+        self.assertEqual(self.snapshot(), (None, None))
 
 
 if __name__ == "__main__":

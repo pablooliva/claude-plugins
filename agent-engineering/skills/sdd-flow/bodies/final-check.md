@@ -48,6 +48,8 @@ Write `SDD/.records/reviews/FINAL-CHECK-FEATURE-[feature-name]-iter<k>-[YYYYMMDD
 
 **A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: the owner sees it in the end report.
 
+**A review with no finding** — no `FINDING` line in the document (the `F<n> | fixed` lines of `## Earlier Findings` are not `FINDING` lines) — writes the whole line `No findings.` under `## Findings`, on a line of its own and outside any fenced block: that line is how the defect ledger (`scripts/ledger.py`) knows a clean review from a malformed one, and refuses a review that has neither.
+
 When the document is written, append to `SDD/.records/progress.md` exactly `## Review FEATURE iter <k> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` — all three counts, zeros included (`k` = the `ITER` in your prompt; with no `ITER`, return a failure rather than guess one). It is a phase-detection marker; do not paraphrase it.
 
 Bounded return: ≤200 words — the decision, the three counts, the document path, and with `tracing: on` the trace-tree path.

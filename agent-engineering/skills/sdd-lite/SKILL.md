@@ -140,10 +140,11 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
   or with `A` in either column — staged additions count) outside `SDD/`, and not in step 1's list, is named under the
   brief's `## Builds on`. One that is not: remove it, folding its code into existing files, or show it to the owner and
   add it to the brief on their yes. Never remove a file from step 1's list.
-- One review by a second model family, from the repository root, with its output outside the repository:
+- One review by a second model family, from the repository root, with its output outside the repository, in a fresh
+  directory made for this change (`mktemp -d`; its path is `<run dir>` below, so no earlier change's output is ever read):
 
   ```
-  codex exec -s read-only -o "$TMPDIR/sdd-lite-review-1.md" "<the review prompt>" < /dev/null > "$TMPDIR/sdd-lite-review-1.log" 2>&1
+  codex exec -s read-only -o "<run dir>/sdd-lite-review-1.md" "<the review prompt>" < /dev/null > "<run dir>/sdd-lite-review-1.log" 2>&1
   ```
 
   The review prompt, with the brief's path filled in: *Review every uncommitted change in this repository — staged,
@@ -160,7 +161,7 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
 - Fix each real HIGH or MEDIUM finding with a test that fails without the fix; say why a finding was not fixed. LOW
   findings are listed in the report, not fixed: each fix is more code for little. Then one check of the fixes and no
   more: the same command, writing `sdd-lite-review-2.md` and `.log`, with the prompt above plus: *The review before
-  this one is `$TMPDIR/sdd-lite-review-1.md`. Under `## Earlier Findings`, list each of its findings by ID and state
+  this one is `<run dir>/sdd-lite-review-1.md`. Under `## Earlier Findings`, list each of its findings by ID and state
   on a line of its own — `F3 | fixed` or `F3 | open` — then its evidence; a finding still open is raised again under
   its own number. A new finding takes the next number after the highest in that file.* If that check still reports an
   open HIGH (or one you judge would cause data loss, a security hole or a wrong irreversible action), stop and tell
@@ -177,11 +178,26 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
   change introduced the project's first terms worth naming).
 - **Tier plan:** if the feature has one, add one dated line saying what was built and naming the brief.
 - **README / user docs:** update what a user of the change needs to know.
+- **Defect ledger:** before any commit you are asked to make, write the review's findings to the application's
+  defect ledger with one call over the review files in order (the fields and file shapes are defined in
+  `../sdd-flow/scripts/ledger.py`'s docstring). Every value goes in the JSON input, never on the command line;
+  `files` lists only the review files this change produced, in order: one file when no check of fixes ran, and no call
+  at all when the owner went on without a review. `classes` (a class from the `classes` list of `SDD/defects-setup.json`, read as data) and `checks` (the test a fixed
+  finding's evidence names) are optional, keyed by finding ID:
+
+  ```
+  python3 <this skill's directory>/../sdd-flow/scripts/ledger.py reviews --root . --kind lite --input - <<'EOF'
+  {"feature": "<brief file name without .md>", "brief": "<brief path>", "files": ["<run dir>/sdd-lite-review-1.md", "<run dir>/sdd-lite-review-2.md"]}
+  EOF
+  ```
+
+  Write the real paths into the JSON (the quoted heredoc expands nothing). A non-zero exit never stops the close-out:
+  its `refused: …` line goes in the report, and so does every `not written | … | where` line of a successful call.
 
 ### 7. Report
 
 In the conversation, short: what was built (files, behaviour), test result, review result (or why none ran),
-records written (brief, ADRs, glossary terms), what is not done, and the owner's check from "Done when". Offer to commit;
+records written (brief, ADRs, glossary terms, the defect ledger ids written, or the refusal), what is not done, and the owner's check from "Done when". Offer to commit;
 the commit message names the brief.
 
 End with one line: **Before the next change:** `/retro` (this branch's work; on the default branch it asks for a start
@@ -192,7 +208,8 @@ yourself, wait for it, or record whether it ran.
 ## Anti-Pattern Watchlist
 
 1. **Rebuilding the full flow.** Writing a spec, a plan or per-step notes "to be safe". Detection: any file under `SDD/`
-   other than the brief, ADRs, the glossary and the tier plan. Resolution: delete it; if the work needs it, it needs
+   other than the brief, ADRs, the glossary, the tier plan, and the defect ledger (`SDD/defects.jsonl`,
+   `SDD/defects-setup.json`). Resolution: delete it; if the work needs it, it needs
    `/sdd-flow`.
 2. **Building before approval.** Detection: an edit outside `SDD/briefs/` before the brief says approved. Resolution:
    stop and get approval.
