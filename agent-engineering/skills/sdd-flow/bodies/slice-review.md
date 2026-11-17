@@ -82,10 +82,10 @@ The slice's reviewable file set is computed as the **intersection** of:
 
 ## Step 4.5: A re-review after a fix round (only when your prompt gives `SNAPSHOT`)
 
-On a re-review whose fix round the orchestrator snapshotted, your prompt gives three more inputs: `SNAPSHOT`, a commit holding the working tree as it was before the fix; `FIXED`, one holding it as the fix left it; and `PREVIOUS REVIEW`, the review document the fix answered. The slice's first review read the whole slice and ran the whole suite; an earlier re-review may have run only some tests. This one checks that its findings are closed, reads what the fix changed, and runs the tests that change can affect — no more, until it finds nothing. If your prompt gives only some of the three, or git cannot diff the two commits, review the slice in full, as the steps below say, and write why on the `Re-review:` line; never take a snapshot yourself or guess one.
+On a re-review whose fix round the orchestrator snapshotted, your prompt gives three more inputs: `SNAPSHOT`, a commit holding the working tree as it was before the fix; `FIXED`, one holding it as the fix left it; and `PREVIOUS REVIEW`, the review document the fix answered. The slice's first review read the whole slice and ran the whole suite; an earlier re-review may have run only some tests. This one checks that its findings are fixed, reads what the fix changed, and runs the tests that change can affect — no more, until it finds nothing. If your prompt gives only some of the three, or git cannot diff the two commits, review the slice in full, as the steps below say, and write why on the `Re-review:` line; never take a snapshot yourself or guess one. A review in full that is given `PREVIOUS REVIEW` (the orchestrator passes it alone after a stop, or with an unusable snapshot) still writes `## Earlier Findings` from it and numbers on from it (Step 5.6).
 
 - **The change** is `git diff --name-only --no-renames SNAPSHOT FIXED -- . ':(exclude)SDD'`, and `git diff SNAPSHOT FIXED -- <file>` for what changed in a file. Both are commits, so a file the slice created and has not committed shows only what the fix did to it. Step 4 still runs as written: the file set is what Step 5.7 refers to.
-- **Every finding of PREVIOUS REVIEW** gets one line in `## Earlier Findings` (template below): `closed` with the evidence — the change that closed it, the test that now fails without it — or `still open`. A finding still open is a finding of this review again, at its severity, numbered with the others, whether or not the code it is about changed.
+- **Every finding of PREVIOUS REVIEW** is listed in `## Earlier Findings` as Step 5.6 says — evidence of `fixed` being the change that fixed it and the test that now fails without it — whether or not the code it is about changed.
 - **Step 5 reads the change only.** Specification alignment for the requirements the changed code serves; test alignment and the Test Integrity Lens over the tests the fix added or changed, with `SNAPSHOT` in place of `BASE` for what changed; the Agentic-Surface Lens and the Fit Lens over the changed files; risk-tiered depth for the modules the change touches; the tier rules over what the fix added. Code the fix did not change was read by the previous review and is not read again: raise nothing there, except a HIGH you see without looking for it.
 - **Step 5.5** walks the checklist items the change touches; mark each other one `N/A — unchanged since PREVIOUS REVIEW`.
 - **Step 5.7** compares the change, not the whole git list, with the brief.
@@ -149,7 +149,19 @@ Items outside the slice's file set still apply when the checklist item is about 
 
 ## Step 5.6: Severities and the marker
 
-Every finding of this review is numbered once, at its severity, in `## Slice-Specific Findings`. **A review with no open HIGH and no open MEDIUM passes the slice.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list at the slice pause and in the end report — and nothing sends it to a fix round.
+Every finding of this review is raised once, at its severity, in `## Slice-Specific Findings` or in the section of the lens that raised it.
+
+**The finding line.** Every finding — any severity, in any section, the sections a reference gives the shape of included — opens with exactly one line:
+
+```
+FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | <open|fixed>
+```
+
+For example `FINDING F3 | MEDIUM | src/cart.py:42 | open`; the title and the rest of the finding follow on the next lines. A finding of this review is `open`. Numbers run through the slice's reviews: with no `PREVIOUS REVIEW`, start at `F1`; with one, a new finding takes the next number after the highest `F<n>` anywhere in `PREVIOUS REVIEW`, and an earlier finding still open keeps its own. A number is never reused. A finding a second section repeats (a FAIL checklist row, `## LOW Findings`, the Design Brief Check) is named there by its `F<n>`, with no second line. Where a reference's shape writes `<#>` or "numbered with the review's others", that is the `F<n>`.
+
+**Earlier findings.** When your prompt gives `PREVIOUS REVIEW`, every ID in it — each of its `FINDING` lines, and each line of its own `## Earlier Findings` — is listed in `## Earlier Findings` by its ID and new state, on a line of its own — `F3 | fixed` or `F3 | open` — and then its evidence, so every ID of the chain stays in each review and none is reused: for an ID already `fixed` there, `already fixed — <PREVIOUS REVIEW's file name>`; for `fixed`, the change or the code that fixed it and the test that now fails without the fix; for `open`, what still fails. A finding still `open` is a finding of this review again, under its own number and at its severity, with its `FINDING` line.
+
+**A review with no open HIGH and no open MEDIUM passes the slice.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list at the slice pause and in the end report — and nothing sends it to a fix round.
 
 When the review document is written, append to `SDD/.records/progress.md` exactly `## Review <SLICE-XXX> iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). `APPROVED` when `h` and `m` are both zero, `REJECTED` otherwise. Always write all three counts, zeros included — the orchestrator reads them from this line. It is a phase-detection marker; do not paraphrase it.
 
@@ -214,15 +226,15 @@ The review document follows the standard review template (`SDD/.records/reviews/
 - ...
 **Source of file set:** <"intersection — agreement" / "git list preferred — divergence">
 **Slice changes:** tracked changes in the working tree vs `BASE` = `<commit>`; untracked files reviewed in full: <list or "none">
-**Re-review:** <"no — reviewed in full" | "after fix round <N>: SNAPSHOT `<sha>` → FIXED `<sha>`; PREVIOUS REVIEW <path>; the change: <files>; tests run: <"whole suite" | the test files>, <passed>/<collected>; whole suite at the end: <"yes, <passed>/<collected>" | "no — <n> finding(s) before it">">
+**Re-review:** <"no — reviewed in full" (with PREVIOUS REVIEW: "no — reviewed in full; PREVIOUS REVIEW <path>") | "after fix round <N>: SNAPSHOT `<sha>` → FIXED `<sha>`; PREVIOUS REVIEW <path>; the change: <files>; tests run: <"whole suite" | the test files>, <passed>/<collected>; whole suite at the end: <"yes, <passed>/<collected>" | "no — <n> finding(s) before it">">
 
 ## Earlier Findings
 
-[Re-review only (Step 4.5): one line per finding of PREVIOUS REVIEW — `<#> <severity> <title>: closed — <evidence>` or `still open — finding <#> below`. On a review in full: `None — reviewed in full.`]
+[Whenever your prompt gives PREVIOUS REVIEW, with or without snapshots (Step 5.6): every ID in it — `F<n> | fixed` or `F<n> | open` on a line of its own, then its evidence (Step 5.6). With no PREVIOUS REVIEW: `None — no earlier review.`]
 
 ## Slice-Specific Findings
 
-[All standard review sections apply, scoped to the slice's REQ/EDGE/FAIL entries.]
+[All standard review sections apply, scoped to the slice's REQ/EDGE/FAIL entries. Each finding opens with its `FINDING` line (Step 5.6).]
 
 ## Test Integrity
 
@@ -230,7 +242,7 @@ The review document follows the standard review template (`SDD/.records/reviews/
 
 ## Fit and Size
 
-[One line per fit finding (FIT §3) — `<#> <MEDIUM|LOW> <question or footprint>: <file:line> — <what to remove or merge>` — or `None.`]
+[One line per fit finding (FIT §3) — its `FINDING` line, then `<question or footprint>: <what to remove or merge>` — or `None.`]
 
 ## Project Review Checklist Walk
 
@@ -262,12 +274,12 @@ The review document follows the standard review template (`SDD/.records/reviews/
 
 ## LOW Findings (listed, not fixed)
 
-[One line per LOW finding — `<#> <title> — <file:line>` — or `None.` Not fixed by this cycle; the owner sees the list.]
+[One line per LOW finding — `F<n> <title> — <file:line>` — or `None.` Not fixed by this cycle; the owner sees the list.]
 
 ## Design Brief Check
 
 - **Delivers:** [the brief's delivery-outline entry or entries this slice corresponds to, quoted — or "no matching outline entry", with what it is instead]
-- **Outside the approved footprint:** [`None.` — or one line per changed file outside the footprint by FIT §2 (an existing file under no area, or a new file no row names) and no recorded deviation: the file, `new` or `changed`, why it was touched, and the number of its fit finding]
+- **Outside the approved footprint:** [`None.` — or one line per changed file outside the footprint by FIT §2 (an existing file under no area, or a new file no row names) and no recorded deviation: the file, `new` or `changed`, why it was touched, and the `F<n>` of its fit finding]
 
 [`No design brief — check skipped.` when the feature has none.]
 

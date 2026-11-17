@@ -140,16 +140,31 @@ Date: [YYYY-MM-DD]. Status: draft | approved [date].
   or with `A` in either column — staged additions count) outside `SDD/`, and not in step 1's list, is named under the
   brief's `## Builds on`. One that is not: remove it, folding its code into existing files, or show it to the owner and
   add it to the brief on their yes. Never remove a file from step 1's list.
-- One review by a second model family, from the repository root: `codex review --uncommitted` (redirect to a file;
-  the findings are the last block). Ordinary and risky changes alike: an independent review is the check most likely
-  to catch a bug, and the cap below keeps it from growing the code.
+- One review by a second model family, from the repository root, with its output outside the repository:
+
+  ```
+  codex exec -s read-only -o "$TMPDIR/sdd-lite-review-1.md" "<the review prompt>" < /dev/null > "$TMPDIR/sdd-lite-review-1.log" 2>&1
+  ```
+
+  The review prompt, with the brief's path filled in: *Review every uncommitted change in this repository — staged,
+  unstaged and untracked (`git status`, `git diff HEAD`, and each untracked file in full) — for bugs, security holes,
+  missing or weak tests, and behaviour the brief at `<brief path>` does not ask for. Change nothing. Rate each finding
+  HIGH (wrong behaviour, data loss, a security hole, a wrong irreversible action), MEDIUM (a real defect or a missing
+  test for a named case) or LOW (minor). Open every finding with exactly one line,
+  `FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | open`, numbered from F1, then the finding. End with
+  the line `No findings.` when there are none.* The findings are in the `-o` file; the log is the working record. Keep `< /dev/null`: without it `codex exec` waits for more input and never starts.
+  Ordinary and risky changes alike: an independent review is the check most likely to catch a bug, and the cap below
+  keeps it from growing the code.
 - No Codex CLI: stop, tell the owner and ask whether to go on without a review (for a risky change, say what it
   touches); go on only on their explicit yes, and say "no review: no Codex CLI, owner's decision" in the report.
-- Fix each real finding at Codex's P0, P1 or P2 priority with a test that fails without the fix; say why a finding was
-  not fixed. P3 findings are listed in the report, not fixed: each fix is more code for little. Then one check of the
-  fixes (`codex review --uncommitted` again) and no more. If that check still reports a finding at P0 or P1 (or one
-  you judge would cause data loss, a security hole or a wrong irreversible action), stop and tell the owner the work
-  needs `/sdd-flow` or their decision; a P2 is fixed or listed in the report, a P3 listed.
+- Fix each real HIGH or MEDIUM finding with a test that fails without the fix; say why a finding was not fixed. LOW
+  findings are listed in the report, not fixed: each fix is more code for little. Then one check of the fixes and no
+  more: the same command, writing `sdd-lite-review-2.md` and `.log`, with the prompt above plus: *The review before
+  this one is `$TMPDIR/sdd-lite-review-1.md`. Under `## Earlier Findings`, list each of its findings by ID and state
+  on a line of its own — `F3 | fixed` or `F3 | open` — then its evidence; a finding still open is raised again under
+  its own number. A new finding takes the next number after the highest in that file.* If that check still reports an
+  open HIGH (or one you judge would cause data loss, a security hole or a wrong irreversible action), stop and tell
+  the owner the work needs `/sdd-flow` or their decision; a MEDIUM is fixed or listed in the report, a LOW listed.
 - Write no review report; the findings and what was done about them go into the final report.
 
 ### 6. Close-out: the records that last

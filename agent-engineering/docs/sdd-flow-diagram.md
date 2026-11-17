@@ -76,7 +76,7 @@ flowchart TD
     s4 -- "whole-feature" --> wf("4a implement, security rules proven by test")
     slices --> cr
     wf --> cr("4b code review of the whole feature, on the second model<br/>spec, fit and size, the brief's footprint,<br/>and an adversarial pass: how would it break?<br/>state model: the code's state writes against it<br/>tracing on: compares a real run with the planned calls<br/>evals on: checks what the model really answered<br/>4c fix HIGH and MEDIUM")
-    cr --> eof("4e.5 final check — every tier, on the second model<br/>security verification, whole suite, last look at the tests<br/>state model: checked once more<br/>tracing on: and the trace check, once more<br/>evals on: and every eval case, once more<br/>4f completion: summary, tier plan updated")
+    cr --> eof("4e.5 final check — every tier, on the second model<br/>security verification, whole suite, last look at the tests<br/>each code-review finding: fixed or open<br/>state model: checked once more<br/>tracing on: and the trace check, once more<br/>evals on: and every eval case, once more<br/>4f completion: summary, tier plan updated")
     eof -- "still open after 2 fix rounds" --> halt45["STOP — final check halt<br/>you resolve, then continue"]:::stop
     eof --> m2["Mirror: tier in review"]:::orch
     m2 --> q4h{"4h — does a requirement wait for your sign-off<br/>(evals on only), or is the feature over<br/>1.5× its growth budget?"}
@@ -114,7 +114,7 @@ flowchart TD
 
 ## What happens at each stage
 
-**Who reviews.** Wherever the table says a review is done by a second model, it is run by a different model family than wrote the work — the Codex CLI. Where Codex is not available, or its run fails twice, that review falls back to a Claude subagent (Opus for the spec critical review, the feature code review, and the panel synthesis, Sonnet for the rest); the cycle goes on, and you are told. Every review document says who reviewed it.
+**Who reviews.** Wherever the table says a review is done by a second model, it is run by a different model family than wrote the work — the Codex CLI. Where Codex is not available, or its run fails twice, that review falls back to a Claude subagent (Opus for the spec critical review, the feature code review, and the panel synthesis, Sonnet for the rest); the cycle goes on, and you are told. Every review document says who reviewed it. Every finding in the slice reviews, the code review and the final check opens with one line — `FINDING F3 | MEDIUM | src/cart.py:42 | open` — numbered through a slice's reviews, or through the code review and the final-check rounds; a re-review marks each earlier number `fixed` or `open`, and the first final check does so for every code-review finding.
 
 **Tests.** The final check (4e.5) always runs, and checks once more that no fix weakened a test or left one out of the run. Before that, the code review and each slice review check that the tests are real: that none was weakened or left out of the run, that expected values come from the spec, that each test fails when the behaviour is broken, and that the code was not fitted to the tests' inputs.
 

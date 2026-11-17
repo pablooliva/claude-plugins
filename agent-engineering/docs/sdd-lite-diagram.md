@@ -15,7 +15,7 @@ flowchart TD
     q2 -- "yes" --> q3{"About a day of building<br/>or less, in one part?"}
     q3 -- "no" --> flow
     q3 -- "yes" --> lite["/sdd-lite"]
-    lite -. "still unclear after one round,<br/>or too large, or the fix check<br/>still finds P0/P1" .-> flow
+    lite -. "still unclear after one round,<br/>or too large, or the fix check<br/>still finds a HIGH" .-> flow
 
     classDef other fill:#eeeeee,stroke:#888888,color:#000
 ```
@@ -39,10 +39,10 @@ flowchart TD
     ask --> s4
     s4 --> nf{"5 — every new file<br/>named in Builds on?"}
     nf -- "no" --> ask
-    nf -- "yes" --> r1["5 — Codex review, every change<br/>codex review --uncommitted"]:::other
-    r1 --> fix("Fix each real P0–P2 finding<br/>with a test that fails without it<br/>P3: listed, not fixed")
-    fix --> r2["One check of the fixes<br/>and no more"]:::other
-    r2 -- "still P0 or P1, or one that would<br/>lose data, open a security hole<br/>or do a wrong irreversible action" --> halt["STOP — needs /sdd-flow<br/>or your decision"]:::stop
+    nf -- "yes" --> r1["5 — Codex review, every change<br/>codex exec -s read-only<br/>one FINDING line per finding"]:::other
+    r1 --> fix("Fix each real HIGH or MEDIUM<br/>with a test that fails without it<br/>LOW: listed, not fixed")
+    fix --> r2["One check of the fixes<br/>and no more: each F-number<br/>marked fixed or open"]:::other
+    r2 -- "still an open HIGH, or one that would<br/>lose data, open a security hole<br/>or do a wrong irreversible action" --> halt["STOP — needs /sdd-flow<br/>or your decision"]:::stop
     r2 -- "clean, or only lesser<br/>findings, fixed or listed" --> s6
     s6("6 — Close-out<br/>ADRs listed in the brief,<br/>glossary terms, tier-plan line,<br/>README or user docs")
     s6 --> s7("7 — Report<br/>what was built, tests, review,<br/>records written, your check<br/>offers to commit, /retro reminder")
@@ -59,7 +59,7 @@ flowchart TD
 | 2 Interview | Asks only what the request, the code and the records leave open and what changes what gets built. Each question carries a recommended answer and its consequence | — | Waits for your answers. Points you to `/sdd-flow` when you are still unsure after one round, or the work is more than about a day or more than one part |
 | 3 Brief | One page: what you can do afterwards, your decisions (quoted), how it will work (with `file:line` for today's code), what it builds on (the existing code it extends, and every new file), what is left out, which changes beyond the request stay off, how you will check it, the risk class (with the security rules a risky change must hold), and the decision records to write with their alternatives and consequences | `SDD/briefs/BRIEF-###-name.md` | **Always.** Nothing is built until you approve; approving also approves writing exactly the listed ADRs |
 | 4 Build | Builds and tests in the conversation, extending the code the brief builds on before adding any. A risky change proves each security rule with a test that fails when its guard is removed, in a scratch copy, one line each under `## Security proofs` in the brief. Tests follow `sdd-flow/references/test-integrity.md` §1, with the brief in place of the spec; a changed or removed test is one line under `## Test changes` in the brief | code and tests | When the work reaches something the brief does not cover that changes what you get, or needs a new file the brief does not name |
-| 5 Review | First, every new file is checked against the brief. Then every change: one Codex review, fixes with tests for P0–P2 (P3 listed, not fixed), one check of the fixes, no further rounds. No Codex CLI: asks whether to go on without one | — (no review report) | On a new file the brief does not name. When the check still reports a P0 or P1 finding (Codex's top two priorities), or one you judge would cause data loss, a security hole or a wrong irreversible action |
+| 5 Review | First, every new file is checked against the brief. Then every change: one Codex review (`codex exec -s read-only`, its output outside the repository), each finding opening with one `FINDING F<n> \| HIGH\|MEDIUM\|LOW \| file:line \| open` line; fixes with tests for HIGH and MEDIUM (LOW listed, not fixed); one check of the fixes, given the first review, which marks each earlier ID `fixed` or `open`; no further rounds. No Codex CLI: asks whether to go on without one | — (no review report) | On a new file the brief does not name. When the check still reports an open HIGH finding, or one you judge would cause data loss, a security hole or a wrong irreversible action |
 | 6 Close-out | Writes each ADR the brief listed through `cross-cutting-adr` (pre-approved); a new binding decision that came up while building is shown to you first. Adds the change's terms to the glossary, one dated line to the tier plan, and what a user needs to the README | `adr/*`, glossary, tier-plan line, user docs | Only to ask about an ADR the brief did not list |
 | 7 Report | What was built, test result, review result (or why none ran), records written, what is not done, your check, and a one-line `/retro` reminder (never run for you) | — | Offers to commit; never commits unasked |
 

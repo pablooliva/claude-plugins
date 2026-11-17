@@ -243,6 +243,14 @@ No gate line: the spec decides. When it has no `### State model`, skip the check
 
 ## Severities and the marker
 
+**The finding line.** Every finding of this review — any severity, in any section, the sections a reference gives the shape of included — opens with exactly one line:
+
+```
+FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | <open|fixed>
+```
+
+For example `FINDING F3 | MEDIUM | src/cart.py:42 | open`; the title and the rest of the finding follow on the next lines. Every finding of this review is `open`, numbered from `F1` in the order you raise them. The numbers run on through the final check (Step 4e.5), which lists each of them with its state and numbers on from the highest, so a number is never reused. A finding a second section repeats (a FAIL checklist row, `## LOW Findings`, the Design Brief Check, the Adversarial Pass, Required Actions) is named there by its `F<n>`, with no second line. Where a reference's shape writes `<#>` or "numbered with the review's others", that is the `F<n>`.
+
 **A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list in the end report — and nothing sends it to a fix round.
 
 When your review document is written, append to `SDD/.records/progress.md` exactly `## Review FEATURE iter <N> - APPROVED | REJECTED (<h> HIGH, <m> MEDIUM, <l> LOW)` — all three counts, zeros included (`N` = the `ITER` in your prompt — if your prompt gives no `ITER`, return a failure to the orchestrator rather than guess one). It is a phase-detection marker; do not paraphrase it.
@@ -354,6 +362,7 @@ Run the **State Check** section above, when the spec has `### State model`. Ever
 ### For Specification Misalignment
 
 ```markdown
+FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | open
 ❌ **Specification Alignment Issue**
 
 **Specification**: SPEC-XXX-[feature-name], Section [X.X]
@@ -367,6 +376,7 @@ Run the **State Check** section above, when the spec has `### State model`. Ever
 ### For Missing Context Management
 
 ```markdown
+FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | open
 ❌ **Context Engineering Issue**
 
 **Missing Artifact**: [IMPLEMENTATION-PLAN file / progress summary / subagent log]
@@ -378,6 +388,7 @@ Run the **State Check** section above, when the spec has `### State model`. Ever
 ### For Edge/Failure Case Issues
 
 ```markdown
+FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | open
 ❌ **Scenario Coverage Issue**
 
 **Scenario**: [EDGE-XXX or FAIL-XXX from specification]
@@ -489,13 +500,13 @@ If the spec had no `## Modules` section, note: "Risk tiering not available — f
 ## Design Brief Check
 
 - **Delivers:** [the brief's delivery-outline entries this implementation corresponds to, quoted — or "no matching outline entry", with what it is instead]
-- **Outside the approved footprint:** [`None.` — or one line per changed file outside the footprint by FIT §2 (an existing file under no area, or a new file no row names) and no recorded deviation: the file, `new` or `changed`, why it was touched, and the number of its fit finding]
+- **Outside the approved footprint:** [`None.` — or one line per changed file outside the footprint by FIT §2 (an existing file under no area, or a new file no row names) and no recorded deviation: the file, `new` or `changed`, why it was touched, and the `F<n>` of its fit finding]
 
 [`No design brief — check skipped.` when the feature has none.]
 
 ## Fit and Size
 
-[One line per fit finding (FIT §3) — `<#> <MEDIUM|LOW> <question or footprint>: <file:line> — <what to remove or merge>` — or `None.` Findings are numbered with the review's others.]
+[One per fit finding (FIT §3) — its `FINDING` line, then `<question or footprint>: <what to remove or merge>` — or `None.`]
 
 ## Project Review Checklist Walk
 
@@ -513,7 +524,8 @@ Include this section only when the lens ran. When it was skipped, replace it wit
 
 **Agentic surface reviewed:** [model calls, tool/MCP definitions, memory and retrieval stores, agent-to-agent edges, external actions — with paths]
 
-- **[HIGH|MEDIUM|LOW]** [Named anti-pattern from catalog Section 4]
+FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line> | open
+- [Named anti-pattern from catalog Section 4]
   - Evidence: [`file:line` + the offending code]
   - Risk: [threat-catalog vocabulary]
   - Resolution: [concrete code change, file named]
@@ -535,7 +547,7 @@ Include this section only when the lens ran. When it was skipped, replace it wit
 
 ## LOW Findings (listed, not fixed)
 
-[One line per LOW finding — `<#> <title> — <file:line>` — or `None.`]
+[One line per LOW finding — `F<n> <title> — <file:line>` — or `None.`]
 
 ## Context Engineering (20%)
 [Context management review]
@@ -563,16 +575,16 @@ Include this section only when the lens ran. When it was skipped, replace it wit
 - Every FAIL-XXX has a test: Yes / No (list uncovered)
 
 ## Test Integrity
-[The table, the mutation list, and the probe list, in the shape TEST_INTEGRITY §6 gives. Findings are numbered with the review's others.]
+[The table, the mutation list, and the probe list, in the shape TEST_INTEGRITY §6 gives. Each finding opens with its `FINDING` line.]
 
 ## Adversarial Pass
-[One line per question of the pass: the finding numbers it raised, or `none`. Then any question for the user about a plugin file.]
+[One line per question of the pass: the `F<n>` of each finding it raised, or `none`. Then any question for the user about a plugin file.]
 
 ## Decision: [APPROVED/REJECTED]
 
 ## Required Actions (if rejected)
-1. [Specific fix needed]
-2. [Another specific fix]
+1. [`F<n>`: specific fix needed]
+2. [`F<n>`: another specific fix]
 
 ## Commendations (if approved)
 - [What was done well]
