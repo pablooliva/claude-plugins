@@ -38,6 +38,7 @@ agent-engineering/
 ├── docs/sdd-flow-diagram.md        # human-facing picture of the sdd-flow cycle — update it when a step or a stop changes
 ├── docs/sdd-lite-diagram.md        # human-facing picture of sdd-lite (which path, the run, what it keeps) — update it when a step or a stop changes
 ├── docs/observability-diagram.md    # picture of the tracing-and-evals proposal (proposals/observability-and-evals-2026-10-04.md) — all four build steps exist: 1 (observability-init), 2 (tracing in sdd-flow), 3 (evals in sdd-flow), 4 (the trace lookup and eval-harvest, 3.13.0); update it when one of them changes
+├── docs/loop-engineering.md        # where the plugin stands on the four feedback loops (local, CI, integration, production) and what is missing — update it when a piece it lists ships (BB task CLAUDEPLUG-18)
 ├── commands/                       # interactive (depth-0) commands the user runs:
 │                                   #   adr-capture, prompt-doctor, research-clarify,
 │                                   #   critical-review, continue, commit, and four compact commands
