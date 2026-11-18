@@ -2,12 +2,14 @@
 
 | Tier | Status | Built in | Task |
 |---|---|---|---|
-| 1 — POC-plus | planned | — | CLAUDEPLUG-20 |
+| 1 — POC-plus | shipped 2026-11-18 | SPEC-002-defect-ledger.md | CLAUDEPLUG-20 |
 | 2 — Standard | sketch | — | CLAUDEPLUG-21 |
 | 3 — Full | sketch | — | CLAUDEPLUG-22 |
 
 ## Tier 1
-Parts 1–3 of `proposals/feedback-loop-2026-11-16.md`, reading the finding line (`FINDING F3 | MEDIUM | file:line | open`, repeated by ID on re-review) that a separate change released first as 5.4.0 puts in the reviews: a committed defect ledger and setup file per application; review lines from sdd-flow (at 4i) and sdd-lite (close-out); the bug-fix rule with `## Escape` and *Seen before* (looked up by the orchestrator after research); `ledger.py` (add, close, lookup, summary, reading the finding lines); the `/defect-ledger` skill; the monthly report-only BB automation. Not in it: the finding line itself (5.4.0), the trace index, renumbering duplicate ids at merge, reading an application the server host cannot reach, CI for any application.
+Does: a committed defect ledger and setup file per application; review lines written by sdd-flow (4i) and sdd-lite (close-out); the bug-fix rule (`## Escape`, *Seen before*, close at the end); `ledger.py` (add, reviews, close, lookup, summary); the `/defect-ledger` skill; the monthly report-only BB automation (commands shown to the owner, never run by the flow). Shipped as 5.5.0.
+Does not: the finding line itself (5.4.0), the trace index, renumbering duplicate ids at merge, reading an application the server host cannot reach, CI for any application, or a flow test harness.
+Look at when using it: the first real bug-fix cycle (does *Seen before* help), the report's counts-only-below-threshold sections, and growth (source 1.8x, tests 2.8x the brief's budget: the owner's call at 4h).
 
 ## Deferred
 | ID | Item | To tier | Why it was safe to leave out | If reached now | Cost to add later | Came from |
@@ -19,6 +21,8 @@ Parts 1–3 of `proposals/feedback-loop-2026-11-16.md`, reading the finding line
 | DEFER-005 | `/defect-ledger` turns the summary into proposed moves (a check earlier, one dropped) | 3 | Evidence — only if reading the table proves not enough | not reachable | moderate | proposal |
 | DEFER-006 | Reading ledgers across applications together | 3 | Evidence — not yet shown needed | not reachable (one section per application) | moderate | proposal |
 | DEFER-007 | Escape rate and cost per feature compared across sdd-flow, sdd-lite and plain Claude Code (CLAUDEPLUG-17, check 3) | 3 | Evidence — needs months of ledger first | not reachable | expensive | proposal |
+| DEFER-008 | An executable flow test harness that runs sdd-flow/sdd-lite Markdown steps against fixtures and asserts the calls made and the file state (would prove the flow halves of a refused or malformed lookup reaching the brief as `unavailable`, instruction-like history kept as data, and stop / open questions / an alternate id at close-out writing or closing nothing) | 2 | Script-level proofs (tests of `ledger.py` named in REQ-012 and REQ-014) plus the review reading the Markdown step | A flow-step regression is caught only by review | expensive | SLICE-003 review (owner, 2026-11-17) |
+| DEFER-009 | A check that tells an owner-approved `/defect-ledger log` from an unapproved one: the show-exact-input / wait / re-approve step is a Markdown procedure, and `add` receives the same JSON either way, so no script guard exists (decided review-only under DEFER-008) | 2 | The step is read in review; an invented approval token would be checked by nothing | A skipped approval is caught only by review | expensive | implementation (4e.5 iteration 4, F4) |
 
 ## Removed
 - A separate `references/` file defining the ledger format — Existing code: `ledger.py`'s docstring is the one definition.

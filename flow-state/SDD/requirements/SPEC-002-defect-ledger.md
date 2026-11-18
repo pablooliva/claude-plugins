@@ -449,3 +449,29 @@ Build `ledger.py` once, with one shared reader/validator all commands call, SLIC
 - **Glossary:** `finding line` is a term this spec uses that the glossary lacks; the glossary-delta step proposes it (REQ-020). The other terms are already there.
 - **The defect ledger is not the learnings ledger.** Write "defect ledger" in every new file; "ledger" alone only inside `ledger.py` and the ledger files.
 - The five applications' own setup files are not written by this cycle; the first cycle in each creates its file (REQ-002).
+
+## Implementation Summary
+
+### Completion Details
+- **Completed:** 2026-11-18
+- **Implementation Duration:** 2 days (2026-11-17 to 2026-11-18)
+- **Final IMPLEMENTATION-PLAN Document:** SDD/implementation/IMPLEMENTATION-PLAN-002-defect-ledger-2026-11-17.md
+- **Implementation Summary:** SDD/implementation/summaries/IMPLEMENTATION-SUMMARY-002-2026-11-18_18-54-46.md
+
+### Requirements Validation Results
+Based on IMPLEMENTATION-PLAN document verification (all five slices `Complete`; final check iteration 5: 0 HIGH, 0 MEDIUM, 0 LOW):
+- ✓ All functional requirements (REQ-001..022): Complete
+- ✓ All non-functional requirements (SEC-001..005, UX-001..002): Complete
+- ✓ All edge cases (EDGE-001..020): Handled
+- ✓ All failure scenarios (FAIL-001..007): Implemented
+
+### Performance Results
+None specified beyond the Quantitative Ledger bounds; no PERF-XXX items.
+
+### Implementation Insights
+1. One script owns every read and write of the defect ledger; every caller passes values as one JSON object, so no value is parsed by a shell.
+2. The flow halves (approval, close-out, 4i/4j wording, `/defect-ledger log`) stay Markdown procedures proven by reading; the script halves are tested (DEFER-008, Tier 2 harness).
+3. Mutation checks in a scratch copy found guards no test covered; each guard now has a test that fails without it (plan `## Security Proofs`).
+
+### Deviations from Original Specification
+See the plan's `### Implementation Deviations`. In short: `closed` field added (twelve fields), JSON-input commands, field shapes (owner, 3g); `close` takes `where` (REQ-010); field validity of every lookup row is `ledger.py`'s (REQ-012 amendment, 2026-11-18); `phases/rare/resume.md` carries the escape-recovery rule; growth over the brief's budget (source 1.8x, tests 2.8x) is the owner's decision at 4h.

@@ -58,7 +58,7 @@ A line has exactly these twelve fields, all strings, in this order:
     space, no Unicode C* or other Z* character), never containing " | " or "===".
 
 Review files (`reviews`). File name -> loop, by --kind:
-    feature: REVIEW-<...> (not REVIEW-SLICE-<...>) -> code-review;  FINAL-CHECK-<...> -> final-check.
+    feature: REVIEW-<###>-<...> -> code-review;  FINAL-CHECK-<...> -> final-check.
     slice:   REVIEW-SLICE-<...> -> slice-review.
     lite:    any file name -> code-review; source `codex review of <brief file name>, F<n>`.
     A file name of another pattern is refused. Text in a fenced block (a line of 3 or more
@@ -71,10 +71,10 @@ Review files (`reviews`). File name -> loop, by --kind:
     Severity and where come from the ID's first FINDING line in the chain; status from its
     latest line. LOW findings are not written; a finding whose source is already in the ledger,
     or whose where breaks its shape, is skipped. A file with no FINDING line must hold one of
-    the accepted no-finding forms, a whole line:
+    the accepted no-finding forms, a whole unindented line:
         No findings.
         0 HIGH, 0 MEDIUM, 0 LOW
-    A whole line `<h> HIGH, <m> MEDIUM, <l> LOW` must give the counts of the file's FINDING
+    A whole unindented line `<h> HIGH, <m> MEDIUM, <l> LOW` must give the counts of the file's FINDING
     lines. A file that breaks either rule, or holds two FINDING lines with one ID, is refused.
 
 `lookup` prints, between the two delimiter lines (defined here only)
@@ -258,7 +258,10 @@ def check_paths(root: Path) -> None:
 
 def take_lock(root: Path) -> int:
     records = root / "SDD" / ".records"
-    records.mkdir(parents=True, exist_ok=True)
+    if not records.is_dir():  # its creator writes the records' ignore file (sdd-flow SKILL.md); an existing one is kept
+        records.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(FileExistsError), open(records / ".gitignore", "x") as ignore:
+            ignore.write("*\n")
     fd = os.open(records / "defects.lock", os.O_RDWR | os.O_CREAT, 0o644)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -362,13 +365,16 @@ def check_membership(line: dict, setup: dict) -> None:
 
 
 def write(root: Path, text: str, new: list[dict], create_setup: bool) -> None:
-    """Create the setup file if asked, then replace the ledger whole (temp file + rename, mode kept)."""
+    """Create the setup file if asked, then replace the ledger whole; each is published whole or not at all."""
     if create_setup:
-        (root / SETUP).write_text(json.dumps(DEFAULT_SETUP) + "\n", encoding="utf-8")
+        publish(root / SETUP, json.dumps(DEFAULT_SETUP) + "\n")
     if new and text and not text.endswith("\n"):
         text += "\n"
-    text += "".join(json.dumps(line, ensure_ascii=False) + "\n" for line in new)
-    path = root / LEDGER
+    publish(root / LEDGER, text + "".join(json.dumps(line, ensure_ascii=False) + "\n" for line in new))
+
+
+def publish(path: Path, text: str) -> None:
+    """Replace a file whole (temp file + rename, mode kept), so an interrupted write leaves the old file."""
     if path.exists():
         mode = stat.S_IMODE(path.stat().st_mode)
     else:
@@ -398,6 +404,8 @@ def new_line(number: int, status: str, date: str, check: str, fields: dict) -> d
 
 
 def next_number(lines: list[dict]) -> int:
+    if hasattr(sys, "set_int_max_str_digits"):
+        sys.set_int_max_str_digits(0)  # an id has no digit cap (REQ-001); Python 3.11+ caps int <-> str
     return max((int(ID_RE.fullmatch(line["id"]).group(1)) for line in lines), default=0) + 1
 
 
@@ -414,7 +422,7 @@ def read_input(arg: str, keys: dict[str, type], required: tuple[str, ...]) -> di
 
     try:
         obj = json.loads(text, object_pairs_hook=no_duplicates)
-    except ValueError:
+    except (ValueError, RecursionError):
         obj = None
     if not isinstance(obj, dict):
         raise Refused("input: is not one JSON object")
@@ -516,7 +524,7 @@ def cmd_lookup(root: Path, opts: dict, data: dict) -> int:
     return 0
 
 
-KINDS = {"feature": "REVIEW-... or FINAL-CHECK-...", "slice": "REVIEW-SLICE-...", "lite": "any"}
+KINDS = {"feature": "REVIEW-<###>-... or FINAL-CHECK-...", "slice": "REVIEW-SLICE-...", "lite": "any"}
 
 
 def loop_of(name: str, kind: str) -> str | None:
@@ -526,26 +534,26 @@ def loop_of(name: str, kind: str) -> str | None:
         return "slice-review" if name.startswith("REVIEW-SLICE-") else None
     if name.startswith("FINAL-CHECK-"):
         return "final-check"
-    if name.startswith("REVIEW-") and not name.startswith("REVIEW-SLICE-"):
+    if re.match(r"REVIEW-[0-9]{3,}-", name):
         return "code-review"
     return None
 
 
 def parsed_lines(text: str):
-    """The lines of a review file outside fenced blocks. A blockquote line (`> ...`) is never read:
-    no rule below matches a line that starts with `>`."""
+    """The lines of a review file outside fenced blocks, each with its line number in the file. A blockquote
+    line (`> ...`) is never read: no rule below matches a line that starts with `>`."""
     fence = ""
-    for raw in text.splitlines():
+    for number, raw in enumerate(text.split("\n"), 1):  # read_text already made every file newline "\n"; no other separator splits (SEC-001)
         match = FENCE_RE.match(raw)
         if fence:
             if match and match.group(1)[0] == fence[0] and len(match.group(1)) >= len(fence) \
-                    and not raw[match.end():].strip():
+                    and not raw[match.end():].strip(" \t"):
                 fence = ""
             continue
         if match:
             fence = match.group(1)
         else:
-            yield raw
+            yield number, raw
 
 
 def parse_chain(files: list[str], kind: str, lite_brief: str = "") -> tuple[dict[str, dict], set[str]]:
@@ -566,11 +574,11 @@ def parse_chain(files: list[str], kind: str, lite_brief: str = "") -> tuple[dict
             raise Refused(f"review file {name}: cannot be read", 3)
         earlier, clean, stated, ids = False, False, [], set()
         tally = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
-        for raw in parsed_lines(text):
+        for number, raw in parsed_lines(text):
             if raw.startswith("## "):
-                earlier = raw[3:].strip() == "Earlier Findings"
+                earlier = raw[3:].strip(" \t") == "Earlier Findings"
                 continue
-            bare = raw.strip()
+            bare = raw.rstrip(" \t")  # unindented metadata only (F7); never Unicode-wide strip() (F6)
             counts = COUNTS_RE.fullmatch(bare)
             if counts:
                 stated.append(tuple(x.lstrip("0") or "0" for x in counts.groups()))
@@ -590,7 +598,7 @@ def parse_chain(files: list[str], kind: str, lite_brief: str = "") -> tuple[dict
             elif not earlier:
                 source = f"codex review of {lite_brief}, {fid}" if kind == "lite" else f"{name}, {fid}"
                 found[fid] = {"severity": match.group(2), "where": match.group(3).strip(),
-                              "source": source, "found_by": loop, "status": state}
+                              "source": source, "found_by": loop, "status": state, "file": name, "line": number}
         if not ids and not clean and ("0", "0", "0") not in stated:
             raise Refused(f"review file {name}: has no FINDING line and no `No findings.` line", 3)
         if any(counts != tuple(str(n) for n in tally.values()) for counts in stated):
@@ -639,8 +647,8 @@ def cmd_reviews(root: Path, opts: dict, data: dict) -> int:
                 out.append(f"not written | {finding['source']} | where")
                 skipped += 1
                 continue
-            if problem:
-                raise input_refusal(line, *problem)
+            if problem:  # review content: file, field and rule only (UX-001)
+                raise content_refusal(f"review file {finding['file']}", finding["line"], None, *problem)
             check_membership(line, setup or DEFAULT_SETUP)
             new.append(line)
             out.append(f"{line['id']} | {line['severity']} | {line['class']} | {line['source']}")
@@ -722,22 +730,32 @@ def app_section(name: str, folder: str) -> list[str]:
     try:
         if git(folder, "rev-parse", "--show-toplevel").stdout != os.fsencode(os.path.realpath(folder)) + b"\n":
             return [f"## {name}", "not reachable from the server host"]
-        branch = git(folder, "symbolic-ref", "-q", "refs/remotes/origin/HEAD").stdout.decode().strip() or next(
-            (b for b in ("refs/heads/main", "refs/heads/master")
-             if not git(folder, "rev-parse", "-q", "--verify", b).returncode), "")
+        unreadable, branch = [f"## {name}", "refused: its default branch cannot be read; check the repository with git fsck"], ""
+        for args in (("symbolic-ref", "-q", "refs/remotes/origin/HEAD"), ("rev-parse", "-q", "--verify", "refs/heads/main"),
+                     ("rev-parse", "-q", "--verify", "refs/heads/master")):
+            found = git(folder, *args)
+            if found.returncode == 1 and not found.stderr:  # only a ref git reports absent falls through (F8)
+                continue
+            branch = found.stdout.decode().strip()
+            if found.returncode or not branch:  # any other failure, a broken ref included, is never "no ledger"
+                return unreadable
+            break
         # one commit for every read below, so the modes checked are those of the bytes parsed
         commit = git(folder, "rev-parse", "-q", "--verify", f"{branch}^{{commit}}").stdout.decode().strip() if branch else ""
-        ledger = git(folder, "show", f"{commit}:{LEDGER}") if commit else None
-        if ledger is None or ledger.returncode:
+        if branch and not commit:
+            return unreadable
+        tree = git(folder, "ls-tree", commit, "--", LEDGER, SETUP) if commit else None
+        modes = {x.partition("\t")[2]: x.split(" ")[0] for x in tree.stdout.decode().splitlines()} if tree else {}
+        if tree is None or (not tree.returncode and LEDGER not in modes):  # absent on a readable tree
             return [f"## {name}", "no ledger yet"]
+        ledger = git(folder, "show", f"{commit}:{LEDGER}")
         setup = git(folder, "show", f"{commit}:{SETUP}")
-        tree = git(folder, "ls-tree", commit, "--", LEDGER, SETUP)
-        modes = {x.partition("\t")[2]: x.split(" ")[0] for x in tree.stdout.decode().splitlines()}
     except (OSError, UnicodeDecodeError):
         return [f"## {name}", "not reachable from the server host"]
     try:
-        if tree.returncode or LEDGER not in modes:  # SEC-002: an unverified file is refused, never read as plain
-            raise Refused(f"{LEDGER}: its committed file mode could not be read; check the repository with git fsck")
+        if tree.returncode or ledger.returncode:  # SEC-002: an unverified file is refused, never read as plain
+            raise Refused(f"{LEDGER}: its committed file {'mode ' * bool(tree.returncode)}could not be read; "
+                          "check the repository with git fsck")
         links = [path for path, mode in modes.items() if mode == "120000"]  # a committed symlink's text is never parsed
         if links:
             raise Refused(f"{links[0]}: is a symlink or lies outside SDD/; replace it with a plain file")
@@ -809,7 +827,8 @@ def main(argv: list[str]) -> int:
         return handler(root, opts, data)
     except (Refused, OSError) as error:
         if isinstance(error, OSError):
-            error = Refused(f"{error.filename or 'SDD'}: {error.strerror}; check that SDD/ is readable and writable")
+            name = next((n for n in (LEDGER, SETUP) if str(error.filename).endswith(n)), "SDD/")  # never the path (UX-001)
+            error = Refused(f"{name}: {error.strerror or 'filesystem error'}; check that SDD/ is readable and writable")
         if argv and argv[0] == "lookup":
             print(f"{DELIMITERS[0]}\nSeen before: unavailable — refused: {error}\n{DELIMITERS[1]}")
             print(f"refused: {error}", file=sys.stderr)

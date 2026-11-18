@@ -88,9 +88,10 @@ def fail(message):
     sys.exit(1)
 
 
-found = [p for p in glob.glob(os.path.expanduser(
-    "~/.claude/plugins/cache/pablooliva/agent-engineering/*/skills/sdd-flow/scripts/ledger.py"))
-    if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", Path(p).parents[3].name)]  # release entries only
+CACHE = os.path.expanduser("~/.claude/plugins/cache/pablooliva/agent-engineering")
+found = [p for p in glob.glob(f"{CACHE}/*/skills/sdd-flow/scripts/ledger.py")
+         if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", Path(p).parents[3].name)  # release entries only, and no
+         and os.path.realpath(p) == os.path.join(os.path.realpath(CACHE), os.path.relpath(p, CACHE))]  # link out
 if not found:
     fail("no installed release (N.N.N) of ledger.py under ~/.claude/plugins/cache/pablooliva/agent-engineering/")
 ledger = max(found, key=lambda p: [int(n) for n in Path(p).parents[3].name.split(".")])
