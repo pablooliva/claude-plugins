@@ -84,6 +84,10 @@ agent-engineering/
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
 │   │                               #   growth.py — measures a feature's growth (source/test lines added, new files, new files the brief does not name)
 │   │                               #   against the design brief's `## Growth budget`; run at the slice pause and at 4h (stops over 1.5×);
+│   │                               #   ledger.py — the defect ledger's only reader and writer (an application's committed SDD/defects.jsonl
+│   │                               #   + SDD/defects-setup.json; add, reviews, close, lookup, summary; fields and review shapes in its docstring).
+│   │                               #   Not the learnings ledger (removed in 4.6.0) — always say "defect ledger". Written at the design gate's
+│   │                               #   approve (a bug fix's escape line) and at 4i; sdd-lite writes it at close-out; read by the 2.5a lookup
 │   │                               #   trace-tree.py — renders a trace run's span file as call trees and call counts
 │   │                               #   (loads observability-init/scripts/check-span-file.py by path — keep both in step)
 │   │                               #   (tests: python3 -m unittest discover -s scripts/tests — they include test_eval_runner.py, which
@@ -114,6 +118,8 @@ agent-engineering/
 │   │                       #   (tests: python3 -m unittest discover -s scripts/tests — the hook test is skipped without
 │   │                       #   Python 3.12 + opentelemetry-sdk; to run it, from the skill's directory:
 │   │                       #   uv run --python 3.12 --with opentelemetry-sdk python -m unittest discover -s scripts/tests)
+│   ├── defect-ledger/      # user-invoked: the owner's way into an application's defect ledger (report, lookup, log) and the
+│   │                       #   monthly report-only `bb automation` commands the owner runs; reads and writes only through sdd-flow's ledger.py
 │   ├── eval-harvest/       # user-invoked, after a tier is used: answers marked wrong in Opik → invented, user-approved eval cases in
 │   │                       #   SDD/flow/HARVEST-*.md + a tier-plan Feedback line; never writes evals/ or code. How the next cycle settles each case
 │   │                       #   (adopt / defer / drop, per case) is evals.md §2 — phases/design-gate.md derives HARVEST, design-brief.md rule 12 decides
