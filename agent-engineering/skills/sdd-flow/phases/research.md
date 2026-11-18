@@ -11,6 +11,7 @@ Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Inputs:** task description, codebase access, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present), `SDD/UBIQUITOUS_LANGUAGE.md` (if present — load before any research writing for vocabulary alignment).
 - **Outputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, append `progress.md`.
 - **Task:** Create the research document and perform the full systematic investigation. If a CLARIFICATION artifact exists, treat its branches and open questions as required research targets — every branch addressed; every open question resolved or explicitly deferred with rationale.
+- **Bug fix:** the body opens the document with `Bug fix: yes|no` and, for `yes`, a cause and a proposed class. Pass no defect-ledger path: research never reads the defect ledger or its setup file; the lookup is the orchestrator's, at 2.5a.
 - **Next-tier cycle** (the flow was started with `--next-tier`; `phases/setup.md` Step 0): add to the inputs the previous tier's research document and **TIER_PLAN**, and state in the prompt `NEXT-TIER CYCLE: Tier N`. The body's next-tier branch makes this a delta investigation — the deferred items this tier takes up, the feedback, and what the shipped code changed — not a second full pass.
 
 Then spawn a second **`agent-engineering:sdd-workhorse`** subagent:

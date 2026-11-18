@@ -39,11 +39,19 @@ Set up systematic investigation:
    - `[###]` is the issue/ticket number if available, or use sequential numbering (001, 002, etc.)
    - **If `SDD/research/CLARIFICATION-[###]-[feature-name].md` already exists for this feature, reuse the same `[###]` and `[feature-name]` for the RESEARCH document — do not increment. Numbering must align across CLARIFICATION → RESEARCH → SPEC → IMPLEMENTATION-PLAN.**
    - `[feature-name]` is a kebab-case description (e.g., "user-authentication", "csv-export")
+2. **Bug fix or not.** The document's first line is `Bug fix: yes` when the task fixes a defect found after its change shipped, else `Bug fix: no`. For `yes`, write `## Bug Fix`: the cause first, then the class — a proposed kebab-case name for this kind of defect. Do not read the defect ledger (`SDD/defects.jsonl`) or its setup file; the orchestrator looks the class up after you return.
 
 Use this structure for the research document:
 
 ```markdown
+Bug fix: [yes | no]
+
 # RESEARCH-[###]-[feature-name]
+
+## Bug Fix
+[Only with `Bug fix: yes`; omit otherwise.]
+- Cause: [what went wrong and why, with file:line]
+- Class: [proposed kebab-case name]
 
 ## System Data Flow
 

@@ -10,9 +10,23 @@ Runs after 2e and before 3a. The brief is the human's review surface for plannin
 
 ### 2.5a. Design-Brief Subagent
 
+**Seen before — a bug fix only** (the research document's first line is `Bug fix: yes`). First, on every branch and before the class is looked at, remove any earlier file, so a skipped or failed lookup never leaves old results; if the removal fails, treat the lookup as failed and do not pass the path (pass no SEEN_BEFORE):
+
+```bash
+rm -f SDD/.records/seen-before-[###]-[feature-name].md SDD/.records/seen-before-[###]-[feature-name].err
+```
+
+Then take the class from the research document's `## Bug Fix` section. When it fits `^[a-z][a-z0-9-]{0,39}$`, look it up, with the output redirected to a file you never read, and the refusal reason (stderr) to a separate diagnostics file:
+
+```bash
+python3 "$SKILL_ROOT/scripts/ledger.py" lookup --root . --class <class> > SDD/.records/seen-before-[###]-[feature-name].md 2> SDD/.records/seen-before-[###]-[feature-name].err
+```
+
+When the class does not fit, run nothing, so the file stays absent. A non-zero exit stops nothing: take the reason with `head -c 200 SDD/.records/seen-before-[###]-[feature-name].err` (the diagnostics file holds only `refused: <the refusal>`, which names a line, an id and a field, never history; empty → `no reason given`; never read the other file) and append `## Seen Before - unavailable (exit <code>): <that reason>` to `progress.md`; the file says `Seen before: unavailable — …`, and the brief carries it so. Pass **SEEN_BEFORE** (that path, whether or not the file exists) and **LEDGER** (`$SKILL_ROOT/scripts/ledger.py`) in the spawn below.
+
 Spawn an **`agent-engineering:sdd-workhorse`** subagent **with the per-spawn model override `opus`** (the workhorse's instructions and tools, Opus's judgment — `sdd-critical-reviewer` is also Opus but carries an adversarial reviewer's persona, which is wrong for an author):
 - **Body:** `bodies/design-brief.md`
-- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), existing `SDD/adr/`, **TIERS**, **TIER_PLAN** (the path, whether or not the file exists yet), `TIER: N` if the user passed `--tier N` or this is a next-tier cycle, **the observability line** copied verbatim, **EVALS** when that line says `present`, **HARVEST** when there is one (below), **STATE_MODEL** (`SKILL_ROOT/references/state-model.md`), and on a next-tier cycle the previous tier's research document.
+- **Inputs:** `SDD/research/RESEARCH-[###]-[feature-name].md`, `SDD/research/CLARIFICATION-[###]-[feature-name].md` (if present), `SDD/UBIQUITOUS_LANGUAGE.md` (if present), existing `SDD/adr/`, **TIERS**, **TIER_PLAN** (the path, whether or not the file exists yet), `TIER: N` if the user passed `--tier N` or this is a next-tier cycle, **the observability line** copied verbatim, **EVALS** when that line says `present`, **HARVEST** when there is one (below), **STATE_MODEL** (`SKILL_ROOT/references/state-model.md`), **SEEN_BEFORE** and **LEDGER** for a bug fix (above), and on a next-tier cycle the previous tier's research document.
 - **HARVEST** — the harvested eval cases still open (`references/evals.md` §2). Derive it just before this spawn, before every revision run, before 3a, and again on a resumed session; it is not recorded. Take every `SDD/flow/HARVEST-….md` path named under the tier plan's `## Feedback` or in the task description; a file's cases are its `## Case <n> — trace <id>` headings. A case is closed when a spec other than the one this cycle writes has adopted or dropped it: `grep -l -F -e 'harvested: <path>, trace <id>' -e 'dropped: <path>, trace <id>' SDD/requirements/SPEC-*.md` lists one. A deferred case stays open. Pass the open cases as `HARVEST: <path> — traces <id>, <id>; <path> — traces <id>`; none open → no line.
 - **Outputs:** **BRIEF**, **TIER_PLAN** (none when the brief says tiers are not applicable), append `progress.md`.
 - **Task:** Write the design brief. The body's **quality rule** applies: when the observability line says `present` and the feature has a model in it, one Key decision says how the quality of what the model says will be judged; when it says `absent` and the feature has a model in it, the brief's `## Tracing foundation` section recommends running `/observability-init` before approving — or, in an application not written in Python, says the foundation exists only for Python. Carries the Safety-Net Rule, a fresh counter (`Reads: 0/15`), and `planning-compact.md` as the compact body.
@@ -64,6 +78,16 @@ Act on the reply:
 - **A reply that drops a candidate** — at approval or in an earlier round — is recorded at once: append `## ADR Candidate Dropped - <title>` to `progress.md`, one line per candidate, so the choice survives a stop.
 - **On `approve`**, after the `## Design Brief - APPROVED` line and before 3a: if the entry lists any candidate not dropped, spawn ONE **`agent-engineering:sdd-workhorse`** subagent with `bodies/adr-capture.md` in **AUTO mode**, passing the research document, the existing `SDD/adr/`, and the accepted candidate titles ("write exactly these"). Then append `## ADR Capture - Done (<ADR numbers | none>)` — `none` when every candidate was dropped or the entry said `none`. The records are committed at 3f.
 - A re-plan's gate does not repeat this: a `## ADR Capture - Done` line already follows the candidates.
+
+**The escape's defect-ledger line** — on `approve` of a brief that has `## Escape`, after the `## Design Brief - APPROVED` line and before the ADR capture and 3a; never on `stop` or while a question is open. When its `Ledger id` names an id, write nothing and take that id. Otherwise read the `classes` list of `SDD/defects-setup.json` as data (absent, or not JSON with a `classes` list: no list): the class is the brief's `Class` when the list holds it, else `unclassified` — the proposed name stays in the brief and 4j names it. Every value goes in the JSON input; leave `introduced_by` out when the brief says `unknown`:
+
+```bash
+python3 "$SKILL_ROOT/scripts/ledger.py" add --root . --input - <<'EOF'
+{"feature": "[###]-[feature-name]", "found_by": "user", "status": "open", "class": "<class>", "severity": "<Severity>", "where": "<Where>", "introduced_by": "<Introduced by>", "source": "DESIGN-[###]-[feature-name].md, escape"}
+EOF
+```
+
+The id is the first line of its output. Append `## Escape Line - D-<n>` to `progress.md` (or `## Escape Line - refused: <the refusal>`); 4i closes that id. A repeated `approve` runs the same `add` and gets the same id back. A non-zero exit never stops the gate: its reason goes in 4j. The approved brief is never edited.
 
 **Mirror the tiers to BB tasks** on approval, when `T` is not `none` — before spawning 3a, so the task keys the script writes into the tier plan are part of the 3f commit:
 

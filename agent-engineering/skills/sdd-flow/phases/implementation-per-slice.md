@@ -29,7 +29,7 @@ Every slice state change, stop, and commit has one owner, named here. A slice bo
 | The slice pause (no halt block — it needs no answer) | orchestrator | after 4c.6 |
 | A re-plan the user asks for at the pause: `## Re-plan Requested` | orchestrator | after 4c.6 |
 | After a re-plan: `## Re-plan Preparation - Started`; archiving the old slice table; moving the replaced plan's slice files to `superseded/<stamp>/`; `## Slices Superseded` | orchestrator | 4a.0 |
-| Defect ledger: `ledger.py reviews` over each slice's review chain, then the code review and final-check chain | orchestrator | 4i, after the task-mirror sync, before the commit |
+| Defect ledger: `ledger.py reviews` over each slice's review chain, then the code review and final-check chain, then `ledger.py close` on a bug fix's escape id | orchestrator | 4i, after the task-mirror sync, before the commit |
 
 How a resumed session reads these markers: `phases/rare/resume.md` → Phase Detection Priority, per-slice cycle sub-steps.
 

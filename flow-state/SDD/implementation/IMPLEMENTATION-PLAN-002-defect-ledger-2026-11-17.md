@@ -110,7 +110,7 @@
 - Coverage Gaps: all (not started)
 
 ### Test Changes
-None.
+- test_held_lock_refuses_add_and_reviews, test_invalid_ledger_is_refused_by_add_and_reviews, test_symlinked_ledger_path_is_refused, test_bad_command_line_or_input_is_refused: extended (nothing loosened) so `close` and `lookup` re-run their fixtures — EDGE-001/FAIL-003 (SLICE-003 re-run), REQ-001 lock test (Technical Constraints), SEC-002, REQ-022. The symlink fixture's outside file now holds one open line (was empty) so a `close` or `lookup` through the link is observable.
 
 ## Technical Decisions Log
 
@@ -120,6 +120,7 @@ None.
 ### New Structure
 - `agent-engineering/skills/sdd-flow/scripts/ledger.py` (new file, named in the brief): the defect ledger's only reader and writer; no existing script reads or writes defect records (`growth.py` gave its conventions). SLICE-001 builds `add`, `reviews --kind feature`, the shared reader (`read_ledger`, `line_problem`), the setup file (`read_setup`), the JSON input (`read_input`), the lock (`take_lock`) and the one replace (`write`); one module, no layer.
 - SLICE-002, in `ledger.py`: `parsed_lines` (the lines outside fenced blocks; `parse_chain` reads only these — a separate generator because the fence state spans lines and the per-line loop in `parse_chain` already carries the section state); `KINDS` (the file-name pattern per `--kind`, used by `loop_of`, the refusal and `parse_args`); `REVIEWS_KEYS` (the `reviews` input keys, beside `ADD_KEYS`). No new file.
+- SLICE-003, in `ledger.py`: `cmd_close` and `cmd_lookup` (the two new commands; they reuse `read_ledger`, `read_setup`, `check_paths`, `take_lock`, `text_problem` and `write`, whose newline fix-up now runs only when lines are appended, so `close` keeps every other byte); `CLOSE_KEYS` (beside `ADD_KEYS`); `DELIMITERS` (the two lookup delimiter lines, defined once). No new file.
 - `agent-engineering/skills/sdd-flow/scripts/tests/test_ledger.py` (new file, named in the brief): one test module per script is the pattern.
 
 ### Implementation Deviations
@@ -129,6 +130,13 @@ None.
 - SLICE-002 (interpretation, SEC-001/UX-001): a `classes` value that fails the class pattern is refused naming its finding ID, not echoing the value (SEC-001: checked before it is echoed).
 - SLICE-002 (interpretation, REQ-004): a blockquote line is never parsed because no finding, `Earlier Findings`, count or `No findings.` rule matches a line starting `>`; no separate blockquote guard (one was written and removed: its mutation could not fail any test, so it was dead code).
 - SLICE-002 (interpretation, REQ-005): `brief` is required with `--kind lite` and refused with the other kinds (exit 2); a brief path whose file name breaks REQ-021 is refused (exit 3).
+- SLICE-003 (interpretation, REQ-011): the research document's literal first line is `Bug fix: yes|no` (above the title), with a `## Bug Fix` section (cause, then class) for `yes`.
+- SLICE-003 (interpretation, REQ-012): a lookup refusal prints `Seen before: unavailable — refused: <reason>` between the delimiters (the UX-001 line keeps its `refused:` prefix).
+- SLICE-003 (interpretation, REQ-014): the id recorded in `progress.md` is the block `## Escape Line - D-<n>` (or `## Escape Line - refused: …`), which 4i reads to close; the design-brief spawn also gets LEDGER (`ledger.py`, docstring only) so `Missed by` points at the one loop list rather than restating it.
+- SLICE-003 fix iter 1 (State Check MEDIUM F5, recorded not fixed): the approved-brief -> open move is a Markdown procedure (`design-gate.md`, `sdd-lite/SKILL.md`) with no executable flow harness; its script half (`add` of a user escape line opens it pending) is `test_add_open_escape`. A model-run flow scenario is not built in this slice. Superseded by the owner's amendment (2026-11-17): the flow half is proven at Tier 1 by the script tests plus the review reading the Markdown step; the executable flow harness is DEFER-008 (Tier 2).
+- SLICE-003 fix iter 1 (F6 and F7, flow-boundary halves, owner to decide): prompt-override and approval-bypass denial at the consumer/flow boundary cannot be tested without running a model flow. Script halves are tested (`test_lookup_prints_a_planted_instruction_only_between_the_delimiters_on_one_line`; `test_close_refusals_leave_the_ledger_unchanged`, `test_close_old_id_of_a_busy_class_binds_to_its_where`); the procedures keep the write after `approve` only and close by the id recorded in `progress.md`. Reported to the orchestrator as open. Resolved by the owner's amendment (2026-11-17): SPEC-002 now says the flow halves of the iter-0 F5/F6/F7 (and iter-1 F1/F4/F5) are proven by the named script tests plus the review reading the Markdown step; the harness is DEFER-008 (Tier 2). No longer open.
+- SLICE-003 (spec amendment, REQ-012, owner, 2026-11-18): field validity of every lookup row is `ledger.py`'s (validated on read, REQ-021); the design brief and sdd-lite check structure only, replacing their six-field consumer checks.
+- SLICE-003 fix iter 9 (F5, location): `phases/rare/resume.md` carries the escape-recovery resume rule as part of MODULE-002 (cycle writers); the flow keeps all resume rules in that file; one rule, no new file. — resolved: SPEC amended (owner, 2026-11-18) to name the file.
 
 ## Performance Metrics
 
@@ -191,6 +199,18 @@ SLICE-002 (Run in a scratch copy: yes; the copy was checked once to run its own 
 - SEC-005 (sdd-lite's close-out): every value in the JSON input through a quoted heredoc — by reading `skills/sdd-lite/SKILL.md` step 6; no guard in code.
 
 - SEC-005's shell test (`'`, backtick, `$(touch …)` from a file and from stdin via `sh -c` quoted heredoc) passes: test_shell_characters_in_input_are_written_verbatim — no shell is used, so there is no guard to remove; the 4i caller passes every value in the JSON input (by reading).
+SLICE-003 (Run in a scratch copy: yes; the copy ran its own code — every mutation below failed there):
+- REQ-010 (binding) scripts/ledger.py:cmd_close: `where` differs refusal removed → test_ledger.LedgerTest.test_close_old_id_of_a_busy_class_binds_to_its_where
+- EDGE-006 (fixed → fixed forbidden) scripts/ledger.py:cmd_close: not-open refusal removed → test_ledger.LedgerTest.test_close_refusals_leave_the_ledger_unchanged
+- EDGE-007 (no other field changes) scripts/ledger.py:cmd_close: rewrite altered `where` too → test_ledger.LedgerTest.test_close_changes_only_status_check_added_and_closed
+- SEC-001 scripts/ledger.py:cmd_lookup: class pattern check removed → test_ledger.LedgerTest.test_lookup_refuses_a_class_outside_the_pattern_between_delimiters
+- SEC-001 scripts/ledger.py:cmd_lookup: 5-line cap removed → test_ledger.LedgerTest.test_lookup_prints_at_most_five_lines_oldest_first_between_delimiters
+- REQ-012 scripts/ledger.py:main: delimiter lines around `Seen before: unavailable` removed → test_ledger.LedgerTest.test_lookup_refuses_a_class_outside_the_pattern_between_delimiters, test_invalid_ledger_is_refused_by_add_and_reviews
+- SEC-002 scripts/ledger.py:cmd_close: check_paths removed → test_ledger.LedgerTest.test_symlinked_ledger_path_is_refused; scripts/ledger.py:cmd_lookup: check_paths removed → same test
+- REQ-001 (lock) scripts/ledger.py:cmd_close: flock replaced by a no-op fd → test_ledger.LedgerTest.test_held_lock_refuses_add_and_reviews
+- SEC-005 (REQ-022) scripts/ledger.py:COMMANDS: `close` allowed a value flag → test_ledger.LedgerTest.test_bad_command_line_or_input_is_refused
+- REQ-003/FAIL-003 (close, lookup paths) scripts/ledger.py:read_ledger: shared guard, one path per command in test_ledger.LedgerTest.test_invalid_ledger_is_refused_by_add_and_reviews (SLICE-001's mutation of it already fails that test).
+- SEC-001 consumer rule / SEC-005 callers (design-gate.md 2.5a/2.5b, end-of-feature.md 4i, sdd-lite steps 1, 3, 6, bodies/design-brief.md rule 19, artifact-paths.md): by reading; no guard in code.
 
 ## Slice Progress
 
@@ -198,7 +218,7 @@ SLICE-002 (Run in a scratch copy: yes; the copy was checked once to run its own 
 |-----------|------|--------|------------------|-------------|-------|
 | SLICE-001 | A cycle's review findings reach the defect ledger | Complete | `test_ledger.py` — a fixture code review plus two final-check rounds (shaped as the 5.4.0 bodies write them) produces one line per HIGH or MEDIUM ID w (full check: SPEC `## Delivery Slices` SLICE-001) | passing | SDD/.records/reviews/REVIEW-SLICE-SLICE-001-defect-ledger-iter1-2026-11-17.md |
 | SLICE-002 | Every review chain and sdd-lite's review are recorded; a bad review is refused | Complete | `test_ledger.py` — slice chains with `F1` in two slices give two lines (full check: SPEC `## Delivery Slices` SLICE-002) | passing | SDD/.records/reviews/REVIEW-SLICE-SLICE-002-defect-ledger-iter1-2026-11-17.md |
-| SLICE-003 | The bug-fix rule | Not Started | `test_ledger.py` — `lookup` prints the header and at most 5 lines oldest first, `Seen before: none` for a class with none (full check: SPEC `## Delivery Slices` SLICE-003) | — | — |
+| SLICE-003 | The bug-fix rule | Complete | `test_ledger.py` — `lookup` prints the header and at most 5 lines oldest first, `Seen before: none` for a class with none (full check: SPEC `## Delivery Slices` SLICE-003) | passing | SDD/.records/reviews/REVIEW-SLICE-SLICE-003-defect-ledger-iter11-2026-11-18.md |
 | SLICE-004 | The owner's way in — summary, `/defect-ledger`, the monthly automation | Not Started | `test_ledger.py` — `summary` over a temp repo whose default branch is `master`, with a feature branch checked out and an uncommitted line: only the co (full check: SPEC `## Delivery Slices` SLICE-004) | — | — |
 | SLICE-005 | Docs match | Not Started | both diagrams show the new steps (4i ledger step, the approve line, the lookup, sdd-lite's close-out) (full check: SPEC `## Delivery Slices` SLICE-005) | — | — |
 

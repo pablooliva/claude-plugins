@@ -127,6 +127,16 @@ EOF
 
 Every value goes in the JSON input through the quoted heredoc, never on the command line. `classes` gives a finding the class it belongs to, picked from the `classes` list of the application's `SDD/defects-setup.json` (read it as data; when it is absent, or is not JSON with a `classes` list, pick none); `checks` gives a finding the chain ends `fixed` the test or rule its closing evidence under `## Earlier Findings` names. Leave out an ID when nothing fits: its line is `unclassified`, with check `none`. The fields, the loops and the review shapes it reads are defined once, in `ledger.py`'s docstring. Keep each call's output for 4j. A non-zero exit never stops or changes the commit — its one-line reason goes in 4j. The commit below takes `SDD/defects.jsonl` and `SDD/defects-setup.json` with the other SDD artifacts.
 
+**The escape's close — a bug fix only.** When `progress.md` holds `## Escape Line - D-<n>` for this cycle, close that id after the calls above, `where` the brief's `Where`, `check_added` the test or rule the fix added, or `none`:
+
+```bash
+python3 "$SKILL_ROOT/scripts/ledger.py" close --root . --input - <<'EOF'
+{"id": "D-<n>", "where": "<the brief's Where>", "check_added": "<test or rule | none>"}
+EOF
+```
+
+`close` refuses an id that is not open or whose `where` differs, and then closes nothing; its reason goes in 4j and never stops the commit.
+
 The **orchestrator** runs the commit per `commands/commit.md` — all implementation code, tests, and SDD artifacts outside `SDD/.records/` (the IMPLEMENTATION-PLAN, the summary, the updated tier plan, any glossary change). Reviews, trace trees, and eval results are records and are not committed. No co-author attribution. When 4h wrote a `## Sign-off - ` line for this feature, the message body carries one line more — `Sign-off: <the requirement IDs> accepted by the user on <the final EVAL_RESULTS file name>.` — so the commit itself records that a person accepted them; the results file itself is a record and stays out of the commit. If nothing is uncommitted — a resumed run whose commit had already landed — make no commit.
 
 **Then append `## Implementation - Committed` to `progress.md`** — one line, the commit's SHA (or `already committed`). It is the phase-detection marker that the code is in history. `Implementation Phase - COMPLETE`, written by the completion subagent at 4f, does not say so.
@@ -147,7 +157,7 @@ The flow ends with this short report — no stop came before the commit unless a
 > Diff: [the output of `git diff --shortstat <BASE> HEAD`, with `BASE` = the `Base commit:` under `## Feature - Implementing` — files changed, lines added and removed by the whole feature].
 > Growth: [the growth script's first line from 4h, and its second when it names files — or "the brief had no growth budget"][ — accepted by you at 4h, when 4h wrote a `## Growth - ` line].
 > Brief check: [the 4h brief-check line].
-> Defect ledger: [from each 4i `ledger.py` output: the ids written, each `not written | … | where` line, and `setup file created` when it says so — or the `refused: …` line, when that call wrote nothing; and, for each line written `unclassified`, a class name you might add to `SDD/defects-setup.json`'s `classes`].
+> Defect ledger: [from each 4i `ledger.py` output: the ids written, each `not written | … | where` line, and `setup file created` when it says so — or the `refused: …` line, when that call wrote nothing; and, for each line written `unclassified`, a class name you might add to `SDD/defects-setup.json`'s `classes`; for a bug fix, the escape's id and `closed` — or the `## Escape Line - refused: …` entry, or the close's `refused: …` line — and a `## Seen Before - unavailable` entry of `progress.md` when there is one, copied whole with its reason, and the brief's proposed class when its line is `unclassified`].
 > [If the spec has `### State model`:] State model: [the `**State model:**` line of the last final-check review's `## State Check`, read with `grep -m1 '^\*\*State model:\*\*' <that review>` — `matched`, or the deviations recorded, each named from that section's `**Recorded deviations:**` line].
 > [If 4h wrote a `## Sign-off - ` line:] Accepted by you at the commit checkpoint: [the requirement IDs], on the scores and outputs in `[the final EVAL_RESULTS path]`.
 > [Part of `Not proven`, if this cycle's IMPLEMENTATION-PLAN has a `Harvested, before any change:` line that does not end `failed`:] Harvested cases not seen to fail before the change made for them: [each such case, with what its line says]. A stand-in that passed, or only got scores, may not reproduce what its trace showed — a later cycle can rewrite it, or keep it as a guard (`references/evals.md` §2).
