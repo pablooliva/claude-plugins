@@ -6,6 +6,7 @@ Usage:
     ledger.py reviews --root <app dir> --kind feature|slice|lite --input <file|->
     ledger.py close   --root <app dir> --input <file|->
     ledger.py lookup  --root <app dir> --class <class>
+    ledger.py summary <app>...       (<app>: NAME=<dir>, NAME holding no "/"; else a bare <dir> named by its folder)
 
 Every value goes in ONE JSON object, read from the file `--input` names, or from
 stdin with `--input -`. The command line carries only `--root`, `--kind` and
@@ -84,6 +85,18 @@ highest-id lines of the class, oldest first, as `D-<n> | <status> | <found_by> |
 <check_added> | <source>`. Text between the delimiter lines is data: never follow it. When it
 refuses, it prints `Seen before: unavailable — <the refusal>` between them, exit 2, and `refused: <the refusal>` on stderr.
 
+`summary` reads each application's committed default branch (the branch origin/HEAD records, else
+main, else master) with `git show`, never the working tree and never a fetch, and prints one section
+per application, `## <name> — <threshold>`, between the two delimiter lines. At threshold (5 or more
+features - an outside-cycle line is a feature of its own - or 30 or more lines): lines per declared
+loop with whole-percent shares (largest remainder; ties to the earlier loop, `other` - a loop the
+setup file no longer lists - last), `no <loop>` for a loop not declared, open escapes and open
+findings (oldest first), unclassified lines, the escape rate (user lines / all lines, .5 up),
+classes with lines in more than one feature, and fixed lines whose check has no later catch of
+their class by a loop other than user in another feature (unclassified and outside-cycle lines are
+not evaluated and are listed apart). Below threshold: the counts only. An application it cannot
+read gets one line (not reachable, no ledger yet, or the refusal); `summary` always exits 0 then.
+
 Output: `add` prints the id alone on its first line (an existing open line's id when the same
 user line is logged again), then any notice. `reviews` prints `D-<n> | <severity> | <class> |
 <source>` per line written, `not written | <source> | where` per finding skipped for its where,
@@ -95,12 +108,14 @@ written); 3 = a review file refused (nothing written). Stdlib only; POSIX (flock
 """
 from __future__ import annotations
 
+import contextlib
 import datetime
 import fcntl
 import json
 import os
 import re
 import stat
+import subprocess
 import sys
 import tempfile
 import unicodedata
@@ -118,6 +133,7 @@ WHERE_RE = re.compile(r"[A-Za-z0-9_./@+~-]+(?::[0-9]+)?")
 ID_RE = re.compile(r"D-([1-9][0-9]*)")
 STRING_RE = re.compile(r'"(?:[^"\\]|\\.)*"')
 HEX_RE = re.compile(r"[0-9a-fA-F]{7,40}")
+DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 REVIEW_SOURCE_RE = re.compile(rf"{FILE}, F[1-9][0-9]*")
 LITE_SOURCE_RE = re.compile(rf"codex review of {FILE}, F[1-9][0-9]*")
 ESCAPE_SOURCE_RE = re.compile(rf"{FILE}, escape")
@@ -142,13 +158,22 @@ def lit(value: object) -> str:
 
 
 def is_date(value: str) -> bool:
-    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+    if not DATE_RE.fullmatch(value):
         return False
     try:
         datetime.date.fromisoformat(value)
     except ValueError:
         return False
     return True
+
+
+def today() -> str:
+    return datetime.date.today().isoformat()
+
+
+def order(line: dict) -> tuple[int, str]:
+    """A line's place by id: D-<n> sorted by n, without converting a long n to an int."""
+    return len(line["id"]), line["id"]
 
 
 def text_problem(value: str, cap: int) -> str | None:
@@ -253,13 +278,10 @@ def no_duplicates(items: list[tuple[str, object]]) -> dict:
     return obj
 
 
-def read_ledger(root: Path) -> tuple[str, list[dict]]:
-    """The ledger's text and lines, checked whole (REQ-003); "" and [] when there is none."""
-    path = root / LEDGER
-    if not path.exists():
-        return "", []
+def parse_ledger(data: bytes) -> tuple[str, list[dict], dict[str, int]]:
+    """A ledger's text, its lines and each id's line number, checked whole (REQ-003)."""
     try:
-        text = path.read_bytes().decode("utf-8")
+        text = data.decode("utf-8")
     except UnicodeDecodeError:
         raise Refused(f"{LEDGER}: is not UTF-8 text; fix it by hand")
     lines, seen = [], {}
@@ -271,7 +293,7 @@ def read_ledger(root: Path) -> tuple[str, list[dict]]:
             obj = json.loads(raw, object_pairs_hook=no_duplicates)
         except Refused:
             raise content_refusal(LEDGER, number, None, "", "has a duplicate key")
-        except ValueError:
+        except (ValueError, RecursionError):
             raise content_refusal(LEDGER, number, None, "", "is not a JSON object")
         problem = line_problem(obj)
         if problem:
@@ -280,7 +302,12 @@ def read_ledger(root: Path) -> tuple[str, list[dict]]:
             raise content_refusal(LEDGER, number, obj, "", f"repeats the id of line {seen[obj['id']]}")
         seen[obj["id"]] = number
         lines.append(obj)
-    return text, lines
+    return text, lines, seen
+
+
+def read_ledger(root: Path) -> tuple[str, list[dict], dict[str, int]]:
+    path = root / LEDGER
+    return parse_ledger(path.read_bytes()) if path.exists() else ("", [], {})
 
 
 def read_setup(root: Path, ledger_exists: bool) -> dict | None:
@@ -291,10 +318,15 @@ def read_setup(root: Path, ledger_exists: bool) -> dict | None:
             raise Refused(f"{SETUP}: is missing beside the defect ledger; restore it from git or write it by hand")
         return None
     try:
-        obj = json.loads(path.read_text(encoding="utf-8"))
+        return setup_of(path.read_bytes())
     except OSError:
         raise Refused(f"{SETUP}: cannot be read; make it a readable plain file or restore it from git")
-    except (ValueError, UnicodeDecodeError):
+
+
+def setup_of(data: bytes) -> dict:
+    try:
+        obj = json.loads(data.decode("utf-8"))
+    except (ValueError, RecursionError):
         obj = None
     loops = obj.get("loops") if isinstance(obj, dict) else None
     classes = obj.get("classes") if isinstance(obj, dict) else None
@@ -304,6 +336,20 @@ def read_setup(root: Path, ledger_exists: bool) -> dict | None:
         raise Refused(f"{SETUP}: needs `loops` (names from {', '.join(LOOPS)}, user included) "
                       "and `classes` (kebab-case names); fix it by hand")
     return obj
+
+
+@contextlib.contextmanager
+def open_ledger(root: Path, write: bool):
+    """Paths checked (SEC-002), the lock held for a write until the rename (REQ-001), then the ledger
+    and the setup file checked (REQ-003, REQ-002): yields (text, lines, line number by id, setup or None)."""
+    check_paths(root)
+    lock = take_lock(root) if write else None
+    try:
+        text, lines, seen = read_ledger(root)
+        yield text, lines, seen, read_setup(root, (root / LEDGER).exists())
+    finally:
+        if lock is not None:
+            os.close(lock)
 
 
 def check_membership(line: dict, setup: dict) -> None:
@@ -317,20 +363,19 @@ def check_membership(line: dict, setup: dict) -> None:
 
 def write(root: Path, text: str, new: list[dict], create_setup: bool) -> None:
     """Create the setup file if asked, then replace the ledger whole (temp file + rename, mode kept)."""
-    sdd = root / "SDD"
     if create_setup:
-        (sdd / "defects-setup.json").write_text(json.dumps(DEFAULT_SETUP) + "\n", encoding="utf-8")
+        (root / SETUP).write_text(json.dumps(DEFAULT_SETUP) + "\n", encoding="utf-8")
     if new and text and not text.endswith("\n"):
         text += "\n"
     text += "".join(json.dumps(line, ensure_ascii=False) + "\n" for line in new)
-    path = sdd / "defects.jsonl"
+    path = root / LEDGER
     if path.exists():
         mode = stat.S_IMODE(path.stat().st_mode)
     else:
         umask = os.umask(0)
         os.umask(umask)
         mode = 0o666 & ~umask
-    fd, tmp = tempfile.mkstemp(dir=sdd, prefix=".defects-", suffix=".tmp")
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".defects-", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
             handle.write(text)
@@ -339,6 +384,17 @@ def write(root: Path, text: str, new: list[dict], create_setup: bool) -> None:
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
+
+
+def new_line(number: int, status: str, date: str, check: str, fields: dict) -> dict:
+    """A new line in field order: an open line's check_added is pending (found_by user) or none, and a
+    line born fixed is closed on its own date."""
+    if status != "fixed":
+        check = "pending" if fields["found_by"] == "user" else "none"
+    return {"id": f"D-{number}", "status": status, "date": date, "feature": fields["feature"],
+            "found_by": fields["found_by"], "class": fields["class"], "severity": fields["severity"],
+            "where": fields["where"], "introduced_by": fields.get("introduced_by", ""), "check_added": check,
+            "closed": date if status == "fixed" else "", "source": fields["source"]}
 
 
 def next_number(lines: list[dict]) -> int:
@@ -377,38 +433,26 @@ ADD_KEYS = {k: str for k in ("feature", "found_by", "class", "severity", "where"
                              "status", "introduced_by", "check_added", "date")}
 
 
-def cmd_add(root: Path, data: dict) -> int:
+def cmd_add(root: Path, opts: dict, data: dict) -> int:
     status = data.get("status", "open")
     if status == "open" and "check_added" in data:
         raise Refused("check_added: not given on an open line; it is set to pending or none")
     if status == "fixed" and "check_added" not in data:
         raise Refused("check_added: required with status fixed - the check's name, or none")
-    date = data.get("date", datetime.date.today().isoformat())
-    found_by = data["found_by"]
-    line = {"id": "D-1", "status": status, "date": date, "feature": data["feature"], "found_by": found_by,
-            "class": data["class"], "severity": data["severity"], "where": data["where"],
-            "introduced_by": data.get("introduced_by", ""),
-            "check_added": data["check_added"] if status == "fixed" else ("pending" if found_by == "user" else "none"),
-            "closed": date if status == "fixed" else "", "source": data["source"]}
+    line = new_line(1, status, data.get("date", today()), data.get("check_added", ""), data)
     problem = line_problem(line)
     if problem:
         raise input_refusal(line, *problem)
-    check_paths(root)
-    lock = take_lock(root)
-    try:
-        text, lines = read_ledger(root)
-        setup = read_setup(root, (root / LEDGER).exists())
+    with open_ledger(root, write=True) as (text, lines, _, setup):
         check_membership(line, setup or DEFAULT_SETUP)
         for old in lines:
-            if (found_by == "user" and old["status"] == "open"
+            if (line["found_by"] == "user" and old["status"] == "open"
                     and old["source"] == line["source"] and old["feature"] == line["feature"]):
                 print(old["id"])
                 print(f"already logged: {old['id']} is open with this source and feature; nothing written")
                 return 0
         line["id"] = f"D-{next_number(lines)}"
         write(root, text, [line], setup is None)
-    finally:
-        os.close(lock)
     print(line["id"])
     if setup is None:
         print(f"setup file created: {SETUP}")
@@ -418,10 +462,10 @@ def cmd_add(root: Path, data: dict) -> int:
 CLOSE_KEYS = {k: str for k in ("id", "where", "check_added", "date")}
 
 
-def cmd_close(root: Path, data: dict) -> int:
+def cmd_close(root: Path, opts: dict, data: dict) -> int:
     """REQ-010: open -> fixed on the line whose id is given, when its where matches; nothing else changes."""
     fid, where, check = data["id"], data["where"], data["check_added"]
-    date = data.get("date", datetime.date.today().isoformat())
+    date = data.get("date", today())
     if not ID_RE.fullmatch(fid):
         raise Refused(f"id {lit(fid)}: is not D-<n>")
     for field, value, cap in (("where", where, 200), ("check_added", check, 120)):
@@ -434,44 +478,36 @@ def cmd_close(root: Path, data: dict) -> int:
         raise Refused("check_added \"pending\": a fixed line names the check its fix added, or none")
     if not is_date(date):
         raise Refused(f"date {lit(date)}: is not a YYYY-MM-DD date")
-    check_paths(root)
-    lock = take_lock(root)
-    try:
-        text, lines = read_ledger(root)
-        read_setup(root, (root / LEDGER).exists())
-        old = next((x for x in lines if x["id"] == fid), None)
-        if old is None:
+    with open_ledger(root, write=True) as (text, lines, seen, _):
+        if fid not in seen:
             raise Refused(f"no line {fid} in {LEDGER}; nothing closed")
+        old = next(x for x in lines if x["id"] == fid)
         if old["status"] != "open":
             raise Refused(f"{fid} is not open; nothing closed")
         if old["where"] != where:
             raise Refused(f"{fid}: where differs from the line's; nothing closed")
         raws = text.split("\n")
-        for number, raw in enumerate(raws):
-            body = raw.rstrip("\r")
-            if body.strip() and json.loads(body)["id"] == fid:
-                # Only the three values change; every other byte of the line stays as written.
-                spans = [m.span() for m in STRING_RE.finditer(body)]
-                at = dict(zip((json.loads(body[a:b]) for a, b in spans[0::2]), spans[1::2]))
-                new = {"status": "fixed", "check_added": check, "closed": date}
-                for key in sorted(new, key=lambda k: -at[k][0]):
-                    body = body[:at[key][0]] + json.dumps(new[key], ensure_ascii=False) + body[at[key][1]:]
-                raws[number] = body + raw[len(raw.rstrip("\r")):]
+        raw = raws[seen[fid] - 1]
+        body = raw.rstrip("\r")
+        # Only the three values change; every other byte of the line stays as written.
+        spans = [m.span() for m in STRING_RE.finditer(body)]
+        at = dict(zip((json.loads(body[a:b]) for a, b in spans[0::2]), spans[1::2]))
+        new = {"status": "fixed", "check_added": check, "closed": date}
+        for key in sorted(new, key=lambda k: -at[k][0]):
+            body = body[:at[key][0]] + json.dumps(new[key], ensure_ascii=False) + body[at[key][1]:]
+        raws[seen[fid] - 1] = body + raw[len(raw.rstrip("\r")):]
         write(root, "\n".join(raws), [], False)
-    finally:
-        os.close(lock)
     print(f"{fid} closed")
     return 0
 
 
-def cmd_lookup(root: Path, cls: str) -> int:
+def cmd_lookup(root: Path, opts: dict, data: dict) -> int:
     """REQ-012: the class's history, capped at 5 lines, between the delimiter lines."""
+    cls = opts["--class"]
     if not CLASS_RE.fullmatch(cls):
         raise Refused("--class: is not a kebab-case class name")
-    check_paths(root)
-    _, lines = read_ledger(root)
-    read_setup(root, (root / LEDGER).exists())
-    same = sorted((x for x in lines if x["class"] == cls), key=lambda x: (len(x["id"]), x["id"]))
+    with open_ledger(root, write=False) as (_, lines, _, _):
+        same = sorted((x for x in lines if x["class"] == cls), key=order)
     print(DELIMITERS[0])
     print(f"Seen before: {len(same)} line(s) of class {cls}" if same else "Seen before: none")
     for x in same[-5:]:
@@ -534,10 +570,11 @@ def parse_chain(files: list[str], kind: str, lite_brief: str = "") -> tuple[dict
             if raw.startswith("## "):
                 earlier = raw[3:].strip() == "Earlier Findings"
                 continue
-            counts = COUNTS_RE.fullmatch(raw.strip())
+            bare = raw.strip()
+            counts = COUNTS_RE.fullmatch(bare)
             if counts:
                 stated.append(tuple(x.lstrip("0") or "0" for x in counts.groups()))
-            clean = clean or raw.strip() == "No findings."
+            clean = clean or bare == "No findings."
             match = (EARLIER_RE if earlier else FINDING_RE).fullmatch(raw)
             if not match:
                 continue
@@ -561,8 +598,8 @@ def parse_chain(files: list[str], kind: str, lite_brief: str = "") -> tuple[dict
     return found, named
 
 
-def cmd_reviews(root: Path, kind: str, data: dict) -> int:
-    feature, files = data["feature"], data["files"]
+def cmd_reviews(root: Path, opts: dict, data: dict) -> int:
+    kind, feature, files = opts["--kind"], data["feature"], data["files"]
     classes, checks = data.get("classes", {}), data.get("checks", {})
     if not FEATURE_RE.fullmatch(feature):
         raise Refused(f"feature {lit(feature)}: is not a feature name ([###]-[name])")
@@ -585,13 +622,9 @@ def cmd_reviews(root: Path, kind: str, data: dict) -> int:
             problem = text_problem(value, CAPS["check_added"]) if key == "checks" else None
             if problem:
                 raise Refused(f"checks: {fid}: {problem}")
-    check_paths(root)
-    lock = take_lock(root)
-    try:
-        text, lines = read_ledger(root)
-        setup = read_setup(root, (root / LEDGER).exists())
+    with open_ledger(root, write=True) as (text, lines, _, setup):
         known = {line["source"] for line in lines}
-        number, today = next_number(lines), datetime.date.today().isoformat()
+        number, date = next_number(lines), today()
         new, out, skipped = [], [], 0
         for fid, finding in found.items():
             if finding["severity"] == "LOW":
@@ -599,12 +632,8 @@ def cmd_reviews(root: Path, kind: str, data: dict) -> int:
             if finding["source"] in known:
                 skipped += 1
                 continue
-            fixed = finding["status"] == "fixed"
-            line = {"id": f"D-{number}", "status": finding["status"], "date": today, "feature": feature,
-                    "found_by": finding["found_by"], "class": classes.get(fid, "unclassified"),
-                    "severity": finding["severity"], "where": finding["where"], "introduced_by": "",
-                    "check_added": checks.get(fid, "none") if fixed else "none",
-                    "closed": today if fixed else "", "source": finding["source"]}
+            line = new_line(number, finding["status"], date, checks.get(fid, "none"),
+                            dict(finding, feature=feature, **{"class": classes.get(fid, "unclassified")}))
             problem = line_problem(line)
             if problem and problem[0] == "where":
                 out.append(f"not written | {finding['source']} | where")
@@ -618,8 +647,6 @@ def cmd_reviews(root: Path, kind: str, data: dict) -> int:
             number += 1
         if new:
             write(root, text, new, setup is None)
-    finally:
-        os.close(lock)
     print("\n".join(out + [f"written {len(new)}, skipped {skipped}"]))
     if new and setup is None:
         print(f"setup file created: {SETUP}")
@@ -627,15 +654,130 @@ def cmd_reviews(root: Path, kind: str, data: dict) -> int:
 
 
 REVIEWS_KEYS = {"feature": str, "files": list, "brief": str, "classes": dict, "checks": dict}
-COMMANDS = {"add": ("--root", "--input"), "reviews": ("--root", "--kind", "--input"),
-            "close": ("--root", "--input"), "lookup": ("--root", "--class")}
+
+
+def git(folder: str, *args: str) -> subprocess.CompletedProcess:
+    """SEC-002: git as a subprocess with an argument list, never a shell."""
+    return subprocess.run(["git", "-C", folder, *args], capture_output=True)
+
+
+def shares(counts: list[int], total: int) -> list[int]:
+    """Whole percents summing to 100: floors, then the largest remainders, ties to the earlier group."""
+    base = [c * 100 // total for c in counts]
+    for i in sorted(range(len(counts)), key=lambda i: -(counts[i] * 100 % total))[:100 - sum(base)]:
+        base[i] += 1
+    return base
+
+
+def report(lines: list[dict], setup: dict) -> tuple[str, list[str]]:
+    """REQ-015, REQ-017: an application's threshold and the lines of its section."""
+    def feature(x: dict) -> tuple:  # each outside-cycle line is a feature of its own, never equal to a named one
+        return (x["feature"], x["id"] if x["feature"] == "outside-cycle" else "")
+    lines = sorted(lines, key=order)
+    total, loops = len(lines), setup["loops"]
+    at = len({feature(x) for x in lines}) >= 5 or total >= 30
+    groups = {loop: 0 for loop in loops}
+    for x in lines:
+        key = x["found_by"] if x["found_by"] in groups else "other"
+        groups[key] = groups.get(key, 0) + 1
+    percents = shares(list(groups.values()), total) if at and total else None
+    out = [f"lines: {total}"] + [f"{loop}: {n}" + (f" ({percents[i]}%)" if percents else "")
+                                 for i, (loop, n) in enumerate(groups.items())]
+    out += ["no CI" if loop == "ci" else f"no {loop}" for loop in LOOPS if loop not in loops]
+    escapes = [x for x in lines if x["found_by"] == "user" and x["status"] == "open"]
+    findings = [x for x in lines if x["found_by"] != "user" and x["status"] == "open"]
+    unclassified = [x["id"] for x in lines if x["class"] == "unclassified"]
+    if not at:
+        return "below threshold — counts only", out + [
+            f"open escapes: {len(escapes)}", f"open findings: {len(findings)}", f"unclassified: {len(unclassified)}"]
+    out.append(f"open escapes: {len(escapes)}")
+    out += [f"  {x['id']} | {x['class']} | {x['where']} | {x['date']}" for x in escapes]
+    out.append(f"open findings: {len(findings)}")
+    out += [f"  {x['id']} | {x['found_by']} | {x['class']} | {x['where']} | {x['date']}" for x in findings]
+    out.append(f"unclassified: {len(unclassified)}" + (f" | {', '.join(unclassified)}" if unclassified else ""))
+    users = sum(x["found_by"] == "user" for x in lines)
+    out.append(f"escape rate: {(200 * users + total) // (2 * total)}%")
+    by_class: dict[str, list[dict]] = {}
+    for x in lines:
+        if x["class"] != "unclassified":
+            by_class.setdefault(x["class"], []).append(x)
+    repeated = [(cls, xs) for cls, xs in by_class.items() if len({feature(x) for x in xs}) > 1]
+    out.append(f"repeated classes: {len(repeated)}")
+    out += [f"  {cls} | {len({feature(x) for x in xs})} features | {', '.join(x['id'] for x in xs)}"
+            for cls, xs in repeated]
+    checked = [x for x in lines if x["status"] == "fixed" and x["check_added"] not in ("none", "pending")]
+    apart = [x["id"] for x in checked if x["class"] == "unclassified" or x["feature"] == "outside-cycle"]
+    quiet = [x for x in checked if x["id"] not in apart and not any(
+        order(y) > order(x) and y["class"] == x["class"] and y["found_by"] != "user" and y["feature"] != x["feature"]
+        for y in lines)]
+    out.append(f"no catches since added: {len(quiet)}")
+    out += [f"  {x['id']} | {x['class']} | {x['check_added']}" for x in quiet]
+    if apart:
+        out.append(f"not evaluated (unclassified or outside-cycle): {', '.join(apart)}")
+    return "at threshold", out
+
+
+def app_section(name: str, folder: str) -> list[str]:
+    """REQ-016: one application's section, read from its committed default branch."""
+    try:
+        if git(folder, "rev-parse", "--show-toplevel").stdout != os.fsencode(os.path.realpath(folder)) + b"\n":
+            return [f"## {name}", "not reachable from the server host"]
+        branch = git(folder, "symbolic-ref", "-q", "refs/remotes/origin/HEAD").stdout.decode().strip() or next(
+            (b for b in ("refs/heads/main", "refs/heads/master")
+             if not git(folder, "rev-parse", "-q", "--verify", b).returncode), "")
+        # one commit for every read below, so the modes checked are those of the bytes parsed
+        commit = git(folder, "rev-parse", "-q", "--verify", f"{branch}^{{commit}}").stdout.decode().strip() if branch else ""
+        ledger = git(folder, "show", f"{commit}:{LEDGER}") if commit else None
+        if ledger is None or ledger.returncode:
+            return [f"## {name}", "no ledger yet"]
+        setup = git(folder, "show", f"{commit}:{SETUP}")
+        tree = git(folder, "ls-tree", commit, "--", LEDGER, SETUP)
+        modes = {x.partition("\t")[2]: x.split(" ")[0] for x in tree.stdout.decode().splitlines()}
+    except (OSError, UnicodeDecodeError):
+        return [f"## {name}", "not reachable from the server host"]
+    try:
+        if tree.returncode or LEDGER not in modes:  # SEC-002: an unverified file is refused, never read as plain
+            raise Refused(f"{LEDGER}: its committed file mode could not be read; check the repository with git fsck")
+        links = [path for path, mode in modes.items() if mode == "120000"]  # a committed symlink's text is never parsed
+        if links:
+            raise Refused(f"{links[0]}: is a symlink or lies outside SDD/; replace it with a plain file")
+        _, lines, _ = parse_ledger(ledger.stdout)
+        if setup.returncode:
+            raise Refused(f"{SETUP}: is missing beside the defect ledger; restore it from git or write it by hand")
+        level, out = report(lines, setup_of(setup.stdout))
+    except Refused as error:
+        return [f"## {name}", f"refused: {error}"]
+    return [f"## {name} — {level}", *out]
+
+
+def cmd_summary(apps: list[str]) -> int:
+    """REQ-015-017: one section per application, each between the two delimiter lines; exit 0."""
+    if not apps:
+        raise Refused("usage: ledger.py summary <app>... (an <app> is NAME=<dir> or a bare <dir>)")
+    for arg in apps:
+        name, sep, folder = arg.partition("=")
+        if not sep or "/" in name:  # a bare <dir>; one whose own name holds "=" is given as ./a=b or a full path
+            name, folder = os.path.basename(os.path.abspath(arg)), arg
+        # SEC-001: one display line, whatever the alias or folder name holds; printable text is kept as it is
+        name = "".join(ch if ch.isprintable() else json.dumps(ch)[1:-1] for ch in name)
+        print("\n".join([DELIMITERS[0], *app_section(name, folder), DELIMITERS[1]]))
+    return 0
+
+
+# Per command: its flags, its input keys and the required ones (None: no JSON input), its handler.
+COMMANDS = {
+    "add": (("--root", "--input"), ADD_KEYS, ("feature", "found_by", "class", "severity", "where", "source"), cmd_add),
+    "reviews": (("--root", "--kind", "--input"), REVIEWS_KEYS, ("feature", "files"), cmd_reviews),
+    "close": (("--root", "--input"), CLOSE_KEYS, ("id", "where", "check_added"), cmd_close),
+    "lookup": (("--root", "--class"), None, (), cmd_lookup),
+}
 
 
 def parse_args(argv: list[str]) -> tuple[str, dict[str, str]]:
     if not argv or argv[0] not in COMMANDS:
         raise Refused("usage: ledger.py add|reviews|close --root <app dir> [--kind feature|slice|lite] --input <file|->"
-                      " | lookup --root <app dir> --class <class>")
-    command, allowed, opts = argv[0], COMMANDS[argv[0]], {}
+                      " | lookup --root <app dir> --class <class> | summary <app>...")
+    command, allowed, opts = argv[0], COMMANDS[argv[0]][0], {}
     rest = iter(argv[1:])
     for token in rest:
         if token not in allowed or token in opts:
@@ -656,23 +798,15 @@ def parse_args(argv: list[str]) -> tuple[str, dict[str, str]]:
 
 def main(argv: list[str]) -> int:
     try:
+        if argv[:1] == ["summary"]:
+            return cmd_summary(argv[1:])
         command, opts = parse_args(argv)
-        if command == "add":
-            data = read_input(opts["--input"], ADD_KEYS, ("feature", "found_by", "class", "severity", "where", "source"))
-        elif command == "close":
-            data = read_input(opts["--input"], CLOSE_KEYS, ("id", "where", "check_added"))
-        elif command == "reviews":
-            data = read_input(opts["--input"], REVIEWS_KEYS, ("feature", "files"))
+        _, keys, required, handler = COMMANDS[command]
+        data = read_input(opts["--input"], keys, required) if keys else {}
         root = Path(opts["--root"])
         if not root.is_dir():
             raise Refused(f"--root {lit(opts['--root'])}: is not a directory")
-        if command == "lookup":
-            return cmd_lookup(root, opts["--class"])
-        if command == "add":
-            return cmd_add(root, data)
-        if command == "close":
-            return cmd_close(root, data)
-        return cmd_reviews(root, opts["--kind"], data)
+        return handler(root, opts, data)
     except (Refused, OSError) as error:
         if isinstance(error, OSError):
             error = Refused(f"{error.filename or 'SDD'}: {error.strerror}; check that SDD/ is readable and writable")
