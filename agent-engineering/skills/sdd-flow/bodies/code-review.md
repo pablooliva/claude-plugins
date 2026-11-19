@@ -29,7 +29,6 @@ Code that misses the specification fails. Code that meets it passes only when it
 3. **IMPLEMENTATION-PLAN Files** (`SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-*.md`)
    - All AI-generated code has associated prompt files
    - Context management approach documented
-   - Subagent usage logged (check `SDD/.records/subagent-calls/`)
    - Progress summaries for each implementation phase
    - Context engineering decisions and handoff points between phases recorded
 
@@ -286,11 +285,6 @@ The new files among them are `git diff --name-only --no-renames --diff-filter=A 
 ### Step 1: Gather All Artifacts
 
 Use the research document, specification, and IMPLEMENTATION-PLAN paths in your prompt — the ones the Pre-Review Artifact Verification checked. Do not list `SDD/` directories to find them.
-
-```bash
-# Check subagent logs
-ls SDD/.records/subagent-calls/
-```
 
 ### Step 2: Read Specification First
 

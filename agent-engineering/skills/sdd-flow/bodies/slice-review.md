@@ -106,7 +106,7 @@ On a re-review whose fix round the orchestrator snapshotted, your prompt gives t
 Apply the following review process to the computed slice file set. The full review priority order applies:
 
 1. **Specification Alignment (70%)** — verify the slice's REQ/EDGE/FAIL coverage from the SPEC. Restrict to REQ-XXX/EDGE-XXX/FAIL-XXX entries the slice's `Acceptance check` and `Modules touched` cite (a slice need not cover ALL of the feature's REQs — only its own).
-2. **Context Engineering (20%)** — verify the slice's section in the IMPLEMENTATION-PLAN's `## Slice Progress` table reflects the work done; verify subagent calls (if any) are logged under `SDD/.records/subagent-calls/`.
+2. **Context Engineering (20%)** — verify the slice's section in the IMPLEMENTATION-PLAN's `## Slice Progress` table reflects the work done.
 3. **Test Specification Alignment (10%)** — verify tests exist and pass for the slice's contribution; verify test type coverage (unit / integration / E2E) is appropriate for the slice's surface.
 
 **Test Integrity Lens (mandatory, every slice).** Item 3 asks whether the slice's tests exist and pass; this lens asks whether they are real — and whether the tests or the code were bent to get the green run. Read the standard at the `TEST_INTEGRITY` path in your prompt and run it **as written**, on this slice's requirements and the test files in this slice's changes: checks T1–T8 (§3), at the depth §4 gives for each module's `Risk:` tier, with `BASE` from your prompt and `### Test Changes` from the IMPLEMENTATION-PLAN. It is an overlay on the 70/20/10 split, and it runs after the slice's tests have passed. Make every mutation and probe in a scratch copy of the working tree (TEST_INTEGRITY §8), never in the working tree. Write the `## Test Integrity` section in the shape §6 gives; its findings are ordinary findings of this review, counted in the marker, each tagged `[needs-code-or-test]`. **A HIGH lens finding rejects the slice.** If your prompt has no `TEST_INTEGRITY` path, return a failure to the orchestrator naming it.
@@ -315,7 +315,6 @@ This review emits paths under the SDD 2.0.0 layout:
 - `SDD/requirements/SPEC-XXX-[feature-name].md`
 - `SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md`
 - `SDD/.records/reviews/REVIEW-SLICE-XXX-[feature-name]-iter<N>-[YYYY-MM-DD].md`
-- `SDD/.records/subagent-calls/`
 
 ## Refusal-Message Discipline (REQ-007 / UX-001)
 
