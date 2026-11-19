@@ -23,6 +23,13 @@ and `<name>.return.md` (the reviewer's final message). The run counts only if:
   that starts with `REVIEW: ` decides; an answer with no such line does not count);
 - every `--expect` file exists, is not empty, and was written during the run.
 
+A run that fails is undone, and what it wrote is kept: each `--expect` file it
+wrote during the run is copied beside itself as `<name>.attempt<N>-void.md` (N the
+next free number), named in the result line, and then put back as it was before
+the run — removed if it did not exist — so a review the step appends to, or a
+partial one a continuation resumes, holds nothing of the failed run. The next run
+of the step checks the copies' findings (`references/second-model-review.md` §3).
+
 A status line `REVIEW: HANDOFF` is neither a pass nor a failure: the reviewer hit
 its read limit and wrote a compaction file, and the caller continues the review
 (exit 4; the `--expect` files are not checked).
@@ -182,6 +189,7 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
     label = LABEL
     expected = [Path(p) if os.path.isabs(p) else cwd / p for p in args.expect]
     stamps = {p: p.stat().st_mtime_ns if p.is_file() else None for p in expected}
+    originals = {p: p.read_bytes() if p.is_file() else None for p in expected}
     argv, stdin = command(cwd, return_file), prompt_file.read_text()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -214,7 +222,7 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
         try:
             restored = restore_code(cwd, before, scratch)
         except GuardError as exc:
-            return f"FAILED — {label}: {exc}; log: {log_file}", 1
+            return f"FAILED — {label}: {exc}{undo(expected, stamps, originals)}; log: {log_file}", 1
 
     note = f"; put back {len(restored)} file(s) it left changed: {', '.join(restored)}" if restored else ""
     if failure is None:
@@ -235,8 +243,32 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
                 if failure:
                     break
     if failure:
-        return f"FAILED — {label}: {failure}{note}; log: {log_file}", 1
+        return f"FAILED — {label}: {failure}{note}{undo(expected, stamps, originals)}; log: {log_file}", 1
     return f"OK — {label} reviewed{note}; return: {return_file}", 0
+
+
+def undo(expected: list[Path], stamps: dict, originals: dict) -> str:
+    """After a failed run: copy each expected file it wrote to `<name>.attempt<N>-void.md`, then put the
+    file back as it was before the run (removed if it did not exist). Returns the result-line note."""
+    kept, stuck = [], []
+    for path in expected:
+        try:
+            if not path.is_file() or path.stat().st_mtime_ns == stamps[path]:
+                continue
+            base = path.name.removesuffix(".md")
+            n = 1
+            while (copy := path.with_name(f"{base}.attempt{n}-void.md")).exists():
+                n += 1
+            shutil.copyfile(path, copy)
+            kept.append(str(copy))
+            if originals[path] is None:
+                path.unlink()
+            else:
+                path.write_bytes(originals[path])
+        except OSError:
+            stuck.append(str(path))  # left as the failed run wrote it: the caller is told
+    note = f"; kept what it wrote as {', '.join(kept)} and put the file(s) back" if kept else ""
+    return note + (f"; could not keep or put back {', '.join(stuck)}" if stuck else "")
 
 
 def main() -> int:

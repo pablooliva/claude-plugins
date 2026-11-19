@@ -90,7 +90,17 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.8.0.
+Version 5.9.0.
+
+### What's new in 5.9.0
+
+- **A failed review run's findings are checked, not lost.** When a second-model review run fails, the runner script
+  copies what it wrote to `….attempt<N>-void.md` and puts the review document back as it was before the run (a
+  resumed session copies what a cut-off run left), and
+  every later run of that step — the retry, or the Claude fallback — is given all such copies as `VOID RUNS:` with
+  one rule: check each HIGH and MEDIUM finding and either raise it as its own or say why it does not hold (a review
+  limited to what a fix changed lists the rest as outside its scope). In 002-defect-ledger two void runs held seven
+  real findings that no retry raised again; the owner had to order their fix at the final-check stop.
 
 ### What's new in 5.8.0
 

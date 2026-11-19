@@ -127,6 +127,38 @@ class SecondModelReviewTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("REVIEW: INCOMPLETE — the tests could not be run", line)
 
+    def test_a_failed_run_keeps_what_it_wrote_as_numbered_void_copies(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        reviews = self.repo / "SDD" / ".records" / "reviews"
+        for n in (1, 2):
+            status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md\nINCOMPLETE now")
+            self.assertEqual(status, 1)
+            copy = reviews / f"REVIEW.attempt{n}-void.md"
+            self.assertIn(f"kept what it wrote as {copy}", line)
+            self.assertTrue(copy.read_text())
+            self.assertFalse((reviews / "REVIEW.md").exists())  # it did not exist before the run
+
+    def test_a_failed_run_puts_back_the_review_it_appended_to(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        reviews = self.repo / "SDD" / ".records" / "reviews"
+        reviews.mkdir(parents=True)
+        accepted = "# The accepted review, appended to by this step\n"
+        (reviews / "REVIEW.md").write_text(accepted)
+        status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md\nINCOMPLETE now")
+        self.assertEqual(status, 1)
+        self.assertEqual((reviews / "REVIEW.md").read_text(), accepted)
+        self.assertNotEqual((reviews / "REVIEW.attempt1-void.md").read_text(), accepted)  # what the run wrote
+
+    def test_a_failed_run_that_wrote_nothing_keeps_no_copy(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        reviews = self.repo / "SDD" / ".records" / "reviews"
+        reviews.mkdir(parents=True)
+        (reviews / "REVIEW.md").write_text("# The accepted review, appended to by this step\n")
+        status, line = self.review("nothing to do\nINCOMPLETE now")
+        self.assertEqual(status, 1)
+        self.assertNotIn("kept what it wrote", line)
+        self.assertEqual(sorted(p.name for p in reviews.iterdir()), ["REVIEW.md"])
+
     def test_run_reports_a_handoff_without_asking_for_the_review_file(self) -> None:
         self.install("codex", FAKE_CODEX)
         status, line = self.review("BREAK src/app.py\nHANDOFF now")
