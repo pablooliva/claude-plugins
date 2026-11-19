@@ -87,7 +87,8 @@ agent-engineering/
 │   │   └── scripts/                #   migrate-records.py — one-off move of a pre-4.7.0 repo's SDD/orchestration/ and SDD/reviews/ into SDD/.records/ (dry run unless --apply; never commits);
 │   │                               #   snapshot.py — saves the working tree as a commit no ref points to, before a fix round and before its re-review;
 │   │                               #   `snapshot.py scratch` copies it outside the repo for a mutation check (test-integrity.md §8);
-│   │                               #   second-model-review.py — settles the cycle's reviewer and runs one review step on codex (the only second model);
+│   │                               #   second-model-review.py — settles the cycle's reviewer, writes a review step's prompt file (`prompt`, holding the
+│   │                               #   reviewer preamble's one copy), and runs one review step on codex (the only second model);
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
 │   │                               #   growth.py — measures a feature's growth (source/test lines added, new files, new files the brief does not name)
 │   │                               #   against the design brief's `## Growth budget`; run at the slice pause and at 4h (stops over 1.5×);

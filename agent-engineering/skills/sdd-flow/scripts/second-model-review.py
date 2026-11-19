@@ -3,6 +3,10 @@
 
 Usage:
     second-model-review.py resolve
+    second-model-review.py prompt --cwd <repo root> --calls-dir <dir> --step <step-id> --iter <iter>
+                                  --role <role file> --reviewer <reviewer line> --body <body file>
+                                  [--value NAME=VALUE ...] [--line TEXT ...] [--input NAME=PATH ...]
+                                  [--output NAME=PATH ...] [--text-file PATH ...]
     second-model-review.py run --prompt-file <path> --cwd <repo root>
                                --expect <path> [--expect <path> ...] [--timeout <seconds>]
 
@@ -13,6 +17,20 @@ script is the one place that knows how the reviewer's CLI is called.
 `resolve` settles the reviewer for a whole cycle: `codex` when that CLI is on
 PATH, else `claude (fallback — <reason>)`, the caller's Claude reviewer. The
 first stdout line is `Result: <answer>`.
+
+`prompt` writes a review step's prompt file,
+`<calls-dir>/<step-id>-<iter>-<YYYY-MM-DD_HH-MM-SS>.prompt.md`, and names it in
+the result line. In order: the reviewer preamble (its one copy is PREAMBLE below)
+with the role file and the reviewer line filled in; the body file; every text
+file's content as it is (a rule to embed verbatim, an owner's decision, a note on
+where the records live); the values (`NAME = VALUE`); the lines as given (a gate
+line, say); the inputs (a name given again adds a path: `VOID RUNS`); the outputs.
+Paths are written absolute; a relative one is taken from `--cwd`. It refuses
+(exit 2, nothing written) a role, body or text file that is not an existing
+file, an input that does not exist, a name given twice, a text file that is not
+UTF-8, and a name, value, path or line holding a line break; an output need not
+exist, but its folder must. The calls folder is created when missing; a prompt
+file is never overwritten.
 
 `run` gives the prompt file's text to Codex and waits. Beside the prompt
 file (`<name>.prompt.md`) it writes `<name>.log` (everything the CLI printed)
@@ -271,10 +289,126 @@ def undo(expected: list[Path], stamps: dict, originals: dict) -> str:
     return note + (f"; could not keep or put back {', '.join(stuck)}" if stuck else "")
 
 
+PREAMBLE = """You are the reviewer for one step of a development cycle. The work you are reviewing was written by a different model family; you were chosen for that reason — judge it on its merits, with no deference to its author.
+
+1. **Read your role first:** `{role}`. Skip the block between the `---` lines at its top. Where it speaks of a "bounded return to the orchestrator", that is your final message. Where it or any file below names a tool (Read, Grep, Glob), use your own file and shell tools. Start no sub-agent and no other agent session.
+2. **Then read the body file the prompt below names.** It is your complete instruction set.
+3. **Write only what the prompt below names as an output**, plus your appended entry in `SDD/.records/progress.md` and your counter file if one is given. Change nothing else. Where your instructions have you break code to see a test fail, do it in a scratch copy of the working tree outside the repository, as they say, never in the working tree. Never commit, stash, reset, or check out anything. Never fix what you are reviewing.
+4. **Put this line directly under the review document's title:** `Reviewed by: {reviewer}`
+5. **Never record a check you could not run as passed.** If you cannot carry out a step your instructions require — a command is blocked, the tests cannot be run, a file is unreadable — say so in the review document at that step, and say when it was the sandbox that stopped it.
+6. **Your final message starts with one of three lines, on a line of its own.** `REVIEW: COMPLETE` when you carried out every step. `REVIEW: HANDOFF — <the compaction file you wrote>` when the Safety-Net Rule in the prompt below fired and you followed its compact instructions. `REVIEW: INCOMPLETE — <what you could not do>` in every other case. After it, the summary your role file asks for, in 200 words or fewer.
+
+---
+"""
+
+
+REPEATABLE = {"VOID RUNS"}  # the one input that lists several paths (references/second-model-review.md §3)
+
+
+def pairs(items: list[str] | None, what: str, seen: set[str], repeat: bool = False) -> list[tuple[str, list[str]]]:
+    """NAME=VALUE items, a name used once across every kind -- or, with repeat, a REPEATABLE name given again."""
+    out: dict[str, list[str]] = {}
+    for item in items or []:
+        name, sep, value = item.partition("=")
+        name = one_line(name, f"a {what} name").strip()
+        if not sep or not name or not value:
+            raise InputError(f"{what} must be NAME=VALUE: {name or '(empty)'}")
+        if name in out and repeat and name in REPEATABLE:
+            out[name].append(value)
+            continue
+        if name in seen:
+            raise InputError(f"{name} is given twice")
+        seen.add(name)
+        out[name] = [value]
+    return list(out.items())
+
+
+def one_line(text: str, what: str) -> str:
+    if any(c in text for c in "\n\r\x0b\x0c\x1c\x1d\x1e\x85\u2028\u2029"):
+        raise InputError(f"{what} holds a line break")
+    return text
+
+
+def existing(path: str, what: str, cwd: Path, kind: str = "file") -> Path:
+    try:
+        p = (cwd / path).resolve()
+    except (OSError, RuntimeError) as exc:
+        raise InputError(f"{what} cannot be resolved: {one_line(path, what)}") from exc
+    if not (p.is_dir() if kind == "dir" else p.is_file() if kind == "file" else p.exists()):
+        raise InputError(f"{what} is not an existing {kind}: {one_line(str(p), what)}")
+    return Path(one_line(str(p), what))
+
+
+def read_text(path: Path, what: str) -> str:
+    try:
+        with path.open(encoding="utf-8", newline="") as f:  # verbatim: no line-ending change
+            return f.read()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise InputError(f"{what} cannot be read as UTF-8 text: {path}") from exc
+
+
+def build_prompt(args: argparse.Namespace) -> tuple[str, int]:
+    seen: set[str] = set()
+    cwd = Path(args.cwd).resolve()
+    if not cwd.is_dir():
+        raise InputError(f"not a directory: {cwd}")
+    for name, what in ((args.step, "--step"), (args.iter, "--iter")):
+        if "/" in name or not one_line(name, what).strip():
+            raise InputError(f"{what} is not a plain name")
+    role = existing(args.role, "the role file", cwd)
+    body = existing(args.body, "the body file", cwd)
+    reviewer = one_line(args.reviewer, "--reviewer")
+    values = [(n, one_line(v[0], n)) for n, v in pairs(args.value, "--value", seen)]
+    inputs = [(n, [existing(x, n, cwd, "path") for x in v]) for n, v in pairs(args.input, "--input", seen, repeat=True)]
+    outputs = []
+    for n, v in pairs(args.output, "--output", seen):
+        out = Path(one_line(str((cwd / v[0]).resolve()), n))
+        if not out.parent.is_dir():
+            raise InputError(f"{n}: its folder does not exist: {out.parent}")
+        outputs.append((n, out))
+    lines = [one_line(t, "a --line") for t in args.line or []]
+    texts = [read_text(existing(t, "a text file", cwd), "a text file") for t in args.text_file or []]
+    calls = (cwd / one_line(args.calls_dir, "--calls-dir")).resolve()
+    try:
+        calls.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise InputError(f"the calls folder cannot be made: {calls}") from exc
+    parts = [PREAMBLE.format(role=role, reviewer=reviewer),
+             f"Read this file FIRST — it is your complete instruction set: {body}"]
+    parts.extend(texts)  # as written, final newline included
+    if values:
+        parts.append("\n".join(f"{n} = {v}" for n, v in values))
+    if lines:
+        parts.append("\n".join(lines))
+    if inputs:
+        parts.append("## Inputs\n" + "\n".join(f"- {n}: {', '.join(map(str, ps))}" for n, ps in inputs))
+    if outputs:
+        parts.append("## Outputs\n" + "\n".join(f"- {n}: {p}" for n, p in outputs))
+    text = "\n\n".join(parts) + "\n"
+    stamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+    for n in range(1, 1000):
+        target = calls / f"{args.step}-{args.iter}-{stamp}{'' if n == 1 else f'-{n}'}.prompt.md"
+        try:
+            with target.open("x", encoding="utf-8", newline="") as f:  # never overwrite, never follow a link
+                f.write(text)
+            return str(target), 0
+        except FileExistsError:
+            continue
+        except OSError as exc:
+            target.unlink(missing_ok=True)  # no partial prompt file left behind
+            raise InputError(f"the prompt file cannot be written: {target}") from exc
+    raise InputError(f"no free prompt file name in {calls}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     sub = parser.add_subparsers(dest="action", required=True)
     sub.add_parser("resolve")
+    p_prompt = sub.add_parser("prompt")
+    for flag in ("--cwd", "--calls-dir", "--step", "--iter", "--role", "--reviewer", "--body"):
+        p_prompt.add_argument(flag, required=True)
+    for flag in ("--value", "--line", "--input", "--output", "--text-file"):
+        p_prompt.add_argument(flag, action="append")
     p_run = sub.add_parser("run")
     p_run.add_argument("--prompt-file", required=True)
     p_run.add_argument("--cwd", required=True)
@@ -284,7 +418,12 @@ def main() -> int:
     signal.signal(signal.SIGTERM, cancel)
     signal.signal(signal.SIGINT, cancel)
     try:
-        line, status = resolve() if args.action == "resolve" else run(args)
+        if args.action == "resolve":
+            line, status = resolve()
+        elif args.action == "prompt":
+            line, status = build_prompt(args)
+        else:
+            line, status = run(args)
     except InputError as exc:
         print(f"Result: ERROR — {exc}")
         return 2

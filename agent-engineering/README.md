@@ -90,7 +90,15 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.10.0.
+Version 5.11.0.
+
+### What's new in 5.11.0
+
+- **Review prompts are written by the script.** `second-model-review.py prompt` writes a second-model review's
+  prompt file from named values, lines, inputs, outputs and text files, adds the reviewer preamble (its one copy is
+  now in the script, and a test keeps the reference's quotation equal to it), and refuses an input that does not
+  exist, a name given twice, or a value holding a line break. In 002-defect-ledger the orchestrator wrote forty
+  prompt files by hand.
 
 ### What's new in 5.10.0
 
