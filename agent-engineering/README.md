@@ -90,7 +90,15 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.6.1.
+Version 5.6.2.
+
+### What's new in 5.6.2
+
+- **Growth leaves out the cycle's own records, wherever they live.** `scripts/growth.py` left out only a repo-root
+  `SDD/`; in a repo whose SDD root is elsewhere, the implementation plan, summary and spec were counted as source and
+  listed as unnamed new files, which could stop an in-budget feature at 4h. It now takes the root from the brief's
+  path as given (`<root>/requirements/DESIGN-*.md`, the root inside `--repo`; symlinks do not change it); a repo-root `SDD/` that is not the cycle's root
+  is counted like any code.
 
 ### What's new in 5.6.1
 

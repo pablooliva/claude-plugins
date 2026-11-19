@@ -5,13 +5,19 @@ Usage:
     growth.py --base <commit> --brief <DESIGN-brief.md> [--repo <dir>]
 
 Compares the working tree (committed and uncommitted work, untracked files
-included, `SDD/` left out) with BASE, and reads the brief's `## Growth budget`
+included, the cycle's SDD root left out) with BASE, and reads the brief's `## Growth budget`
 and `## What changes where` sections. Prints three lines:
 
     Growth: source +<n> of ~<n> (<r>x), tests +<n> of ~<n> (<r>x), new files <n> of <n>, tests per source line <t>
     Unnamed new files: none | <path>, <path>
     Over budget: yes | no
 
+- The SDD root is the folder two levels above the brief when the brief sits in a
+  `requirements/` folder (`<root>/requirements/DESIGN-*.md`), else `SDD` — judged on
+  the path as given, before any symlink in it is followed. Everything under
+  the root — plan, summary, slices, spec, records — is left out of every count and
+  of the new files. A root that is REPO itself or lies outside it is a usage error:
+  REPO must be the folder that holds the code, with the SDD root inside it.
 - Lines are lines added (git's numstat "added" column; every line of an untracked
   text file). A file is a test file when a directory in its path is `test`,
   `tests`, `__tests__` or `spec`, or its name starts `test_`, ends `_test.<ext>`,
@@ -31,6 +37,7 @@ error or a git failure. Deterministic: stdlib only.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -38,7 +45,6 @@ from pathlib import Path, PurePosixPath
 
 OVERRUN = 1.5
 TEST_DIRS = {"test", "tests", "__tests__", "spec"}
-EXCLUDE = ":(exclude)SDD"
 
 
 def is_test(path: str) -> bool:
@@ -84,10 +90,22 @@ def named_paths(brief: str) -> set[str]:
     return names
 
 
-def measure(repo: Path, base: str) -> tuple[int, int, list[str]]:
+def sdd_root(repo: Path, brief: str) -> str:
+    """The cycle's SDD root, relative to REPO, as a POSIX path. ValueError when it is REPO or outside it."""
+    folder = Path(os.path.normpath(repo / brief)).parent  # named as given: no symlink changes which folder it is
+    if folder.name != "requirements":
+        return "SDD"
+    root = folder.parent.resolve().relative_to(repo).as_posix()  # ValueError outside REPO
+    if root == ".":
+        raise ValueError("the SDD root is the --repo folder itself")
+    return root
+
+
+def measure(repo: Path, base: str, root: str) -> tuple[int, int, list[str]]:
     """NUL-separated git output (-z), so a path with unusual characters is read as it is, never quoted."""
     source = tests = 0
-    fields = git(repo, "diff", "--numstat", "-z", "--no-renames", base, "--", ".", EXCLUDE).split("\0")
+    exclude = f":(exclude,literal){root}"
+    fields = git(repo, "diff", "--numstat", "-z", "--no-renames", base, "--", ".", exclude).split("\0")
     for row in fields:
         if not row:
             continue
@@ -98,7 +116,7 @@ def measure(repo: Path, base: str) -> tuple[int, int, list[str]]:
             tests += int(added)
         else:
             source += int(added)
-    untracked = [p for p in git(repo, "ls-files", "-z", "--others", "--exclude-standard", "--", ".", EXCLUDE).split("\0") if p]
+    untracked = [p for p in git(repo, "ls-files", "-z", "--others", "--exclude-standard", "--", ".", exclude).split("\0") if p]
     for path in untracked:
         try:
             n = len((repo / path).read_text(encoding="utf-8").splitlines())
@@ -108,7 +126,7 @@ def measure(repo: Path, base: str) -> tuple[int, int, list[str]]:
             tests += n
         else:
             source += n
-    added_files = [p for p in git(repo, "diff", "--name-only", "-z", "--no-renames", "--diff-filter=A", base, "--", ".", EXCLUDE).split("\0") if p]
+    added_files = [p for p in git(repo, "diff", "--name-only", "-z", "--no-renames", "--diff-filter=A", base, "--", ".", exclude).split("\0") if p]
     return source, tests, sorted(set(added_files) | set(untracked))
 
 
@@ -135,12 +153,17 @@ def main(argv: list[str]) -> int:
     except OSError as e:
         print(f"Result: ERROR — cannot read the brief: {e}")
         return 2
+    try:
+        root = sdd_root(repo, args.brief)
+    except ValueError:
+        print("Result: ERROR — --repo must hold the code, with the brief's SDD root (<root>/requirements/) inside it")
+        return 2
     budget = read_budget(brief)
     if budget is None:
         print("Result: NO BUDGET — the brief has no readable ## Growth budget section")
         return 3
     try:
-        source, tests, new_files = measure(repo, args.base)
+        source, tests, new_files = measure(repo, args.base, root)
     except subprocess.CalledProcessError as e:
         print(f"Result: ERROR — git failed: {e.stderr.strip()}")
         return 2

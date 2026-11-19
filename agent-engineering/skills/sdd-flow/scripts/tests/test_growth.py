@@ -108,6 +108,59 @@ class GrowthTest(unittest.TestCase):
         self.assertIn("source +0 of ~30", out.stdout)
         self.assertIn("Unnamed new files: none", out.stdout)
 
+    def test_a_non_default_sdd_root_is_left_out_and_root_sdd_is_counted(self) -> None:
+        root = self.root / "flow-state/SDD"
+        (root / "requirements").mkdir(parents=True)
+        (root / "implementation/summaries").mkdir(parents=True)
+        (root / "requirements/DESIGN-001-x.md").write_text(BRIEF.format(source=30, tests=20), encoding="utf-8")
+        (root / "implementation/IMPLEMENTATION-PLAN-001-x-2026-11-19.md").write_text(lines(225), encoding="utf-8")
+        (root / "implementation/summaries/IMPLEMENTATION-SUMMARY-001.md").write_text(lines(40), encoding="utf-8")
+        (root / "requirements/SPEC-001-x.md").write_text(lines(13), encoding="utf-8")
+        git(self.root, "add", "flow-state")
+        git(self.root, "commit", "-q", "-m", "records")
+        (root / "implementation/draft.md").write_text(lines(50), encoding="utf-8")  # untracked record
+        (self.root / "SDD/notes.md").write_text(lines(7), encoding="utf-8")  # not this cycle's root: code here
+        out = self.run_brief("flow-state/SDD/requirements/DESIGN-001-x.md")
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("source +7 of ~30", out.stdout)
+        self.assertIn("Unnamed new files: SDD/notes.md\n", out.stdout)
+
+    def test_a_symlinked_brief_keeps_its_own_sdd_root(self) -> None:
+        root = self.root / "flow-state/SDD"
+        (root / "requirements").mkdir(parents=True)
+        (self.root / "briefs").mkdir()
+        (self.root / "briefs/approved.md").write_text(BRIEF.format(source=30, tests=20), encoding="utf-8")
+        (root / "requirements/DESIGN-001-x.md").symlink_to("../../../briefs/approved.md")
+        (root / "plan.md").write_text(lines(9), encoding="utf-8")
+        out = self.run_brief("flow-state/SDD/requirements/DESIGN-001-x.md")
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        brief_lines = len(BRIEF.format(source=30, tests=20).splitlines())
+        self.assertIn(f"source +{brief_lines} of ~30", out.stdout)  # briefs/approved.md counts; flow-state/SDD/plan.md does not
+        self.assertIn("Unnamed new files: briefs/approved.md\n", out.stdout)
+
+    def test_a_symlinked_requirements_folder_keeps_its_sdd_root(self) -> None:
+        root = self.root / "flow-state/SDD"
+        (root / "specs").mkdir(parents=True)
+        (root / "specs/DESIGN-001-x.md").write_text(BRIEF.format(source=30, tests=20), encoding="utf-8")
+        (root / "requirements").symlink_to("specs")
+        (root / "plan.md").write_text(lines(9), encoding="utf-8")
+        out = self.run_brief("flow-state/SDD/requirements/DESIGN-001-x.md")
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("source +0 of ~30", out.stdout)
+
+    def test_an_sdd_root_that_is_the_repo_folder_is_a_usage_error(self) -> None:
+        (self.root / "requirements").mkdir()
+        (self.root / "requirements/DESIGN-001-x.md").write_text("# DESIGN\n", encoding="utf-8")  # no budget: the root is checked first
+        out = self.run_brief("requirements/DESIGN-001-x.md")
+        self.assertEqual(out.returncode, 2)
+        self.assertTrue(out.stdout.startswith("Result: ERROR"))
+
+    def run_brief(self, brief: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(SCRIPT), "--base", self.base, "--brief", brief, "--repo", str(self.root)],
+            capture_output=True, text=True,
+        )
+
     def test_zero_estimate_with_lines_added_is_over(self) -> None:
         self.brief(source=0)
         (self.root / "src/app.py").write_text(lines(6), encoding="utf-8")
