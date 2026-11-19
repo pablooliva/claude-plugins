@@ -90,7 +90,15 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.6.0.
+Version 5.6.1.
+
+### What's new in 5.6.1
+
+- **The subagent-log hook runs.** `hooks/log_subagent_call.py` was stored without its executable bit, so it never ran and
+  `SDD/.records/subagent-calls/` was never written. The code review and slice review no longer ask for those logs.
+- **Completion reads one file of LOW findings.** Before the completion spawn (4f) the orchestrator gathers the LOW
+  findings of every review of the feature into `SDD/.records/reviews/LOW-FINDINGS-[feature-name].md` by
+  command; the completion step reads that, not each review — a feature with many review rounds ran it out of reads.
 
 ### What's new in 5.6.0
 

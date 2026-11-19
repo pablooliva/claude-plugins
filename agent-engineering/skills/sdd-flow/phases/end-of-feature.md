@@ -60,7 +60,35 @@ The bracketed parts are written only when their gate is on. A hard eval case tha
 
 Spawn an **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/implementation-complete.md`
-- **Inputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, **SECURITY**, **FINAL_CHECK** — the last final-check review, the one whose marker let the loop end — **REVIEWS** — every review document of this feature that has a `LOW Findings (listed, not fixed)` section (the code review or the slice reviews, the critical reviews, the final checks; the orchestrator names them, the body lists no folder) — and, when the spec carries `tier:`, **TIERS** and **TIER_PLAN** (`SDD/flow/TIERS-[feature-name].md`; on a next-tier cycle the path recorded at Step 0).
+- **Inputs:** `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md`, `SDD/requirements/SPEC-[###]-[feature-name].md`, **SECURITY**, **FINAL_CHECK** — the last final-check review, the one whose marker let the loop end — **REVIEWS** — one file, `SDD/.records/reviews/LOW-FINDINGS-[feature-name].md`, that the orchestrator gathers just before the spawn from every review document of this feature (the code review or the slice reviews, the critical reviews, the final checks): for each document, its name as a `## ` heading, then the lines of its `LOW Findings (listed, not fixed)` section; a document whose section is missing or says `None.` is left out. It is gathered by command, with no review read — one file, so a feature with many review rounds does not spend the completion spawn's reads on them; the body lists no folder — and, when the spec carries `tier:`, **TIERS** and **TIER_PLAN** (`SDD/flow/TIERS-[feature-name].md`; on a next-tier cycle the path recorded at Step 0).
+- **Gathering REVIEWS** (from the repository root; `[###]` and `[feature-name]` filled in, the block run as written; each pattern is one review kind's whole name, so another feature's reviews never match, and a file it cannot read stops it with a traceback):
+
+```bash
+python3 - "[###]" "[feature-name]" <<'PY'
+import re, sys
+from pathlib import Path
+num, name = (re.escape(a) for a in sys.argv[1:])
+kinds = [rf"REVIEW-{num}-{name}-\d{{8}}", rf"REVIEW-SLICE-SLICE-\d{{3}}-{name}-iter\d+-\d{{4}}-\d{{2}}-\d{{2}}",
+         rf"CRITICAL-SPEC-{name}-\d{{8}}", rf"FINAL-CHECK-FEATURE-{name}-iter\d+-\d{{8}}"]
+folder, out = Path("SDD/.records/reviews"), []
+for f in sorted(folder.iterdir()):
+    if not any(re.fullmatch(k + r"\.md", f.name) for k in kinds):
+        continue
+    body, keep = [], False
+    for line in f.read_text(encoding="utf-8").split("\n"):
+        if re.match(r"#{2,} LOW Findings \(listed, not fixed\)", line):
+            keep = True
+        elif keep and line.startswith("## "):
+            break
+        elif keep and line.strip():
+            body.append(line)
+    if body and [l.strip() for l in body] != ["None."]:
+        out.append(f"## {f.name}\n" + "\n".join(body) + "\n")
+(folder / f"LOW-FINDINGS-{sys.argv[2]}.md").write_text("\n".join(out), encoding="utf-8")
+PY
+```
+
+  An empty file is a feature with no LOW findings; a status other than 0 is a failed gather — tell the user and stop before the spawn. The file has no date in its name: a resumed session, or a continuation of 4f after a handoff, gathers it again to the same path, and since no review changes after the final check, gets the same content.
 - **Tracing:** the gate line. With `tracing: on` also **OBS_RECORD** and the final **TRACE_TREE** — the file FINAL_CHECK's review wrote. The body runs no trace run and no script: it reads the two files to fill the summary's `## Monitoring & Observability` and to check that the final check left no tracing finding open.
 - **Evals:** the gate line. With `evals: on` also **EVALS**, and the eval run line and **EVAL_RESULTS** that FINAL_CHECK read. The body makes no eval run: it reads the results to fill the summary's `### Evals` part — the `Sign-off requirements` table the 4h checkpoint shows the user is in it — and to check that the final check raised no eval finding.
 - **Completion never rests on a check made before the code or the tests last changed.** The body changes no code and no test: an item that needs either — a failing test, a missing test, an unfinished requirement — comes back in its return as incomplete. The orchestrator does not re-spawn it and does not spawn a fix: it appends `## Awaiting Final Check Resolution` with the first line `Completion for SPEC-[###] found items that need code or tests changed after the final check: <the items, one line>.` and that block's usual second and third lines, and stops. `/sdd-flow continue` takes that block's rule: the final check again, and only then 4f. This takes the place of the retry in Error Handling (`phases/protocols.md`) for that one return; a completion spawn that fails for any other reason is handled there as before.

@@ -375,7 +375,7 @@ FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | open
 FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | open
 ❌ **Context Engineering Issue**
 
-**Missing Artifact**: [IMPLEMENTATION-PLAN file / progress summary / subagent log]
+**Missing Artifact**: [IMPLEMENTATION-PLAN file / progress summary]
 **Expected Location**: SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-YYYYMMDD.md
 **Why Required**: [Impact on maintainability/understanding]
 **Action Required**: [Specific documentation needed]

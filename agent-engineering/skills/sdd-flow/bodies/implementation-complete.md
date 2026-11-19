@@ -57,9 +57,9 @@ You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provide
    - If one is named, load it to understand any pending items, and review its "Specification Validation Remaining" section. If none is named, skip this step.
 
 5. **The Final Check and the LOW Findings:**
-   - Your prompt provides **FINAL_CHECK** — the last final-check review (`SDD/.records/reviews/FINAL-CHECK-FEATURE-*`), the one that let the loop end — **SECURITY** (`references/security-verification.md`, read §5), and **REVIEWS**, the review documents of this feature.
+   - Your prompt provides **FINAL_CHECK** — the last final-check review (`SDD/.records/reviews/FINAL-CHECK-FEATURE-*`), the one that let the loop end — **SECURITY** (`references/security-verification.md`, read §5), and **REVIEWS**, one file holding the `LOW Findings (listed, not fixed)` lines of every review of this feature, under each review's name.
    - Copy FINAL_CHECK's `## Security Verification` table into the summary's `### Security Verification` (template below). A rule whose row is not `holds, proven` is an incomplete item.
-   - Copy every LOW finding from the `LOW Findings (listed, not fixed)` sections of REVIEWS into the summary's `### LOW Findings (listed, not fixed)` — one line each, with the review it came from — and write `None.` when there are none. The owner reads this list in the end report.
+   - Copy every LOW finding in REVIEWS into the summary's `### LOW Findings (listed, not fixed)` — one line each, with the review it came from; a LOW that a later iteration of the same review repeats is listed once, from the latest — and write `None.` when there are none. Open no review document for it. The owner reads this list in the end report.
    - **Change no code and no test in this run.** FINAL_CHECK reviewed the code and the tests as they stand; a change made after it would be completed without that check. Wherever this body tells you to fix a failing test, write a missing test, or complete an implementation, list the item as incomplete instead and return it (Error Recovery → Save Progress), saying in the return that it needs code or tests changed. Completion documents — the plan, the spec's summary, the tier plan, the glossary, the implementation summary — are yours to write.
 
 6. **Tier Standard and Tier Plan (tiered specs only):**
