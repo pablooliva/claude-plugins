@@ -72,6 +72,9 @@ agent-engineering/
 │   │   │                           #   code review, and the 4e.5 final check read it; never restate it in a body);
 │   │   │                           #   state-model.md — the ONE definition of a feature's state model (brief draws it, spec maps moves to REQ/EDGE,
 │   │   │                           #   implementer tests each move, the State Check in slice review, code review, 4e.5); no gate — a spec without `### State model` has none;
+│   │   │                           #   hostile-input.md — the ONE definition of how a reader of input the code does not control is built and when its
+│   │   │                           #   guards are tested (the SPEC decides what is accepted); implementers and every fix prompt get it as HOSTILE_INPUT;
+│   │   │                           #   the brief's `Inputs it does not control:` line names the boundaries;
 │   │   │                           #   spec-reading.md — the ONE definition of how an implementer reads the SPEC (by section and id, never whole;
 │   │   │                           #   the sections holding security rules, state model, deviations and deferrals always read); passed as SPEC_READING to every implementation spawn;
 │   │   │                           #   evals.md — the ONE definition of evals (the two kinds, the cases, the eval run, the reviews' Eval Check in §7,

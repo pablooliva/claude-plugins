@@ -90,7 +90,16 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.6.3.
+Version 5.7.0.
+
+### What's new in 5.7.0
+
+- **Implementers and fixers read the hostile-input rules.** `references/hostile-input.md` says how code is built
+  where it reads input it does not control — files, arguments, another tool's output, records — and when such a
+  guard is tested. In 002-defect-ledger about forty review findings were of these kinds, each found by a reviewer
+  and paid for with a fix round. The SPEC still decides what an input may be; a guard it names no case for is
+  reported as a missing case, not tested. The design brief names those inputs in one line,
+  `Inputs it does not control:`, under `## How it will work`.
 
 ### What's new in 5.6.3
 
