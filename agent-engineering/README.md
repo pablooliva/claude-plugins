@@ -90,7 +90,16 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.7.0.
+Version 5.8.0.
+
+### What's new in 5.8.0
+
+- **The spec writes the hostile-input cases.** For each input on the brief's `Inputs it does not control:` line, the
+  planning step writes the cases it can really meet — a missing or malformed file, a symlink, a failing command, a
+  look-alike name — under `### Input Boundaries` as `EDGE`s with their outcomes (or by citing an EDGE or FAIL that
+  already states one); the spec critical review checks them and spec fixes keep them in step. A guard with a spec
+  case is tested from the first build; a boundary found only in the code is built to the rules and reported as a
+  missing case.
 
 ### What's new in 5.7.0
 

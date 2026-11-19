@@ -43,7 +43,7 @@ If `SDD/requirements/DESIGN-[###]-[feature-name].md` exists, load it. The user r
 
 - [ ] **Ambiguous requirements** - Which REQ-XXX can be interpreted multiple ways?
 - [ ] **Untestable criteria** - Which success criteria can't be objectively verified?
-- [ ] **Missing edge cases** - What EDGE-XXX scenarios weren't specified?
+- [ ] **Missing edge cases** - What EDGE-XXX scenarios weren't specified? When the brief's `Inputs it does not control:` line names inputs, check `### Input Boundaries` against it by HOSTILE_INPUT §2 (at the path in your prompt): a case an input can really meet that has no entry and no other EDGE or FAIL stating it — and was not left out as a change beyond the request — or an outcome §2 forbids, is a finding.
 - [ ] **Incomplete failure handling** - Which FAIL-XXX scenarios lack recovery paths?
 - [ ] **Contradictions** - Do any requirements conflict with each other?
 

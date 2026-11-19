@@ -52,7 +52,7 @@ Read the design brief at the path in your prompt (skip this block if your prompt
 
 ### Edge Cases (Research-Backed)
 
-- [ ] All EDGE-XXX cases documented with research references
+- [ ] All EDGE-XXX cases documented with research references (an `### Input Boundaries` entry cites its HOSTILE_INPUT rule instead)
 - [ ] Current behavior clearly described
 - [ ] Desired behavior specified
 - [ ] Test approach defined for each edge case

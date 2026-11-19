@@ -33,6 +33,9 @@ Starting planning phase based on completed research.
 6. **Read the State Model Reference:**
    - Read **STATE_MODEL** at the path in your prompt, §1 and §3. When the design brief draws a state model at the end of its `## How it will work`, the spec maps it (Planning Process, steps 7 and 8). When the brief says `State model: not applicable`, write no `### State model` — unless the requirements plainly move a thing through named states, in which case draw it by §2 and record it under `## Deviations from Design Brief` (§3).
 
+6.5. **Read the Hostile-Input Rules:**
+   - Read **HOSTILE_INPUT** at the path in your prompt, §1 and §2. The design brief's `Inputs it does not control:` line (in its `## How it will work`) names the inputs the change reads; the spec writes their cases (Planning Process, step 7, *Input boundaries*). A brief whose line says `none`, or that has no such line, gets no `### Input Boundaries` section. If your prompt has no `HOSTILE_INPUT` path, return a failure to the orchestrator naming it.
+
 7. **Update Progress for Planning Phase:**
    - Add a new planning section to `SDD/.records/progress.md`
    - IMPORTANT: Preserve all research phase information - do NOT delete or reset it
@@ -174,6 +177,14 @@ tier: 1
   - Current behavior: [What happens now]
   - Desired behavior: [What should happen]
   - Test approach: [How to verify]
+
+### Input Boundaries
+> Only when the brief's `Inputs it does not control:` line names an input (Planning Process, step 7, *Input boundaries*). One entry per case an input can really meet; each states the outcome the code gives.
+
+- EDGE-XXX: **[input] — [the hostile case, e.g. the file is a symlink]**
+  - Rule: HOSTILE_INPUT §2.[n] (in place of a research reference)
+  - Desired behavior: [the outcome — the refusal and its message without the value, a default, an error and its exit]
+  - Test approach: [the real input that drives it — a real symlink, a git command that really fails]
 
 ## Failure Scenarios
 
@@ -470,6 +481,7 @@ These fields have sensible defaults; populate them intentionally rather than lea
    - Assign each module a **Risk** tier (low/medium/high) — this drives review depth in code review. High-risk = irreversible, financial, security-critical, regulatory. Low-risk = contained, recoverable, boundary-only.
    - Map every REQ-XXX/EDGE-XXX/FAIL-XXX to at least one module via the `Spec refs:` field — every requirement must have a home.
    - **When the design brief draws a state model — or says `not applicable` for a feature whose requirements plainly move a thing through named states (context load step 6) — write `### State model`** beneath the module entries, as STATE_MODEL §3 says: the brief's diagram and `**Never:**` list unchanged, and every allowed move mapped to a `REQ`, every forbidden one to an `EDGE` stating what the refusal does.
+   - **Input boundaries.** For each input on the brief's `Inputs it does not control:` line, write under `### Input Boundaries` one `EDGE` per case of HOSTILE_INPUT §2 that the input can really meet, stating the outcome — a file the code reads: missing, a folder in its place, unreadable or malformed, a symlink; text it splits or names it matches: a separator or whitespace the format does not allow, a look-alike name; a command it runs: failing; an error it prints: a value that would break the output. A case the input cannot meet gets no entry. A case an existing EDGE or FAIL already states is not written twice: cite that id instead; two guards that a test must trip separately stay two entries. Number them in the spec's one EDGE sequence. Where research or the brief settles the outcome, write it. Where neither does, write the outcome HOSTILE_INPUT §2 gives — a failed command is an error, never "none found"; an exception ends in the refusal the spec gives a bad value of that input — and, when the spec gives that input no refusal, the one this feature uses for its other bad input; never an outcome §2 forbids. Mark such an entry `(outcome chosen in planning)` and list it under `## Deviations from Design Brief` as a decision the brief did not make, so the owner sees it at the spec stop (3g). A case whose outcome would change what an input that works today does is beyond the request (TIERS → Beyond the request): leave it out unless the brief opts in to it. Map each to its module like any EDGE, and in per-slice mode list it in the `REQs satisfied:` of the slice that builds and tests that guard — never `SLICE-001`, whose happy path carries no EDGE: the first later slice that uses the reader, or, when only `SLICE-001` uses it, the slice after `SLICE-001`, which then also touches that reader's module.
    - **With tracing on, draw `### Planned call graph`** beneath the module entries, following *Planned call graph rules* at the end of this list. It is drawn here, before the slices, so that step 8 can assign its marked nodes and so that it exists whichever way the practicality gate (step 10) goes.
 
 8. **Define Delivery Slices (per-slice mode only):**
@@ -572,6 +584,7 @@ Before considering the specification complete:
 - [ ] Every module has a `MODULE-XXX` entry with Interface, Hides, and Risk filled in
 - [ ] No shallow modules without explicit justification
 - [ ] Every REQ-XXX / EDGE-XXX / FAIL-XXX is mapped to at least one module
+- [ ] Every input on the brief's `Inputs it does not control:` line has its `### Input Boundaries` cases, each with its outcome
 - [ ] If `delivery_mode: per-slice`, the `## Delivery Slices` section exists and is populated with at least one `SLICE-XXX` entry
 - [ ] If `delivery_mode: per-slice`, every slice declares Concentrated function, REQs satisfied, Modules touched, Acceptance check, Try it, and Sequence rationale
 - [ ] If `delivery_mode: per-slice`, SLICE-001 is the thinnest possible end-to-end happy path
