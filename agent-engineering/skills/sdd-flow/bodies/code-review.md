@@ -269,14 +269,14 @@ When the spec's frontmatter carries `tier:` (the delivery tier — not a module'
 
 Read the design brief at the path in your prompt (`SDD/requirements/DESIGN-[###]-[feature-name].md`; your prompt states its approved revision and tier). The user approved it before the spec was written; this section tells them whether the implementation stayed inside it.
 
-Compute the feature's changed files — the work is uncommitted, so compare the working tree against the `BASE` commit in your prompt and add untracked files, leaving out SDD artifacts:
+Compute the feature's changed files — the work is uncommitted, so compare the working tree against the `BASE` commit in your prompt and add untracked files, leaving out SDD artifacts — `SDD_ROOT`, the records folder your prompt names (`SDD` when it names none) — in each command write the value of SDD_ROOT in its place, inside the same quotes; a pathspec left reading `SDD_ROOT` excludes nothing:
 
 ```bash
-git diff --name-only --no-renames BASE -- . ':(exclude)SDD'
-git ls-files --others --exclude-standard -- . ':(exclude)SDD'
+git diff --name-only --no-renames BASE -- . ':(exclude,literal)SDD_ROOT'
+git ls-files --others --exclude-standard -- . ':(exclude,literal)SDD_ROOT'
 ```
 
-The new files among them are `git diff --name-only --no-renames --diff-filter=A BASE -- . ':(exclude)SDD'` and the untracked list. If your prompt has no `BASE`, use the file paths the IMPLEMENTATION-PLAN lists. Compare that file set against the brief's "What changes where" table as FIT §2 says — an existing file against its areas, a new file against the paths it names — and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
+The new files among them are `git diff --name-only --no-renames --diff-filter=A BASE -- . ':(exclude,literal)SDD_ROOT'` and the untracked list. If your prompt has no `BASE`, use the file paths the IMPLEMENTATION-PLAN lists. Compare that file set against the brief's "What changes where" table as FIT §2 says — an existing file against its areas, a new file against the paths it names — and against its delivery outline, and write the `## Design Brief Check` section of the review document (template below).
 
 **A changed file outside the footprint is a fit finding** (FIT §2): raise one per such file, graded by FIT §3, unless the spec's `## Deviations from Design Brief` records it. If your prompt names no design brief, write `No design brief — check skipped.` as the section's body.
 

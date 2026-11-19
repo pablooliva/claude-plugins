@@ -90,7 +90,15 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.6.2.
+Version 5.6.3.
+
+### What's new in 5.6.3
+
+- **Reviews leave out the cycle's own records, wherever they live.** The slice review, code review, final check and
+  every fix round left out only a repo-root `SDD/` when they listed changed files and counted net lines, so records
+  kept elsewhere were reviewed as code and could be raised as files outside the brief. The orchestrator now passes
+  them **SDD_ROOT** — the folder two levels above the brief, as in `growth.py` — and they leave that out (`SDD` when
+  a prompt names none).
 
 ### What's new in 5.6.2
 

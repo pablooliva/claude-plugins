@@ -25,7 +25,7 @@ speed concern the spec does not raise.
 
 ## 2. The footprint
 
-A review that has a design brief compares the changed files (`SDD/` left out) with the brief's "What changes where"
+A review that has a design brief compares the changed files (the records folder `SDD_ROOT` left out — `SDD` unless the prompt names another) with the brief's "What changes where"
 table. **A changed file outside the footprint is a fit finding**, unless the spec's `## Deviations from Design Brief`
 records it — those are departures the owner already saw. A file is outside the footprint when:
 
@@ -54,9 +54,9 @@ work truly needs that no approved area can hold is said so in the return, and th
 owner.
 
 Every fix round — of any finding, not only fit — reports its **net line change** in its return: lines added minus
-lines removed by the round, `SDD/` left out. Before your first edit and after your last, take the net against
-`BASE` — added minus removed in `git diff --numstat BASE -- . ':(exclude)SDD'`, plus every line of each untracked
-file outside `SDD/` — and report the difference, e.g. `Net line change: -42`.
+lines removed by the round, `SDD_ROOT` left out. Before your first edit and after your last, take the net against
+`BASE` — added minus removed in `git diff --numstat BASE -- . ':(exclude,literal)SDD_ROOT'`, plus every line of each untracked
+file outside `SDD_ROOT` (write the value from your prompt in its place, inside the same quotes) — and report the difference, e.g. `Net line change: -42`.
 
 ## 5. Building: extend before adding
 

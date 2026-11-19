@@ -6,7 +6,7 @@ This is the last review of the feature, run after every fix has landed. It reads
 
 ## Inputs (all from your prompt)
 
-Always: `SCOPE = FEATURE`, `ITER = <k>`, the SPEC, the IMPLEMENTATION-PLAN, `BASE` (the commit the feature started from), **SECURITY** (`references/security-verification.md`), **TEST_INTEGRITY**, **STATE_MODEL** (`references/state-model.md`), and the gate lines `tracing: on|off` and `evals: on|off`. With the `agent_security` gate open: **CATALOG** and the panel review `SDD/.records/reviews/PANEL-SPEC-*`. With `tracing: on`: **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE** (a file named for this iteration). With `evals: on`: **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not). `PREVIOUS REVIEW` on every round — on the first, the code review (Step 4b); on a later round, the final-check review before it — and on a later round also `SNAPSHOT` and `FIXED` (below).
+Always: `SCOPE = FEATURE`, `ITER = <k>`, the SPEC, the IMPLEMENTATION-PLAN, `BASE` (the commit the feature started from), **SDD_ROOT** (the records folder; `SDD` when your prompt names none; in a command write its value in its place, inside the same quotes), **SECURITY** (`references/security-verification.md`), **TEST_INTEGRITY**, **STATE_MODEL** (`references/state-model.md`), and the gate lines `tracing: on|off` and `evals: on|off`. With the `agent_security` gate open: **CATALOG** and the panel review `SDD/.records/reviews/PANEL-SPEC-*`. With `tracing: on`: **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE** (a file named for this iteration). With `evals: on`: **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not). `PREVIOUS REVIEW` on every round — on the first, the code review (Step 4b); on a later round, the final-check review before it — and on a later round also `SNAPSHOT` and `FIXED` (below).
 
 If an input the gates call for is missing, return a failure to the orchestrator naming it. Do not list `SDD/` to find one.
 
@@ -37,7 +37,7 @@ If an input the gates call for is missing, return a failure to the orchestrator 
 
 After a fix round your prompt gives `SNAPSHOT` (the working tree before the fix) and `FIXED` (as the fix left it), with `PREVIOUS REVIEW` (the final-check review the fix answered). If it gives only some of the three, or git cannot diff the two commits, run every part in full and say why in one line at the top of the document; never take a snapshot yourself.
 
-- **The change** is `git diff --name-only --no-renames SNAPSHOT FIXED -- . ':(exclude)SDD'`, and `git diff SNAPSHOT FIXED -- <file>` for a file.
+- **The change** is `git diff --name-only --no-renames SNAPSHOT FIXED -- . ':(exclude,literal)SDD_ROOT'`, and `git diff SNAPSHOT FIXED -- <file>` for a file.
 - **Part 1** checks the earlier findings first, then looks for new paths in the change and in the code it reaches; a rule whose code the fix did not touch is listed as `unchanged since PREVIOUS REVIEW`.
 - **Part 3** runs T1 and T2 over the change, and T3 and T4's reading half over the tests the fix added or changed.
 - **Parts 2 and 4 run in full.** For the lens, *the code the scope changed* stays everything changed since `BASE`.
