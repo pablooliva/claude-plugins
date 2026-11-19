@@ -2,9 +2,11 @@
 
 Read this with the Step 4 chapter in use — `phases/implementation-whole-feature.md` (4a), `phases/implementation-per-slice.md`, or `phases/end-of-feature.md` (4b–4j). It holds what every Step 4 spawn is passed and the rules every review and fix follows.
 
-All paths below are resolved absolute. SECURITY, FIT, TEST_INTEGRITY, TRACE_TREE_SCRIPT, LENS, EVALS and EVAL_TEMPLATES ship inside this skill; one that is missing is a broken install — halt and tell the user. **"Every fix prompt"** below means 4c, the 4e.5 fix, and per-slice 4c.
+All paths below are resolved absolute. SECURITY, SPEC_READING, FIT, TEST_INTEGRITY, TRACE_TREE_SCRIPT, LENS, EVALS and EVAL_TEMPLATES ship inside this skill; one that is missing is a broken install — halt and tell the user. **"Every fix prompt"** below means 4c, the 4e.5 fix, and per-slice 4c.
 
 **SECURITY** = `SKILL_ROOT/references/security-verification.md`, passed to every implementation spawn, the final check (4e.5) and its fix, and the completion spawn.
+
+**SPEC_READING** = `SKILL_ROOT/references/spec-reading.md` — how an implementer reads the SPEC: by section and by id, never the whole file in one Read, with the sections that carry security rules, the state model, deviations and deferrals always read. No gate: passed to every implementation spawn — the per-slice scaffold (4a), each slice's implement step (4a), and the whole-feature implementer and each of its chunks. When the work is split into chunks, the prompt names each chunk's REQ, EDGE and FAIL ids (SPEC_READING §3).
 
 **LOW findings are listed, not fixed.** A review with no open HIGH and no open MEDIUM passes; its LOW findings are listed in its document and reach the owner at the slice pause and in the end report. **Embed this rule verbatim in every fix prompt:**
 

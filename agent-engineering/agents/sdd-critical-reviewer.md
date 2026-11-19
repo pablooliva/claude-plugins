@@ -46,7 +46,7 @@ The synthesis is the adversarial work — you're judging whether the specialist 
 
 ## Counter file + safety-net (when applicable)
 
-If your prompt assigns a counter file path under `SDD/.records/counters/`, update the file (one line, `Reads: 0/15`) after every Read. The default safety-net trigger is Reads >15. For synthesis runs that must read N specialist findings files, your prompt may raise the trigger to N+5. There is no nested-subagent counter — you must not spawn.
+If your prompt assigns a counter file path under `SDD/.records/counters/`, update the file (one line, `Reads: 0/15`) after every Read of a file not read before in this run (a file read in parts counts once). The default safety-net trigger is Reads >15. For synthesis runs that must read N specialist findings files, your prompt may raise the trigger to N+5. There is no nested-subagent counter — you must not spawn.
 
 If you trip the safety-net, read the compact-body path your prompt provides and follow it — write a compaction file, append `## PARTIAL: needs continuation` to `progress.md`, and return.
 

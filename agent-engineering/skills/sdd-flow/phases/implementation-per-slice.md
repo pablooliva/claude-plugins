@@ -45,7 +45,7 @@ Before the first slice, if `progress.md` has no `## Feature - Implementing` line
 
 Then check whether `SDD/implementation/IMPLEMENTATION-PLAN-[###]-[feature-name]-[YYYY-MM-DD].md` already exists with a `## Slice Progress` table (it will, when resuming). If absent, spawn ONE **`agent-engineering:sdd-workhorse`** subagent:
 - **Body:** `bodies/implementation.md` — its `per-slice` branch is **scaffold-only**: create the tracker with the `## Slice Progress` table populated from the spec's `## Delivery Slices` (all rows `Not Started`), then return without implementing anything.
-- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `progress.md`.
+- **Inputs:** `SDD/requirements/SPEC-[###]-[feature-name].md`, `SDD/research/RESEARCH-[###]-[feature-name].md`, `progress.md`, **SPEC_READING**.
 - **Output:** the IMPLEMENTATION-PLAN tracker at the path above (always named in the prompt — the body returns a failure without it); append `progress.md`.
 - **After a re-plan** the live table is always absent at this point: give the scaffold a post-replan note in the prompt, and it writes a FRESH `## Slice Progress` table from the revised spec.
 
@@ -59,7 +59,7 @@ Without this scaffold, `bodies/slice-start.md` halts per FAIL-007 (missing `## S
 Spawn ONE **`agent-engineering:sdd-workhorse`** subagent **with the per-spawn model override `opus`** (strict — no bundling):
 - **Body:** `bodies/slice-start.md` (for `SLICE-XXX`).
 - **Which slice:** always name it in the prompt — never leave the body to pick. It is the first row after the last committed slice, in table order, that is not `Complete`. Pass `--resume SLICE-XXX` when that slice's row is already `In Progress` (a 4a that was interrupted): the body re-attaches and carries on from the working tree, without resetting the row or the base commit. There is no way to re-start a `Complete` slice — the body refuses; work on a finished slice goes into a later slice or a re-plan.
-- **Inputs:** the active spec, the IMPLEMENTATION-PLAN path, **SECURITY**, **TEST_INTEGRITY**, **BRIEF** (`SDD/requirements/DESIGN-[###]-[feature-name].md`, with its approved revision), **FIT** — the body's Step 10 follows FIT §5 — and **STATE_MODEL**.
+- **Inputs:** the active spec, **SPEC_READING** (the body reads the spec as it says, never whole), the IMPLEMENTATION-PLAN path, **SECURITY**, **TEST_INTEGRITY**, **BRIEF** (`SDD/requirements/DESIGN-[###]-[feature-name].md`, with its approved revision), **FIT** — the body's Step 10 follows FIT §5 — and **STATE_MODEL**.
 - **Outputs:** slice code + tests (each security rule the slice touches proven, body Step 11, under `## Security Proofs` in the IMPLEMENTATION-PLAN); a `## Slice SLICE-XXX - Implemented` entry in `progress.md`.
 - **Tracing:** the **tracing inputs** (`phases/implementation-inputs.md`). With `tracing: on` the body's Step 11.5 applies: the implementer follows the tracing standard for what the slice adds and checks the slice's `Traced nodes:` against the trace run.
 - **Evals:** the **evals inputs** (`phases/implementation-inputs.md`). With `evals: on` the body's Step 11.6 applies: the implementer builds the cases on the slice's `Evals:` line — rendering the eval run from EVAL_TEMPLATES when the application has none yet — and makes its own eval run.

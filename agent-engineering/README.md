@@ -90,7 +90,18 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.5.0.
+Version 5.6.0.
+
+### What's new in 5.6.0
+
+An implementer no longer reads the spec whole. A large spec (95 KB in one cycle) made the implementer's Read fail and
+filled its context before the first edit.
+
+- **Read by section and by id** (`skills/sdd-flow/references/spec-reading.md`): every implementer — the per-slice
+  implementer, the whole-feature implementer and each of its chunks, and the slice scaffold — reads the sections that
+  carry the intent, the deviations, the deferrals, the security and experience rules, the constraints, the state model
+  and the validation strategy in full, then only its slice's entry, modules and ids (or its chunk's ids), each found by
+  heading or id and read with offset and limit. No new artifact and no new step or stop.
 
 ### What's new in 5.5.0
 

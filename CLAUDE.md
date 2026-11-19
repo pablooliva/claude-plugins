@@ -72,6 +72,8 @@ agent-engineering/
 │   │   │                           #   code review, and the 4e.5 final check read it; never restate it in a body);
 │   │   │                           #   state-model.md — the ONE definition of a feature's state model (brief draws it, spec maps moves to REQ/EDGE,
 │   │   │                           #   implementer tests each move, the State Check in slice review, code review, 4e.5); no gate — a spec without `### State model` has none;
+│   │   │                           #   spec-reading.md — the ONE definition of how an implementer reads the SPEC (by section and id, never whole;
+│   │   │                           #   the sections holding security rules, state model, deviations and deferrals always read); passed as SPEC_READING to every implementation spawn;
 │   │   │                           #   evals.md — the ONE definition of evals (the two kinds, the cases, the eval run, the reviews' Eval Check in §7,
 │   │   │                           #   sign-off in §9): implementer bodies, the three reviews above, completion, and the phase chapters read it, never restate it
 │   │   ├── templates/evals/        #   what an application's eval run is rendered from (Python only): run.py, task.py, test_eval_checks.py.
