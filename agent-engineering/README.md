@@ -90,7 +90,15 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.9.0.
+Version 5.10.0.
+
+### What's new in 5.10.0
+
+- **Every code-fix round runs one body.** `bodies/fix-round.md` holds every rule a fix follows — scope, tests, input
+  boundaries, the state model, tracing, evals, and the final check's security proofs — and what it appends and
+  returns. Per-slice 4c, 4c and the 4e.5 fix pass it by path with `MODE` and `MARKER`; the orchestrator no longer
+  copies up to six rule blocks into each fix prompt, and a fix spawn can no longer miss one. Fix rounds now also get
+  SPEC_READING.
 
 ### What's new in 5.9.0
 

@@ -57,6 +57,8 @@ agent-engineering/
 │   │   │                           #   its chapter (+ inputs file) — keep that under ~15k tokens; a rare case goes in rare/, not a chapter
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
 │   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
+│   │   │                           #   fix-round.md = the one body of every Step 4 code-fix round (per-slice 4c, 4c, the 4e.5 fix): it holds every
+│   │   │                           #   rule a fix follows, so a fix prompt passes paths, MODE and MARKER and embeds no fix rule (only the Safety-Net Rule)
 │   │   ├── references/             #   security-verification.md — the ONE definition of the final check's security pass (what a security rule is,
 │   │   │                           #   what the verification looks for, what a proving test is, the two fix rounds); bodies/final-check.md runs it,
 │   │   │                           #   implementer bodies read §1 and §3, completion copies §5's table;
@@ -73,7 +75,7 @@ agent-engineering/
 │   │   │                           #   state-model.md — the ONE definition of a feature's state model (brief draws it, spec maps moves to REQ/EDGE,
 │   │   │                           #   implementer tests each move, the State Check in slice review, code review, 4e.5); no gate — a spec without `### State model` has none;
 │   │   │                           #   hostile-input.md — the ONE definition of how a reader of input the code does not control is built and when its
-│   │   │                           #   guards are tested (the SPEC decides what is accepted); implementers and every fix prompt get it as HOSTILE_INPUT;
+│   │   │                           #   guards are tested (the SPEC decides what is accepted); implementers and every fix round get it as HOSTILE_INPUT;
 │   │   │                           #   the brief's `Inputs it does not control:` line names the boundaries;
 │   │   │                           #   spec-reading.md — the ONE definition of how an implementer reads the SPEC (by section and id, never whole;
 │   │   │                           #   the sections holding security rules, state model, deviations and deferrals always read); passed as SPEC_READING to every implementation spawn;

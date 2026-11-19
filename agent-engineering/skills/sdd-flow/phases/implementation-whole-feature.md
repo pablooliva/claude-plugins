@@ -4,7 +4,7 @@ Reached at Step 4 when the spec's `delivery_mode:` is `whole-feature`. If `deliv
 
 Phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file + the `implementation-compact.md` compact body path. Implementation-chunk counters use `Reads: 0/20`. A review step run on the second model carries none of the three (`references/second-model-review.md` §3). Body paths are `SKILL_ROOT/bodies/<file>.md`, resolved absolute.
 
-Read `phases/implementation-inputs.md` with this file: the inputs every Step 4 spawn is passed (SECURITY, FIT, TEST_INTEGRITY, the tracing and evals inputs), the eval run of record, and the LOW and scope-of-the-fix rules. When 4a is done, go on to 4b in `phases/end-of-feature.md`.
+Read `phases/implementation-inputs.md` with this file: the inputs every Step 4 spawn is passed (SECURITY, FIT, TEST_INTEGRITY, the tracing and evals inputs), the eval run of record, the LOW rule, and the fix rounds' body. When 4a is done, go on to 4b in `phases/end-of-feature.md`.
 
 ---
 
