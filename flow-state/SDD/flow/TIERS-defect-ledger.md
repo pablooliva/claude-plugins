@@ -44,3 +44,4 @@ Look at when using it: the first real bug-fix cycle (does *Seen before* help), t
 - A line's class can be re-labelled by command.
 
 ## Feedback
+- 2026-11-20 — Tier 2 parked by the owner after SLICE-001's second review: too much work for a need not yet shown (Tier 1 has no usage yet). Spec and brief stay at 53c28c4. SLICE-001 work (owner amendment to REQ-003/REQ-012, fix round 1, implementation plan) is on branch `park/defect-ledger-t2-slice-001` (e4fc2d6), review iter 1 REJECTED (4 HIGH, 1 MEDIUM); open owner choices F3, F4, F6, F9. Resume only when `/retro` needs sessions whose transcripts are gone.
