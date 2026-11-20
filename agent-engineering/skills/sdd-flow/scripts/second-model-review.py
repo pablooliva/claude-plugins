@@ -27,7 +27,7 @@ where the records live); the values (`NAME = VALUE`); the lines as given (a gate
 line, say); the inputs (a name given again adds a path: `VOID RUNS`); the outputs.
 Paths are written absolute; a relative one is taken from `--cwd`. It refuses
 (exit 2, nothing written) a role, body or text file that is not an existing
-file, an input that does not exist, a name given twice, a text file that is not
+file, an input that does not exist, a name given twice (VOID RUNS alone may repeat), a text file that is not
 UTF-8, and a name, value, path or line holding a line break; an output need not
 exist, but its folder must. The calls folder is created when missing; a prompt
 file is never overwritten.

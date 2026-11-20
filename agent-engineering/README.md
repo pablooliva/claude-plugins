@@ -90,14 +90,29 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.11.0.
+Version 5.11.1.
+
+### What's new in 5.11.1
+
+Documentation brought in step with 5.6.0–5.11.0; no behaviour changed.
+
+- **Stale instructions removed.** The slice implementer is no longer told to follow the removed learnings ledger, and its
+  `In Progress` entry drops the `Ledger loaded` line. The handoff rule's example names the final check
+  (`bodies/final-check.md`) instead of the removed site-verification mode. The growth check at 4h passes the resolved
+  brief path, so the script finds the cycle's own SDD root.
+- **References corrected.** `HOSTILE_INPUT` is also given to planning and the spec reviews and fixes; `VOID RUNS` is
+  the one name the prompt builder lets repeat; a review writes no trace tree when a slice re-review deferred the lens.
+- **Diagrams and pages.** `docs/sdd-flow-diagram.md` shows input boundaries, reading the spec by section, the one
+  fix-round body, the LOW-findings file and full re-reviews; `docs/observability-diagram.md` shows the growth stop at
+  4h, Opus implementers, both fallbacks and the 2-round slice cap; `docs/loop-engineering.md` and
+  `docs/sdd-lite-diagram.md` match what a finding line and the defect ledger hold.
 
 ### What's new in 5.11.0
 
 - **Review prompts are written by the script.** `second-model-review.py prompt` writes a second-model review's
   prompt file from named values, lines, inputs, outputs and text files, adds the reviewer preamble (its one copy is
   now in the script, and a test keeps the reference's quotation equal to it), and refuses an input that does not
-  exist, a name given twice, or a value holding a line break. In 002-defect-ledger the orchestrator wrote forty
+  exist, a name given twice (`VOID RUNS` alone may repeat), or a value holding a line break. In 002-defect-ledger the orchestrator wrote forty
   prompt files by hand.
 
 ### What's new in 5.10.0
@@ -132,7 +147,7 @@ Version 5.11.0.
 - **Implementers and fixers read the hostile-input rules.** `references/hostile-input.md` says how code is built
   where it reads input it does not control — files, arguments, another tool's output, records — and when such a
   guard is tested. In 002-defect-ledger about forty review findings were of these kinds, each found by a reviewer
-  and paid for with a fix round. The SPEC still decides what an input may be; a guard it names no case for is
+  and paid for with a fix round. The SPEC still decides what an input may be; a guard it names no case for, and that holds no security rule, is
   reported as a missing case, not tested. The design brief names those inputs in one line,
   `Inputs it does not control:`, under `## How it will work`.
 
@@ -168,7 +183,8 @@ filled its context before the first edit.
 - **Read by section and by id** (`skills/sdd-flow/references/spec-reading.md`): every implementer — the per-slice
   implementer, the whole-feature implementer and each of its chunks, and the slice scaffold — reads the sections that
   carry the intent, the deviations, the deferrals, the security and experience rules, the constraints, the state model
-  and the validation strategy in full, then only its slice's entry, modules and ids (or its chunk's ids), each found by
+  and the validation strategy in full, then only its slice's entry, modules and ids (a chunk: its ids; the scaffold: `## Delivery Slices`; a
+  whole-feature implementer with no chunks: every section, one Read each), each found by
   heading or id and read with offset and limit. No new artifact and no new step or stop.
 
 ### What's new in 5.5.0

@@ -3,7 +3,7 @@
 | Tier | Status | Built in | Task |
 |---|---|---|---|
 | 1 — POC-plus | shipped 2026-11-18 | SPEC-002-defect-ledger.md | CLAUDEPLUG-20 |
-| 2 — Standard | in progress | — | CLAUDEPLUG-21 |
+| 2 — Standard | parked 2026-11-20 (not built) | — | CLAUDEPLUG-21 |
 | 3 — Full | sketch | — | CLAUDEPLUG-22 |
 
 ## Tier 1
@@ -29,10 +29,11 @@ Look at when using it: the first real bug-fix cycle (does *Seen before* help), t
 - A new stop to approve a new class name — Moving parts: the standing `unclassified` class records it without a stop.
 
 ## Tier 2
+Parked 2026-11-20, nothing of it built (see `## Feedback`); the lines below are the plan, not shipped behaviour.
 - When a session's transcript is gone, `/retro` lists and digests it from the bb trace index, marked as a summary: when, directory, counts, and the user's prompts; failed calls, lookup runs and repeats are not available.
 - Codex sessions of the repository's directories and dates are listed and digested the same way.
 - A missing, locked or differently shaped index gives one line and the run carries on with transcripts.
-- Defers DEFER-002, -003, -008, -009 to Tier 3 (Evidence).
+- Defers DEFER-002, -003, -008, -009 to Tier 3 (Evidence); the owner's cuts at the spec stop added DEFER-011 to -014 (SPEC-003-defect-ledger-t2.md → Deferred to Later Tiers).
 
 ## Tier 3 — sketch
 - Two branches that added defect ledger lines at once merge without a hand renumber.

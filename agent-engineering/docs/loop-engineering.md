@@ -3,7 +3,7 @@
 How the plugin's pieces fit the four feedback loops in Josh Wulf's *Agentic Loop Engineering*
 (<https://camunda.github.io/agentic-engineering-explainers/loops.html>; owner's note: *What Everyone Gets Wrong about
 Loop Engineering - Josh Wulf*). The goal is all four loops, measured, in every application built with `sdd-flow` or
-`sdd-lite`. This page says what exists, what the defect ledger adds (feature 002, in progress), and what is missing.
+`sdd-lite`. This page says what exists, what the defect ledger adds (feature 002: Tier 1 shipped in 5.5.0; Tier 2 parked), and what is missing.
 Update it when a piece in the tables below ships or changes.
 
 ## The model in brief
@@ -39,7 +39,7 @@ The loop rules Wulf names, and where they hold:
 
 - **The evaluator is independent** — reviews on a different model family; a test is real only if it fails without
   its code; a failing eval case is fixed in the application, never by weakening the case; a review cannot change code.
-- **The signal says which way** — every finding names a file and line and a severity.
+- **The signal says which way** — every finding names where (a file and line, a file, or `-`) and a severity.
 - **No convergence: cap the rounds and escalate** — fix loops stop after two rounds and go to the owner.
 - **Measuring the wrong thing** — the Test Integrity Lens and the final check's last look at the tests.
 
@@ -49,7 +49,7 @@ The scoreboard — the piece the plugin lacked for **fixing the loops**. Design:
 `flow-state/SDD/requirements/DESIGN-002-defect-ledger.md`; proposal: `proposals/feedback-loop-2026-11-16.md`.
 
 - **A committed record per application** (`SDD/defects.jsonl`): every HIGH or MEDIUM defect, the loop that caught it,
-  its class, the commit that introduced it, and the check its fix added.
+  its class, the commit that introduced it when known, and the check its fix added.
 - **Each application declares the loops it has** (`SDD/defects-setup.json`). A loop is counted from the day it is
   declared, so "no CI" is never reported as "CI caught nothing".
 - **Escapes are labelled** — a bug fix of shipped work names the loop that missed it and the earliest check that can

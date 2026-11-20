@@ -104,8 +104,8 @@ flowchart TD
     ffix -- "2 rounds used" --> fhalt["STOP — final check halt<br/>an existing stop"]:::stop
     final -- "no HIGH or MEDIUM" --> done("4f Completion<br/>reads the final call tree and eval results")
     done -- "it finds something that<br/>needs code or tests changed" --> fhalt
-    done --> q{"Is there a requirement<br/>only a judge can score?"}
-    q -- "yes" --> ask["4h STOP<br/>judged scores shown, outputs in the results file<br/>yes commits and accepts"]:::stop
+    done --> q{"A requirement only a judge can score,<br/>or growth over 1.5× the budget?"}
+    q -- "yes" --> ask["4h STOP<br/>a judged requirement: its scores, outputs in the results file<br/>growth over budget: the growth lines<br/>yes commits (and accepts the scores)"]:::stop
     q -- "no" --> c4["4i commit, 4j short report"]:::orch
     ask --> c4
 
@@ -194,11 +194,11 @@ Evals do not swap: they go to Opik only, and `/eval-harvest` works only while tr
 | 3a Specification | Planned call graph; each slice lists its traced nodes | Eval cases, harvested ones included; each slice lists its evals | Sonnet subagent |
 | 3c Panel | Gate settled and recorded | Gate settled and recorded | Orchestrator |
 | 3d Spec review | Checks the graph and the slice lists | Checks every LLM requirement has a rule-based eval or is listed for you to accept at the final commit | A second model; an Opus subagent where none is available |
-| 4a Implement | Spans for what the slice adds, nothing else | The spec's cases as a file, and their checks; the eval run on first use, from templates | Sonnet subagent |
-| 4b Review | Trace run, call tree, comparison with the plan | The flow's main session makes the eval run and sends it to Opik; the review reads the results and the eval files against the spec | Orchestrator for the eval run; a second model for the review, a Sonnet subagent where none is available |
+| 4a Implement | Spans for what the slice adds, nothing else | The spec's cases as a file, and their checks; the eval run on first use, from templates | Opus subagent (the workhorse with an Opus override) |
+| 4b Review | Trace run, call tree, comparison with the plan | The flow's main session makes the eval run and sends it to Opik; the review reads the results and the eval files against the spec | Orchestrator for the eval run; a second model for the review — where none is available, a Sonnet subagent for a slice review, an Opus one for the feature code review |
 | 4e.5 Final check | Whole graph compared after every fix has landed; a HIGH or MEDIUM finding is fixed before completion | Every case run again after every fix has landed, and checked; a finding is fixed before completion | Sonnet subagents for the fixes; orchestrator for the eval run; a second model for the review, a Sonnet subagent where none is available |
 | 4f Completion | Summary filled from the final call tree. It changes no code or test: if it finds something that needs either, the flow stops and the final check runs again after you resume | Evals listed with their results, and each requirement left for you to accept with its judged scores. It changes no code or test, as with tracing on | Sonnet subagent |
-| 4h Commit question | — | Stops only when a requirement can only be judged; yes commits and accepts it | You |
+| 4h Commit question | — | Stops when a requirement can only be judged (yes commits and accepts it), and, whatever the gates, when growth is over 1.5× the brief's budget | You |
 | `/eval-harvest` | Reads the traces you marked in Opik through the trace lookup; stops if the application sends them to Langfuse | Drafts an invented case for each failure you pick; writes the ones you approve to a harvest file for the next cycle's brief | A skill you run, after using the tier |
 
 ## What changes about the stops
@@ -209,9 +209,9 @@ The proposal added no stop. As built there are two new ones — the first two ro
 |---|---|---|
 | Tracing or evals asked for and not possible (3c) — 3.8.0 for tracing, 3.12.0 for evals | Did not exist | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the design brief was approved, or one of the two fields holds an invalid value. You change the field; nothing is reviewed until you do |
 | Eval run could not be made (before a review) — 3.12.0 | Did not exist | With evals on, the application's model could not be reached twice in a row when the flow ran the eval cases. Nothing is reviewed until it can be; you fix the network, the key, or the provider's limit, and continue. It costs no fix round |
-| Before the final commit (4h) — changed in 3.12.0 and 4.0.0 | Always, unless the run was set to run unattended | Only when evals are on and the spec has a requirement only a judge can score. It shows each such requirement with its judged scores and where the outputs are; yes commits and accepts them |
+| Before the final commit (4h) — changed in 3.12.0 and 4.0.0 | Always, unless the run was set to run unattended | Only when evals are on and the spec has a requirement only a judge can score — it shows each such requirement with its judged scores and where the outputs are; yes commits and accepts them — or when growth is over 1.5× the brief's budget (any gates) |
 | Final check halt (4e.5) — changed in 3.8.0, 3.12.0, and 4.1.0 | The final check still has open findings after its fix rounds | Tracing and eval findings count among them, HIGH and MEDIUM only, with at most 2 fix rounds. It also fires when completion finds something that needs code or tests changed after the final check |
-| Slice fix-loop halt (4c) | A slice did not pass its review in 3 fix rounds, or a round made no progress | Unchanged — tracing and eval findings are ordinary review findings |
+| Slice fix-loop halt (4c) | A slice did not pass its review in 3 fix rounds, or a round made no progress | Now at most 2 fix rounds, with the same halt on a round that made no progress; tracing and eval findings are ordinary review findings |
 | Slice pause — changed in 3.12.0 | Shows the brief check line | With evals on, also shows the last line of the slice's eval run — how many rule-checked cases passed, how many judged cases there are and their lowest score — and where its results are |
 
 ## What exists after each build step

@@ -42,7 +42,7 @@ It answers `codex` when that CLI is installed, and the Claude route otherwise. T
 
 At a review step, when the recorded reviewer line does not start with `claude`, the orchestrator spawns no subagent. It:
 
-1. **Writes the prompt** with the script, which adds the **reviewer preamble** (§4) and refuses an input that does not exist, a name given twice, or a value that holds a line break — never by hand:
+1. **Writes the prompt** with the script, which adds the **reviewer preamble** (§4) and refuses an input that does not exist, a name given twice (`VOID RUNS` alone may repeat), or a value that holds a line break — never by hand:
 
    ```
    python3 "$SKILL_ROOT/scripts/second-model-review.py" prompt --cwd <the repository root> \

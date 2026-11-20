@@ -75,7 +75,8 @@ agent-engineering/
 │   │   │                           #   state-model.md — the ONE definition of a feature's state model (brief draws it, spec maps moves to REQ/EDGE,
 │   │   │                           #   implementer tests each move, the State Check in slice review, code review, 4e.5); no gate — a spec without `### State model` has none;
 │   │   │                           #   hostile-input.md — the ONE definition of how a reader of input the code does not control is built and when its
-│   │   │                           #   guards are tested (the SPEC decides what is accepted); implementers and every fix round get it as HOSTILE_INPUT;
+│   │   │                           #   guards are tested (the SPEC decides what is accepted); planning writes the spec's `### Input Boundaries` from it, and the spec review,
+│   │   │                           #   spec fixes, implementers and every fix round get it as HOSTILE_INPUT;
 │   │   │                           #   the brief's `Inputs it does not control:` line names the boundaries;
 │   │   │                           #   spec-reading.md — the ONE definition of how an implementer reads the SPEC (by section and id, never whole;
 │   │   │                           #   the sections holding security rules, state model, deviations and deferrals always read); passed as SPEC_READING to every implementation spawn;
@@ -91,11 +92,11 @@ agent-engineering/
 │   │                               #   reviewer preamble's one copy), and runs one review step on codex (the only second model);
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
 │   │                               #   growth.py — measures a feature's growth (source/test lines added, new files, new files the brief does not name)
-│   │                               #   against the design brief's `## Growth budget`; run at the slice pause and at 4h (stops over 1.5×);
+│   │                               #   against the design brief's `## Growth budget`, leaving out the cycle's own SDD root; run at the slice pause and at 4h (stops over 1.5×);
 │   │                               #   ledger.py — the defect ledger's only reader and writer (an application's committed SDD/defects.jsonl
 │   │                               #   + SDD/defects-setup.json; add, reviews, close, lookup, summary; fields and review shapes in its docstring).
 │   │                               #   Not the learnings ledger (removed in 4.6.0) — always say "defect ledger". Written at the design gate's
-│   │                               #   approve (a bug fix's escape line) and at 4i; sdd-lite writes it at close-out; read by the 2.5a lookup
+│   │                               #   approve (a bug fix's escape line) and at 4i; sdd-lite writes it on a bug-fix brief's approval and at close-out; read by the 2.5a lookup
 │   │                               #   trace-tree.py — renders a trace run's span file as call trees and call counts
 │   │                               #   (loads observability-init/scripts/check-span-file.py by path — keep both in step)
 │   │                               #   (tests: python3 -m unittest discover -s scripts/tests — they include test_eval_runner.py, which
