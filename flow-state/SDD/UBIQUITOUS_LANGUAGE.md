@@ -273,6 +273,16 @@ The fixed first line of every review finding, released as 5.4.0: `FINDING F<n> |
 - Synonyms to avoid: "finding header", "finding marker", "finding ID line".
 - Source: SPEC-002 REQ-004, REQ-007, EDGE-017; DESIGN-002 D2.
 
+### trace index
+The bb plugin `traces`' local SQLite store (`~/.bb/plugins/traces/data.db`; tables `trace_sessions`, `trace_events`, ...) of Claude and Codex sessions, with each event kept only as a summary (about 1,000 characters; raw text is empty). The Tier 2 `/retro` fallback reads a session from it when its transcript file is gone, and marks what it reads as a summary. Third-party, no `bb` command, no schema contract.
+- Synonyms to avoid: "trace DB", "session store", "the traces" (not the application tracing of `observability-init`, whose traces are in Opik).
+- Source: RESEARCH-003-defect-ledger-t2 -> DEFER-001.
+
+### flow test harness
+The proposed (DEFER-008, Tier 2) executable check that runs an sdd-flow or sdd-lite Markdown step against fixtures and asserts the calls made and the file state. Its deterministic half uses a stub CLI in place of the model (as `test_tier_mirror.py` stubs `bb`); a real model run per case is non-deterministic and billed. Not the same as the per-script `unittest` suites.
+- Synonyms to avoid: "flow tests", "step tests".
+- Source: RESEARCH-003-defect-ledger-t2 -> DEFER-008, DEFER-009.
+
 ---
 
 ## Glossary discipline
