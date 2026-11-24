@@ -15,7 +15,11 @@ could have called — not just the diff. Then ask, of every change in scope:
 1. **Match.** Does it match the surrounding code — its style, naming, helpers, patterns and layering?
 2. **Reuse.** Does it reuse what exists, or duplicate a helper, type or pattern the code base already has?
 3. **Size.** Could it be smaller, or folded into existing code? Is there a layer, wrapper, option or abstraction
-   the approved tier does not need?
+   the approved tier does not need? Three kinds of code the spec does not ask for, which only hide a failure, count
+   here, and each is fixed by deleting it — a fallback or error type the spec names is behaviour, and stays (§4):
+   - a **fallback chain** that hides which path worked, so the main path's failure goes unseen;
+   - a **check that changes nothing** — its result is ignored and it has no other effect: it never raises, logs, records, or changes any state;
+   - a **rewrapped error** — a specific error caught and re-raised as a generic one, losing its cause.
 4. **Next change.** Will the next person or agent who changes this code find it where they would look, and change
    it in one place?
 

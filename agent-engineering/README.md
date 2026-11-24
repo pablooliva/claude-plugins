@@ -93,7 +93,14 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.12.0.
+Version 5.12.1.
+
+### What's new in 5.12.1
+
+- **The Fit Lens names three kinds of code that only hide a failure** (`sdd-flow/references/fit-lens.md` §1, Size):
+  a fallback chain, a check that changes nothing, and an error rewrapped as a generic
+  one — when the spec does not ask for them. Each is fixed by deleting it. Taken from the code-quality rubric of
+  [SprocketLab/slop-code-bench](https://github.com/SprocketLab/slop-code-bench).
 
 ### What's new in 5.12.0
 
