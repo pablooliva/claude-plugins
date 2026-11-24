@@ -1,0 +1,141 @@
+---
+name: show-me
+description: "INVOKE THIS SKILL only when the user runs `/show-me` (optionally with a topic) to have the current topic of conversation explained visually. Picks the smallest view that makes the point — pseudocode, a call tree, a component tree, a shallow file tree, a Mermaid diagram, a `diff` of any of those showing what changes, or one focused HTML page — and keeps prose brief. In BB the HTML page is shown inline in the reply; elsewhere it is written to the OS temp directory and opened. Never writes into the repository and changes no code. NOT for restating a report as Done / Pending / Blocking / Next (use `rephrase`), NOT for surveying code for shallow modules (use `improve-codebase-architecture`), and NOT for the fixed sdd-flow diagrams under `docs/`."
+disable-model-invocation: true
+---
+
+# Show Me
+
+Adapted from `show-me` in [humanlayer/skills](https://github.com/humanlayer/skills), commit `bba9d13ab34f0a87f1cc33df4dd196372393ddfc` (MIT — see the plugin's `THIRD-PARTY-NOTICES.md`). The views and their examples are upstream's, unchanged; where the HTML page goes and how it is shown are this plugin's (see the last bullet and **Where the HTML page goes**).
+
+
+Help the user understand the current topic of conversation visually. Skip the preamble and keep prose brief. Pick the smallest view that makes the key point clear.
+
+- Show logic or an algorithm as pseudocode:
+
+```text
+on(save)
+  if content is unchanged
+    return cached result
+  write new content
+  return fresh result
+```
+
+- Show runtime control flow as a call tree:
+
+```text
+submitForm
+  createSession
+    persistPrompt
+    launchAgent
+  navigateToSession
+```
+
+- Show UI structure as a component tree, including state and module boundaries that matter:
+
+```tsx
+<SessionPage> (apps/example/src/routes/session.tsx)
+  useSessionEvents()
+  <SessionToolbar>
+    <RunSkillButton> (packages/ui)
+```
+
+- Show file responsibility or a broad refactor as a shallow file tree:
+
+```text
+src/
+├── commands/       # parses user actions
+├── sessions/       # owns session state
+└── transport/      # sends API requests
+```
+
+- Show component interaction, control flow, or data flow with Mermaid:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI
+    participant Daemon
+    User->>UI: choose command
+    UI->>Daemon: send expanded prompt
+    Daemon-->>UI: stream result
+```
+
+- Use `diff` when the point is what changes and the surrounding shape already exists. Match the diff shape to the topic.
+
+For a component change:
+
+```diff
+ <SessionPage>
+   useSessionEvents()
+   <SessionToolbar>
++    <RunSkillButton />
+   <SessionTimeline>
++    <SkillResultCard />
+```
+
+For a file-layout change:
+
+```diff
+ src/
+ ├── commands/
++│   └── show-me.ts       # expands the slash command
+ ├── sessions/
+-└── transport.ts
++└── transport/
++    ├── client.ts
++    └── stream.ts
+```
+
+For a call-tree or call-stack change:
+
+```diff
+ submitForm
+   createSession
+     persistPrompt
++    expandSkillMention
+     launchAgent
+-  navigateToSession
++  navigateToSession
++    subscribeToEvents
+```
+
+For a state or control-flow change:
+
+```diff
+ on(save)
+-  write content
++  if content is unchanged
++    return cached result
++  write new content
++  invalidate cache
+```
+
+- Show the whole block when most of it is new, when omitted context would hide ownership or order, or when the user needs a copyable target shape:
+
+```ts
+function expandSkill(command: string): string {
+  const skillName = command.slice(1)
+  return `use the ${skillName} skill`
+}
+```
+
+- For a visual UI, layout, state comparison, or concept too dense for Mermaid, make one focused HTML page — a diagram, an infographic, or a short slide deck, whichever fits the point. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile. Show it as **Where the HTML page goes** says.
+
+### guidance
+
+Place each visual next to the short text it supports. Keep only the calls, files, props, states, and boundaries needed to answer the user's current question or the options to resolve the current discussion point.
+
+You may use one of these, you may use several, it is unlikely you will use all of them. Use your judgement and don't overwhelm the user.
+
+### Where the HTML page goes
+
+The page is never written into the repository, so it cannot end up in a commit.
+
+- **In BB** (the environment variable `BB_THREAD_STORAGE` is set): show the page inline in your reply, following the `inline-vis` skill BB ships (load it first if its rules are not already in context).
+  - A small page: write it in the reply as an `inline-vis` fenced block. Nothing is saved.
+  - A larger page, or one the user may want to keep: write it to `$BB_THREAD_STORAGE/show-me/show-me-{description}.html`, then put the directive `::inline-vis{source="thread-storage" file="show-me/show-me-{description}.html"}` on its own line in the reply.
+  - Style it with BB's theme variables (`--foreground`, `--border`, `--chart-1` … and the rest) rather than fixed colours, and leave the page background unset, so it reads in light and dark mode. When the page mocks a specific product screen, its own colours win inside that mock.
+- **Elsewhere**: write it to the OS temp directory (`$TMPDIR`, falling back to `/tmp`, or `%TEMP%` on Windows) as `show-me-{description}-<timestamp>.html`, open it (`open` on macOS, `xdg-open` on Linux, `start` on Windows), and give the user the absolute path.
+
+Either way, do not describe what the page already shows; write only what it does not say.

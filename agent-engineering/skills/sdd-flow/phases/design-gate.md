@@ -61,11 +61,12 @@ Re-plan: <no | yes — the slice review it follows: <review-path>>
 > Brief ([N] lines): `SDD/requirements/DESIGN-[###]-[feature-name].md`
 > Research: `SDD/research/RESEARCH-[###]-[feature-name].md`
 > **Before you approve:** `/worth-building SDD/requirements/DESIGN-[###]-[feature-name].md` asks whether this should be built as planned at all — the cheapest test that could show the idea does not work, and whether the plan runs it first. Optional; the flow does not run it for you.
+> **To see it drawn:** `/show-me` pictures what the brief will change — where the changes land, the new calls, the flow. Optional; the flow does not run it for you.
 > Reply with your answers and any changes — including `tier 2` or `tier 3` to build more now. `approve` accepts the brief as written, and is available once every question above has an answer. `stop` halts here.
 
 If the brief's first line under its title is `Too large for one brief — recommend decomposition` or `Too large for one cycle — no cut of this tier fits`, show that line and the seams it names in place of the summary, and offer only a change request or `stop` — there is nothing to approve. On a next-tier cycle, the change request is how the user narrows what this cycle builds (for example, "build only the first of those seams now"); do not suggest running a decomposition, whose items would no longer be tied to the tier plan.
 
-**The `Before you approve` line is a reminder, not a step.** It is shown at every gate — a revision round and a re-plan's gate included. The orchestrator never invokes the `worth-building` skill itself, the gate does not wait for it, and nothing is recorded about whether it was run. If the user runs it, its verdict reaches the flow only as their reply: a change request (2.5c), a different tier, or `stop`. Omit the line in both `Too large for one …` cases — there is no plan to judge yet.
+**The `Before you approve` and `To see it drawn` lines are reminders, not steps.** They are shown at every gate — a revision round and a re-plan's gate included. The orchestrator never invokes the `worth-building` or `show-me` skill itself, the gate does not wait for either, and nothing is recorded about whether one was run. If the user runs `worth-building`, its verdict reaches the flow only as their reply: a change request (2.5c), a different tier, or `stop`. Omit both lines in both `Too large for one …` cases — there is no plan to judge yet.
 
 Act on the reply:
 

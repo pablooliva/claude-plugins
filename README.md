@@ -102,6 +102,7 @@ Cross-cutting skills and commands for disciplined AI-assisted software developme
 - `improve-claude-md` skill — audits and trims `CLAUDE.md`/`AGENTS.md` files to focus on preferences and behavioral nudges
 - `prompt-doctor` skill — diagnoses a task prompt before you send it against the ten-component anatomy, with quoted evidence per component and an opt-in rewrite built only from your own words
 - `rephrase` skill — restates an end-of-work report as Done / Pending / Blocking / Next, without adding facts or doing new work
+- `show-me` skill — `/show-me` explains the current topic with the smallest picture that makes the point (a call tree, a file tree, a diff of either, a Mermaid diagram, or one HTML page shown inline in BB); adapted from [humanlayer/skills](https://github.com/humanlayer/skills)
 - `sdd-lite` skill — the light path: an interview only for what is open, one approved brief, the build in the main conversation, one Codex review of every change, and a close-out of decision records, glossary and brief; points to `sdd-flow` when the work needs it ([diagram](agent-engineering/docs/sdd-lite-diagram.md))
 - `worth-building` skill — asks whether the work should be built as planned at all: the cheapest test that could kill the idea, the ceiling, the budget, and a tripwire; one verdict (proceed / reorder / shrink / stop)
 - `simplicity-challenge` skill — cuts a proposal down before it is built: smallest useful version, cuts and deferrals by tier (POC-plus / Standard / Full) with their costs, and what was kept for safety; removes or defers only

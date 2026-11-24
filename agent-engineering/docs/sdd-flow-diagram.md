@@ -57,7 +57,7 @@ flowchart TD
     s2 --> c2["2e commit research"]:::orch
     c2 --> look["bug fix only: look up the class<br/>in the defect ledger (Seen before)"]:::orch
     look --> s25a("Step 2.5a — Design brief<br/>at most 150 lines, plain language<br/>bug fix: an Escape section with Seen before<br/>proposes three tiers, writes the tier plan<br/>draws the workflow, if it branches<br/>draws the state model, if things move through states<br/>names the inputs the code does not control")
-    s25a --> gate["Step 2.5b — Design gate<br/>STOP<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve<br/>changes beyond the request stay off:<br/>opt in D-n to turn one on<br/>reminds you of /worth-building<br/>model feature, no tracing foundation:<br/>recommends /observability-init<br/>(not Python: says it is Python only)"]:::stop
+    s25a --> gate["Step 2.5b — Design gate<br/>STOP<br/>answer questions, pick a tier,<br/>accept ADR candidates, approve<br/>changes beyond the request stay off:<br/>opt in D-n to turn one on<br/>reminds you of /worth-building<br/>and /show-me to see it drawn<br/>model feature, no tracing foundation:<br/>recommends /observability-init<br/>(not Python: says it is Python only)"]:::stop
     gate -- "answers or changes" --> s25c("2.5c — Revise the brief")
     s25c --> gate
     gate -- "approve" --> m1["bug fix: try to open the escape's defect-ledger line<br/>Look again for the tracing foundation<br/>Write the accepted ADRs<br/>Mirror tiers to BB tasks<br/>tier being built: in progress"]:::orch
@@ -69,7 +69,7 @@ flowchart TD
     s3c -- "proceed" --> s3d("3d critical review of the spec<br/>3e fix HIGH and MEDIUM findings<br/>3e.5 check the fix")
     s3d -- "still open after one more fix" --> halt3e["STOP — fix-check halt<br/>you fix the spec by hand"]:::stop
     s3d --> c3["3f commit planning"]:::orch
-    c3 --> s3g["3g — STOP after the spec, every time<br/>departures from the brief, the panel's proposals<br/>run /simplicity-challenge --brief, then<br/>approve, or cut / accept to change the spec"]:::stop
+    c3 --> s3g["3g — STOP after the spec, every time<br/>departures from the brief, the panel's proposals<br/>run /simplicity-challenge --brief<br/>(reminds you of /show-me), then<br/>approve, or cut / accept to change the spec"]:::stop
     s3g -- "cut or accept" --> fixg("change the spec as asked,<br/>commit it, stop again")
     fixg --> s3g
     s3g -- "approve" --> s4{"Step 4 — Implementation<br/>route on delivery mode"}
@@ -149,7 +149,7 @@ flowchart TD
 | Tracing or evals asked for and not possible (3c) | when it applies | The spec says `tracing: true` or `evals: true` and the application had no tracing foundation when the brief was approved, or one of the two fields holds a value other than `auto`, `true`, `false`. You change the field in the spec; nothing is reviewed until you do. It cannot fire with both fields left at `auto` |
 | Panel halt (3c) | when it applies | The spec did not pass the specialist panel in 2 rounds, or a round made no progress. You fix the spec by hand |
 | Fix-check halt (3e.5) | when it applies | The check after the spec fix still found a HIGH or MEDIUM finding open after one more fix. You fix the spec by hand |
-| Stop after the spec (3g) | every time | The spec may have grown since you approved the brief. It shows the departures from the brief and the scope the panel proposed but did not add, and points you to `/simplicity-challenge` with the brief. `approve` starts building; `cut …` or `accept …` changes the spec first, and the stop is shown again |
+| Stop after the spec (3g) | every time | The spec may have grown since you approved the brief. It shows the departures from the brief and the scope the panel proposed but did not add, and points you to `/simplicity-challenge` with the brief, and to `/show-me` to see the spec drawn. `approve` starts building; `cut …` or `accept …` changes the spec first, and the stop is shown again |
 | Slice fix-loop halt (4c) | when it applies | A slice did not pass its review in 2 fix rounds, or a round made no progress. A test failure that only the whole-suite run at the end of a re-review found does not count against progress. A LOW finding is listed, not fixed, and cannot cause this stop. You resolve the findings; `continue` re-reviews the slice |
 | Slice pause | after every slice | Try the slice while it is small: it says what to run and what you should see, the brief check, the growth so far against the budget, the LOW findings the review listed, and the review's `Re-plan:` line. `continue` starts the next slice; ask for a re-plan in words and the brief is revised, the design gate stops for you, and planning runs again |
 | Eval run could not be made (before a review, evals on) | when it applies | The application's model could not be reached, twice, when the flow ran the feature's eval cases before a review. Nothing is reviewed until it can be: you fix the network, the key, or the provider's limit, and continue. It costs no fix round |

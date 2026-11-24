@@ -241,9 +241,10 @@ Spec: SDD/requirements/SPEC-[###]-[feature-name].md   Brief: SDD/requirements/DE
 > **Departures from the brief:** [each: what the brief said → what the spec says — why; an entry ending `beyond the request, not specified` is shown with that label: the spec left it off as the brief says] [or "none"].
 > **Proposed by the panel, not in the spec:** [each open addition: `A[n]` — one line, starting `Beyond the request:` when the addition carries that label] [or "none"]. `accept A1, A3` adds them; the rest are dropped. `approve` accepts none.
 > **Cut it down:** `/simplicity-challenge SDD/requirements/SPEC-[###]-[feature-name].md --brief SDD/requirements/DESIGN-[###]-[feature-name].md` lists what the spec could drop or defer; a cut that touches a decision you made in the brief is marked "needs your call". Then reply `cut` with the cuts you want, by their rows or in your words. Optional; the flow does not run it for you.
+> **To see it drawn:** `/show-me` pictures what the spec will change — where the changes land, the new calls, the flow. Optional; the flow does not run it for you.
 > Reply `approve` to start building[, accepting the departures above], `cut …` and/or `accept …` to change the spec first, or `stop`.
 
-**The `Cut it down` line is a reminder, not a step.** The orchestrator never invokes `simplicity-challenge` itself and records nothing about whether it was run. Its verdict reaches the flow only as the owner's reply.
+**The `Cut it down` and `To see it drawn` lines are reminders, not steps.** The orchestrator never invokes `simplicity-challenge` or `show-me` itself and records nothing about whether either was run. A `simplicity-challenge` verdict reaches the flow only as the owner's reply.
 
 Act on the reply:
 

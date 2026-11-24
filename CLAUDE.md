@@ -105,6 +105,9 @@ agent-engineering/
 │   │                       #   standalone review; sdd-flow reads the same catalog
 │   ├── prompt-doctor/          # ten-component agent-prompt diagnosis (catalog in references/)
 │   ├── rephrase/               # restates an end-of-work report as Done / Pending / Blocking / Next
+│   ├── show-me/                # user-invoked: explains the current topic visually (call/file/component trees, diffs, Mermaid, one HTML page);
+│   │                       #   adapted from humanlayer/skills (THIRD-PARTY-NOTICES.md) — the views are upstream's, the HTML placement (BB inline-vis, else OS temp) is ours;
+│   │                       #   sdd-flow names it at the design gate and the stop after the spec (3g) — a reminder, it never runs it
 │   ├── simplicity-challenge/   # user-invoked: cuts a proposal down before it is built (function + structure); `--brief <path>` marks cuts
 │   │                       #   against an approved design brief (sdd-flow's stop after the spec, 3g, prints the command with it);
 │   │                       #   references/tiers.md is the plugin's ONE tier standard (tiers, floor, cut tests,
