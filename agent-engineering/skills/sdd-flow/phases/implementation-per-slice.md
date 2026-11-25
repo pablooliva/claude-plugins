@@ -1,5 +1,17 @@
 # Phase: Implementation — per-slice mode
 
+**Steps — read by section** (`SKILL.md` → State Machine). Every step reads this opening section and `## Who owns what on the slice path`, then its own:
+
+| Step | Section heading |
+|---|---|
+| 4a.0 | `## Per-slice 4a.0 — Scaffold the implementation tracker` |
+| 4a | `### Per-slice 4a — Implement slice` |
+| 4b | `### Per-slice 4b — Per-slice code review` |
+| 4c, and the stop `## Awaiting Slice Resolution` | `### Per-slice 4c — Address per-slice findings` |
+| 4c.6 | `### Per-slice 4c.6 — Per-slice commit` |
+| The pause | `### PAUSE (after every slice)` |
+| After the last slice | `## End-of-feature cycle` |
+
 Reached at Step 4 when the spec's `delivery_mode:` is `per-slice`. The whole-feature 4a–4j steps DO NOT run; the orchestrator iterates `SLICE-XXX` entries from the spec's `## Delivery Slices` section, executing the per-slice cycle for each in order, then runs the end-of-feature cycle once after the last slice lands.
 
 Per-slice subagents carry the Safety-Net Rule + a fresh counter file (`Reads: 0/20` for the implement step, `Reads: 0/15` otherwise) + the `implementation-compact.md` compact body path. A review step run on the second model carries none of the three (`references/second-model-review.md` §3). Body paths are `SKILL_ROOT/bodies/<file>.md`, resolved absolute.

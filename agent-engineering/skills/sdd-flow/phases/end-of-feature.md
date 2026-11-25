@@ -1,5 +1,7 @@
 # Phase: Implementation — end of feature (Steps 4b–4j, both delivery modes)
 
+**Steps — read by section** (`SKILL.md` → State Machine). Every step reads this opening section, then its own: `## 4b. Code Review Subagent`, `## 4c. Address Code Review Findings`, `## 4e.5. Final Check` (with its stop), `## 4f. Implementation Completion Subagent`, `## 4h. Commit Checkpoint` (with its stop), `## 4i. Commit Implementation`, `## 4j. Completion Announcement`.
+
 Read with `phases/implementation-inputs.md` once the feature is implemented: after whole-feature 4a (`## Feature - Implemented`), or after the last slice's commit (per-slice end-of-feature cycle, `phases/implementation-per-slice.md`). Both delivery modes run these steps the same way (there is no 4g; eval capture was removed in 3.0.0).
 
 Phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file + the `implementation-compact.md` compact body path. A review step run on the second model carries none of the three (`references/second-model-review.md` §3). Body paths are `SKILL_ROOT/bodies/<file>.md`, resolved absolute.

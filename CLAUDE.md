@@ -54,7 +54,7 @@ agent-engineering/
 │   │   │                           #   (4a), implementation-per-slice, end-of-feature (4b–4j) (+ implementation-inputs.md for all
 │   │   │                           #   three), protocols (errors); read only when needed: artifact-paths, model-routing, tier-mirror,
 │   │   │                           #   and rare/ (resume, handoff, rotation, replan, next-tier, decomposition). A step reads SKILL.md +
-│   │   │                           #   its chapter (+ inputs file) — keep that under ~15k tokens; a rare case goes in rare/, not a chapter
+│   │   │                           #   its chapter (+ inputs file) — by section, from the index each Step 4 chapter opens with — keep that under ~15k tokens; a rare case goes in rare/, not a chapter
 │   │   ├── bodies/                 #   complete instruction sets for spawned subagents (read by path);
 │   │   │                           #   design-brief.md = the Step 2.5 design gate's brief, the one planning doc a human reads
 │   │   │                           #   fix-round.md = the one body of every Step 4 code-fix round (per-slice 4c, 4c, the 4e.5 fix): it holds every

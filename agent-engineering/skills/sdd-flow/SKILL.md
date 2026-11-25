@@ -11,7 +11,7 @@ This skill is the **single source of truth** for the flow, and **self-contained*
 
 The main conversation is a lightweight **orchestrator**: it spawns one subagent per phase / review / fix / capture step, each with a fresh context, so no `/clear` is needed. A review step runs on a second model through its command-line agent instead (Second-Model Review below). Steps communicate only through the **SDD files on disk**; every spawn prompt gives resolved paths and the absolute path of the body to read first.
 
-**What to read when.** This file at every step, plus the phase chapter the State Machine names. A rare case — resume, handoff, rotation, re-plan, next tier, decomposition, tier mirror — reads its own file only when it happens. Artifact paths a chapter does not give: `phases/artifact-paths.md`.
+**What to read when.** This file at every step, plus the phase chapter the State Machine names — by section where the chapter has an index (State Machine). A rare case — resume, handoff, rotation, re-plan, next tier, decomposition, tier mirror — reads its own file only when it happens. Artifact paths a chapter does not give: `phases/artifact-paths.md`.
 
 ## Usage
 
@@ -161,7 +161,13 @@ Writing and fixing steps run on `agent-engineering:sdd-workhorse` (sonnet), with
 
 ## State Machine
 
-Evaluate top-to-bottom. At each step boundary, **read the named phase file before acting** — it holds the per-step spawn briefs, checkpoint templates, and halt semantics.
+Evaluate top-to-bottom. At each step boundary, **read the named phase file before acting** — it holds the per-step spawn briefs, checkpoint templates, and halt semantics. **Read a file by section** when it opens with a *Steps* or *Sections* index (the Step 4 chapters and `phases/implementation-inputs.md`): its opening section, then the sections the index names for the step at hand, each with
+
+````bash
+awk -v h='<heading as the index gives it>' '/^```/{f=!f} !f&&index($0,h)==1{p=1;print;next} p&&!f&&/^(#|##|###) /{exit} p' <file>
+````
+
+(a heading inside a fenced block, such as a halt-block template, is not a section's end). **A section already read in this session is not read again** — the files do not change during a run; after a compaction, or in a new session, read it again.
 
 | Step | What | Read now |
 |---|---|---|
