@@ -282,7 +282,7 @@ handle_upload(req)                              [entry: POST /uploads]
 - **State moves:** [Only when the spec has `### State model`; omit the line otherwise. The moves of its table, allowed and forbidden, that this slice brings into existence (STATE_MODEL §3) — e.g. `pending → analyzed, analyzed → pending (forbidden)` — or `none`.]
 - **Evals:** [Only when evals are on; omit the line otherwise. The cases of `### Evals` this slice is the first to be able to pass — e.g. `EVAL-001, EVAL-003 (case 1)` — or `none`.]
 - **Acceptance check:** [a single, focused test that proves the slice works end-to-end. Ideally an automated test name; manual verification step otherwise.]
-- **Try it:** [for the person who approved the brief, who does not read code: what to run or do to see this slice working, and what they should see — plain words, no test names. When nothing can be seen by hand yet, say so and why, in one line.]
+- **Try it:** [for the person who approved the brief, who does not read code: each step as a complete command run from the repository root — one per line, nothing left to fill in, output under `$TMPDIR` — then what they should see, in plain words, no test names. Mark a step that makes a real model or paid call, or that needs a person (watching, logging in), `(owner runs)`. When nothing can be seen by hand yet, say so and why, in one line.]
 - **Sequence rationale:** [why this slice is at this position. SLICE-001 = thinnest end-to-end happy path; subsequent slices add depth, edge cases, and additional concentrated functions.]
 
 ### SLICE-002: [name]

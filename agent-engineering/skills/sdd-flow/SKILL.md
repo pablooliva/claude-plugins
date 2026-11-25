@@ -80,6 +80,7 @@ CATALOG, TIERS, and TRACING are read here and never restated. Record SKILL_ROOT,
 - the fix-round snapshots (`scripts/snapshot.py`);
 - the tier task mirror (`scripts/tier-mirror.py`, `phases/tier-mirror.md`);
 - growth against the brief's budget at the slice pause and before the final commit (`scripts/growth.py`; it prints three lines, and the orchestrator reads no code to get them);
+- at the slice pause, the steps of the slice's `Try it:` line a command can do (`phases/implementation-per-slice.md` → PAUSE, item 1: no real model or paid call, scratch files under `$TMPDIR`; it reads what the commands print, never the code);
 - with the `evals` gate on, the eval run of record before a review (the application's own eval command, from one row of `SDD/OBSERVABILITY.md`; it reads the last line printed, never the results — `phases/implementation-inputs.md` → *The eval run of record*);
 - user-facing checkpoint messages, and state in `progress.md`;
 - the mechanical edits the phase files give it by name: an addition's `declined` marker in the PANEL-SPEC on `approve` at the stop after the spec; a slice's row to `Complete` before its commit; after a re-plan, archiving the old slice table and moving the replaced plan's slice files aside; before the completion spawn (4f), gathering the reviews' LOW findings into one file.
