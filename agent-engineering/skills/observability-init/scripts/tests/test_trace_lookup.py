@@ -332,14 +332,14 @@ class TraceLookupTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("100 spans", out)
 
-    def test_the_earliest_of_two_separate_failures_is_named(self):
+    def test_the_latest_of_two_separate_failures_is_named(self):
         self.spans_for("t-two", [
             span("r", "POST /ask", None, 0, 50, error_info=ERROR),
             span("a", "app.one", "r", 10, 20, metadata=place(1), error_info={"exception_type": "KeyError"}),
             span("b", "app.two", "r", 5, 8, metadata=place(2), error_info={"exception_type": "ValueError"}),
         ])
         _, out, _ = self.run_lookup("t-two")
-        self.assertIn("failed first in: app.two  app/main.py:2  (ValueError)", out)
+        self.assertIn("failed first in: app.one  app/main.py:1  (KeyError)", out)
 
     def test_a_span_whose_parent_is_missing_is_shown_as_a_root(self):
         self.spans_for("t-orphan", [span("r", "POST /ask", None, 0, 50), span("o", "app.lost", "gone", 5, 6, metadata=place(3))])
@@ -347,7 +347,7 @@ class TraceLookupTest(unittest.TestCase):
         self.assertIn("\napp.lost  app/main.py:3  1 ms", out)
 
     def test_spans_whose_parents_loop_are_shown_not_dropped(self):
-        self.spans_for("t-loop", [span("r", "POST /ask", None, 0, 50),
+        self.spans_for("t-loop", [span("r", "POST /ask", None, 0, 50, error_info=ERROR),
                                   span("x", "app.x", "y", 1, 2, metadata=place(4), error_info={"exception_type": "OSError"}),
                                   span("y", "app.y", "x", 3, 4, metadata=place(5))])
         code, out, _ = self.run_lookup("t-loop")
@@ -355,7 +355,7 @@ class TraceLookupTest(unittest.TestCase):
         self.assertIn("2 span(s) whose parents form a loop:", out)
         self.assertIn("app.x", out)
         self.assertIn("app.y", out)
-        self.assertIn("failed first in: app.x", out)
+        self.assertIn("failed first in: POST /ask", out)
 
     def test_content_alone_prints_the_model_call(self):
         _, out, _ = self.run_lookup("t-failed", "--content")
@@ -417,6 +417,72 @@ class TraceLookupTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn(f"cannot be reached at http://127.0.0.1:{port} (", err)
         self.assertNotIn("PASS-6789", err)
+
+
+def rendered_module():
+    """The template, its placeholders filled, imported as a module: its functions can be called one at a time."""
+    import importlib.util
+    folder = Path(tempfile.mkdtemp())
+    path = folder / "trace_lookup.py"
+    path.write_text(TEMPLATE.read_text(encoding="utf-8")
+                    .replace("@@ROOT@@", "Path(__file__).resolve().parents[1]")
+                    .replace("@@ENV_FILE@@", "None")
+                    .replace("@@TRACE_LOOKUP_COMMAND@@", "python scripts/trace_lookup.py"), encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("rendered_trace_lookup", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class FirstFailureTest(unittest.TestCase):
+    """Which call `failed first in:` names: where the failure that ended the run started, and none when the run did not fail."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.first_failure = staticmethod(rendered_module().first_failure)
+
+    def named(self, found):
+        first = self.first_failure(found)
+        return first and first["id"]
+
+    def test_a_run_that_recovered_from_a_failed_call_names_none(self):
+        self.assertIsNone(self.named([
+            span("r", "main", None, 0, 50),
+            span("m1", "chat demo-model", "r", 1, 10, kind="llm", error_info=ERROR),
+            span("m2", "chat demo-model", "r", 11, 20, kind="llm"),
+            span("w", "app.render", "r", 21, 30),
+        ]))
+
+    def test_a_failed_run_names_the_later_failure_not_the_one_it_recovered_from(self):
+        self.assertEqual(self.named([
+            span("r", "main", None, 0, 50, error_info=ERROR),
+            span("m1", "chat demo-model", "r", 1, 10, kind="llm", error_info=ERROR),
+            span("m2", "chat demo-model", "r", 11, 20, kind="llm"),
+            span("w", "app.render", "r", 21, 30, error_info=ERROR),
+        ]), "w")
+
+    def test_a_run_that_answered_a_server_error_names_the_call_that_failed(self):
+        self.assertEqual(self.named([
+            span("r", "POST /ask", None, 0, 50, input={"http.response.status_code": 502}),
+            span("m", "chat demo-model", "r", 1, 10, kind="llm", error_info=ERROR),
+        ]), "m")
+
+    def test_one_deep_failure_is_named(self):
+        self.assertEqual(self.named([
+            span("r", "main", None, 0, 50, error_info=ERROR),
+            span("a", "app.a", "r", 1, 40, error_info=ERROR),
+            span("b", "app.b", "a", 2, 30, error_info=ERROR),
+            span("c", "app.c", "b", 3, 20, error_info=ERROR),
+            span("d", "app.d", "a", 31, 35),
+        ]), "c")
+
+    def test_a_failed_root_with_no_failed_call_beneath_it_is_named(self):
+        self.assertEqual(self.named([span("r", "main", None, 0, 50, error_info=ERROR), span("a", "app.a", "r", 1, 10)]), "r")
+
+    def test_spans_whose_parents_loop_still_give_a_failed_span(self):
+        found = [span("r", "main", None, 0, 50, error_info=ERROR),
+                 span("x", "app.x", "y", 1, 2, error_info=ERROR), span("y", "app.y", "x", 3, 4, error_info=ERROR)]
+        self.assertEqual(self.named(found), "r")
 
 
 if __name__ == "__main__":

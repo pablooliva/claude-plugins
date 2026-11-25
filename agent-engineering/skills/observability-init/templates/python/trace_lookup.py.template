@@ -241,8 +241,12 @@ def _indent(text, width):
 
 
 def first_failure(found):
-    """Where the failure started: a failed span with no failed span anywhere beneath it, the earliest if there are several."""
+    """Where the failure that ended the run started: a failed span with no failed span anywhere beneath it, the latest
+    if there are several - an earlier one was recovered from (a model call that failed and was retried). None when the
+    run itself did not fail, whatever failed inside it: no root span failed, by the same rule as a listed trace."""
     by_id = {span["id"]: span for span in found}
+    if not any(failed(span) for span in found if span.get("parent_span_id") not in by_id):
+        return None
     above_a_failure = set()
     for span in found:
         if span.get("error_info"):
@@ -251,9 +255,9 @@ def first_failure(found):
                 above_a_failure.add(parent)
                 parent = by_id[parent].get("parent_span_id")
     starts = [span for span in found if span.get("error_info") and span["id"] not in above_a_failure]
-    # Spans whose parents loop are each above the other; then the earliest failed span is the best that can be said.
+    # Spans whose parents loop are each above the other; then the latest failed span is the best that can be said.
     starts = starts or [span for span in found if span.get("error_info")]
-    return min(starts, key=_order) if starts else None
+    return max(starts, key=_order) if starts else None
 
 
 def _in_tree_order(found):

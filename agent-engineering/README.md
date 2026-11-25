@@ -93,7 +93,15 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.14.0.
+Version 5.14.1.
+
+### What's new in 5.14.1
+
+- **The trace lookup names the failure that ended the run** (`observability-init/templates/python/trace_lookup.py.template`,
+  `first_failure`): of the failed calls with no failed call beneath them it names the latest, not the earliest, and it
+  names none when the run's root call did not fail (no error, no 5xx status). Before, a model call that failed and was retried was named instead
+  of the later step that ended the run, and a run that succeeded after a retry still printed `failed first in:`.
+  An application set up earlier gets the fix by running `/observability-init` again (audit mode proposes the function).
 
 ### What's new in 5.14.0
 
