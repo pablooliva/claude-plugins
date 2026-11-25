@@ -56,27 +56,20 @@ Apply the **Active-Slice Resolution Convention** above. Expected status for this
 - **No argument, multiple matching rows:** return a failure to the orchestrator listing the candidate rows; write no review and no stop note.
 - **No argument, zero matching rows:** fail with: `No slice currently In Progress in <IMPLEMENTATION-PLAN-XXX-...md>. Run slice-start <SLICE-XXX> first.`
 
-## Step 4: Compute the slice's file set (REQ-004)
+## Step 4: The slice's file set
 
-The slice's reviewable file set is computed as the **intersection** of:
+The slice's file set is **the files actually modified for this slice** (the git list). **The slice is uncommitted while you review it** (the per-slice commit lands only after review and fixes), so compare the working tree against the slice's base commit `BASE` — never `BASE..HEAD`, which compares two identical commits and is always empty. SDD artifacts are excluded; they are not slice code. `SDD_ROOT` is the records folder your prompt names (`SDD` when it names none) — in each command write the value of SDD_ROOT in its place, inside the same quotes; a pathspec left reading `SDD_ROOT` excludes nothing:
 
-1. The SPEC's `## Delivery Slices` → `### SLICE-XXX:` → `Modules touched` field — for each MODULE-XXX listed there, expand to the file paths the SPEC's `## Modules` section attributes to that module.
-2. The files actually modified for this slice (the **git list**). **The slice is uncommitted while you review it** (the per-slice commit lands only after review and fixes), so compare the working tree against the slice's base commit `BASE` — never `BASE..HEAD`, which compares two identical commits and is always empty. SDD artifacts are excluded; they are not slice code. `SDD_ROOT` is the records folder your prompt names (`SDD` when it names none) — in each command write the value of SDD_ROOT in its place, inside the same quotes; a pathspec left reading `SDD_ROOT` excludes nothing:
-
-   ```bash
-   git diff --name-only --no-renames BASE -- . ':(exclude,literal)SDD_ROOT'           # tracked files modified, deleted, or renamed (old and new path)
-   git ls-files --others --exclude-standard -- . ':(exclude,literal)SDD_ROOT'         # new, untracked files (git diff never lists these)
-   ```
-
-   `BASE` comes from your prompt. **Never guess it from HEAD** — after a resume or a re-run HEAD may already include the slice, and the diff would silently come back empty. If your prompt has no `BASE`, take it from the `Base commit:` line of the slice's latest `## Slice <SLICE-XXX> - In Progress` entry in `progress.md`. If neither exists, stop and return "BASE missing for SLICE-XXX" without writing a review. If `BASE` is `none` (the repo had no commits), use the empty tree from `git hash-object -t tree /dev/null` (computed, not hard-coded, so SHA-256 repositories work).
-
-   Untracked files have no diff: review them **in full**.
-
-**Disagreement handling (per REQ-004):** if the two lists agree, use the intersection. If they disagree, **prefer the git list** (it reflects what was actually modified) and surface the divergence as a `MEDIUM` finding in the review output:
-
-```markdown
-**MEDIUM finding — Slice scope divergence**: SPEC's `Modules touched` for SLICE-XXX lists <X>; the slice's working-tree changes against BASE list <Y>. Reviewing the git list; if the SPEC is correct, the slice touched files outside its declared modules (or missed ones inside them) and must be reconciled — either the code or the SPEC's `Modules touched` changes.
+```bash
+git diff --name-only --no-renames BASE -- . ':(exclude,literal)SDD_ROOT'           # tracked files modified, deleted, or renamed (old and new path)
+git ls-files --others --exclude-standard -- . ':(exclude,literal)SDD_ROOT'         # new, untracked files (git diff never lists these)
 ```
+
+`BASE` comes from your prompt. **Never guess it from HEAD** — after a resume or a re-run HEAD may already include the slice, and the diff would silently come back empty. If your prompt has no `BASE`, take it from the `Base commit:` line of the slice's latest `## Slice <SLICE-XXX> - In Progress` entry in `progress.md`. If neither exists, stop and return "BASE missing for SLICE-XXX" without writing a review. If `BASE` is `none` (the repo had no commits), use the empty tree from `git hash-object -t tree /dev/null` (computed, not hard-coded, so SHA-256 repositories work).
+
+Untracked files have no diff: review them **in full**.
+
+The spec's `Modules touched` is not compared with this list: a file outside what the design brief approved is a Fit Lens finding (FIT §2), and a test, a fixture, or a document a slice needs is not a divergence. `Modules touched` still decides which requirements Specification Alignment checks and the depth of Risk-Tiered Review.
 
 **Slice-scoped review caveat — shared/foundation files:** if the slice's file set includes a file that was also modified by an EARLIER slice (foundation file shared across slices), the review focuses on THIS slice's diff only — use `git diff BASE -- <path>` (working tree against the slice's base) to scope the diff. An untracked file has no diff — review it in full. The earlier slice's review owns the earlier slice's diff; this slice owns its own.
 
@@ -222,11 +215,10 @@ The review document follows the standard review template (`SDD/.records/reviews/
 **Feature:** [feature-name]
 **SPEC:** SDD/requirements/SPEC-XXX-[feature-name].md
 **IMPLEMENTATION-PLAN:** SDD/implementation/IMPLEMENTATION-PLAN-XXX-[feature-name]-[date].md
-**Slice file set (computed per REQ-004 intersection rule):**
+**Slice file set (the git list against BASE):**
 - <file 1>
 - <file 2>
 - ...
-**Source of file set:** <"intersection — agreement" / "git list preferred — divergence">
 **Slice changes:** tracked changes in the working tree vs `BASE` = `<commit>`; untracked files reviewed in full: <list or "none">
 **Re-review:** <"no — reviewed in full" (with PREVIOUS REVIEW: "no — reviewed in full; PREVIOUS REVIEW <path>") | "after fix round <N>: SNAPSHOT `<sha>` → FIXED `<sha>`; PREVIOUS REVIEW <path>; the change: <files>; tests run: <"whole suite" | the test files>, <passed>/<collected>; whole suite at the end: <"yes, <passed>/<collected>" | "no — <n> finding(s) before it">">
 

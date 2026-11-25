@@ -93,7 +93,24 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.13.0.
+Version 5.14.0.
+
+### What's new in 5.14.0
+
+From a retrospective of one per-slice cycle:
+
+- **The slice review no longer raises "slice scope divergence"** (`bodies/slice-review.md` → Step 4): it reviews the
+  files git says changed. A file outside the design brief's footprint is still a Fit Lens finding; a test, fixture, or
+  document a slice needs is not a finding.
+- **The slice pause runs the slice's `Try it:` steps** (`phases/implementation-per-slice.md` → PAUSE): each command a
+  step can run, with its output, under `$TMPDIR`, with no real model or paid call; what needs a person is left to the
+  user as a complete command. Planning writes `Try it:` as complete commands.
+- **Findings in lines the fix just wrote do not stall a slice's fix loop** (`phases/implementation-per-slice.md` → 4c):
+  a re-review tags them `[fix-added]` and writes a `## Fix-Added` line; the stall check sets them aside, and when they
+  are all that is left at the cap, one extra round runs before the stop.
+- **The orchestrator reads a Step 4 chapter by section, once per session** (`SKILL.md` → State Machine): the per-slice
+  and end-of-feature chapters and the implementation inputs open with an index of their sections. 4a to the slice
+  pause reads about 37k characters instead of about 192k, no single read over 7.1k.
 
 ### What's new in 5.13.0
 
