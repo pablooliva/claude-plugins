@@ -28,7 +28,7 @@ For each rule, read the code that must hold it, from every entry point a user or
 - **Missing configuration** — a default the code relies on that the deployment does not set; a file, key, or allowlist that is absent.
 - **Values echoed back** — upstream error text, internal names, paths, keys, or another user's data returned to a caller or written to a log a user can read.
 
-Each path found is **one finding: HIGH** when a user or caller can reach it, **MEDIUM** when it needs a setting or state the spec says the deployment does not have. A rule that holds on every path tried, but that no test would catch if its guard were removed (§3), is **MEDIUM** — the code is right today and nothing keeps it right.
+Each path found is **one finding**, rated by **SEVERITY** (`references/severity.md` §2–§3, passed to the final check), which decides: a path a user or caller can trigger with input they supply is normal use, however unusual that input is; a path that needs a setting or state the spec says the deployment does not have is not — unless a caller can bring that setting or state about through input they supply, which makes it normal use again. A security rule broken on a path a caller can reach is always severe impact (SEVERITY §2), so it is HIGH. A rule that holds on every path tried, but that no test would catch if its guard were removed (§3), is **MEDIUM** — the code is right today and nothing keeps it right.
 
 ## 3. What a proving test is
 

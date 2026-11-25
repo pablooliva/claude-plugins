@@ -93,7 +93,19 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.12.1.
+Version 5.13.0.
+
+### What's new in 5.13.0
+
+- **Reviews rate a finding by how likely it is, not only by what it breaks** (`sdd-flow/references/severity.md`, new):
+  a finding the review judges is rated by its impact (severe, moderate, minor) and its reach — normal use, a
+  plausible mistake or failure, or a contrived case that needs several unusual conditions at once or an attacker
+  who already holds more access. A contrived case is LOW: listed for the owner, never sent to a fix round. Every HIGH
+  and MEDIUM names its `Trigger:` and `Impact:`. Input the code does not control counts as reachable by whoever can
+  supply it. In the final check's later rounds, a new finding blocks only when it is severe in normal use.
+  The security verification's HIGH/MEDIUM rule now reads it; the lenses with fixed severities (test integrity, fit,
+  tracing, state, evals) are unchanged. Read by the spec panel, the spec critical review, the code and slice reviews,
+  and the final check.
 
 ### What's new in 5.12.1
 

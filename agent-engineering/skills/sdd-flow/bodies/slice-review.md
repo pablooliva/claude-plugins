@@ -149,7 +149,7 @@ Items outside the slice's file set still apply when the checklist item is about 
 
 ## Step 5.6: Severities and the marker
 
-Every finding of this review is raised once, at its severity, in `## Slice-Specific Findings` or in the section of the lens that raised it.
+Every finding of this review is raised once, at its severity, in `## Slice-Specific Findings` or in the section of the lens that raised it. Rate every finding you judge by **SEVERITY** (at the path in your prompt): its impact and who can make it happen, with a `Trigger:` and an `Impact:` line under the title of every HIGH and MEDIUM. A finding whose severity a reference or a rule of this body fixes keeps that severity.
 
 **The finding line.** Every finding — any severity, in any section, the sections a reference gives the shape of included — opens with exactly one line:
 

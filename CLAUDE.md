@@ -67,6 +67,9 @@ agent-engineering/
 │   │   │                           #   test-integrity.md — the ONE definition of a real test and of the reviews' Test Integrity Lens
 │   │   │                           #   (implementer bodies read §1; code review and slice review run it; fixers follow §7;
 │   │   │                           #   §8 = the scratch copy every mutation is made in, by every body);
+│   │   │                           #   severity.md — the ONE definition of how a review rates a finding it judges (impact × reach: a contrived case is LOW;
+│   │   │                           #   `Trigger:` + `Impact:` on every HIGH/MEDIUM; a new finding in a later final-check round blocks only when severe in normal use);
+│   │   │                           #   fixed-severity lenses keep theirs; the spec panel, spec review, code/slice review and final check read it (security-verification §2 defers to it);
 │   │   │                           #   fit-lens.md — the ONE definition of the reviews' Fit Lens (fit and size: match, reuse, smaller, next change;
 │   │   │                           #   a file outside the brief's footprint is a finding — a new file counts only when the brief names it; MEDIUM for a new file, layer or duplicate helper;
 │   │   │                           #   §4 = fixers remove or merge, never add, and report net lines): code review, slice review, fixers;

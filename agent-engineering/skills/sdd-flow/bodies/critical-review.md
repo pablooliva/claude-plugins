@@ -8,6 +8,8 @@ You are performing an adversarial critical review to find gaps, mistakes, incons
 
 Act as a skeptical reviewer, not a validator. Your goal is to find what's wrong, missing, or questionable - not to confirm correctness. Assume there ARE problems to find.
 
+**Rate them by how much they matter.** When your prompt gives **SEVERITY**, rate every finding you judge by it (its §6 for a spec): what the built feature would do in the case, and how that case comes up — in normal use, through a plausible mistake or failure, or only a contrived one. Every HIGH and MEDIUM carries a `Trigger:` and an `Impact:` line under its title. A finding whose severity a reference or a rule of this body fixes keeps that severity.
+
 ## 1. Determine Review Context
 
 Your prompt says what you are reviewing: it names the artifact paths and which section of this body to apply.
@@ -273,7 +275,7 @@ When reviewing a proposed solution outside the SDD lifecycle:
 
 ### Prioritize by Impact
 
-Rate each finding:
+When your prompt gives **SEVERITY**, it rates every finding you judge, the new findings of a Fix Check included (see *Rate them by how much they matter* above), and the levels below are only what a HIGH, MEDIUM, and LOW impact look like. Without SEVERITY, rate each finding:
 - **HIGH**: Will cause failures, security issues, or major rework
 - **MEDIUM**: Will cause confusion, technical debt, or minor issues
 - **LOW**: Best practice deviation, style issue, or minor improvement

@@ -2,7 +2,7 @@
 
 Read this with the Step 4 chapter in use — `phases/implementation-whole-feature.md` (4a), `phases/implementation-per-slice.md`, or `phases/end-of-feature.md` (4b–4j). It holds what every Step 4 spawn is passed and the rules every review and fix follows.
 
-All paths below are resolved absolute. SECURITY, SPEC_READING, HOSTILE_INPUT, FIT, TEST_INTEGRITY, TRACE_TREE_SCRIPT, LENS, EVALS and EVAL_TEMPLATES ship inside this skill; one that is missing is a broken install — halt and tell the user. **The fix rounds** — 4c, the 4e.5 fix, and per-slice 4c — run one body, `bodies/fix-round.md`, which holds every rule a fix follows; a fix prompt passes it by path with `MODE` (`feature`, `final-check`, `slice`), `MARKER` (the `progress.md` line it appends, or `none`), and the inputs its chapter lists, and embeds no rule of the fix's own — only the Safety-Net Rule every spawn carries.
+All paths below are resolved absolute. SECURITY, SEVERITY, SPEC_READING, HOSTILE_INPUT, FIT, TEST_INTEGRITY, TRACE_TREE_SCRIPT, LENS, EVALS and EVAL_TEMPLATES ship inside this skill; one that is missing is a broken install — halt and tell the user. **The fix rounds** — 4c, the 4e.5 fix, and per-slice 4c — run one body, `bodies/fix-round.md`, which holds every rule a fix follows; a fix prompt passes it by path with `MODE` (`feature`, `final-check`, `slice`), `MARKER` (the `progress.md` line it appends, or `none`), and the inputs its chapter lists, and embeds no rule of the fix's own — only the Safety-Net Rule every spawn carries.
 
 **SECURITY** = `SKILL_ROOT/references/security-verification.md`, passed to every implementation spawn, the final check (4e.5) and its fix, and the completion spawn.
 
@@ -11,6 +11,8 @@ All paths below are resolved absolute. SECURITY, SPEC_READING, HOSTILE_INPUT, FI
 **HOSTILE_INPUT** = `SKILL_ROOT/references/hostile-input.md` — the rules for code that reads input it does not control (how it splits and matches text, treats a failed command, a link, an exception, an error message, a write) and how they are tested. No gate: passed to every spawn that writes code — each slice's implement step (4a), the whole-feature implementer and each of its chunks, and every fix spawn (the fix body's rule 3).
 
 **LOW findings are listed, not fixed.** A review with no open HIGH and no open MEDIUM passes; its LOW findings are listed in its document and reach the owner at the slice pause and in the end report. The fix body holds the rule (`bodies/fix-round.md`, rule 1).
+
+**SEVERITY** = `SKILL_ROOT/references/severity.md` — how a review rates a finding it judges: impact and reach, with a `Trigger:` and an `Impact:` line on every HIGH and MEDIUM. No gate: passed to the code review and the slice review (4b) and every review of the final check (4e.5).
 
 **FIT** = `SKILL_ROOT/references/fit-lens.md` — the reviews' Fit Lens. No gate: passed in every cycle to the code review and the slice review (4b) and every fix spawn.
 

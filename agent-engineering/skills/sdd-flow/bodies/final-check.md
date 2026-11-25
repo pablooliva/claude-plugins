@@ -6,7 +6,7 @@ This is the last review of the feature, run after every fix has landed. It reads
 
 ## Inputs (all from your prompt)
 
-Always: `SCOPE = FEATURE`, `ITER = <k>`, the SPEC, the IMPLEMENTATION-PLAN, `BASE` (the commit the feature started from), **SDD_ROOT** (the records folder; `SDD` when your prompt names none; in a command write its value in its place, inside the same quotes), **SECURITY** (`references/security-verification.md`), **TEST_INTEGRITY**, **STATE_MODEL** (`references/state-model.md`), and the gate lines `tracing: on|off` and `evals: on|off`. With the `agent_security` gate open: **CATALOG** and the panel review `SDD/.records/reviews/PANEL-SPEC-*`. With `tracing: on`: **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE** (a file named for this iteration). With `evals: on`: **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not). `PREVIOUS REVIEW` on every round — on the first, the code review (Step 4b); on a later round, the final-check review before it — and on a later round also `SNAPSHOT` and `FIXED` (below).
+Always: `SCOPE = FEATURE`, `ITER = <k>`, the SPEC, the IMPLEMENTATION-PLAN, `BASE` (the commit the feature started from), **SDD_ROOT** (the records folder; `SDD` when your prompt names none; in a command write its value in its place, inside the same quotes), **SECURITY** (`references/security-verification.md`), **SEVERITY** (`references/severity.md`), **TEST_INTEGRITY**, **STATE_MODEL** (`references/state-model.md`), and the gate lines `tracing: on|off` and `evals: on|off`. With the `agent_security` gate open: **CATALOG** and the panel review `SDD/.records/reviews/PANEL-SPEC-*`. With `tracing: on`: **LENS**, **TRACING**, **OBS_RECORD**, **TRACE_TREE_SCRIPT**, and **TRACE_TREE** (a file named for this iteration). With `evals: on`: **EVALS**, **EVAL_TEMPLATES**, **OBS_RECORD**, the eval run line (`Eval run: …`), and **EVAL_RESULTS** when the run wrote results (your prompt says so in one line when it did not). `PREVIOUS REVIEW` on every round — on the first, the code review (Step 4b); on a later round, the final-check review before it — and on a later round also `SNAPSHOT` and `FIXED` (below).
 
 If an input the gates call for is missing, return a failure to the orchestrator naming it. Do not list `SDD/` to find one.
 
@@ -23,6 +23,7 @@ If an input the gates call for is missing, return a failure to the orchestrator 
 
 ## Findings: the line, the numbers, the earlier ones
 
+- **The rating.** Rate every finding you judge by **SEVERITY** (at the path in your prompt): its impact and who can make it happen, with a `Trigger:` and an `Impact:` line under the title of every HIGH and MEDIUM. A finding whose severity a reference or a rule of this body fixes keeps that severity. When `ITER` is 2 or more — with or without `SNAPSHOT` — a new finding (not in `PREVIOUS REVIEW`, and not a lead from a void run of an earlier round) blocks only when SEVERITY §5 says so: severe impact in normal use; any other new finding it rates is LOW.
 - **The finding line.** Every finding — any severity, from any part, in any section — opens with exactly one line:
 
   ```

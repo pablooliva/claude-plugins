@@ -28,6 +28,8 @@ Rate each finding with one of three levels:
 - **MEDIUM** — Meaningful problem that requires spec revision; non-trivial to remediate after implementation begins.
 - **LOW** — Improvement opportunity that does not block implementation but reduces risk or improves quality.
 
+When your prompt gives **SEVERITY**, it decides the level of a finding you judge (its §6 for a spec) — a finding this body or your Section gives a severity by rule keeps that severity: the levels above are what a HIGH, MEDIUM, and LOW impact look like, and a case that comes up only through a contrived one is LOW. Every HIGH and MEDIUM carries a `Trigger:` and an `Impact:` line under its title.
+
 ### Ban Bare Approvals
 
 Your output **must not** be "LGTM" or "no issues found" without evidence. If you find nothing, state what you specifically checked:

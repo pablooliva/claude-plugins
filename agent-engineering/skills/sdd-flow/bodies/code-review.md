@@ -137,7 +137,7 @@ Read the standard at the `FIT` path in your prompt and run it **as written** ove
 
 ### 5. ADVERSARIAL PASS (mandatory, every cycle)
 
-The sections above check the code against the spec. This pass asks how it breaks. Read the changed code as someone trying to make it fail, and raise each answer as a finding at the severity of its impact:
+The sections above check the code against the spec. This pass asks how it breaks. Read the changed code as someone trying to make it fail, and raise each answer as a finding rated by **SEVERITY** (impact and reach — a way to break it that needs several unusual conditions at once is LOW):
 
 - **Silent failures** — where an error is swallowed, logged and ignored, or turned into a default value.
 - **Concurrency** — what happens when two calls overlap, or a call is repeated or retried.
@@ -249,6 +249,8 @@ FINDING F<n> | <HIGH|MEDIUM|LOW> | <file:line, or file, or -> | <open|fixed>
 ```
 
 For example `FINDING F3 | MEDIUM | src/cart.py:42 | open`; the title and the rest of the finding follow on the next lines. Every finding of this review is `open`, numbered from `F1` in the order you raise them. The numbers run on through the final check (Step 4e.5), which lists each of them with its state and numbers on from the highest, so a number is never reused. A finding a second section repeats (a FAIL checklist row, `## LOW Findings`, the Design Brief Check, the Adversarial Pass, Required Actions) is named there by its `F<n>`, with no second line. Where a reference's shape writes `<#>` or "numbered with the review's others", that is the `F<n>`.
+
+Rate every finding you judge by **SEVERITY** (at the path in your prompt): its impact and who can make it happen, with a `Trigger:` and an `Impact:` line under the title of every HIGH and MEDIUM. A finding whose severity a reference or a rule of this body fixes keeps that severity.
 
 **A review with no open HIGH and no open MEDIUM is APPROVED.** A LOW finding is listed, not fixed: write each one under `## LOW Findings (listed, not fixed)` in the template below — the owner sees the list in the end report — and nothing sends it to a fix round.
 
