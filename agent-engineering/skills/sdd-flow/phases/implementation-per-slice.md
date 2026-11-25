@@ -21,7 +21,7 @@ Every slice state change, stop, and commit has one owner, named here. A slice bo
 |---|---|---|
 | Slice row `Not Started` → `In Progress`; `## Slice SLICE-XXX - In Progress` (with `Base commit:`); `## Slice SLICE-XXX - Implemented` | `bodies/slice-start.md` | 4a |
 | Evals gate on: the eval run of record; `## Eval Run SLICE-XXX iter <N> - …`; the stop when the model cannot be reached: `## Awaiting Eval Run` | orchestrator | 4b, before the review |
-| `## Review SLICE-XXX iter <N> - …`; the review's `Re-plan:` line | `bodies/slice-review.md` | 4b |
+| `## Review SLICE-XXX iter <N> - …`; the review's `Re-plan:` line; on a re-review, `## Whole Suite …` and `## Fix-Added …` above the marker | `bodies/slice-review.md` | 4b |
 | `## Snapshot SLICE-XXX iter <k> - …` (before and after each fix round) | orchestrator | 4c |
 | `## Fix SLICE-XXX iter <k> - Complete` | the fix subagent | 4c |
 | The fix-loop stop: `## Awaiting Slice Resolution` | orchestrator | 4c |
@@ -81,6 +81,8 @@ If the review left a HIGH or MEDIUM finding open, spawn an **`agent-engineering:
 
 **A HIGH the whole-suite run raised is set aside by the stall check.** A re-review after a snapshotted fix round runs the whole suite only when it would otherwise pass the slice (`bodies/slice-review.md` → Step 4.5), so a failure there was hidden from earlier reviews and says nothing about the loop's progress. Such a review writes `## Whole Suite SLICE-XXX iter <N> - <w> HIGH raised` directly before its marker, and its HIGH for the stall check is h − w. Only a `Whole Suite` line directly above the marker counts (one elsewhere is left by an unfinished attempt). Its findings are fixed like any other; the cap is unchanged.
 
+**A finding in lines the fix itself wrote is set aside too.** A re-review given the snapshot pair tags each new finding in lines the fix added or changed `[fix-added]`, and writes `## Fix-Added SLICE-XXX iter <N> - <a> HIGH, <b> MEDIUM` above its marker (above the `## Whole Suite` line when there is one; `bodies/slice-review.md` → Step 4.5). For the stall check its HIGH is h − w − a, and its MEDIUM m − b. Only a `Fix-Added` line in that place counts. A review whose open HIGH and MEDIUM are all fix-added counts as progress. **One extra round:** when the review that ends the second round is `REJECTED` and every open HIGH and MEDIUM in it is fix-added (a = h and b = m), run one more iteration — snapshot, fix, snapshot, re-review — instead of halting. At most one per cap: the extra round's own review is never followed by another. If it is `REJECTED`, halt as below, with `(extra round used)` after the round count.
+
 **One iteration k = snapshot → fix → snapshot → 4b re-review.** The fix subagent runs `bodies/fix-round.md` with `MODE: slice` and `MARKER: ## Fix SLICE-XXX iter <k> - Complete`, and receives the review, the active spec, **SPEC_READING**, the IMPLEMENTATION-PLAN path, `BASE`, **SDD_ROOT**, **HOSTILE_INPUT**, **TEST_INTEGRITY**, **FIT**, **STATE_MODEL**, and the two gate lines; it appends the marker to `progress.md` when done. These lines, the snapshot lines, and the review markers are the phase-detection markers for a resumed run.
 
 **The snapshots** tell a re-review what the fix changed, so it need not read the whole slice again. The orchestrator takes each from the repository root with:
@@ -101,7 +103,7 @@ The *before fix* snapshot is taken once. When its line is already there after th
 ```markdown
 ## Awaiting Slice Resolution
 
-SLICE-XXX did not pass its review after <k> fix round(s) (<cap reached | no progress>). Unresolved: <h> HIGH, <m> MEDIUM.
+SLICE-XXX did not pass its review after <k> fix round(s) (<cap reached | no progress>)[ (extra round used)]. Unresolved: <h> HIGH, <m> MEDIUM.
 Latest review: <REVIEW-SLICE path>
 Resolve the findings (or amend the SPEC), then run `/sdd-flow continue` — the flow re-reviews the slice from a fresh iteration.
 ```

@@ -101,7 +101,7 @@ flowchart TD
     impl --> review("4b — slice review<br/>includes fit and size: a file outside<br/>the brief's footprint is a finding<br/>state model: this and earlier slices' moves<br/>tracing on: and the trace check<br/>evals on: and the eval check")
     review -- "HIGH or MEDIUM" --> fix("4c — fix those, then re-review,<br/>at most 2 rounds; LOW is listed, not fixed<br/>the re-review checks the earlier findings,<br/>reads what the fix changed, and runs the tests it can affect<br/>the whole suite and the trace check when it would pass<br/>(the trace check also after a tracing finding;<br/>in full when there is no snapshot, as after a stop)")
     fix --> review
-    fix -- "no progress, or 2 rounds used" --> halt["STOP — slice halted<br/>you fix the findings, then continue re-reviews"]:::stop
+    fix -- "no progress, or 2 rounds used<br/>(one more when only lines the fix wrote are left)" --> halt["STOP — slice halted<br/>you fix the findings, then continue re-reviews"]:::stop
     halt -- "continue" --> review
     review -- "approved" --> commit["4c.6 — mark the slice complete<br/>and commit it"]:::orch
     commit --> pause["STOP — slice pause, every slice<br/>Try it, run for you, with what it printed<br/>the brief check line<br/>growth so far against the budget<br/>the review's Re-plan line: yes or no, and why<br/>LOW findings, when there are any<br/>evals on: and the eval run's line<br/>after the first slice: reminds you<br/>of /worth-building recheck"]:::stop
