@@ -93,7 +93,18 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.14.1.
+Version 5.15.0.
+
+### What's new in 5.15.0
+
+- **A T6 probe finding is rated by impact and reach** (`skills/sdd-flow/references/test-integrity.md` T6,
+  `references/severity.md` §1): when the reviewer runs the code with an input no test uses and the outcome differs from
+  the spec's, the finding's severity now comes from the severity table, with `Trigger:` and `Impact:` lines, instead of
+  always being HIGH. Before, a probe input that needed a contrived setup still cost a fix round, and probe findings of that
+  kind were stopping slices at the fix-round cap. An input the spec states, or one an outsider can supply (a file from
+  another machine, a model's answer, a network reply), is still normal-use reach. T6's four fitting checks (a test's
+  literal in a condition, a lookup of the test cases, behaviour under the test runner, a range implemented only for the
+  tested values) stay HIGH by rule.
 
 ### What's new in 5.14.1
 

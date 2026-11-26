@@ -81,7 +81,11 @@ Before breaking anything, read the test: one with no assertion, an assertion tha
 - behaviour that depends on running under the test runner (an environment variable, a `testing` flag, the runner's name in `sys.modules`);
 - a requirement stated for a range and implemented only for the values the tests use.
 
-Each is **HIGH**. Then **probe**: for each requirement in the sample (§4), choose an input the SPEC covers and **no test uses** — a different valid value, the other side of a boundary — work out from the SPEC what the outcome must be, and run the real code with it (a throwaway script or test, in the scratch copy). An outcome that differs from the SPEC's → **HIGH**: the code is right only where it is tested.
+Each is **HIGH**, whatever the input: it shows the code was shaped to the tests. Then **probe**: for each requirement in the sample (§4), choose an input the SPEC covers and **no test uses** — a different valid value, the other side of a boundary — work out from the SPEC what the outcome must be, and run the real code with it (a throwaway script or test, in the scratch copy). An outcome that differs from the SPEC's is a finding — the code is right only where it is tested — **rated by the severity standard** (`references/severity.md` §2–§3, impact × reach), with the `Trigger:` and `Impact:` lines its §4 requires. A probe finding rated LOW is listed, not fixed.
+- **An input the SPEC names** — a value or boundary it states — is normal-use reach by definition.
+- **An input the code does not control** (a file from another machine, a model's answer, a network reply) is judged by who can supply it (`references/severity.md` §2): one an outsider can supply is normal-use reach.
+
+Both settle the input only: a failure that also needs a state or access ordinary use does not give is rated on that whole trigger.
 
 **T7 — The test says what it claims.** For each requirement's tests, state in one line the outcome a user or caller would see that the test proves.
 - A test named or mapped to `REQ-XXX` that asserts something else → **HIGH**.
@@ -124,7 +128,7 @@ A `## Test Integrity` section in the review document, with this table and the tw
 | T3 Expected values from the SPEC | <n> requirements | PASS / FAIL | <#s or —> |
 | T4 Fails when broken | <n> of <n> requirements mutated | PASS / FAIL | <#s or —> |
 | T5 Stand-ins at the edge | <n> tests with stand-ins | PASS / FAIL | <#s or —> |
-| T6 Code not fitted to tests | <n> files read; <n> probes | PASS / FAIL | <#s or —> |
+| T6 Code not fitted to tests | <n> files read; <n> probes | PASS / FAIL / LOW | <#s or —> |
 | T7 Tests say what they claim | <n> requirements | PASS / FAIL | <#s or —> |
 | T8 No surplus tests | <n> tests added; <n> map to no named case | PASS / LOW | <#s or —> |
 
