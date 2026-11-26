@@ -93,7 +93,19 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.15.0.
+Version 5.16.0.
+
+### What's new in 5.16.0
+
+- **T4 mutation findings and four T7 findings are rated by impact and reach** (`skills/sdd-flow/references/test-integrity.md`
+  T4 and T7, `references/severity.md` §1), as the T6 probe has been since 5.15.0: "no test fails", "fails only
+  incidentally", and the T7 findings for internal structure, a test-only seam, pinned wording, and a tested test helper
+  now take their severity from the severity table, with `Trigger:` and `Impact:` lines, and one rated LOW is listed, not
+  fixed. Before, their fixed HIGH or MEDIUM sent low-risk test gaps to fix rounds and stopped slices at the fix-round cap —
+  in one cycle a fix moved an assertion from too strict (F10, pinned wording) to too loose (F15, a wrong corrective hint no
+  test caught, failing with a clear error) and back. A security rule no test fails for (none fails, or one fails only incidentally) is HIGH. The checks that say
+  the suite cannot be trusted keep their fixed ratings: T1, T2, T3, T4's reading half, T5, T6's fitting checks, T7's
+  mislabeled test, and T8 (LOW). A T4 finding rated LOW does not widen the sample.
 
 ### What's new in 5.15.0
 

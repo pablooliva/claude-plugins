@@ -64,10 +64,15 @@ For each pre-existing test that was deleted, renamed away, skipped, marked expec
 - A value the SPEC does not give and cannot be derived from it → **MEDIUM**, and say which: the test invented a requirement, or the spec has a gap.
 
 **T4 — The test fails when the behaviour is broken.** For each requirement in the sample (§4): find the line or condition that implements it; in a scratch copy of the working tree (§8), break it — invert the condition, return a constant, delete the line — and run that requirement's tests there. At least one test must fail, and for the reason the requirement gives.
-- No test fails → **HIGH**: the requirement is untested, whatever the coverage map says.
-- A test fails only incidentally (an import error, an unrelated assertion) → **MEDIUM**.
+- No test fails → a finding: the requirement is untested, whatever the coverage map says.
+- A test fails only incidentally (an import error, an unrelated assertion) → a finding.
 
-Before breaking anything, read the test: one with no assertion, an assertion that cannot be false (`is not None` on a value that is never `None`, a status "in" every possible status), an assertion inside a branch that never runs or after a swallowed exception, or an assertion only on what a mock was told to return → **HIGH** without running anything.
+A mutation finding is **rated by the severity standard** (`references/severity.md` §2–§3, impact × reach), with the `Trigger:` and `Impact:` lines its §4 requires. A mutation finding rated LOW is listed, not fixed.
+- **Impact** is what the break the tests miss would do to a user: a lost or corrupted file, a leak, a broken security rule, or a wrong result shown with no sign that it is wrong is severe; a clear error with a cheap retry is minor.
+- **Reach** is how plausibly the code would come to be broken that way — by a later edit, by input the code does not control, or by an outsider — not how easily the review broke it on purpose.
+- **A security rule keeps HIGH.** When the requirement is one the SPEC marks as a security rule (`references/security-verification.md` §1) and no test fails for the reason it gives — none fails, or one fails only incidentally — the finding is **HIGH**, whatever the reach.
+
+Before breaking anything, read the test: one with no assertion, an assertion that cannot be false (`is not None` on a value that is never `None`, a status "in" every possible status), an assertion inside a branch that never runs or after a swallowed exception, or an assertion only on what a mock was told to return → **HIGH** without running anything. This reading half keeps its fixed rating: a test that cannot fail cannot be trusted for anything it claims.
 
 **T5 — Stand-ins sit at the edge of the application.** For each test that uses a mock, stub, fake, or patch, name what it replaces.
 - Something outside the application → passes.
@@ -88,15 +93,17 @@ Each is **HIGH**, whatever the input: it shows the code was shaped to the tests.
 Both settle the input only: a failure that also needs a state or access ordinary use does not give is rated on that whole trigger.
 
 **T7 — The test says what it claims.** For each requirement's tests, state in one line the outcome a user or caller would see that the test proves.
-- A test named or mapped to `REQ-XXX` that asserts something else → **HIGH**.
-- A test that proves only internal structure — a private helper's result, a call count, an order of internal calls — when the SPEC names an observable outcome → **MEDIUM**.
-- A requirement whose tests all pass through a seam built only for the test → **MEDIUM**, and say what that implies about the design: logic that can be tested only by reaching inside is logic sitting behind the wrong interface.
-- A test that pins exact wording the SPEC does not make the requirement (§1 rule 5) → **MEDIUM**. Resolved by asserting what the text must do instead.
-- A test of a test helper that holds no real logic (§1 rule 6) → **MEDIUM**. Resolved by deleting that test.
+- A test named or mapped to `REQ-XXX` that asserts something else → **HIGH**, by rule: the test is mislabeled, so the requirement it claims has no test.
 
-Neither resolution weakens a test in T1's sense: neither test holds a requirement.
+The four below are **rated by the severity standard** (`references/severity.md` §2–§3), like a T4 mutation finding — impact is what the test's fault would let through or cost, reach is how plausibly that comes about — with the `Trigger:` and `Impact:` lines its §4 requires; one rated LOW is listed, not fixed:
+- A test that proves only internal structure — a private helper's result, a call count, an order of internal calls — when the SPEC names an observable outcome.
+- A requirement whose tests all pass through a seam built only for the test — and say what that implies about the design: logic that can be tested only by reaching inside is logic sitting behind the wrong interface.
+- A test that pins exact wording the SPEC does not make the requirement (§1 rule 5). Resolved by asserting what the text must do instead.
+- A test of a test helper that holds no real logic (§1 rule 6). Resolved by deleting that test.
 
-**T8 — No surplus tests.** For each test this feature added, name the case of the SPEC it proves (§1, *How many tests*). A test that maps to no named case — a property test the SPEC does not ask for, defensive coverage, a matrix over cases nobody named — is **LOW**: listed, not fixed, so the owner sees it in the end report. LOW because the lens's own levels, HIGH and MEDIUM, both reject in every review that runs it, and a surplus test hides no defect; LOW is the reviews' one level that does not. Deleting a surplus test is not weakening one in T1's sense — it holds no requirement — but no fix round is sent to do it.
+Neither of the last two resolutions weakens a test in T1's sense: neither test holds a requirement.
+
+**T8 — No surplus tests.** For each test this feature added, name the case of the SPEC it proves (§1, *How many tests*). A test that maps to no named case — a property test the SPEC does not ask for, defensive coverage, a matrix over cases nobody named — is **LOW**: listed, not fixed, so the owner sees it in the end report. LOW because a HIGH or a MEDIUM rejects in every review that runs it, and a surplus test hides no defect; LOW is the reviews' one level that does not. Deleting a surplus test is not weakening one in T1's sense — it holds no requirement — but no fix round is sent to do it.
 
 ## 4. How much to check
 
@@ -108,7 +115,7 @@ T1, T2, T7, and T8 cover every test the changes touch. T3 and T5 cover every tes
 | `medium`, or no tier given | at least one requirement per module and at least **25%** of its requirements, rounded up |
 | `low` | at least one requirement per module |
 
-Choose the requirements where a wrong answer costs most — money, permissions, data written, a decision shown to a person — before the ones that are easiest to break. A sample that turns up a HIGH is widened to every requirement of that module.
+Choose the requirements where a wrong answer costs most — money, permissions, data written, a decision shown to a person — before the ones that are easiest to break. A sample that turns up a HIGH, or a T4 mutation finding rated MEDIUM, is widened to every requirement of that module; one rated LOW does not widen it.
 
 ## 5. The last-look checks (4e.5)
 
@@ -126,13 +133,13 @@ A `## Test Integrity` section in the review document, with this table and the tw
 | T1 Existing tests not weakened | <n> test files changed since BASE; <n> pre-existing tests changed or removed | PASS / FAIL / NOT RUN — no BASE | <#s or —> |
 | T2 Nothing kept out of the run | test command + <config files>; collected <n> of <n> defined | PASS / FAIL | <#s or —> |
 | T3 Expected values from the SPEC | <n> requirements | PASS / FAIL | <#s or —> |
-| T4 Fails when broken | <n> of <n> requirements mutated | PASS / FAIL | <#s or —> |
+| T4 Fails when broken | <n> of <n> requirements mutated | PASS / FAIL / LOW | <#s or —> |
 | T5 Stand-ins at the edge | <n> tests with stand-ins | PASS / FAIL | <#s or —> |
 | T6 Code not fitted to tests | <n> files read; <n> probes | PASS / FAIL / LOW | <#s or —> |
-| T7 Tests say what they claim | <n> requirements | PASS / FAIL | <#s or —> |
+| T7 Tests say what they claim | <n> requirements | PASS / FAIL / LOW | <#s or —> |
 | T8 No surplus tests | <n> tests added; <n> map to no named case | PASS / LOW | <#s or —> |
 
-**Mutations (T4):** one line each — `REQ-XXX <file>:<symbol>: <what was broken> → <failing test id>` or `→ NO TEST FAILED → finding <#>`. Run in a scratch copy: yes.
+**Mutations (T4):** one line each — `REQ-XXX <file>:<symbol>: <what was broken> → <failing test id>` or `→ NO TEST FAILED → finding <#> <HIGH | MEDIUM | LOW>` (`→ FAILED ONLY INCIDENTALLY → finding <#> <rating>` likewise). Run in a scratch copy: yes.
 **Probes (T6):** one line each — `REQ-XXX: input <value> (no test uses it); SPEC says <outcome>; code gave <outcome>` — or `→ finding <#>`.
 ```
 
