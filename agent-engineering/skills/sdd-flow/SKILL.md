@@ -139,7 +139,7 @@ A slice's cycle has exactly two kinds of end: its commit (4c.6, which also sets 
 
 ### Subagent Safety-Net Rule (embed verbatim in every phase-execution, fix, and continuation prompt)
 
-A review run on the second model carries none of it — no rule, counter file, or compact path (`references/second-model-review.md` §3): the reviewer's CLI manages its own context.
+A review run on the second model carries none of it — no rule and no counter file (`references/second-model-review.md` §3): the reviewer's CLI manages its own context. It is given the compact body, and hands off on its own judgment when it sees it cannot finish (§4, rule 6). A Claude reviewer past its trigger hands off then — the trigger is binding (§5).
 
 > **Bail-out trigger (a trigger, not a budget to spend):** you have Read more than **15** files (implementation chunks: more than **20**).
 >

@@ -120,7 +120,7 @@ If an essential file cannot be loaded — a phase artifact named in your prompt,
 
 ### 6. Safety-Net and Bounded Return
 
-The Safety-Net Rule in your prompt applies here as it did to the prior subagent, with the fresh counter file you were given. (A review continued on a second model since 3.14.2 has no Safety-Net Rule in its prompt: then there is no read limit, and this section does not apply.) If it trips again, stop and follow the compact body named in your prompt (under "Compact instructions — use only if the Safety-Net trips") — that file, not this section, says what to do. In short, it has you:
+The Safety-Net Rule in your prompt applies here as it did to the prior subagent, with the fresh counter file you were given. (A review continued on a second model has no Safety-Net Rule in its prompt: there is no read limit, and it hands off when it sees it cannot finish every step in this session, by its preamble's rule 6 and the compact body named under "Compact instructions — use only if you hand off".) If it trips again, stop and follow the compact body named in your prompt (under "Compact instructions — use only if the Safety-Net trips") — that file, not this section, says what to do. In short, it has you:
 
 1. Write a new compaction file under `SDD/.records/compacted/`, named for the current phase (e.g., `implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`)
 2. Append a `## PARTIAL: needs continuation` block to `SDD/.records/progress.md` with the compaction file path and where you left off

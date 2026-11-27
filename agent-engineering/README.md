@@ -93,7 +93,23 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.16.0.
+Version 5.17.0.
+
+### What's new in 5.17.0
+
+- **A second-model review hands off instead of ending INCOMPLETE** (`skills/sdd-flow/references/second-model-review.md`
+  §3, §4 rule 6, §6; `scripts/second-model-review.py`). A Codex reviewer that sees it cannot finish every step in one
+  session now writes a compaction file — per required step, what is done with its evidence and what is left — and the
+  `## PARTIAL` block, and ends `REVIEW: HANDOFF`; a fresh Codex run continues from it. Before, a review too large for one
+  session could only end `INCOMPLETE`, which failed the run: two runs of one feature code review across five slices
+  ended so after about eight minutes each, and their real findings were retried from scratch and then left to the
+  Claude fallback. There is still no read counter in a second-model prompt; it now carries the compact body
+  (`prompt --compact`, required). The script exits 4 only when the compaction file it names exists and is not empty
+  (exit 1 otherwise), and leaves the partial review in place. The orchestrator records each handoff as
+  `## Review Handoff - [step-id]-[iter]`; a third handoff of one step is a failed run, retried once from the latest
+  compaction file and then continued on the Claude route. `INCOMPLETE` is kept for a step that cannot be done at all.
+  A Claude reviewer keeps the read trigger as its only handoff trigger, and it is now binding: a reviewer past it hands
+  off, however close to done (`agents/sdd-critical-reviewer.md`, `agents/sdd-workhorse.md`).
 
 ### What's new in 5.16.0
 

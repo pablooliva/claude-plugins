@@ -5,6 +5,7 @@ Usage:
     second-model-review.py resolve
     second-model-review.py prompt --cwd <repo root> --calls-dir <dir> --step <step-id> --iter <iter>
                                   --role <role file> --reviewer <reviewer line> --body <body file>
+                                  --compact <compact body file>
                                   [--value NAME=VALUE ...] [--line TEXT ...] [--input NAME=PATH ...]
                                   [--output NAME=PATH ...] [--text-file PATH ...]
     second-model-review.py run --prompt-file <path> --cwd <repo root>
@@ -21,12 +22,13 @@ first stdout line is `Result: <answer>`.
 `prompt` writes a review step's prompt file,
 `<calls-dir>/<step-id>-<iter>-<YYYY-MM-DD_HH-MM-SS>.prompt.md`, and names it in
 the result line. In order: the reviewer preamble (its one copy is PREAMBLE below)
-with the role file and the reviewer line filled in; the body file; every text
+with the role file and the reviewer line filled in; the body file; the compact
+body, the instructions the reviewer follows only if it hands off; every text
 file's content as it is (a rule to embed verbatim, an owner's decision, a note on
 where the records live); the values (`NAME = VALUE`); the lines as given (a gate
 line, say); the inputs (a name given again adds a path: `VOID RUNS`); the outputs.
 Paths are written absolute; a relative one is taken from `--cwd`. It refuses
-(exit 2, nothing written) a role, body or text file that is not an existing
+(exit 2, nothing written) a role, body, compact or text file that is not an existing
 file, an input that does not exist, a name given twice (VOID RUNS alone may repeat), a text file that is not
 UTF-8, and a name, value, path or line holding a line break; an output need not
 exist, but its folder must. The calls folder is created when missing; a prompt
@@ -48,9 +50,12 @@ the run — removed if it did not exist — so a review the step appends to, or 
 partial one a continuation resumes, holds nothing of the failed run. The next run
 of the step checks the copies' findings (`references/second-model-review.md` §3).
 
-A status line `REVIEW: HANDOFF` is neither a pass nor a failure: the reviewer hit
-its read limit and wrote a compaction file, and the caller continues the review
-(exit 4; the `--expect` files are not checked).
+A status line `REVIEW: HANDOFF — <compaction file>` is neither a pass nor a
+failure: the reviewer saw it could not finish every step in this session and wrote
+a compaction file, and the caller continues the review (exit 4). The `--expect`
+files are not checked and are left in place, for the continuation to finish. The
+compaction file it names (a relative path is taken from `--cwd`) must exist and
+not be empty; if it does not, the run fails (exit 1) like any other.
 
 Codex runs in its `workspace-write` sandbox with network access on
 (`-c sandbox_workspace_write.network_access=true`), so a test suite that opens
@@ -247,8 +252,20 @@ def run(args: argparse.Namespace) -> tuple[str, int]:
         final = return_file.read_text() if return_file.is_file() else ""
         status = next((ln.strip() for ln in reversed(final.splitlines()) if ln.strip().startswith(STATUS)), "")
         if status.startswith(HANDOFF):
-            return f"HANDOFF — {label}: {status}{note}; return: {return_file}", 4
-        if not status:
+            named = status.removeprefix(HANDOFF).strip()
+            if named[:1] in ("—", "–", "-") and named[1:2].isspace():  # the separator; a file name may start with a dash
+                named = named[1:].strip()
+            named = named.strip("`")
+            compaction = Path(named) if os.path.isabs(named) else cwd / named
+            try:
+                written = bool(named) and compaction.is_file() and compaction.stat().st_size > 0
+            except OSError:
+                written = False
+            if written:
+                return f"HANDOFF — {label}: {status}{note}; return: {return_file}", 4
+            failure = (f"it handed off but the compaction file it names does not exist or is empty: {named}"
+                       if named else "it handed off but named no compaction file")
+        elif not status:
             failure = "its answer has no `REVIEW: ` status line"
         elif not status.startswith(COMPLETE):
             failure = status
@@ -293,10 +310,10 @@ PREAMBLE = """You are the reviewer for one step of a development cycle. The work
 
 1. **Read your role first:** `{role}`. Skip the block between the `---` lines at its top. Where it speaks of a "bounded return to the orchestrator", that is your final message. Where it or any file below names a tool (Read, Grep, Glob), use your own file and shell tools. Start no sub-agent and no other agent session.
 2. **Then read the body file the prompt below names.** It is your complete instruction set.
-3. **Write only what the prompt below names as an output**, plus your appended entry in `SDD/.records/progress.md` and your counter file if one is given. Change nothing else. Where your instructions have you break code to see a test fail, do it in a scratch copy of the working tree outside the repository, as they say, never in the working tree. Never commit, stash, reset, or check out anything. Never fix what you are reviewing.
+3. **Write only what the prompt below names as an output**, plus your appended entry in `SDD/.records/progress.md` — and, if you hand off, the compaction file and the block the compact instructions name. Change nothing else. Where your instructions have you break code to see a test fail, do it in a scratch copy of the working tree outside the repository, as they say, never in the working tree. Never commit, stash, reset, or check out anything. Never fix what you are reviewing.
 4. **Put this line directly under the review document's title:** `Reviewed by: {reviewer}`
 5. **Never record a check you could not run as passed.** If you cannot carry out a step your instructions require — a command is blocked, the tests cannot be run, a file is unreadable — say so in the review document at that step, and say when it was the sandbox that stopped it.
-6. **Your final message starts with one of three lines, on a line of its own.** `REVIEW: COMPLETE` when you carried out every step. `REVIEW: HANDOFF — <the compaction file you wrote>` when the Safety-Net Rule in the prompt below fired and you followed its compact instructions. `REVIEW: INCOMPLETE — <what you could not do>` in every other case. After it, the summary your role file asks for, in 200 words or fewer.
+6. **Your final message starts with one of three lines, on a line of its own.** `REVIEW: COMPLETE` when you carried out every step. `REVIEW: HANDOFF — <the compaction file you wrote>` when you see that you cannot finish every step in this session — there is no read limit; this is your judgment. Before you end, follow the compact instructions the prompt below names (where they speak of a Safety-Net tripping, read it as your decision to hand off): write the compaction file, listing for each step your instructions require what is done, with its evidence, and what is left; append its `## PARTIAL: needs continuation` block; and leave the review document as far as you wrote it, for the continuation to finish. `REVIEW: INCOMPLETE — <what you could not do>` when a step cannot be done at all — a command is blocked, the tests cannot be run, a file is unreadable. After it, the summary your role file asks for, in 200 words or fewer.
 
 ---
 """
@@ -357,6 +374,7 @@ def build_prompt(args: argparse.Namespace) -> tuple[str, int]:
             raise InputError(f"{what} is not a plain name")
     role = existing(args.role, "the role file", cwd)
     body = existing(args.body, "the body file", cwd)
+    compact = existing(args.compact, "the compact body", cwd)
     reviewer = one_line(args.reviewer, "--reviewer")
     values = [(n, one_line(v[0], n)) for n, v in pairs(args.value, "--value", seen)]
     inputs = [(n, [existing(x, n, cwd, "path") for x in v]) for n, v in pairs(args.input, "--input", seen, repeat=True)]
@@ -374,7 +392,8 @@ def build_prompt(args: argparse.Namespace) -> tuple[str, int]:
     except OSError as exc:
         raise InputError(f"the calls folder cannot be made: {calls}") from exc
     parts = [PREAMBLE.format(role=role, reviewer=reviewer),
-             f"Read this file FIRST — it is your complete instruction set: {body}"]
+             f"Read this file FIRST — it is your complete instruction set: {body}",
+             f"Compact instructions — use only if you hand off: {compact}"]
     parts.extend(texts)  # as written, final newline included
     if values:
         parts.append("\n".join(f"{n} = {v}" for n, v in values))
@@ -405,7 +424,7 @@ def main() -> int:
     sub = parser.add_subparsers(dest="action", required=True)
     sub.add_parser("resolve")
     p_prompt = sub.add_parser("prompt")
-    for flag in ("--cwd", "--calls-dir", "--step", "--iter", "--role", "--reviewer", "--body"):
+    for flag in ("--cwd", "--calls-dir", "--step", "--iter", "--role", "--reviewer", "--body", "--compact"):
         p_prompt.add_argument(flag, required=True)
     for flag in ("--value", "--line", "--input", "--output", "--text-file"):
         p_prompt.add_argument(flag, action="append")

@@ -32,7 +32,9 @@ for line in sys.stdin.read().splitlines():
     elif verb == "INCOMPLETE":
         final = "REVIEW: INCOMPLETE — the tests could not be run"
     elif verb == "HANDOFF":
-        final = "REVIEW: HANDOFF — SDD/.records/compacted/x.md"
+        final = "REVIEW: HANDOFF — " + (rest or "SDD/.records/compacted/x.md")
+    elif verb == "RAWHANDOFF":
+        final = "REVIEW: HANDOFF " + rest
     elif verb == "SILENT":
         final = "all good, nothing to add"
     elif verb == "SPAWN":
@@ -98,12 +100,15 @@ class SecondModelReviewTest(unittest.TestCase):
     # prompt
 
     def build(self, *extra: str) -> tuple[int, str]:
-        role, body = self.repo / "role.md", self.repo / "body.md"
+        role, body, compact = self.repo / "role.md", self.repo / "body.md", self.repo / "compact.md"
         role.write_text("---\nname: r\n---\nrole\n")
         body.write_text("the body\n")
+        compact.write_text("the compact body\n")
         calls = self.repo / "SDD" / ".records" / "reviewer-calls"
+        compact_args = [] if "--no-compact" in extra else ["--compact", str(compact)]
+        extra = tuple(x for x in extra if x != "--no-compact")
         return self.call("prompt", "--cwd", str(self.repo), "--calls-dir", str(calls), "--step", "4b-SLICE-001", "--iter", "2",
-                         "--role", str(role), "--reviewer", "codex", "--body", str(body), *extra)
+                         "--role", str(role), "--reviewer", "codex", "--body", str(body), *compact_args, *extra)
 
     def test_prompt_writes_the_preamble_and_every_section_in_order(self) -> None:
         rule = self.repo / "rule.md"
@@ -118,7 +123,9 @@ class SecondModelReviewTest(unittest.TestCase):
         text = path.read_text()
         self.assertIn(f"**Read your role first:** `{self.repo / 'role.md'}`", text)
         self.assertIn("`Reviewed by: codex`", text)
-        order = [f"complete instruction set: {self.repo / 'body.md'}", "> **A rule.** Embedded verbatim.",
+        order = [f"complete instruction set: {self.repo / 'body.md'}",
+                 f"Compact instructions — use only if you hand off: {self.repo / 'compact.md'}",
+                 "> **A rule.** Embedded verbatim.",
                  "SCOPE = SLICE-001\nITER = 2", "tracing: off",
                  f"- SPEC: {(self.repo / 'src' / 'app.py')}", f"- REVIEW: {self.repo / 'SDD/.records/reviews/R.md'}"]
         at = [text.index(part) for part in order]
@@ -149,14 +156,19 @@ class SecondModelReviewTest(unittest.TestCase):
             "calls folder under a file": (["--calls-dir", "src/app.py/calls"], "cannot be made"),
             "directory as a text file": (["--text-file", "src"], "is not an existing file"),
             "text file not UTF-8": (["--text-file", "bad.md"], "cannot be read as UTF-8"),
+            "compact body missing": (["--compact", "nowhere-compact.md"], "the compact body is not an existing file"),
         }
         (self.repo / "bad.md").write_bytes(b"\xff\xfe not utf-8")
         for name, (extra, message) in cases.items():
             with self.subTest(name):
-                status, line = self.build(*extra)
+                status, line = self.build(*extra) if extra[0] != "--compact" else self.build("--no-compact", *extra)
                 self.assertEqual(status, 2, line)
                 self.assertIn(message, line)
                 self.assertEqual(list(calls.glob("*.prompt.md")), [])
+        with self.subTest("no compact body given"):
+            status, _ = self.build("--no-compact")
+            self.assertEqual(status, 2)  # argparse: --compact is required
+            self.assertEqual(list(calls.glob("*.prompt.md")), [])
 
     def test_prompt_never_overwrites_one_written_in_the_same_second(self) -> None:
         import importlib.util
@@ -168,7 +180,8 @@ class SecondModelReviewTest(unittest.TestCase):
         role.write_text("role\n")
         body.write_text("body\n")
         args = module.argparse.Namespace(cwd=str(self.repo), calls_dir="SDD/.records/new-calls", step="4b", iter="1",
-                                         role="role.md", reviewer="codex", body="body.md", value=None, line=None,
+                                         role="role.md", reviewer="codex", body="body.md", compact="body.md",
+                                         value=None, line=None,
                                          input=None, output=None, text_file=None)
         with mock.patch.object(module.time, "strftime", return_value="2026-11-19_12-00-00"):
             first, second = module.build_prompt(args)[0], module.build_prompt(args)[0]
@@ -253,10 +266,51 @@ class SecondModelReviewTest(unittest.TestCase):
 
     def test_run_reports_a_handoff_without_asking_for_the_review_file(self) -> None:
         self.install("codex", FAKE_CODEX)
-        status, line = self.review("BREAK src/app.py\nHANDOFF now")
+        status, line = self.review("BREAK src/app.py\nWRITE SDD/.records/compacted/x.md\nHANDOFF")
         self.assertEqual(status, 4, line)
         self.assertTrue(line.startswith("Result: HANDOFF — codex: REVIEW: HANDOFF — SDD/.records/compacted/x.md"), line)
         self.assertEqual((self.repo / "src" / "app.py").read_text(), "guard()\n")
+
+    def test_a_handoff_leaves_the_partial_review_in_place_for_the_continuation(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        reviews = self.repo / "SDD" / ".records" / "reviews"
+        status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md\nWRITE SDD/.records/compacted/x.md\nHANDOFF")
+        self.assertEqual(status, 4, line)
+        self.assertEqual((reviews / "REVIEW.md").read_text(), "# Review\n")
+        self.assertEqual(sorted(p.name for p in reviews.iterdir()), ["REVIEW.md"])  # no void copy
+
+    def test_a_handoff_naming_a_missing_compaction_file_fails(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        cases = {"missing": "HANDOFF SDD/.records/compacted/nowhere.md",
+                 "outside SDD, so removed": "WRITE notes/x.md\nHANDOFF notes/x.md",
+                 "named nothing": "HANDOFF -"}
+        for name, prompt in cases.items():
+            with self.subTest(name):
+                status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md\n" + prompt)
+                self.assertEqual(status, 1, line)
+                self.assertIn("FAILED — codex: it handed off but", line)
+                self.assertFalse((self.repo / "SDD" / ".records" / "reviews" / "REVIEW.md").exists())  # undone, as any failure
+
+    def test_a_handoff_naming_an_empty_compaction_file_fails(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        empty = self.repo / "SDD" / ".records" / "compacted" / "empty.md"
+        empty.parent.mkdir(parents=True)
+        empty.write_text("")
+        status, line = self.review("WRITE SDD/.records/reviews/REVIEW.md\nHANDOFF " + str(empty))
+        self.assertEqual(status, 1, line)
+        self.assertIn("does not exist or is empty", line)
+
+    def test_a_handoff_keeps_a_compaction_file_name_that_starts_with_a_dash(self) -> None:
+        self.install("codex", FAKE_CODEX)
+        status, line = self.review("WRITE SDD/.records/compacted/-x.md\nHANDOFF SDD/.records/compacted/-x.md")
+        self.assertEqual(status, 4, line)
+        (self.repo / "SDD" / ".records" / "compacted" / "x.md").write_text("another\n")
+        (self.repo / "x.md").write_text("not the compaction file\n")
+        status, line = self.review("HANDOFF -SDD/.records/compacted/x.md")
+        self.assertEqual(status, 1, line)  # not read as SDD/.records/compacted/x.md
+        status, line = self.review("RAWHANDOFF -x.md")  # no separator: the name is -x.md, not x.md
+        self.assertEqual(status, 1, line)
+        self.assertIn("is empty: -x.md", line)
 
     def test_run_puts_back_a_tracked_file_that_gitignore_also_matches(self) -> None:
         self.install("codex", FAKE_CODEX)

@@ -20,7 +20,7 @@ You are an SDD-flow workhorse subagent. You execute one phase or sub-phase task 
 
 6. **Counter file + safety-net (when assigned).** If your prompt names a counter file path under `SDD/.records/counters/`, update it immediately after every Read of a file not read before in this run (a file read in parts counts once). The file holds one line, `Reads: 0/15`. The default safety-net trigger is Reads >15. The implementation-chunk role's trigger is raised to Reads >20 per the prompt. There is NO nested-subagent counter — you must not spawn subagents, so there is nothing to count.
 
-7. **On safety-net trip:** read the compact-body path your prompt provides (under "Compact instructions — use only if the Safety-Net trips") and follow it — write a compaction file at `SDD/.records/compacted/<phase>-compacted-<timestamp>.md`, append a `## PARTIAL: needs continuation` block to `progress.md` with the compaction file path and where you left off, return ≤100 words to the orchestrator stating that a Mid-Phase Handoff is required.
+7. **On safety-net trip:** stop then — the trigger is binding, however close to done the step is; never read past it and carry on. Read the compact-body path your prompt provides (under "Compact instructions — use only if the Safety-Net trips") and follow it — write a compaction file at `SDD/.records/compacted/<phase>-compacted-<timestamp>.md`, append a `## PARTIAL: needs continuation` block to `progress.md` with the compaction file path and where you left off, return ≤100 words to the orchestrator stating that a Mid-Phase Handoff is required.
 
 ## When to escalate
 
