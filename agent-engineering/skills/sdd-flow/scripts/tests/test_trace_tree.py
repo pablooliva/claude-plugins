@@ -48,12 +48,12 @@ class Spans:
             "gen_ai.operation.name": operation, "gen_ai.request.model": "model-x"}, **more)
 
 
-def run(lines, *env_files, environment=None, out=None):
-    """(exit status, stdout, stderr) of the script on a span file holding `lines`."""
+def run(lines, *env_files, environment=None, out=None, full=True):
+    """(exit status, stdout, stderr) of the script on a span file holding `lines` (the full trees unless full=False)."""
     with tempfile.TemporaryDirectory() as folder:
         span_file = Path(folder) / "spans.jsonl"
         span_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        argv = ["trace-tree.py", str(span_file), *env_files] + (["--out", out] if out else [])
+        argv = ["trace-tree.py", str(span_file), *env_files] + (["--out", out] if out else []) + (["--full"] if full else [])
         stdout, stderr = io.StringIO(), io.StringIO()
         with mock.patch.dict(os.environ, environment or {}, clear=True), \
                 contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
@@ -615,6 +615,94 @@ class RepeatCapTest(unittest.TestCase):
         self.function(spans, "app.x.loop", route, attributes={"calls.app.hunter2secret.not_recorded": 2})
         status, out, _ = run(spans.lines, environment={"API_KEY": "hunter2secret"})
         self.assertNotIn("hunter2secret", out)
+
+
+class PathTest(unittest.TestCase):
+    """The default document: each distinct path to an LLM or external call once, covering every request."""
+
+    function = staticmethod(RepeatCapTest.function)
+
+    def ask(self, spans, trace, helper, calls=1, error=False):
+        route = spans.route(trace=trace)
+        handler = self.function(spans, "app.ask.handle", route, trace=trace)
+        noise = self.function(spans, helper, handler, trace=trace)  # a helper that differs per request: a new shape
+        self.function(spans, "app.ask.clean", noise, trace=trace)
+        extract = self.function(spans, "app.ask.extract", handler, trace=trace)
+        for _ in range(calls):
+            spans.llm(extract, trace=trace, error=error)
+        return handler
+
+    def test_requests_of_many_shapes_are_one_path_with_their_counts(self):
+        spans = Spans()
+        for number in range(trace_tree.MAX_SHAPES + 3):
+            self.ask(spans, f"t{number}", f"app.ask.helper_{number}", calls=1 + number % 2, error=number == 0)
+        spans.route(trace="none")  # a request with no call
+        status, document, _ = run(spans.lines, full=False)
+        self.assertEqual(status, 0)
+        self.assertNotIn("### Shape", document)
+        self.assertIn("- Paths: 1; requests with no LLM or external call: 1", document)
+        self.assertIn("| 1 | POST /ask › app.ask.handle › app.ask.extract | [LLM] chat model-x | "
+                      f"{trace_tree.MAX_SHAPES + 3} | 1–2 | 1 |", document)
+        self.assertIn("| POST /ask | 14 | 0–2 | 0 | 0 | 1 |", document)  # the Paths column
+
+    def test_two_functions_that_call_the_model_are_two_paths_and_an_external_call_is_a_path(self):
+        spans = Spans()
+        handler = self.ask(spans, "t1", "app.ask.helper")
+        summarise = self.function(spans, "app.ask.summarise", handler)
+        spans.llm(summarise)
+        spans.add("SELECT", summarise, kind="CLIENT", attributes={"db.system": "postgresql"})
+        _, document, _ = run(spans.lines, full=False)
+        self.assertIn("- Paths: 3;", document)
+        self.assertIn("POST /ask › app.ask.handle › app.ask.summarise | [LLM] chat model-x | 1 | 1 | 0 |", document)
+        self.assertIn("POST /ask › app.ask.handle › app.ask.summarise | [external: postgresql] SELECT | 1 | 1 | 0 |", document)
+
+    def test_without_function_spans_a_path_lists_every_span_above_the_call(self):
+        spans = Spans()
+        route = spans.route()
+        endpoint = spans.add("fastapi.endpoint", route)
+        spans.llm(endpoint)
+        _, document, _ = run(spans.lines, full=False)
+        self.assertIn("The run recorded no function span", document)
+        self.assertIn("| 1 | POST /ask › fastapi.endpoint | [LLM] chat model-x | 1 | 1 | 0 |", document)
+
+    def test_a_call_beneath_another_call_keeps_that_call_on_its_path(self):
+        spans = Spans()
+        route = spans.route()
+        endpoint = spans.add("fastapi.endpoint", route)
+        spans.add("GET", endpoint, kind="CLIENT", attributes={"server.address": "api.example"})
+        agent = spans.add("invoke_agent helper", endpoint, kind="CLIENT", attributes={"gen_ai.operation.name": "invoke_agent"})
+        outer = spans.llm(agent)
+        spans.llm(outer)
+        _, document, _ = run(spans.lines, full=False)
+        self.assertIn("| POST /ask › fastapi.endpoint | [external: api.example] GET |", document)
+        self.assertIn("| POST /ask › fastapi.endpoint › invoke_agent helper | [LLM] chat model-x |", document)
+        self.assertIn("| POST /ask › fastapi.endpoint › invoke_agent helper › chat model-x | [LLM] chat model-x |", document)
+
+    def test_a_recursive_call_is_its_own_path_and_a_wrapper_of_the_same_name_is_not(self):
+        spans = Spans()
+        route = spans.route()
+        wrapper = spans.add("app.walk", route)  # a span made by hand, named for the function it wraps
+        walk = self.function(spans, "app.walk", wrapper)
+        spans.llm(walk)
+        inner = self.function(spans, "app.walk", walk)  # recursion
+        spans.llm(inner)
+        _, document, _ = run(spans.lines, full=False)
+        self.assertIn("| POST /ask › app.walk | [LLM] chat model-x | 1 | 1 | 0 |", document)
+        self.assertIn("| POST /ask › app.walk › app.walk | [LLM] chat model-x | 1 | 1 | 0 |", document)
+
+    def test_full_draws_the_shapes_and_the_default_does_not(self):
+        spans = Spans()
+        self.ask(spans, "t1", "app.ask.helper")
+        self.assertIn("### Shape 1 of 1", run(spans.lines, full=True)[1])
+        self.assertIn("run the same command with `--full`", run(spans.lines, full=False)[1])
+
+    def test_a_secret_in_a_function_name_is_not_printed_in_a_path(self):
+        spans = Spans()
+        self.ask(spans, "t1", "app.ask.helper")
+        handler = self.function(spans, "app.hunter2secret.call", spans.route(trace="t2"), trace="t2")
+        spans.llm(handler, trace="t2")
+        _, document, _ = run(spans.lines, environment={"API_KEY": "hunter2secret"}, full=False)
+        self.assertNotIn("hunter2secret", document)
 
 
 if __name__ == "__main__":

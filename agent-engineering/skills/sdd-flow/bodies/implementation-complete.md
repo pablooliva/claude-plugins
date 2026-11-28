@@ -99,8 +99,8 @@ COMPLETION READINESS CHECKLIST
 □ Every security rule in the final check's `## Security Verification` table holds and is proven
 □ With `tracing: on` — the final check ran the Tracing Lens and left no HIGH or MEDIUM finding open
   (a "Tracing Lens not run" line there, or an open HIGH or MEDIUM, is an incomplete item; a LOW is listed, not blocking)
-□ With `evals: on` — the final check ran the Eval Check and lists no finding of it
-  (no `## Eval Check` section there, or an open eval finding, is an incomplete item)
+□ With `evals: on` — the final check ran the Eval Check and left no HIGH or MEDIUM finding of it open
+  (no `## Eval Check` section there, or an open HIGH or MEDIUM eval finding, is an incomplete item; a LOW is listed, not blocking)
 □ With `evals: on` — every sign-off requirement's judged eval has a score on every run in the final eval results
 □ Test coverage meets or exceeds target from specification
 □ No "Blocked/Pending" items remain in IMPLEMENTATION-PLAN document
@@ -443,7 +443,7 @@ Example: `IMPLEMENTATION-SUMMARY-042-2025-10-21_14-30-45.md`
 |--------------------------------|---------------------------|--------------------------------------------------------|-----------------------|
 | [`POST /uploads`] | [14] | [1 / 1] | [`postgres`, `qdrant`] |
 
-- **Planned calls the trace run did not prove:** [each marked node the review lists as `not exercised in tests`, `not shown in the shapes drawn`, `not told apart by function`, or `not distinguishable by count`, with the reason it gives — or "None."]
+- **Planned calls the trace run did not prove:** [each marked node the review lists as `not exercised in tests`, `not told apart by function`, or `not distinguishable by count`, with the reason it gives — or "None."]
 - **Recorded differences from the planned call graph:** [each plan-versus-trace difference under `### Implementation Deviations`, or "None."]
 - **Own-function calls the repeat cap left without a record:** [per entry point, the range the tree's *Own-function calls not recorded in one request* line gives — or "None cut."]
 

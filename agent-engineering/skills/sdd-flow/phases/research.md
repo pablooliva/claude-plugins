@@ -1,6 +1,6 @@
 # Phase: Research — Steps 2a, 2b, 2e
 
-Read at the Step 2 boundary. All spawns follow the SKILL's spawn-prompt checklist; phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file (`Reads: 0/15`) + the `research-compact.md` compact body path. Body paths below are `SKILL_ROOT/bodies/<file>.md`, resolved absolute. Research has no review step: the owner judges the design built on it at the design gate (2.5).
+Read at the Step 2 boundary. All spawns follow the SKILL's spawn-prompt checklist; phase-execution and fix subagents carry the Safety-Net Rule + a fresh counter file + the `research-compact.md` compact body path. Body paths below are `SKILL_ROOT/bodies/<file>.md`, resolved absolute. Research has no review step: the owner judges the design built on it at the design gate (2.5).
 
 ---
 

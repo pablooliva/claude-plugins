@@ -93,7 +93,43 @@ The SDD plugin is **optional and uninstallable** — `sdd-flow` does not need it
 
 ## Status
 
-Version 5.17.0.
+Version 5.18.0.
+
+### What's new in 5.18.0
+
+Four fixes from a real Tier 2 cycle (SPEC-002 of a video application, 2026-11-25 to 27).
+
+- **The Safety-Net is measured by a hook, not counted by the agent** (`hooks/context_guard.py`, a new `PreToolUse`
+  hook; `skills/sdd-flow/SKILL.md` → Subagent Safety-Net Rule; `phases/protocols.md`). Before each tool call of a spawn
+  whose prompt has a `Your counter file:` line, the hook reads that subagent's transcript, writes the context size the
+  API last reported to the counter file (`Context: <tokens>/<limit> tokens`), and past the limit (120,000 tokens, set
+  in the counter file) refuses every call except the handoff's, with a reason that starts `Safety-Net tripped`. The
+  self-reported `Reads: n/15` (`/20`) counter is gone. It counted files, not context, and the agent wrote it itself:
+  a SLICE-005 implementer used 13 of its 20 reads on the plugin's own reference files and handed off before writing
+  any code, and a fallback reviewer read past its limit unnoticed. The spec's size was not the cause (it counted as
+  one read), so the spec's structure is unchanged; `references/spec-reading.md` drops its counter note.
+- **A failed hard eval case is rated by impact and reach** (`references/evals.md` §6–§8, `references/severity.md`
+  §1). Eval Check rows 3 (a failed hard case), 4 (a case not as the spec states it) and 6 (a check that passed a bad
+  output) are rated by the severity standard instead of fixed at HIGH. A model's answer is input the code does not
+  control, so a case that never passed has normal-use reach and an unsteady one (`unsteady, k of n runs passed`) is
+  plausible: a wrong fact or a broken security rule still blocks (HIGH, or MEDIUM when unsteady), a cosmetic fault —
+  a 31-word narration against a 30-word limit, a handle said with its underscore — is LOW. A check that refuses a
+  correct answer is a **check defect**, named so in the finding and fixed in the check, with that answer added as a
+  known-good example; that fix is not weakening (§6), and row 5 does not fire for it. Two softer T3 findings and two
+  softer T5 findings of the Test Integrity Lens are rated the same way (`references/test-integrity.md`); the checks that
+  say a test cannot fail or does not test what it claims keep their fixed rating.
+- **`growth.py` leaves data files and template lines out of the source budget** (`scripts/growth.py`,
+  `bodies/design-brief.md` rule 15). Data files (`.txt`, `.json`, `.jsonl`, `.csv`, `.tsv`, lockfiles, and paths a brief
+  names on an optional `- Not source:` line) and the lines of a new file rendered from one of the plugin's templates are
+  left out of both line counts, and the first output line ends with what was left out. On the cycle's own diff the
+  figure goes from `source +3946 of ~1666 (2.4x)` to `+1755 (1.1x) — left out: data 1557 lines (4 files), plugin
+  templates 654 lines (3 files)`.
+- **The trace tree is a list of paths a reviewer can read** (`scripts/trace-tree.py`, `references/tracing-lens.md`).
+  By default it lists, per entry point, each distinct path to an LLM or external call once — the application's own
+  functions from the entry point down to the call, how many requests took it, how many calls one request made, how
+  many failed — covering every request; `--full` draws the call trees as before. The cycle's 3,207-line tree is 58
+  lines as paths. The lens compares the planned nodes against the paths, and renders `--full` only for a question the
+  paths cannot answer; the `not shown in the shapes drawn` verdict is gone.
 
 ### What's new in 5.17.0
 

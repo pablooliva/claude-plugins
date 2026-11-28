@@ -161,6 +161,47 @@ class GrowthTest(unittest.TestCase):
             capture_output=True, text=True,
         )
 
+    def test_data_files_are_left_out_and_named(self) -> None:
+        brief = BRIEF.format(source=30, tests=20).replace("- New files: 2", "- New files: 2\n- Not source: `src/names.dat`, `assets/`")
+        (self.root / "SDD/requirements/DESIGN-001-x.md").write_text(brief, encoding="utf-8")
+        (self.root / "evals").mkdir()
+        (self.root / "evals/common_words.txt").write_text(lines(1473), encoding="utf-8")
+        (self.root / "evals/cases.jsonl").write_text(lines(19), encoding="utf-8")
+        (self.root / "uv.lock").write_text(lines(24), encoding="utf-8")
+        (self.root / "src/names.dat").write_text(lines(5), encoding="utf-8")
+        (self.root / "assets").mkdir()
+        (self.root / "assets/logo.svg").write_text(lines(3), encoding="utf-8")
+        (self.root / "tests").mkdir()
+        (self.root / "tests/fixture.json").write_text(lines(40), encoding="utf-8")
+        (self.root / "src/app.py").write_text(lines(9), encoding="utf-8")  # +4
+        git(self.root, "add", "evals/cases.jsonl")
+        git(self.root, "commit", "-q", "-m", "cases")
+        out = self.run_growth()
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("Growth: source +4 of ~30 (0.1x), tests +0 of ~20 (0.0x)", out.stdout)
+        self.assertIn("— left out: data 1564 lines (6 files)\n", out.stdout)
+        self.assertIn("Over budget: no", out.stdout)
+
+    def test_lines_rendered_from_a_plugin_template_are_left_out(self) -> None:
+        self.brief()
+        template = (SCRIPT.parents[1] / "templates/evals/python/run.py.template").read_text(encoding="utf-8").splitlines()
+        rendered = [line.replace("@@EVAL_COMMAND@@", "uv run python evals/run.py") for line in template]
+        changed = sum(1 for a, b in zip(template, rendered) if a != b)
+        rendered += ["RUNS = 1  # the application's own change"] * 2
+        (self.root / "evals").mkdir()
+        (self.root / "evals/run.py").write_text("\n".join(rendered) + "\n", encoding="utf-8")
+        (self.root / "evals/checks.py").write_text('"""The checks."""\n' + lines(7), encoding="utf-8")  # no template: all counts
+        out = self.run_growth()
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn(f"Growth: source +{changed + 2 + 8} of ~30", out.stdout)
+        self.assertIn(f"— left out: plugin templates {len(template) - changed} lines (1 files)\n", out.stdout)
+
+    def test_nothing_left_out_says_none(self) -> None:
+        self.brief()
+        (self.root / "src/app.py").write_text(lines(6), encoding="utf-8")
+        out = self.run_growth()
+        self.assertIn("— left out: none\n", out.stdout)
+
     def test_zero_estimate_with_lines_added_is_over(self) -> None:
         self.brief(source=0)
         (self.root / "src/app.py").write_text(lines(6), encoding="utf-8")

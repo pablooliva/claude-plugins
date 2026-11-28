@@ -2,7 +2,7 @@
 
 You are a spawned subagent in an orchestrated /sdd-flow run. Your prompt provides resolved artifact paths and identifiers — use them verbatim. This file is your complete instruction set. Do not spawn subagents or invoke slash commands/skills, even if an Agent/Task tool is available — the flow’s flat-orchestration contract forbids it; all work happens inline in your own context.
 
-You are reading this because your Reads-counter safety-net tripped mid-phase. Follow these compaction instructions to write `SDD/.records/compacted/implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `SDD/.records/progress.md` with the compaction file path and where you left off, then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
+You are reading this because your safety-net tripped mid-phase (the plugin's hook refused a tool call: `Safety-Net tripped`). Follow these compaction instructions to write `SDD/.records/compacted/implementation-compacted-[YYYY-MM-DD_HH-MM-SS].md`, append a `## PARTIAL: needs continuation` block to `SDD/.records/progress.md` with the compaction file path and where you left off, then return ≤100 words to the orchestrator stating a Mid-Phase Handoff is required.
 
 IMPLEMENTATION PROGRESS COMPACTION
 

@@ -60,8 +60,10 @@ For each pre-existing test that was deleted, renamed away, skipped, marked expec
 **T3 — Expected values come from the SPEC.** For each requirement's tests, trace the expected value to its source.
 - Stated by the SPEC, or derived from it by reasoning shown in the test → passes.
 - Computed in the test by calling the code under test, or by a copy of its formula → **HIGH**: the test compares the code with itself.
-- A snapshot or golden file with no sign that anyone checked its content against the SPEC → **MEDIUM**; **HIGH** when it is the requirement's only test.
-- A value the SPEC does not give and cannot be derived from it → **MEDIUM**, and say which: the test invented a requirement, or the spec has a gap.
+- A snapshot or golden file with no sign that anyone checked its content against the SPEC → a finding **rated by the severity standard**; **HIGH** when it is the requirement's only test.
+- A value the SPEC does not give and cannot be derived from it → a finding **rated by the severity standard**, and say which: the test invented a requirement, or the spec has a gap.
+
+A finding *rated by the severity standard* (`references/severity.md` §2–§3, impact × reach) carries the `Trigger:` and `Impact:` lines its §4 requires; one rated LOW is listed, not fixed. Impact is what the test's fault would let through or cost; reach is how plausibly that comes about.
 
 **T4 — The test fails when the behaviour is broken.** For each requirement in the sample (§4): find the line or condition that implements it; in a scratch copy of the working tree (§8), break it — invert the condition, return a constant, delete the line — and run that requirement's tests there. At least one test must fail, and for the reason the requirement gives.
 - No test fails → a finding: the requirement is untested, whatever the coverage map says.
@@ -77,8 +79,8 @@ Before breaking anything, read the test: one with no assertion, an assertion tha
 **T5 — Stand-ins sit at the edge of the application.** For each test that uses a mock, stub, fake, or patch, name what it replaces.
 - Something outside the application → passes.
 - The module that holds the requirement's logic, or the function under test itself → **HIGH**.
-- One of the application's own modules on the path between the test's entry point and the logic → **MEDIUM**; **HIGH** when no other test of that requirement runs the real path.
-- A requirement that crosses modules and has only tests where every collaborator is replaced → **MEDIUM**: nothing checks that the pieces work together.
+- One of the application's own modules on the path between the test's entry point and the logic → a finding **rated by the severity standard** (T3); **HIGH** when no other test of that requirement runs the real path.
+- A requirement that crosses modules and has only tests where every collaborator is replaced → a finding **rated by the severity standard** (T3): nothing checks that the pieces work together.
 
 **T6 — The code was not fitted to the tests.** Read the production code the feature changed for:
 - a literal in a condition that appears as a test input and nowhere in the SPEC;
@@ -132,9 +134,9 @@ A `## Test Integrity` section in the review document, with this table and the tw
 |---|---|---|---|
 | T1 Existing tests not weakened | <n> test files changed since BASE; <n> pre-existing tests changed or removed | PASS / FAIL / NOT RUN — no BASE | <#s or —> |
 | T2 Nothing kept out of the run | test command + <config files>; collected <n> of <n> defined | PASS / FAIL | <#s or —> |
-| T3 Expected values from the SPEC | <n> requirements | PASS / FAIL | <#s or —> |
+| T3 Expected values from the SPEC | <n> requirements | PASS / FAIL / LOW | <#s or —> |
 | T4 Fails when broken | <n> of <n> requirements mutated | PASS / FAIL / LOW | <#s or —> |
-| T5 Stand-ins at the edge | <n> tests with stand-ins | PASS / FAIL | <#s or —> |
+| T5 Stand-ins at the edge | <n> tests with stand-ins | PASS / FAIL / LOW | <#s or —> |
 | T6 Code not fitted to tests | <n> files read; <n> probes | PASS / FAIL / LOW | <#s or —> |
 | T7 Tests say what they claim | <n> requirements | PASS / FAIL / LOW | <#s or —> |
 | T8 No surplus tests | <n> tests added; <n> map to no named case | PASS / LOW | <#s or —> |

@@ -204,7 +204,7 @@ tier: 1
 ## Implementation Constraints
 
 ### Context Requirements
-- **Context discipline:** implementation subagents operate under the sdd-flow Safety-Net Reads budget (no percentage self-checks)
+- **Context discipline:** implementation subagents operate under the sdd-flow Safety-Net (their context is measured by the plugin's hook; no self-checks)
 - **Essential files for implementation:**
   - [file path]:lines [why needed]
   - [file path]:lines [why needed]

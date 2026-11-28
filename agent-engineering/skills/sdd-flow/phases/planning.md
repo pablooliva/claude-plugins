@@ -108,7 +108,7 @@ Each spawn gets:
 
 After all Stage 1 specialists return, spawn ONE **`agent-engineering:sdd-critical-reviewer`** subagent (Opus — the synthesis is the adversarial work):
 - **Body:** `bodies/panel-synthesis.md`
-- **Inputs:** the exact list of `SDD/.records/reviews/PANEL-FINDINGS-*-[feature-name]-[YYYYMMDD].md` paths written in Stage 1, the spec path, **BRIEF** (to tell a finding from an addition), and **TIERS** (the floor, and *Beyond the request*). (Its counter trigger may be raised to N+5 for an N-specialist panel.)
+- **Inputs:** the exact list of `SDD/.records/reviews/PANEL-FINDINGS-*-[feature-name]-[YYYYMMDD].md` paths written in Stage 1, the spec path, **BRIEF** (to tell a finding from an addition), and **TIERS** (the floor, and *Beyond the request*).
 - **Output:** `SDD/.records/reviews/PANEL-SPEC-[feature-name]-[YYYYMMDD].md`.
 - **Task:** Read each PANEL-FINDINGS file from disk, dedupe cross-specialist overlap, aggregate severity, and emit the verdict. Collect every `ADDITION` into the review's `## Additions for the owner`, numbered `A1`, `A2`, …; additions carry no severity and never count toward the verdict. It spawns nothing.
 

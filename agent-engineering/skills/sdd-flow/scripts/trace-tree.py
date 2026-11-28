@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Render a trace run's span file as call trees, per-request call counts, and a capture-policy scan.
+"""Render a trace run's span file as call paths (or, with --full, call trees), per-request call counts, and a
+capture-policy scan.
 
 Usage:
-    trace-tree.py <span-file> [env-file ...] [--out <file.md>]
+    trace-tree.py <span-file> [env-file ...] [--out <file.md>] [--full]
 
 The span file is the one an application's trace run writes: one span per line, as
 the OpenTelemetry SDK's `span.to_json()` prints it. The output is Markdown. With
@@ -14,8 +15,15 @@ traced by the wrapper). A *request* is one entry-point span and everything benea
 it, down to the next entry-point span. Spans in no request — the test's own client
 above a route, a call made while the application starts — are listed by name in
 the notes, an LLM span among them marked `[LLM]`. Requests are grouped per entry point by the entry span's name, and
-requests whose trees are identical are shown once, as one *shape*, with how many
-there were.
+requests whose trees are identical are one *shape*.
+
+By default the document is a summary: per entry point, each distinct *path* to an
+LLM or external call once — the application's own functions from the entry point
+down to the call (every span above it when the run recorded no function span),
+the call, how many requests took that path, how many such calls one request made,
+and how many ended in error — then the requests that made no such call, counted.
+The paths cover every request. With --full the document draws the shapes instead,
+the heaviest first, at most MAX_SHAPES per entry point, every function in them.
 
 Inside a request every span is one of:
   [LLM]            it carries a `gen_ai.*` attribute and is not a tool or agent
@@ -191,7 +199,7 @@ class Node:
 
 
 class Request:
-    def __init__(self, entry: Span):
+    def __init__(self, entry: Span, functions: bool = True):
         self.entry = entry
         self.llm = 0
         self.external = 0
@@ -199,26 +207,39 @@ class Request:
         self.inside: set[str] = set()   # what outgoing spans beneath an LLM span reached
         self.unrecorded = 0             # own-function calls the repeat cap left without a span
         self.unrecorded_failed = 0      # ... and how many of those ended in an exception
-        self.root = self._node(entry, first=True, inside=False)
+        self.functions = functions
+        self.paths: Counter = Counter()   # (path, call mark, call span name) -> calls in this request
+        self.failed: Counter = Counter()  # ... of those, ended in error
+        self.root = self._node(entry, first=True, inside=False, path=(entry.name,), above_function=False)
 
-    def _node(self, span: Span, first: bool, inside: bool) -> Node:
+    def _node(self, span: Span, first: bool, inside: bool, path: tuple[str, ...], above_function: bool) -> Node:
         span.in_request = True
         self.unrecorded += sum(calls for calls, _ in span.unrecorded.values())
         self.unrecorded_failed += sum(failed for _, failed in span.unrecorded.values())
         marks = ["[entry]"] if first else []
+        call = ""
         if span.model_call:
             marks.append("[LLM]")
             self.llm += 1
+            call = "[LLM]"
             inside = True
         elif span.kind in OUTGOING and not span.gen_ai:
             if inside:
                 marks.append(f"(inside the LLM call: {span.target})" if span.target else "(inside the LLM call)")
                 self.inside.add(span.target or span.name)
             else:
-                marks.append(f"[external: {span.target}]" if span.target else "[external]")
+                call = f"[external: {span.target}]" if span.target else "[external]"
+                marks.append(call)
                 self.external += 1
                 self.targets.add(span.target or span.name)
-        return Node(span, marks, [self._node(child, False, inside) for child in span.children
+        if call:
+            self.paths[(path, call, span.name)] += 1
+            self.failed[(path, call, span.name)] += span.error
+        # A call beneath another call keeps the call above it on its path. A name is not repeated when the span above
+        # is a wrapper of the same name (the entry span, a span made by hand) — only a real recursive call repeats it.
+        if not first and (call or span.function or not self.functions) and (path[-1] != span.name or above_function):
+            path = path + (span.name,)
+        return Node(span, marks, [self._node(child, False, inside, path, span.function) for child in span.children
                                   if child.kind not in INCOMING])
 
 
@@ -264,9 +285,10 @@ def analyse(spans: dict[tuple[str, str], Span]) -> tuple[dict[str, list[Request]
         waiting += span.children
     groups: dict[str, list[Request]] = {}
     first = {id(span) for span in roots}
+    functions = any(span.function for span in spans.values())
     for span in sorted(spans.values(), key=lambda span: (span.start, span.trace, span.id)):
         if span.reached and (span.kind in INCOMING or (id(span) in first and span.kind not in OUTGOING)):
-            groups.setdefault(span.name, []).append(Request(span))
+            groups.setdefault(span.name, []).append(Request(span, functions))
     outside = Counter(span.name + (" [LLM]" if span.model_call else "")
                       for span in spans.values() if span.reached and not span.in_request)
     return groups, outside, orphans, sum(1 for span in spans.values() if not span.reached)
@@ -341,15 +363,35 @@ def statuses(requests: list[Request]) -> str:
     return ", ".join(f"{code} ×{count}" for code, count in sorted(codes.items()))
 
 
-def render_entry(name: str, requests: list[Request]) -> list[str]:
+def path_rows(requests: list[Request]) -> list[tuple[tuple, int, list[int], int]]:
+    """(path key, requests that took it, calls per request among them, calls that ended in error), most requests first.
+    One pass over the requests' own path counters."""
+    calls: dict[tuple, list[int]] = {}
+    failed: Counter = Counter()
+    for request in requests:
+        for key, count in request.paths.items():
+            calls.setdefault(key, []).append(count)
+            failed[key] += request.failed[key]
+    rows = [(key, len(counts), counts, failed[key]) for key, counts in calls.items()]
+    return sorted(rows, key=lambda row: (-row[1], row[0]))
+
+
+def render_paths(requests: list[Request], rows: list[tuple[tuple, int, list[int], int]]) -> list[str]:
+    none = sum(1 for request in requests if not request.paths)
+    lines = [f"- Paths: {len(rows)}; requests with no LLM or external call: {none}", ""]
+    if rows:
+        lines += ["| # | Path — own functions from the entry point down | Call | Requests | Calls in one request "
+                  "| Calls ended in error |", "|---|---|---|---|---|---|"]
+        for number, ((path, call, span_name), took, calls, failed) in enumerate(rows, start=1):
+            lines.append(f"| {number} | {cell(' › '.join(path))} | {cell(call)} {cell(span_name)} | {took} | "
+                         f"{span_range(calls)} | {failed} |")
+    return lines
+
+
+def render_entry(name: str, requests: list[Request], full: bool = True, rows: Optional[list] = None) -> list[str]:
     failed = sum(1 for request in requests if request.entry.error)
     targets = sorted({target for request in requests for target in request.targets})
     inside = sorted({target for request in requests for target in request.inside})
-    shapes: dict[tuple, list[Request]] = {}
-    for request in requests:
-        shapes.setdefault(request.root.key, []).append(request)
-    ordered = sorted(shapes.values(), key=lambda group: (-group[0].llm, -group[0].external, -len(group),
-                                                         render_shape(group)))
     lines = [f"## {name}", ""]
     if all(request.entry.no_route for request in requests):
         lines += ["Named by the method alone: no route matched — a request refused before routing, or an unknown path.", ""]
@@ -366,6 +408,13 @@ def render_entry(name: str, requests: list[Request]) -> list[str]:
         lines.append(f"- Own-function calls not recorded in one request (over the repeat cap): fewest "
                      f"{min(r.unrecorded for r in requests)}, most {max(r.unrecorded for r in requests)}; "
                      f"of those, ended in an exception: most {max(r.unrecorded_failed for r in requests)}")
+    if not full:
+        return lines + render_paths(requests, rows if rows is not None else path_rows(requests)) + [""]
+    shapes: dict[tuple, list[Request]] = {}
+    for request in requests:
+        shapes.setdefault(request.root.key, []).append(request)
+    ordered = sorted(shapes.values(), key=lambda group: (-group[0].llm, -group[0].external, -len(group),
+                                                         render_shape(group)))
     lines.append(f"- Shapes: {len(ordered)}")
     for number, group in enumerate(ordered[:MAX_SHAPES], start=1):
         http = statuses(group)
@@ -384,7 +433,7 @@ def cell(text: str) -> str:
     return text.replace("|", "\\|")
 
 
-def render(span_file: str, lines: list[str], env_files: list[str], scan: Any) -> tuple[str, str, bool]:
+def render(span_file: str, lines: list[str], env_files: list[str], scan: Any, full: bool = True) -> tuple[str, str, bool]:
     """(the `Result:` line, the whole document, whether the scan found something)."""
     sources = [("environment", dict(os.environ))]
     for number, path in enumerate(env_files, start=1):
@@ -414,21 +463,30 @@ def render(span_file: str, lines: list[str], env_files: list[str], scan: Any) ->
               f"most LLM calls in one request {most}" + (f" ({heaviest})" if most else "")
               + f", capture-policy scan {'FOUND' if found else 'CLEAN'}")
 
-    out = ["# Trace tree", "", result, "",
+    functions = any(span.function for span in spans.values())
+    out = ["# Trace tree" + ("" if full else " — paths"), "", result, "",
            f"Span file: `{redact(span_file)}` — {plural(len(spans), 'span')}. A request is one entry-point span "
            f"and everything beneath it, down to the next entry point; counts are per request, never a total "
-           f"across requests.", "",
-           "## Summary", "",
-           "| Entry point | Requests | LLM calls in one request | External calls in one request | Ended in error | Shapes |",
-           "|---|---|---|---|---|---|"]
+           f"across requests.", ""]
+    if not full:
+        out += [("A path lists the application's own functions from the entry point down to one LLM or external "
+                 "call, and covers every request that reached that call that way. "
+                 if functions else
+                 "The run recorded no function span, so a path lists every span from the entry point down to the call. ")
+                + "The full trees: run the same command with `--full`.", ""]
+    paths = {} if full else {name: path_rows(groups[name]) for name in names}
+    out += ["## Summary", "",
+            f"| Entry point | Requests | LLM calls in one request | External calls in one request | Ended in error | "
+            f"{'Shapes' if full else 'Paths'} |",
+            "|---|---|---|---|---|---|"]
     for name in names:
         group = groups[name]
         out.append(f"| {cell(name)} | {len(group)} | {span_range([r.llm for r in group])} | "
                    f"{span_range([r.external for r in group])} | {sum(1 for r in group if r.entry.error)} | "
-                   f"{len({r.root.key for r in group})} |")
+                   f"{len({r.root.key for r in group}) if full else len(paths[name])} |")
     out.append("")
     for name in names:
-        out += render_entry(name, groups[name])
+        out += render_entry(name, groups[name], full, paths.get(name))
 
     out += ["## Capture-policy scan", "",
             f"- Secret values found for: {', '.join(leaked) or 'none'}",
@@ -456,6 +514,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("span_file")
     parser.add_argument("env_files", nargs="*", metavar="env-file")
     parser.add_argument("--out", help="write the document here and echo only its Result: line")
+    parser.add_argument("--full", action="store_true", help="draw every request's call tree instead of the paths")
     args = parser.parse_args(argv[1:])
     try:
         try:
@@ -463,7 +522,7 @@ def main(argv: list[str]) -> int:
                 lines = handle.read().splitlines()
         except (OSError, UnicodeDecodeError) as exc:
             raise Unreadable(f"cannot read the span file: {type(exc).__name__}")
-        result, document, found = render(args.span_file, lines, args.env_files, load_scan())
+        result, document, found = render(args.span_file, lines, args.env_files, load_scan(), args.full)
         if args.out:
             try:
                 Path(args.out).parent.mkdir(parents=True, exist_ok=True)

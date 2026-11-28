@@ -8,7 +8,6 @@ A spec can be larger than one Read returns (SPEC-002 was 95 KB; its SLICE-004 im
 
 - Find a section with a search for its heading line (`^## Intent`, `^### State model`, `^### SLICE-004:`); it ends at the next heading of the same or a higher level. Find an id with a search for a list item or heading that opens with the id as a whole word, whatever follows it and with or without bold — `^\s*(- |### )\**REQ-012\b` matches `- REQ-012:`, `- REQ-012 (script part):` and `- **REQ-012**:`. An id can be defined in more than one place (a script part and a flow part): read every match. An id's entry ends where the next id's entry, or the next heading, begins (an EDGE or FAIL entry has indented sub-lines — read them too).
 - Read each with offset and limit covering exactly that range. A section or entry too long for one Read is read in consecutive parts until its end. Entries that sit close together in one section are read as one range, from the first to the last, when that range fits in one Read.
-- **The SPEC counts once on your Safety-Net counter** — the Safety-Net Rule counts a file read in parts once.
 - A section that is not in the SPEC (`### State model`, `### Planned call graph`) is not there: go on without it. An id your slice or chunk is given that is not in the SPEC is a gap: build nothing for it, never guess its text, record it under `### Implementation Deviations` in the IMPLEMENTATION-PLAN, and name it in your return.
 
 ## 2. Always read, in full

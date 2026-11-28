@@ -46,9 +46,9 @@ The synthesis is the adversarial work — you're judging whether the specialist 
 
 ## Counter file + safety-net (when applicable)
 
-If your prompt assigns a counter file path under `SDD/.records/counters/`, update the file (one line, `Reads: 0/15`) after every Read of a file not read before in this run (a file read in parts counts once). The default safety-net trigger is Reads >15. For synthesis runs that must read N specialist findings files, your prompt may raise the trigger to N+5. There is no nested-subagent counter — you must not spawn.
+If your prompt assigns a counter file under `SDD/.records/counters/`, the plugin's hook measures your context before each tool call and writes it there (`Context: <tokens>/<limit> tokens`); never write the file yourself. The safety-net trips when a tool call is refused with a reason that starts `Safety-Net tripped`. You must not spawn.
 
-If you trip the safety-net, stop then — the trigger is binding, however close to done the review is — read the compact-body path your prompt provides and follow it: write a compaction file, append `## PARTIAL: needs continuation` to `progress.md`, and return. Never read past the trigger and carry on.
+If you trip the safety-net, stop then — the trigger is binding, however close to done the review is — read the compact-body path your prompt provides and follow it: write a compaction file, append `## PARTIAL: needs continuation` to `progress.md`, and return. The hook refuses every other call once it has tripped.
 
 ## Ethos
 

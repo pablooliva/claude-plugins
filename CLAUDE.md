@@ -30,11 +30,13 @@ plugin/
 ### Skill + self-contained-orchestrator plugin (`agent-engineering`)
 ```
 agent-engineering/
-├── .claude-plugin/plugin.json      # metadata + SubagentStop hook (as of 1.0.0)
+├── .claude-plugin/plugin.json      # metadata + SubagentStop hook (as of 1.0.0) + PreToolUse hook (5.18.0)
 ├── agents/                         # 10 forked subagent types sdd-flow spawns:
 │                                   #   sdd-workhorse (sonnet), sdd-critical-reviewer (opus),
 │                                   #   8× sdd-spec-*-specialist (sonnet)
 ├── hooks/log_subagent_call.py      # logs subagent transcripts
+├── hooks/context_guard.py          # sdd-flow's Safety-Net: measures a spawn's context from its transcript, writes its counter file,
+│                                   #   refuses all but the handoff's calls past the limit (tests: sdd-flow/scripts/tests/test_context_guard.py)
 ├── docs/sdd-flow-diagram.md        # human-facing picture of the sdd-flow cycle — update it when a step or a stop changes
 ├── docs/sdd-lite-diagram.md        # human-facing picture of sdd-lite (which path, the run, what it keeps) — update it when a step or a stop changes
 ├── docs/observability-diagram.md    # picture of the tracing-and-evals proposal (proposals/observability-and-evals-2026-10-04.md) — all four build steps exist: 1 (observability-init), 2 (tracing in sdd-flow), 3 (evals in sdd-flow), 4 (the trace lookup and eval-harvest, 3.13.0); update it when one of them changes
@@ -94,13 +96,13 @@ agent-engineering/
 │   │                               #   second-model-review.py — settles the cycle's reviewer, writes a review step's prompt file (`prompt`, holding the
 │   │                               #   reviewer preamble's one copy), and runs one review step on codex (the only second model);
 │   │                               #   tier-mirror.py — mirrors a feature's tier plan to BB tasks via the `bb` CLI;
-│   │                               #   growth.py — measures a feature's growth (source/test lines added, new files, new files the brief does not name)
+│   │                               #   growth.py — measures a feature's growth (source/test lines added — data files and plugin-template lines left out and named — new files, new files the brief does not name)
 │   │                               #   against the design brief's `## Growth budget`, leaving out the cycle's own SDD root; run at the slice pause and at 4h (stops over 1.5×);
 │   │                               #   ledger.py — the defect ledger's only reader and writer (an application's committed SDD/defects.jsonl
 │   │                               #   + SDD/defects-setup.json; add, reviews, close, lookup, summary; fields and review shapes in its docstring).
 │   │                               #   Not the learnings ledger (removed in 4.6.0) — always say "defect ledger". Written at the design gate's
 │   │                               #   approve (a bug fix's escape line) and at 4i; sdd-lite writes it on a bug-fix brief's approval and at close-out; read by the 2.5a lookup
-│   │                               #   trace-tree.py — renders a trace run's span file as call trees and call counts
+│   │                               #   trace-tree.py — renders a trace run's span file as the paths to each LLM/external call and call counts (--full: call trees)
 │   │                               #   (loads observability-init/scripts/check-span-file.py by path — keep both in step)
 │   │                               #   (tests: python3 -m unittest discover -s scripts/tests — they include test_eval_runner.py, which
 │   │                               #   renders templates/evals/python/run.py.template and runs it; change the template and that test together)

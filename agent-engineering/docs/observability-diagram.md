@@ -123,7 +123,7 @@ Not drawn: with evals on, the flow stops before a review when the application's 
 flowchart TD
     subgraph T ["Tracing check — when tracing is on"]
         run("trace run<br/>the tests that drive real entry points,<br/>tracing forced on, every request kept") --> file["span file on disk"]:::orch
-        file --> tree["trace-tree.py<br/>call tree per request, call counts,<br/>scan for headers and secrets"]:::orch
+        file --> tree["trace-tree.py<br/>paths to each model and external call,<br/>call counts, scan for headers and secrets<br/>(--full: the call trees)"]:::orch
         tree --> cmp{"Any of these?<br/>the trace run cannot be read<br/>a header or secret on a span<br/>an LLM or external call the plan does not show<br/>more LLM calls in a request than the plan allows<br/>a marked node of this slice or an earlier one that never ran,<br/>unless the spec marks it not exercised in tests<br/>a new entry point that is not traced<br/>a structured value stored as a JSON string,<br/>a hand-written span on a function already recorded,<br/>a backend named outside the bootstrap module"}
         cmp -- "yes" --> tf["finding"]
     end

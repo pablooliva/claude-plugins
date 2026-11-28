@@ -77,7 +77,7 @@ Code that misses the specification fails. Code that meets it passes only when it
 
 #### Context Management Approach
 
-- [ ] Safety-Net discipline followed (counter updated; any trips handled via handoff)
+- [ ] Safety-Net discipline followed (any trips handled via handoff)
 - [ ] Large file handling strategies documented
 - [ ] Context handoffs between phases are clean
 - [ ] Future modification path is clear
